@@ -10,55 +10,64 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SimHeapTest {
+class SimHeapTest
+{
 
     @Nested
-    class AllocationSiteTests {
+    class AllocationSiteTests
+    {
 
         @Test
-        void testAllocationSiteEquality() {
+        void testAllocationSiteEquality()
+        {
             AllocationSite site1 = AllocationSite.of("com/example/Foo", 10, "com/example/Bar.test()V");
             AllocationSite site2 = AllocationSite.of("com/example/Foo", 10, "com/example/Bar.test()V");
             assertEquals(site1, site2);
         }
 
         @Test
-        void testDifferentMethodsDifferentSites() {
+        void testDifferentMethodsDifferentSites()
+        {
             AllocationSite site1 = AllocationSite.of("com/example/Foo", 10, "method1");
             AllocationSite site2 = AllocationSite.of("com/example/Foo", 10, "method2");
             assertNotEquals(site1, site2);
         }
 
         @Test
-        void testDifferentIndexDifferentSites() {
+        void testDifferentIndexDifferentSites()
+        {
             AllocationSite site1 = AllocationSite.of("com/example/Foo", 10, "method");
             AllocationSite site2 = AllocationSite.of("com/example/Foo", 20, "method");
             assertNotEquals(site1, site2);
         }
 
         @Test
-        void testAllocationSiteHashCode() {
+        void testAllocationSiteHashCode()
+        {
             AllocationSite site1 = AllocationSite.of("com/example/Foo", 10, "method");
             AllocationSite site2 = AllocationSite.of("com/example/Foo", 10, "method");
             assertEquals(site1.hashCode(), site2.hashCode());
         }
 
         @Test
-        void testAllocationSiteToString() {
+        void testAllocationSiteToString()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             String str = site.toString();
             assertTrue(str.contains("Foo"));
         }
 
         @Test
-        void testSyntheticAllocationSite() {
+        void testSyntheticAllocationSite()
+        {
             AllocationSite site = AllocationSite.synthetic("com/example/Foo", "test");
             assertEquals("com/example/Foo", site.getClassName());
             assertTrue(site.isSynthetic());
         }
 
         @Test
-        void testAllocationSiteGetters() {
+        void testAllocationSiteGetters()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 15, "method()V");
             assertEquals("com/example/Foo", site.getClassName());
             assertEquals(15, site.getInstructionIndex());
@@ -67,45 +76,52 @@ class SimHeapTest {
     }
 
     @Nested
-    class FieldKeyTests {
+    class FieldKeyTests
+    {
 
         @Test
-        void testFieldKeyEquality() {
+        void testFieldKeyEquality()
+        {
             FieldKey key1 = FieldKey.of("com/example/Foo", "value", "I");
             FieldKey key2 = FieldKey.of("com/example/Foo", "value", "I");
             assertEquals(key1, key2);
         }
 
         @Test
-        void testDifferentOwnerDifferentKey() {
+        void testDifferentOwnerDifferentKey()
+        {
             FieldKey key1 = FieldKey.of("com/example/Foo", "value", "I");
             FieldKey key2 = FieldKey.of("com/example/Bar", "value", "I");
             assertNotEquals(key1, key2);
         }
 
         @Test
-        void testDifferentNameDifferentKey() {
+        void testDifferentNameDifferentKey()
+        {
             FieldKey key1 = FieldKey.of("com/example/Foo", "value1", "I");
             FieldKey key2 = FieldKey.of("com/example/Foo", "value2", "I");
             assertNotEquals(key1, key2);
         }
 
         @Test
-        void testDifferentDescriptorDifferentKey() {
+        void testDifferentDescriptorDifferentKey()
+        {
             FieldKey key1 = FieldKey.of("com/example/Foo", "value", "I");
             FieldKey key2 = FieldKey.of("com/example/Foo", "value", "J");
             assertNotEquals(key1, key2);
         }
 
         @Test
-        void testFieldKeyHashCode() {
+        void testFieldKeyHashCode()
+        {
             FieldKey key1 = FieldKey.of("com/example/Foo", "value", "I");
             FieldKey key2 = FieldKey.of("com/example/Foo", "value", "I");
             assertEquals(key1.hashCode(), key2.hashCode());
         }
 
         @Test
-        void testFieldKeyGetters() {
+        void testFieldKeyGetters()
+        {
             FieldKey key = FieldKey.of("com/example/Foo", "count", "I");
             assertEquals("com/example/Foo", key.getOwner());
             assertEquals("count", key.getName());
@@ -113,7 +129,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testFieldKeyToString() {
+        void testFieldKeyToString()
+        {
             FieldKey key = FieldKey.of("com/example/Foo", "count", "I");
             String str = key.toString();
             assertTrue(str.contains("Foo"));
@@ -122,10 +139,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class HeapModeTests {
+    class HeapModeTests
+    {
 
         @Test
-        void testHeapModeValues() {
+        void testHeapModeValues()
+        {
             HeapMode[] modes = HeapMode.values();
             assertEquals(3, modes.length);
             assertNotNull(HeapMode.IMMUTABLE);
@@ -134,7 +153,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapModeValueOf() {
+        void testHeapModeValueOf()
+        {
             assertEquals(HeapMode.IMMUTABLE, HeapMode.valueOf("IMMUTABLE"));
             assertEquals(HeapMode.MUTABLE, HeapMode.valueOf("MUTABLE"));
             assertEquals(HeapMode.COPY_ON_MERGE, HeapMode.valueOf("COPY_ON_MERGE"));
@@ -142,10 +162,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class SimObjectTests {
+    class SimObjectTests
+    {
 
         @Test
-        void testObjectCreation() {
+        void testObjectCreation()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             SimObject obj = new SimObject(site);
             assertEquals(site, obj.getSite());
@@ -153,7 +175,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testFieldWrite() {
+        void testFieldWrite()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             SimObject obj = new SimObject(site);
             FieldKey field = FieldKey.of("com/example/Foo", "value", "I");
@@ -166,7 +189,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testFieldRead() {
+        void testFieldRead()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             SimObject obj = new SimObject(site);
             FieldKey field = FieldKey.of("com/example/Foo", "value", "I");
@@ -179,7 +203,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testUnknownFieldRead() {
+        void testUnknownFieldRead()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             SimObject obj = new SimObject(site);
             FieldKey unknownField = FieldKey.of("com/example/Foo", "unknown", "I");
@@ -189,7 +214,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testObjectMerge() {
+        void testObjectMerge()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             FieldKey field = FieldKey.of("com/example/Foo", "value", "I");
 
@@ -202,7 +228,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testEscapeMarking() {
+        void testEscapeMarking()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             SimObject obj = new SimObject(site);
             assertFalse(obj.hasEscaped());
@@ -213,7 +240,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testImmutableUpdates() {
+        void testImmutableUpdates()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             SimObject obj = new SimObject(site);
             FieldKey field = FieldKey.of("com/example/Foo", "value", "I");
@@ -225,7 +253,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMultipleFieldValues() {
+        void testMultipleFieldValues()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             FieldKey field = FieldKey.of("com/example/Foo", "value", "I");
 
@@ -241,7 +270,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetFieldKeys() {
+        void testGetFieldKeys()
+        {
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             FieldKey field1 = FieldKey.of("com/example/Foo", "a", "I");
             FieldKey field2 = FieldKey.of("com/example/Foo", "b", "J");
@@ -258,10 +288,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class SimArrayTests {
+    class SimArrayTests
+    {
 
         @Test
-        void testArrayCreation() {
+        void testArrayCreation()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
             SimArray arr = new SimArray(site, PrimitiveType.INT, length);
@@ -272,7 +304,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayStore() {
+        void testArrayStore()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
             SimArray arr = new SimArray(site, PrimitiveType.INT, length);
@@ -285,7 +318,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayLoad() {
+        void testArrayLoad()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
             SimArray arr = new SimArray(site, PrimitiveType.INT, length);
@@ -299,7 +333,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testUnknownIndexStore() {
+        void testUnknownIndexStore()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
             SimArray arr = new SimArray(site, PrimitiveType.INT, length);
@@ -313,7 +348,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testUnknownIndexLoad() {
+        void testUnknownIndexLoad()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
             SimArray arr = new SimArray(site, PrimitiveType.INT, length);
@@ -332,7 +368,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayMerge() {
+        void testArrayMerge()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
 
@@ -350,7 +387,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayImmutability() {
+        void testArrayImmutability()
+        {
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
             SimArray arr = new SimArray(site, PrimitiveType.INT, length);
@@ -364,10 +402,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class SimHeapOperationsTests {
+    class SimHeapOperationsTests
+    {
 
         @Test
-        void testHeapAllocation() {
+        void testHeapAllocation()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
 
@@ -378,7 +418,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapPutField() {
+        void testHeapPutField()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             heap.allocate(site);
@@ -392,7 +433,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapGetField() {
+        void testHeapGetField()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             heap.allocate(site);
@@ -407,7 +449,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapGetUnknownField() {
+        void testHeapGetUnknownField()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("com/example/Foo", 10, "method");
             heap.allocate(site);
@@ -418,7 +461,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testStaticFieldOperations() {
+        void testStaticFieldOperations()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             FieldKey staticField = FieldKey.of("com/example/Foo", "INSTANCE", "Lcom/example/Foo;");
             SimValue value = SimValue.ofType(IRType.fromDescriptor("Lcom/example/Foo;"), null);
@@ -429,7 +473,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapMerge() {
+        void testHeapMerge()
+        {
             SimHeap heap1 = new SimHeap(HeapMode.MUTABLE);
             SimHeap heap2 = new SimHeap(HeapMode.MUTABLE);
 
@@ -445,7 +490,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayAllocation() {
+        void testArrayAllocation()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(10, PrimitiveType.INT, null);
@@ -457,7 +503,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayStore() {
+        void testArrayStore()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("[I", 10, "method");
             SimValue length = SimValue.constant(10, PrimitiveType.INT, null);
@@ -473,7 +520,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetAllSites() {
+        void testGetAllSites()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site1 = AllocationSite.of("Foo", 1, "m");
             AllocationSite site2 = AllocationSite.of("Bar", 2, "m");
@@ -488,7 +536,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMarkEscaped() {
+        void testMarkEscaped()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -499,7 +548,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapCopy() {
+        void testHeapCopy()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -519,10 +569,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class SimValueBuilderTests {
+    class SimValueBuilderTests
+    {
 
         @Test
-        void testBuildPrimitive() {
+        void testBuildPrimitive()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             SimValue value = SimValueBuilder.forType(PrimitiveType.INT)
                 .withIntValue(42)
@@ -532,7 +584,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildLongPrimitive() {
+        void testBuildLongPrimitive()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             SimValue value = SimValueBuilder.forType(PrimitiveType.LONG)
                 .withLongValue(123456789L)
@@ -542,7 +595,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildObject() {
+        void testBuildObject()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("com/example/Foo", 1, "test");
 
@@ -554,7 +608,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildWithFields() {
+        void testBuildWithFields()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue obj = SimValueBuilder.forClass("com/example/User")
@@ -566,12 +621,12 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildNestedObjects() {
+        void testBuildNestedObjects()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue outer = SimValueBuilder.forClass("com/example/Outer")
-                .withField("inner", SimValueBuilder.forClass("com/example/Inner")
-                    .withField("value", 100))
+                .withField("inner", SimValueBuilder.forClass("com/example/Inner") .withField("value", 100))
                 .build(heap);
 
             assertNotNull(outer);
@@ -579,7 +634,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildArray() {
+        void testBuildArray()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
@@ -593,7 +649,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildNullable() {
+        void testBuildNullable()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue value = SimValueBuilder.forClass("com/example/Foo")
@@ -605,7 +662,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildDefinitelyNull() {
+        void testBuildDefinitelyNull()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue value = SimValueBuilder.forClass("com/example/Foo")
@@ -616,7 +674,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuildDefinitelyNotNull() {
+        void testBuildDefinitelyNotNull()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue value = SimValueBuilder.forClass("com/example/Foo")
@@ -627,7 +686,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuilderChaining() {
+        void testBuilderChaining()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue value = SimValueBuilder.forClass("com/example/Config")
@@ -643,10 +703,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class EscapeAnalyzerTests {
+    class EscapeAnalyzerTests
+    {
 
         @Test
-        void testNoEscape() {
+        void testNoEscape()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "method");
             heap.allocate(site);
@@ -656,7 +718,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGlobalEscape() {
+        void testGlobalEscape()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "method");
             heap.allocate(site);
@@ -667,7 +730,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testTransitiveEscape() {
+        void testTransitiveEscape()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite escapedSite = AllocationSite.of("Container", 1, "m");
@@ -687,7 +751,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetNonEscaping() {
+        void testGetNonEscaping()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite escaped = AllocationSite.of("Escaped", 1, "m");
@@ -705,7 +770,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetEscaping() {
+        void testGetEscaping()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite escaped = AllocationSite.of("Escaped", 1, "m");
@@ -723,7 +789,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMayEscape() {
+        void testMayEscape()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -734,7 +801,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testDefinitelyEscapes() {
+        void testDefinitelyEscapes()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -745,7 +813,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testReachableFrom() {
+        void testReachableFrom()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite root = AllocationSite.of("Root", 1, "m");
@@ -755,8 +824,7 @@ class SimHeapTest {
             heap.allocate(child);
 
             FieldKey field = FieldKey.of("Root", "child", "LChild;");
-            heap.putField(root, field, SimValue.ofAllocation(child,
-                IRType.fromDescriptor("LChild;"), null));
+            heap.putField(root, field, SimValue.ofAllocation(child, IRType.fromDescriptor("LChild;"), null));
 
             EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
             Set<AllocationSite> reachable = analyzer.getReachableFrom(root);
@@ -767,10 +835,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class PointsToQueryTests {
+    class PointsToQueryTests
+    {
 
         @Test
-        void testPointsTo() {
+        void testPointsTo()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -783,7 +853,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMayPointTo() {
+        void testMayPointTo()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -795,7 +866,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMustPointTo() {
+        void testMustPointTo()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -807,7 +879,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMayAlias() {
+        void testMayAlias()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -820,7 +893,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMayNotAlias() {
+        void testMayNotAlias()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site1 = AllocationSite.of("Foo", 1, "m");
             AllocationSite site2 = AllocationSite.of("Bar", 2, "m");
@@ -835,7 +909,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMustAlias() {
+        void testMustAlias()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -848,7 +923,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMayBeNull() {
+        void testMayBeNull()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue nullable = SimValue.ofReference(IRType.fromDescriptor("LFoo;"), null,
@@ -861,7 +937,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testIsDefinitelyNull() {
+        void testIsDefinitelyNull()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue nullValue = SimValue.ofNull(IRType.fromDescriptor("LFoo;"), null);
@@ -873,7 +950,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testReachableFrom() {
+        void testReachableFrom()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite root = AllocationSite.of("Root", 1, "m");
@@ -895,7 +973,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetFieldValues() {
+        void testGetFieldValues()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -912,7 +991,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetArrayElements() {
+        void testGetArrayElements()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("[I", 1, "m");
             SimValue length = SimValue.constant(5, PrimitiveType.INT, null);
@@ -929,7 +1009,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testGetPointsToSetSize() {
+        void testGetPointsToSetSize()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -941,7 +1022,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testIsSingleton() {
+        void testIsSingleton()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             heap.allocate(site);
@@ -954,10 +1036,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class SimValueEnhancementsTests {
+    class SimValueEnhancementsTests
+    {
 
         @Test
-        void testOfAllocation() {
+        void testOfAllocation()
+        {
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             SimValue ref = SimValue.ofAllocation(site, IRType.fromDescriptor("LFoo;"), null);
 
@@ -966,7 +1050,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testOfNull() {
+        void testOfNull()
+        {
             SimValue nullRef = SimValue.ofNull(IRType.fromDescriptor("LFoo;"), null);
 
             assertTrue(nullRef.isDefinitelyNull());
@@ -974,7 +1059,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMergeSimValues() {
+        void testMergeSimValues()
+        {
             AllocationSite site1 = AllocationSite.of("Foo", 1, "m");
             AllocationSite site2 = AllocationSite.of("Bar", 2, "m");
 
@@ -987,7 +1073,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMergeCollection() {
+        void testMergeCollection()
+        {
             AllocationSite site1 = AllocationSite.of("A", 1, "m");
             AllocationSite site2 = AllocationSite.of("B", 2, "m");
             AllocationSite site3 = AllocationSite.of("C", 3, "m");
@@ -1003,7 +1090,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testNullStateDefinitelyNull() {
+        void testNullStateDefinitelyNull()
+        {
             SimValue nullVal = SimValue.ofNull(IRType.fromDescriptor("LFoo;"), null);
             assertTrue(nullVal.isDefinitelyNull());
             assertFalse(nullVal.isDefinitelyNotNull());
@@ -1011,7 +1099,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testNullStateDefinitelyNotNull() {
+        void testNullStateDefinitelyNotNull()
+        {
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             SimValue ref = SimValue.ofAllocation(site, IRType.fromDescriptor("LFoo;"), null);
             assertFalse(ref.isDefinitelyNull());
@@ -1020,7 +1109,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testNullStateMaybeNull() {
+        void testNullStateMaybeNull()
+        {
             SimValue nullable = SimValue.ofReference(IRType.fromDescriptor("LFoo;"), null,
                 Collections.emptySet(), SimValue.NullState.MAYBE_NULL);
             assertFalse(nullable.isDefinitelyNull());
@@ -1029,7 +1119,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMergeNullStates() {
+        void testMergeNullStates()
+        {
             AllocationSite site = AllocationSite.of("Foo", 1, "m");
             SimValue notNull = SimValue.ofAllocation(site, IRType.fromDescriptor("LFoo;"), null);
             SimValue nullVal = SimValue.ofNull(IRType.fromDescriptor("LFoo;"), null);
@@ -1040,10 +1131,12 @@ class SimHeapTest {
     }
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void testObjectCreationAndFieldAccess() {
+        void testObjectCreationAndFieldAccess()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite site = AllocationSite.of("com/example/User", 10, "createUser()V");
@@ -1064,14 +1157,16 @@ class SimHeapTest {
         }
 
         @Test
-        void testArrayCreationAndAccess() {
+        void testArrayCreationAndAccess()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite arraySite = AllocationSite.of("[I", 5, "init()V");
             SimValue length = SimValue.constant(10, PrimitiveType.INT, null);
             heap.allocateArray(arraySite, PrimitiveType.INT, length);
 
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++)
+            {
                 SimValue index = SimValue.constant(i, PrimitiveType.INT, null);
                 SimValue value = SimValue.constant(i * 10, PrimitiveType.INT, null);
                 heap.arrayStore(arraySite, index, value);
@@ -1083,7 +1178,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testHeapMergePreservesPrecision() {
+        void testHeapMergePreservesPrecision()
+        {
             SimHeap heap1 = new SimHeap(HeapMode.MUTABLE);
             SimHeap heap2 = new SimHeap(HeapMode.MUTABLE);
 
@@ -1103,7 +1199,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testEscapeAnalysisIntegration() {
+        void testEscapeAnalysisIntegration()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite localSite = AllocationSite.of("Local", 1, "m");
@@ -1120,7 +1217,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testPointsToQueryIntegration() {
+        void testPointsToQueryIntegration()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite site1 = AllocationSite.of("Obj1", 1, "m");
@@ -1142,7 +1240,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testBuilderWithHeapIntegration() {
+        void testBuilderWithHeapIntegration()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             SimValue config = SimValueBuilder.forClass("com/example/Config")
@@ -1161,7 +1260,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testComplexObjectGraph() {
+        void testComplexObjectGraph()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             AllocationSite outerSite = AllocationSite.of("Outer", 1, "m");
@@ -1177,8 +1277,7 @@ class SimHeapTest {
 
             heap.putField(outerSite, innerField,
                 SimValue.ofAllocation(innerSite, IRType.fromDescriptor("LInner;"), null));
-            heap.putField(innerSite, leafField,
-                SimValue.ofAllocation(leafSite, IRType.fromDescriptor("LLeaf;"), null));
+            heap.putField(innerSite, leafField, SimValue.ofAllocation(leafSite, IRType.fromDescriptor("LLeaf;"), null));
 
             EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
             Set<AllocationSite> reachable = analyzer.getReachableFrom(outerSite);
@@ -1189,7 +1288,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testStaticFieldTracking() {
+        void testStaticFieldTracking()
+        {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
             FieldKey staticField = FieldKey.of("com/example/Singleton", "INSTANCE", "Lcom/example/Singleton;");
@@ -1205,7 +1305,8 @@ class SimHeapTest {
         }
 
         @Test
-        void testMergeWithDifferentObjects() {
+        void testMergeWithDifferentObjects()
+        {
             SimHeap heap1 = new SimHeap(HeapMode.MUTABLE);
             SimHeap heap2 = new SimHeap(HeapMode.MUTABLE);
 

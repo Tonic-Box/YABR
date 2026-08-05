@@ -16,24 +16,34 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Finds if-blocks matching pattern: if (var == const) or if (const == var).
+ * Debug demo showing recovery of if-blocks that compare a variable against a constant.
  */
-public class DebugDoAction {
+public class DebugDoAction
+{
 
-    public static void main(String[] args) throws Exception {
+    /**
+     * Recovers a hard-coded method's AST and prints the matching if-blocks.
+     * @param args unused
+     * @throws Exception if the class file cannot be read or recovery fails
+     */
+    public static void main(String[] args) throws Exception
+    {
         String classPath = "C:/test/dumper/do.class";
         String methodName = "lx";
 
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(classPath));
 
         MethodEntry target = null;
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(methodName)) {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(methodName))
+            {
                 target = m;
                 break;
             }
         }
-        if (target == null) {
+        if (target == null)
+        {
             System.err.println("Method not found: " + methodName);
             return;
         }
@@ -42,16 +52,19 @@ public class DebugDoAction {
         BlockStmt body = MethodRecoverer.recoverMethod(ir, target);
         List<IfStmt> matches = new ArrayList<>();
         ASTUtils.forEachStatement(body, stmt -> {
-            if (stmt instanceof IfStmt) {
+            if (stmt instanceof IfStmt)
+            {
                 IfStmt ifStmt = (IfStmt) stmt;
-                if (isVarEqualsConst(ifStmt.getCondition())) {
+                if (isVarEqualsConst(ifStmt.getCondition()))
+                {
                     matches.add(ifStmt);
                 }
             }
         });
 
         System.out.println("Found " + matches.size() + " matching if(var == const) blocks:\n");
-        for (int i = 0; i < matches.size(); i++) {
+        for (int i = 0; i < matches.size(); i++)
+        {
             IfStmt ifStmt = matches.get(i);
             System.out.println("[" + (i + 1) + "] " + SourceEmitter.emit(ifStmt.getCondition()));
             System.out.println(SourceEmitter.emit(ifStmt));
@@ -59,7 +72,8 @@ public class DebugDoAction {
         }
     }
 
-    private static boolean isVarEqualsConst(Expression expr) {
+    private static boolean isVarEqualsConst(Expression expr)
+    {
         if (!(expr instanceof BinaryExpr)) return false;
         BinaryExpr bin = (BinaryExpr) expr;
         if (bin.getOperator() != BinaryOperator.EQ) return false;

@@ -14,35 +14,42 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Comprehensive tests for StmtMatcher predicate-based statement matching.
+ * * Comprehensive tests for StmtMatcher predicate-based statement matching.
  */
 @DisplayName("StmtMatcher Tests")
-class StmtMatcherTest {
+class StmtMatcherTest
+{
 
     // Helper methods to create test statements
-    private static Expression createBooleanLiteral(boolean value) {
+    private static Expression createBooleanLiteral(boolean value)
+    {
         return LiteralExpr.ofBoolean(value);
     }
 
-    private static Expression createIntLiteral(int value) {
+    private static Expression createIntLiteral(int value)
+    {
         return LiteralExpr.ofInt(value);
     }
 
-    private static Expression createVarRef(String name) {
+    private static Expression createVarRef(String name)
+    {
         return new VarRefExpr(name, PrimitiveSourceType.INT);
     }
 
-    private static Statement createEmptyBlock() {
+    private static Statement createEmptyBlock()
+    {
         return new BlockStmt(List.of());
     }
 
     @Nested
     @DisplayName("Basic Matching")
-    class BasicMatching {
+    class BasicMatching
+    {
 
         @Test
         @DisplayName("matches() returns true when predicate matches")
-        void matchesReturnsTrueWhenPredicateMatches() {
+        void matchesReturnsTrueWhenPredicateMatches()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt();
             ReturnStmt returnStmt = new ReturnStmt(createIntLiteral(42));
 
@@ -51,7 +58,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("matches() returns false when predicate does not match")
-        void matchesReturnsFalseWhenPredicateDoesNotMatch() {
+        void matchesReturnsFalseWhenPredicateDoesNotMatch()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt();
             IfStmt ifStmt = new IfStmt(createBooleanLiteral(true), createEmptyBlock());
 
@@ -60,7 +68,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("matches() returns false for null statements")
-        void matchesReturnsFalseForNull() {
+        void matchesReturnsFalseForNull()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt();
 
             assertFalse(matcher.matches(null));
@@ -69,11 +78,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Return Statement Matchers")
-    class ReturnMatchers {
+    class ReturnMatchers
+    {
 
         @Test
         @DisplayName("returnStmt() matches any return statement")
-        void returnStmtMatchesAnyReturn() {
+        void returnStmtMatchesAnyReturn()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt();
 
             ReturnStmt returnWithValue = new ReturnStmt(createIntLiteral(42));
@@ -85,7 +96,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("returnStmt() does not match non-return statements")
-        void returnStmtDoesNotMatchNonReturn() {
+        void returnStmtDoesNotMatchNonReturn()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt();
 
             IfStmt ifStmt = new IfStmt(createBooleanLiteral(true), createEmptyBlock());
@@ -95,7 +107,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("returnWithValue() matches non-void returns")
-        void returnWithValueMatchesNonVoidReturns() {
+        void returnWithValueMatchesNonVoidReturns()
+        {
             StmtMatcher matcher = StmtMatcher.returnWithValue();
 
             ReturnStmt returnWithValue = new ReturnStmt(createIntLiteral(42));
@@ -105,7 +118,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("returnWithValue() does not match void returns")
-        void returnWithValueDoesNotMatchVoidReturns() {
+        void returnWithValueDoesNotMatchVoidReturns()
+        {
             StmtMatcher matcher = StmtMatcher.returnWithValue();
 
             ReturnStmt voidReturn = new ReturnStmt();
@@ -115,7 +129,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("voidReturn() matches void returns")
-        void voidReturnMatchesVoidReturns() {
+        void voidReturnMatchesVoidReturns()
+        {
             StmtMatcher matcher = StmtMatcher.voidReturn();
 
             ReturnStmt voidReturn = new ReturnStmt();
@@ -125,7 +140,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("voidReturn() does not match non-void returns")
-        void voidReturnDoesNotMatchNonVoidReturns() {
+        void voidReturnDoesNotMatchNonVoidReturns()
+        {
             StmtMatcher matcher = StmtMatcher.voidReturn();
 
             ReturnStmt returnWithValue = new ReturnStmt(createIntLiteral(42));
@@ -136,11 +152,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Exception Statement Matchers")
-    class ExceptionMatchers {
+    class ExceptionMatchers
+    {
 
         @Test
         @DisplayName("throwStmt() matches throw statements")
-        void throwStmtMatchesThrowStatements() {
+        void throwStmtMatchesThrowStatements()
+        {
             StmtMatcher matcher = StmtMatcher.throwStmt();
 
             Expression exception = new VarRefExpr("ex", ReferenceSourceType.OBJECT);
@@ -151,7 +169,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("throwStmt() does not match non-throw statements")
-        void throwStmtDoesNotMatchNonThrow() {
+        void throwStmtDoesNotMatchNonThrow()
+        {
             StmtMatcher matcher = StmtMatcher.throwStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -161,7 +180,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("tryCatchStmt() matches try-catch statements")
-        void tryCatchStmtMatchesTryCatch() {
+        void tryCatchStmtMatchesTryCatch()
+        {
             StmtMatcher matcher = StmtMatcher.tryCatchStmt();
 
             BlockStmt tryBlock = new BlockStmt(List.of());
@@ -174,7 +194,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("tryCatchStmt() does not match non-try-catch statements")
-        void tryCatchStmtDoesNotMatchNonTryCatch() {
+        void tryCatchStmtDoesNotMatchNonTryCatch()
+        {
             StmtMatcher matcher = StmtMatcher.tryCatchStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -185,11 +206,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Conditional Statement Matchers")
-    class ConditionalMatchers {
+    class ConditionalMatchers
+    {
 
         @Test
         @DisplayName("ifStmt() matches any if statement")
-        void ifStmtMatchesAnyIf() {
+        void ifStmtMatchesAnyIf()
+        {
             StmtMatcher matcher = StmtMatcher.ifStmt();
 
             IfStmt ifOnly = new IfStmt(createBooleanLiteral(true), createEmptyBlock());
@@ -201,7 +224,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("ifStmt() does not match non-if statements")
-        void ifStmtDoesNotMatchNonIf() {
+        void ifStmtDoesNotMatchNonIf()
+        {
             StmtMatcher matcher = StmtMatcher.ifStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -211,7 +235,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("ifElseStmt() matches if with else")
-        void ifElseStmtMatchesIfWithElse() {
+        void ifElseStmtMatchesIfWithElse()
+        {
             StmtMatcher matcher = StmtMatcher.ifElseStmt();
 
             IfStmt ifElse = new IfStmt(createBooleanLiteral(true), createEmptyBlock(), createEmptyBlock());
@@ -221,7 +246,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("ifElseStmt() does not match if without else")
-        void ifElseStmtDoesNotMatchIfWithoutElse() {
+        void ifElseStmtDoesNotMatchIfWithoutElse()
+        {
             StmtMatcher matcher = StmtMatcher.ifElseStmt();
 
             IfStmt ifOnly = new IfStmt(createBooleanLiteral(true), createEmptyBlock());
@@ -231,7 +257,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("ifOnlyStmt() matches if without else")
-        void ifOnlyStmtMatchesIfWithoutElse() {
+        void ifOnlyStmtMatchesIfWithoutElse()
+        {
             StmtMatcher matcher = StmtMatcher.ifOnlyStmt();
 
             IfStmt ifOnly = new IfStmt(createBooleanLiteral(true), createEmptyBlock());
@@ -241,7 +268,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("ifOnlyStmt() does not match if with else")
-        void ifOnlyStmtDoesNotMatchIfWithElse() {
+        void ifOnlyStmtDoesNotMatchIfWithElse()
+        {
             StmtMatcher matcher = StmtMatcher.ifOnlyStmt();
 
             IfStmt ifElse = new IfStmt(createBooleanLiteral(true), createEmptyBlock(), createEmptyBlock());
@@ -252,11 +280,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Loop Statement Matchers")
-    class LoopMatchers {
+    class LoopMatchers
+    {
 
         @Test
         @DisplayName("anyLoop() matches for loops")
-        void anyLoopMatchesForLoops() {
+        void anyLoopMatchesForLoops()
+        {
             StmtMatcher matcher = StmtMatcher.anyLoop();
 
             ForStmt forStmt = new ForStmt(List.of(), createBooleanLiteral(true), List.of(), createEmptyBlock());
@@ -266,7 +296,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("anyLoop() matches while loops")
-        void anyLoopMatchesWhileLoops() {
+        void anyLoopMatchesWhileLoops()
+        {
             StmtMatcher matcher = StmtMatcher.anyLoop();
 
             WhileStmt whileStmt = new WhileStmt(createBooleanLiteral(true), createEmptyBlock());
@@ -276,7 +307,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("anyLoop() matches do-while loops")
-        void anyLoopMatchesDoWhileLoops() {
+        void anyLoopMatchesDoWhileLoops()
+        {
             StmtMatcher matcher = StmtMatcher.anyLoop();
 
             DoWhileStmt doWhileStmt = new DoWhileStmt(createEmptyBlock(), createBooleanLiteral(true));
@@ -286,7 +318,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("anyLoop() matches for-each loops")
-        void anyLoopMatchesForEachLoops() {
+        void anyLoopMatchesForEachLoops()
+        {
             StmtMatcher matcher = StmtMatcher.anyLoop();
 
             Expression iterable = new VarRefExpr("items", ReferenceSourceType.OBJECT);
@@ -298,7 +331,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("anyLoop() does not match non-loop statements")
-        void anyLoopDoesNotMatchNonLoop() {
+        void anyLoopDoesNotMatchNonLoop()
+        {
             StmtMatcher matcher = StmtMatcher.anyLoop();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -308,7 +342,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("forStmt() matches for loops only")
-        void forStmtMatchesForLoopsOnly() {
+        void forStmtMatchesForLoopsOnly()
+        {
             StmtMatcher matcher = StmtMatcher.forStmt();
 
             ForStmt forStmt = new ForStmt(List.of(), createBooleanLiteral(true), List.of(), createEmptyBlock());
@@ -320,7 +355,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("whileStmt() matches while loops only")
-        void whileStmtMatchesWhileLoopsOnly() {
+        void whileStmtMatchesWhileLoopsOnly()
+        {
             StmtMatcher matcher = StmtMatcher.whileStmt();
 
             WhileStmt whileStmt = new WhileStmt(createBooleanLiteral(true), createEmptyBlock());
@@ -332,7 +368,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("doWhileStmt() matches do-while loops only")
-        void doWhileStmtMatchesDoWhileLoopsOnly() {
+        void doWhileStmtMatchesDoWhileLoopsOnly()
+        {
             StmtMatcher matcher = StmtMatcher.doWhileStmt();
 
             DoWhileStmt doWhileStmt = new DoWhileStmt(createEmptyBlock(), createBooleanLiteral(true));
@@ -344,7 +381,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("forEachStmt() matches for-each loops only")
-        void forEachStmtMatchesForEachLoopsOnly() {
+        void forEachStmtMatchesForEachLoopsOnly()
+        {
             StmtMatcher matcher = StmtMatcher.forEachStmt();
 
             Expression iterable = new VarRefExpr("items", ReferenceSourceType.OBJECT);
@@ -359,11 +397,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Other Statement Matchers")
-    class OtherStatementMatchers {
+    class OtherStatementMatchers
+    {
 
         @Test
         @DisplayName("switchStmt() matches switch statements")
-        void switchStmtMatchesSwitchStatements() {
+        void switchStmtMatchesSwitchStatements()
+        {
             StmtMatcher matcher = StmtMatcher.switchStmt();
 
             SwitchStmt switchStmt = new SwitchStmt(createIntLiteral(1), List.of());
@@ -373,7 +413,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("switchStmt() does not match non-switch statements")
-        void switchStmtDoesNotMatchNonSwitch() {
+        void switchStmtDoesNotMatchNonSwitch()
+        {
             StmtMatcher matcher = StmtMatcher.switchStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -383,7 +424,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("synchronizedStmt() matches synchronized blocks")
-        void synchronizedStmtMatchesSynchronizedBlocks() {
+        void synchronizedStmtMatchesSynchronizedBlocks()
+        {
             StmtMatcher matcher = StmtMatcher.synchronizedStmt();
 
             Expression lock = new VarRefExpr("lock", ReferenceSourceType.OBJECT);
@@ -394,7 +436,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("synchronizedStmt() does not match non-synchronized statements")
-        void synchronizedStmtDoesNotMatchNonSynchronized() {
+        void synchronizedStmtDoesNotMatchNonSynchronized()
+        {
             StmtMatcher matcher = StmtMatcher.synchronizedStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -404,7 +447,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("blockStmt() matches block statements")
-        void blockStmtMatchesBlockStatements() {
+        void blockStmtMatchesBlockStatements()
+        {
             StmtMatcher matcher = StmtMatcher.blockStmt();
 
             BlockStmt blockStmt = new BlockStmt(List.of());
@@ -414,7 +458,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("blockStmt() does not match non-block statements")
-        void blockStmtDoesNotMatchNonBlock() {
+        void blockStmtDoesNotMatchNonBlock()
+        {
             StmtMatcher matcher = StmtMatcher.blockStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -424,7 +469,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("exprStmt() matches expression statements")
-        void exprStmtMatchesExpressionStatements() {
+        void exprStmtMatchesExpressionStatements()
+        {
             StmtMatcher matcher = StmtMatcher.exprStmt();
 
             ExprStmt exprStmt = new ExprStmt(createIntLiteral(42));
@@ -434,7 +480,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("exprStmt() does not match non-expression statements")
-        void exprStmtDoesNotMatchNonExpression() {
+        void exprStmtDoesNotMatchNonExpression()
+        {
             StmtMatcher matcher = StmtMatcher.exprStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -444,7 +491,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("varDeclStmt() matches variable declarations")
-        void varDeclStmtMatchesVariableDeclarations() {
+        void varDeclStmtMatchesVariableDeclarations()
+        {
             StmtMatcher matcher = StmtMatcher.varDeclStmt();
 
             VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x", createIntLiteral(42));
@@ -454,7 +502,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("varDeclStmt() does not match non-variable-declaration statements")
-        void varDeclStmtDoesNotMatchNonVarDecl() {
+        void varDeclStmtDoesNotMatchNonVarDecl()
+        {
             StmtMatcher matcher = StmtMatcher.varDeclStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -465,11 +514,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Jump Statement Matchers")
-    class JumpStatementMatchers {
+    class JumpStatementMatchers
+    {
 
         @Test
         @DisplayName("breakStmt() matches break statements")
-        void breakStmtMatchesBreakStatements() {
+        void breakStmtMatchesBreakStatements()
+        {
             StmtMatcher matcher = StmtMatcher.breakStmt();
 
             BreakStmt breakStmt = new BreakStmt();
@@ -479,7 +530,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("breakStmt() does not match non-break statements")
-        void breakStmtDoesNotMatchNonBreak() {
+        void breakStmtDoesNotMatchNonBreak()
+        {
             StmtMatcher matcher = StmtMatcher.breakStmt();
 
             ContinueStmt continueStmt = new ContinueStmt();
@@ -489,7 +541,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("continueStmt() matches continue statements")
-        void continueStmtMatchesContinueStatements() {
+        void continueStmtMatchesContinueStatements()
+        {
             StmtMatcher matcher = StmtMatcher.continueStmt();
 
             ContinueStmt continueStmt = new ContinueStmt();
@@ -499,7 +552,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("continueStmt() does not match non-continue statements")
-        void continueStmtDoesNotMatchNonContinue() {
+        void continueStmtDoesNotMatchNonContinue()
+        {
             StmtMatcher matcher = StmtMatcher.continueStmt();
 
             BreakStmt breakStmt = new BreakStmt();
@@ -509,7 +563,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("labeledStmt() matches labeled statements")
-        void labeledStmtMatchesLabeledStatements() {
+        void labeledStmtMatchesLabeledStatements()
+        {
             StmtMatcher matcher = StmtMatcher.labeledStmt();
 
             LabeledStmt labeledStmt = new LabeledStmt("loop", createEmptyBlock());
@@ -519,7 +574,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("labeledStmt() does not match non-labeled statements")
-        void labeledStmtDoesNotMatchNonLabeled() {
+        void labeledStmtDoesNotMatchNonLabeled()
+        {
             StmtMatcher matcher = StmtMatcher.labeledStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -529,7 +585,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("withLabel() matches statements with specific label")
-        void withLabelMatchesSpecificLabel() {
+        void withLabelMatchesSpecificLabel()
+        {
             StmtMatcher matcher = StmtMatcher.withLabel("loop");
 
             LabeledStmt labeledStmt = new LabeledStmt("loop", createEmptyBlock());
@@ -539,7 +596,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("withLabel() does not match statements with different label")
-        void withLabelDoesNotMatchDifferentLabel() {
+        void withLabelDoesNotMatchDifferentLabel()
+        {
             StmtMatcher matcher = StmtMatcher.withLabel("loop");
 
             LabeledStmt labeledStmt = new LabeledStmt("other", createEmptyBlock());
@@ -549,7 +607,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("withLabel() does not match statements without label")
-        void withLabelDoesNotMatchNoLabel() {
+        void withLabelDoesNotMatchNoLabel()
+        {
             StmtMatcher matcher = StmtMatcher.withLabel("loop");
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -560,11 +619,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Expression Statement Matchers")
-    class ExpressionStatementMatchers {
+    class ExpressionStatementMatchers
+    {
 
         @Test
         @DisplayName("methodCallStmt() matches ExprStmt containing MethodCallExpr")
-        void methodCallStmtMatchesMethodCalls() {
+        void methodCallStmtMatchesMethodCalls()
+        {
             StmtMatcher matcher = StmtMatcher.methodCallStmt();
 
             MethodCallExpr methodCall = MethodCallExpr.staticCall("java/lang/System", "println",
@@ -576,7 +637,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("methodCallStmt() does not match ExprStmt without MethodCallExpr")
-        void methodCallStmtDoesNotMatchNonMethodCall() {
+        void methodCallStmtDoesNotMatchNonMethodCall()
+        {
             StmtMatcher matcher = StmtMatcher.methodCallStmt();
 
             ExprStmt exprStmt = new ExprStmt(createIntLiteral(42));
@@ -586,7 +648,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("methodCallStmt() does not match non-ExprStmt")
-        void methodCallStmtDoesNotMatchNonExprStmt() {
+        void methodCallStmtDoesNotMatchNonExprStmt()
+        {
             StmtMatcher matcher = StmtMatcher.methodCallStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -596,7 +659,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("assignmentStmt() matches ExprStmt containing assignment BinaryExpr")
-        void assignmentStmtMatchesAssignments() {
+        void assignmentStmtMatchesAssignments()
+        {
             StmtMatcher matcher = StmtMatcher.assignmentStmt();
 
             BinaryExpr assignment = new BinaryExpr(BinaryOperator.ASSIGN,
@@ -608,7 +672,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("assignmentStmt() matches compound assignment operators")
-        void assignmentStmtMatchesCompoundAssignments() {
+        void assignmentStmtMatchesCompoundAssignments()
+        {
             StmtMatcher matcher = StmtMatcher.assignmentStmt();
 
             BinaryExpr addAssign = new BinaryExpr(BinaryOperator.ADD_ASSIGN,
@@ -620,7 +685,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("assignmentStmt() does not match non-assignment BinaryExpr")
-        void assignmentStmtDoesNotMatchNonAssignment() {
+        void assignmentStmtDoesNotMatchNonAssignment()
+        {
             StmtMatcher matcher = StmtMatcher.assignmentStmt();
 
             BinaryExpr addition = new BinaryExpr(BinaryOperator.ADD,
@@ -632,7 +698,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("assignmentStmt() does not match ExprStmt without BinaryExpr")
-        void assignmentStmtDoesNotMatchNonBinaryExpr() {
+        void assignmentStmtDoesNotMatchNonBinaryExpr()
+        {
             StmtMatcher matcher = StmtMatcher.assignmentStmt();
 
             ExprStmt exprStmt = new ExprStmt(createIntLiteral(42));
@@ -642,7 +709,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("assignmentStmt() does not match non-ExprStmt")
-        void assignmentStmtDoesNotMatchNonExprStmt() {
+        void assignmentStmtDoesNotMatchNonExprStmt()
+        {
             StmtMatcher matcher = StmtMatcher.assignmentStmt();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -653,11 +721,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Combinator Operations")
-    class Combinators {
+    class Combinators
+    {
 
         @Test
         @DisplayName("and() combines matchers with AND logic")
-        void andCombinesWithAndLogic() {
+        void andCombinesWithAndLogic()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt().and(StmtMatcher.returnWithValue());
 
             ReturnStmt returnWithValue = new ReturnStmt(createIntLiteral(42));
@@ -669,7 +739,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("or() combines matchers with OR logic")
-        void orCombinesWithOrLogic() {
+        void orCombinesWithOrLogic()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt().or(StmtMatcher.throwStmt());
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -684,7 +755,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("not() negates matcher")
-        void notNegatesMatcher() {
+        void notNegatesMatcher()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt().not();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -696,7 +768,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("combinators can be chained")
-        void combinatorsCanBeChained() {
+        void combinatorsCanBeChained()
+        {
             // Matches return statements that are NOT void returns
             StmtMatcher matcher = StmtMatcher.returnStmt()
                 .and(StmtMatcher.voidReturn().not());
@@ -712,7 +785,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("complex combinator expressions work correctly")
-        void complexCombinatorExpressionsWork() {
+        void complexCombinatorExpressionsWork()
+        {
             // Matches (if statements OR while loops) AND NOT labeled statements
             StmtMatcher matcher = StmtMatcher.ifStmt()
                 .or(StmtMatcher.whileStmt())
@@ -732,7 +806,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("any() matches all statements")
-        void anyMatchesAllStatements() {
+        void anyMatchesAllStatements()
+        {
             StmtMatcher matcher = StmtMatcher.any();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -746,7 +821,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("none() matches no statements")
-        void noneMatchesNoStatements() {
+        void noneMatchesNoStatements()
+        {
             StmtMatcher matcher = StmtMatcher.none();
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -761,11 +837,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Custom Matchers")
-    class CustomMatchers {
+    class CustomMatchers
+    {
 
         @Test
         @DisplayName("custom() creates matcher from predicate")
-        void customCreatesMatcherFromPredicate() {
+        void customCreatesMatcherFromPredicate()
+        {
             StmtMatcher matcher = StmtMatcher.custom(stmt -> stmt instanceof ReturnStmt);
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -777,11 +855,9 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("custom() with description creates matcher with description")
-        void customWithDescriptionCreatesMatcherWithDescription() {
-            StmtMatcher matcher = StmtMatcher.custom(
-                stmt -> stmt instanceof ReturnStmt,
-                "returns only"
-            );
+        void customWithDescriptionCreatesMatcherWithDescription()
+        {
+            StmtMatcher matcher = StmtMatcher.custom(stmt -> stmt instanceof ReturnStmt, "returns only");
 
             ReturnStmt returnStmt = new ReturnStmt();
 
@@ -791,7 +867,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("custom() matcher can use complex predicates")
-        void customMatcherCanUseComplexPredicates() {
+        void customMatcherCanUseComplexPredicates()
+        {
             // Match if statements with else branches that are also if statements (else-if)
             StmtMatcher matcher = StmtMatcher.custom(stmt -> {
                 if (!(stmt instanceof IfStmt)) return false;
@@ -800,8 +877,7 @@ class StmtMatcherTest {
             }, "else-if chains");
 
             IfStmt simpleIf = new IfStmt(createBooleanLiteral(true), createEmptyBlock());
-            IfStmt ifElseBlock = new IfStmt(createBooleanLiteral(true),
-                createEmptyBlock(), createEmptyBlock());
+            IfStmt ifElseBlock = new IfStmt(createBooleanLiteral(true), createEmptyBlock(), createEmptyBlock());
             IfStmt elseIf = new IfStmt(createBooleanLiteral(true), createEmptyBlock(),
                 new IfStmt(createBooleanLiteral(false), createEmptyBlock()));
 
@@ -812,7 +888,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("custom() throws NullPointerException for null predicate")
-        void customThrowsForNullPredicate() {
+        void customThrowsForNullPredicate()
+        {
             assertThrows(NullPointerException.class, () -> {
                 StmtMatcher.custom(null);
             });
@@ -821,11 +898,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Type-Based Matching")
-    class TypeBasedMatching {
+    class TypeBasedMatching
+    {
 
         @Test
         @DisplayName("ofType() matches statements of specific type")
-        void ofTypeMatchesSpecificType() {
+        void ofTypeMatchesSpecificType()
+        {
             StmtMatcher matcher = StmtMatcher.ofType(ReturnStmt.class);
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -837,7 +916,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("ofType() can match interface types")
-        void ofTypeCanMatchInterfaceTypes() {
+        void ofTypeCanMatchInterfaceTypes()
+        {
             StmtMatcher matcher = StmtMatcher.ofType(Statement.class);
 
             ReturnStmt returnStmt = new ReturnStmt();
@@ -852,11 +932,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("toString() Behavior")
-    class ToStringBehavior {
+    class ToStringBehavior
+    {
 
         @Test
         @DisplayName("toString() returns descriptive representation")
-        void toStringReturnsDescriptiveRepresentation() {
+        void toStringReturnsDescriptiveRepresentation()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt();
 
             String result = matcher.toString();
@@ -867,7 +949,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("toString() for combinators shows combined logic")
-        void toStringForCombinatorsShowsCombinedLogic() {
+        void toStringForCombinatorsShowsCombinedLogic()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt().and(StmtMatcher.returnWithValue());
 
             String result = matcher.toString();
@@ -877,7 +960,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("toString() for negation shows negation operator")
-        void toStringForNegationShowsNegationOperator() {
+        void toStringForNegationShowsNegationOperator()
+        {
             StmtMatcher matcher = StmtMatcher.returnStmt().not();
 
             String result = matcher.toString();
@@ -887,7 +971,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("toString() for custom matcher shows description")
-        void toStringForCustomMatcherShowsDescription() {
+        void toStringForCustomMatcherShowsDescription()
+        {
             StmtMatcher matcher = StmtMatcher.custom(stmt -> true, "my custom matcher");
 
             String result = matcher.toString();
@@ -898,11 +983,13 @@ class StmtMatcherTest {
 
     @Nested
     @DisplayName("Edge Cases")
-    class EdgeCases {
+    class EdgeCases
+    {
 
         @Test
         @DisplayName("matcher works with nested statements")
-        void matcherWorksWithNestedStatements() {
+        void matcherWorksWithNestedStatements()
+        {
             StmtMatcher returnMatcher = StmtMatcher.returnStmt();
 
             // Create an if statement containing a return
@@ -916,7 +1003,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("matcher handles empty block statements")
-        void matcherHandlesEmptyBlocks() {
+        void matcherHandlesEmptyBlocks()
+        {
             StmtMatcher blockMatcher = StmtMatcher.blockStmt();
 
             BlockStmt emptyBlock = new BlockStmt(List.of());
@@ -926,9 +1014,9 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("matcher can distinguish loop types")
-        void matcherCanDistinguishLoopTypes() {
-            ForStmt forStmt = new ForStmt(List.of(), createBooleanLiteral(true),
-                List.of(), createEmptyBlock());
+        void matcherCanDistinguishLoopTypes()
+        {
+            ForStmt forStmt = new ForStmt(List.of(), createBooleanLiteral(true), List.of(), createEmptyBlock());
             WhileStmt whileStmt = new WhileStmt(createBooleanLiteral(true), createEmptyBlock());
             DoWhileStmt doWhileStmt = new DoWhileStmt(createEmptyBlock(), createBooleanLiteral(true));
             Expression iterable = new VarRefExpr("items", ReferenceSourceType.OBJECT);
@@ -957,7 +1045,8 @@ class StmtMatcherTest {
 
         @Test
         @DisplayName("withLabel() handles null label in statement")
-        void withLabelHandlesNullLabelInStatement() {
+        void withLabelHandlesNullLabelInStatement()
+        {
             StmtMatcher matcher = StmtMatcher.withLabel("test");
 
             // Most statements return null for getLabel()

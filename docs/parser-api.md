@@ -28,7 +28,8 @@ SourceType type = parser.parseType("List<String>");
 The main facade for parsing Java source code.
 
 ```java
-public final class JavaParser {
+public final class JavaParser
+{
     // Create a parser with default (throwing) error listener
     static JavaParser create();
 
@@ -72,9 +73,12 @@ JavaParser parser = JavaParser.withErrorListener(error -> {
 Thrown when parsing fails. Includes location and formatted error message.
 
 ```java
-try {
+try
+{
     parser.parse("class { }");  // Missing class name
-} catch (ParseException e) {
+}
+catch (ParseException e)
+{
     int line = e.getLine();
     int column = e.getColumn();
     String message = e.getMessage();

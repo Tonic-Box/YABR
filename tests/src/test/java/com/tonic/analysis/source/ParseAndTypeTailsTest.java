@@ -18,22 +18,22 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Four parse/type tails that failed whole classes:
- * <ul>
- * <li>{@code var} is reserved only as a type name - fields, parameters and locals named {@code var}
- *     are legal and must parse in declaration, member-access and expression position.</li>
- * <li>A varargs parameter declares the element type but IS an array - {@code xs.length} and
+ * - {@code var} is reserved only as a type name - fields, parameters and locals named {@code var}
+ *     are legal and must parse in declaration, member-access and expression position.
+ * - A varargs parameter declares the element type but IS an array - {@code xs.length} and
  *     {@code xs[0]} on {@code int... xs} must lower against {@code int[]}, and the rebuilt
- *     descriptor must carry the array dimension.</li>
- * <li>A class literal may be stored in the pool in descriptor form ({@code [Ljava/lang/String;});
- *     it must emit as {@code String[].class} and that text must parse back.</li>
- * <li>{@code instanceof} against an array type is a reference check even though the checked type
- *     is not a ReferenceSourceType.</li>
- * </ul>
+ *     descriptor must carry the array dimension.
+ * - A class literal may be stored in the pool in descriptor form ({@code [Ljava/lang/String;});
+ *     it must emit as {@code String[].class} and that text must parse back.
+ * - {@code instanceof} against an array type is a reference check even though the checked type
+ *     is not a ReferenceSourceType.
  */
-class ParseAndTypeTailsTest {
+class ParseAndTypeTailsTest
+{
 
     @Test
-    void varIsALegalMemberAndVariableName() throws Exception {
+    void varIsALegalMemberAndVariableName() throws Exception
+    {
         ClassFile cf = compile("VarName", new ClassPool(),
                 "public class VarName {",
                 "    static int var = 3;",
@@ -56,7 +56,8 @@ class ParseAndTypeTailsTest {
     }
 
     @Test
-    void aVarargsParameterIsAnArray() throws Exception {
+    void aVarargsParameterIsAnArray() throws Exception
+    {
         ClassFile cf = compile("Tally", new ClassPool(),
                 "public class Tally {",
                 "    static int tally(String... xs) { return xs.length * 10 + xs[0].length(); }",
@@ -75,7 +76,8 @@ class ParseAndTypeTailsTest {
     }
 
     @Test
-    void anArrayClassLiteralRoundTrips() throws Exception {
+    void anArrayClassLiteralRoundTrips() throws Exception
+    {
         ClassFile cf = compile("Lits", new ClassPool(),
                 "public class Lits {",
                 "    public static String check() {",
@@ -97,7 +99,8 @@ class ParseAndTypeTailsTest {
     }
 
     @Test
-    void anArrayInstanceOfLowers() throws Exception {
+    void anArrayInstanceOfLowers() throws Exception
+    {
         ClassFile cf = compile("ArrInst", new ClassPool(),
                 "public class ArrInst {",
                 "    static int kind(Object o) {",
@@ -121,14 +124,14 @@ class ParseAndTypeTailsTest {
                 "the round-tripped class must behave the same");
     }
 
-    private static ClassFile compile(String name, ClassPool pool, String... lines) throws Exception {
+    private static ClassFile compile(String name, ClassPool pool, String... lines) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory(name.toLowerCase());
         Path src = dir.resolve(name + ".java");
         Files.writeString(src, String.join(System.lineSeparator(), lines));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         return pool.loadClass(Files.readAllBytes(dir.resolve(name + ".class")));
     }
 }

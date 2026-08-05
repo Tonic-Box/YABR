@@ -9,18 +9,17 @@ import com.tonic.parser.ClassFile;
  * has access to the entire ClassFile and can perform cross-method optimizations
  * such as method inlining and dead method elimination.
  */
-public interface ClassTransform {
+public interface ClassTransform
+{
 
     /**
      * Gets the name of this transformation.
-     *
      * @return the transformation name
      */
     String getName();
 
     /**
      * Runs the transformation on the specified class.
-     *
      * @param classFile the class file to transform
      * @param ssa the SSA processor for lifting/lowering methods
      * @return true if the class was modified

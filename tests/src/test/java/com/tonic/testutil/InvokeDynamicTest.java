@@ -11,15 +11,16 @@ import static com.tonic.testutil.TestUtils.liftMethod;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for invokedynamic support in BytecodeBuilder.
+ * * Tests for invokedynamic support in BytecodeBuilder.
  */
-class InvokeDynamicTest {
+class InvokeDynamicTest
+{
 
     @Test
-    void testSimpleInvokeDynamic() throws IOException {
+    void testSimpleInvokeDynamic() throws IOException
+    {
         BytecodeBuilder bb = BytecodeBuilder.forClass("com/test/InvokeDynamicTest");
 
-        // Add a simple method
         BytecodeBuilder.MethodBuilder mb = bb.publicStaticMethod("test", "()V");
 
         ClassFile cf = mb
@@ -40,26 +41,24 @@ class InvokeDynamicTest {
     }
 
     @Test
-    void testBootstrapMethodManagement() throws IOException {
+    void testBootstrapMethodManagement() throws IOException
+    {
         BytecodeBuilder bb = BytecodeBuilder.forClass("com/test/LambdaTest");
 
         // First create a method that will build the class
         BytecodeBuilder.MethodBuilder testMethod = bb.publicStaticMethod("test", "()Ljava/lang/Runnable;");
 
-        // Build the class to initialize constPool
         ClassFile cf = testMethod
             .aconst_null()  // Placeholder for now
             .areturn()
             .build();
 
-        // Verify constPool was initialized
         assertNotNull(bb.constPool);
 
         // Now test adding bootstrap method after build
         int bsmIndex = bb.addBootstrapMethod(1, java.util.Arrays.asList(2, 3, 4));
         assertEquals(0, bsmIndex);  // First bootstrap method
 
-        // Verify the class file was created
         assertNotNull(cf);
         MethodEntry method = cf.getMethods().stream()
             .filter(m -> "test".equals(m.getName()))
@@ -74,7 +73,8 @@ class InvokeDynamicTest {
     }
 
     @Test
-    void testInvokeDynamicInstruction() throws IOException {
+    void testInvokeDynamicInstruction() throws IOException
+    {
         BytecodeBuilder bb = BytecodeBuilder.forClass("com/test/InvokeDynamicTest");
 
         BytecodeBuilder.MethodBuilder mb = bb.publicStaticMethod("getDynamic", "()Ljava/lang/Object;");
@@ -87,11 +87,9 @@ class InvokeDynamicTest {
         // Add a bootstrap method (indices are placeholders, won't execute)
         int bootstrapIndex = bb.addBootstrapMethod(1, java.util.Arrays.asList(2, 3));
 
-        // Verify we can create the class
         assertNotNull(cf);
         assertEquals("com/test/InvokeDynamicTest", cf.getClassName());
 
-        // Verify bootstrap method was added
         assertEquals(0, bootstrapIndex);
     }
 }

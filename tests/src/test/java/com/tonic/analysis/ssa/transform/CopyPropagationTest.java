@@ -14,13 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for CopyPropagation transform.
  * Verifies that simple copies are propagated to their uses.
  */
-class CopyPropagationTest {
+class CopyPropagationTest
+{
 
     private IRMethod method;
     private IRBlock block;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -31,17 +33,18 @@ class CopyPropagationTest {
     }
 
     @Test
-    void getNameReturnsCopyPropagation() {
+    void getNameReturnsCopyPropagation()
+    {
         CopyPropagation transform = new CopyPropagation();
         assertEquals("CopyPropagation", transform.getName());
     }
 
     @Test
-    void propagatesSimpleCopy() {
+    void propagatesSimpleCopy()
+    {
         // v0 = const 5
         // v1 = v0 (copy)
         // v2 = v1 + 3
-        // return v2
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
@@ -61,12 +64,12 @@ class CopyPropagationTest {
     }
 
     @Test
-    void propagatesThroughChainOfCopies() {
+    void propagatesThroughChainOfCopies()
+    {
         // v0 = const 10
         // v1 = v0
         // v2 = v1
         // v3 = v2 + 5
-        // return v3
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
@@ -84,13 +87,12 @@ class CopyPropagationTest {
         assertTrue(changed);
         // v2 should be replaced with its source through the copy chain
         BinaryOpInstruction add = (BinaryOpInstruction) block.getInstructions().get(3);
-        // Should propagate to v0 (original source)
         assertTrue(add.getLeft().equals(v0) || add.getLeft().equals(v1));
     }
 
     @Test
-    void updatesPhiOperands() {
-        // Create two blocks with phi merge
+    void updatesPhiOperands()
+    {
         IRBlock pred1 = new IRBlock("pred1");
         IRBlock pred2 = new IRBlock("pred2");
         IRBlock merge = new IRBlock("merge");
@@ -130,10 +132,10 @@ class CopyPropagationTest {
     }
 
     @Test
-    void returnsFalseWhenNoCopies() {
+    void returnsFalseWhenNoCopies()
+    {
         // v0 = const 5
         // v1 = v0 + 3
-        // return v1
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
 
@@ -148,13 +150,13 @@ class CopyPropagationTest {
     }
 
     @Test
-    void propagatesMultipleCopies() {
+    void propagatesMultipleCopies()
+    {
         // v0 = const 1
         // v1 = v0
         // v2 = const 2
         // v3 = v2
         // v4 = v1 + v3
-        // return v4
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
@@ -179,10 +181,10 @@ class CopyPropagationTest {
     }
 
     @Test
-    void propagatesCopyInReturn() {
+    void propagatesCopyInReturn()
+    {
         // v0 = const 42
         // v1 = v0
-        // return v1
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
 
@@ -199,7 +201,8 @@ class CopyPropagationTest {
     }
 
     @Test
-    void doesNotPropagateCopyToItself() {
+    void doesNotPropagateCopyToItself()
+    {
         // v0 = const 5
         // v1 = v0
         // v2 = v1 (this is also a copy, should not create circular reference)
@@ -215,12 +218,12 @@ class CopyPropagationTest {
         CopyPropagation transform = new CopyPropagation();
         boolean changed = transform.run(method);
 
-        // Should propagate without creating issues
         assertTrue(changed);
     }
 
     @Test
-    void terminatesOnCyclicCopies() {
+    void terminatesOnCyclicCopies()
+    {
         // Two mutually-referencing single-source phis form a copy cycle v1 -> v2 -> v1 (the shape a loop
         // produces, e.g. in the gamepack's ev.bz). Following the chain without cycle detection spins
         // forever; this must terminate.
@@ -249,7 +252,8 @@ class CopyPropagationTest {
     }
 
     @Test
-    void propagatesAcrossBlocks() {
+    void propagatesAcrossBlocks()
+    {
         // Block 1: v1 = v0 (copy)
         // Block 2: v2 = v1 + 5
         IRBlock block2 = new IRBlock("block2");

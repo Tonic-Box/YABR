@@ -42,13 +42,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Core test utilities for YABR unit tests.
  * Provides helper methods for creating and manipulating test fixtures.
  */
-public final class TestUtils {
+public final class TestUtils
+{
 
-    private TestUtils() {
+    private TestUtils()
+    {
         // Utility class
     }
 
-    // ========== ClassPool Utilities ==========
+    // ClassPool Utilities
 
     /**
      * Creates an empty ClassPool without loading built-in classes.
@@ -56,7 +58,8 @@ public final class TestUtils {
      *
      * @return empty ClassPool
      */
-    public static ClassPool emptyPool() {
+    public static ClassPool emptyPool()
+    {
         return new ClassPool(true);
     }
 
@@ -67,7 +70,8 @@ public final class TestUtils {
      * @return the created ClassFile
      * @throws IOException if class creation fails
      */
-    public static ClassFile createMinimalClass(String className) throws IOException {
+    public static ClassFile createMinimalClass(String className) throws IOException
+    {
         ClassPool pool = emptyPool();
         int access = new AccessBuilder().setPublic().build();
         return pool.createNewClass(className, access);
@@ -83,9 +87,9 @@ public final class TestUtils {
      * @return the created ClassFile
      * @throws IOException if creation fails
      */
-    public static ClassFile createClassWithMethod(String className, String methodName,
-                                                   String desc, Consumer<Bytecode> bytecodeSetup)
-            throws IOException {
+    public static ClassFile createClassWithMethod(String className, String methodName, String desc, Consumer<Bytecode> bytecodeSetup)
+            throws IOException
+            {
         ClassPool pool = emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass(className, classAccess);
@@ -107,10 +111,13 @@ public final class TestUtils {
      * @return the loaded ClassFile
      * @throws IOException if loading fails
      */
-    public static ClassFile loadTestFixture(String fixtureName) throws IOException {
+    public static ClassFile loadTestFixture(String fixtureName) throws IOException
+    {
         String resourcePath = "com/tonic/fixtures/" + fixtureName + ".class";
-        try (InputStream is = TestUtils.class.getClassLoader().getResourceAsStream(resourcePath)) {
-            if (is == null) {
+        try (InputStream is = TestUtils.class.getClassLoader().getResourceAsStream(resourcePath))
+        {
+            if (is == null)
+            {
                 throw new IOException("Test fixture not found: " + resourcePath);
             }
             ClassPool pool = emptyPool();
@@ -118,7 +125,7 @@ public final class TestUtils {
         }
     }
 
-    // ========== SSA Utilities ==========
+    // SSA Utilities
 
     /**
      * Lifts a method to SSA form.
@@ -126,7 +133,8 @@ public final class TestUtils {
      * @param method the method to lift
      * @return the SSA IR method
      */
-    public static IRMethod liftMethod(MethodEntry method) {
+    public static IRMethod liftMethod(MethodEntry method)
+    {
         ConstPool cp = method.getClassFile().getConstPool();
         SSA ssa = new SSA(cp);
         return ssa.lift(method);
@@ -137,7 +145,8 @@ public final class TestUtils {
      *
      * @return a minimal IRMethod with entry block
      */
-    public static IRMethod createSimpleIRMethod() {
+    public static IRMethod createSimpleIRMethod()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -146,7 +155,6 @@ public final class TestUtils {
         method.addBlock(entry);
         method.setEntryBlock(entry);
 
-        // Add void return
         ReturnInstruction ret = new ReturnInstruction(null);
         entry.addInstruction(ret);
 
@@ -160,7 +168,8 @@ public final class TestUtils {
      * @param name the value name
      * @return the created SSAValue
      */
-    public static SSAValue createSSAValue(IRType type, String name) {
+    public static SSAValue createSSAValue(IRType type, String name)
+    {
         return new SSAValue(type, name);
     }
 
@@ -170,7 +179,8 @@ public final class TestUtils {
      * @param name the value name
      * @return the created SSAValue
      */
-    public static SSAValue intValue(String name) {
+    public static SSAValue intValue(String name)
+    {
         return new SSAValue(PrimitiveType.INT, name);
     }
 
@@ -180,7 +190,8 @@ public final class TestUtils {
      * @param value the integer value
      * @return the IntConstant
      */
-    public static IntConstant intConst(int value) {
+    public static IntConstant intConst(int value)
+    {
         return IntConstant.of(value);
     }
 
@@ -190,11 +201,12 @@ public final class TestUtils {
      * @param value the long value
      * @return the LongConstant
      */
-    public static LongConstant longConst(long value) {
+    public static LongConstant longConst(long value)
+    {
         return LongConstant.of(value);
     }
 
-    // ========== Verification Utilities ==========
+    // Verification Utilities
 
     /**
      * Performs a round-trip test: write class bytes and re-parse.
@@ -203,7 +215,8 @@ public final class TestUtils {
      * @return the re-parsed ClassFile
      * @throws IOException if round-trip fails
      */
-    public static ClassFile roundTrip(ClassFile cf) throws IOException {
+    public static ClassFile roundTrip(ClassFile cf) throws IOException
+    {
         byte[] bytes = cf.write();
         ClassPool pool = emptyPool();
         return pool.loadClass(bytes);
@@ -217,14 +230,15 @@ public final class TestUtils {
      * @return the loaded Class
      * @throws Exception if loading fails
      */
-    public static Class<?> loadAndVerify(ClassFile cf) throws Exception {
+    public static Class<?> loadAndVerify(ClassFile cf) throws Exception
+    {
         byte[] bytes = cf.write();
         TestClassLoader loader = new TestClassLoader();
         return loader.defineClass(cf.getClassName().replace('/', '.'), bytes);
     }
 
     /**
-     * Defines and <b>links</b> a class, forcing the JVM bytecode verifier to run over the whole class
+     * Defines and links a class, forcing the JVM bytecode verifier to run over the whole class
      * (including its StackMapTable). Throws {@link VerifyError} if the generated bytecode is invalid.
      * This is the reliable way to assert a recompiled class is verifiable - plain {@code defineClass}
      * defers verification to link time and so never runs for an unused class.
@@ -232,7 +246,8 @@ public final class TestUtils {
      * @param cf the ClassFile to verify
      * @throws Exception if loading, linking, or verification fails
      */
-    public static void linkAndVerify(ClassFile cf) throws Exception {
+    public static void linkAndVerify(ClassFile cf) throws Exception
+    {
         byte[] bytes = cf.write();
         String binaryName = cf.getClassName().replace('/', '.');
         TestClassLoader loader = new TestClassLoader();
@@ -249,7 +264,8 @@ public final class TestUtils {
      * @return the loaded, verified Class
      * @throws Exception if compiling, linking, or verification fails
      */
-    public static Class<?> compileLinkAndLoad(String source, String internalClassName) throws Exception {
+    public static Class<?> compileLinkAndLoad(String source, String internalClassName) throws Exception
+    {
         ClassFile cf = compileSource(source, internalClassName);
         byte[] bytes = cf.write();
         String binaryName = internalClassName.replace('/', '.');
@@ -268,7 +284,8 @@ public final class TestUtils {
      * @return the compiled ClassFile
      * @throws Exception if parsing or lowering fails
      */
-    public static ClassFile compileSource(String source, String internalClassName) throws Exception {
+    public static ClassFile compileSource(String source, String internalClassName) throws Exception
+    {
         CompilationUnit cu = JavaParser.create().parse(source);
         ClassDecl classDecl = (ClassDecl) cu.getTypes().get(0);
 
@@ -279,12 +296,15 @@ public final class TestUtils {
         lowerer.setCurrentClassDecl(classDecl);
         lowerer.setImports(cu.getImports());
 
-        for (MethodDecl methodDecl : classDecl.getMethods()) {
-            if (methodDecl.getBody() == null) {
+        for (MethodDecl methodDecl : classDecl.getMethods())
+        {
+            if (methodDecl.getBody() == null)
+            {
                 continue;
             }
             StringBuilder desc = new StringBuilder("(");
-            for (ParameterDecl p : methodDecl.getParameters()) {
+            for (ParameterDecl p : methodDecl.getParameters())
+            {
                 desc.append(p.getType().toIRType().getDescriptor());
             }
             desc.append(")").append(methodDecl.getReturnType().toIRType().getDescriptor());
@@ -314,19 +334,23 @@ public final class TestUtils {
      * {@code owner} as the current class. Mirrors how live recompilation works. Returns false without
      * recompiling when the primary type is not a plain class (annotation/enum/interface out of scope).
      */
-    public static boolean recompileSource(ClassFile cf, ClassPool pool, String source, String owner) throws Exception {
-        if (source.contains("@interface ")) {
+    public static boolean recompileSource(ClassFile cf, ClassPool pool, String source, String owner) throws Exception
+    {
+        if (source.contains("@interface "))
+        {
             return false;
         }
         // A package-info or module-info entry declares nothing recompilable as a class; its
         // original bytecode IS the result.
-        if (owner != null && (owner.endsWith("package-info") || owner.endsWith("module-info"))) {
+        if (owner != null && (owner.endsWith("package-info") || owner.endsWith("module-info")))
+        {
             return true;
         }
         CompilationUnit cu = JavaParser.create().parse(source);
         boolean plainClass = cu.getPrimaryType() instanceof ClassDecl;
         if (!plainClass && !(cu.getPrimaryType() instanceof EnumDecl)
-                && !(cu.getPrimaryType() instanceof InterfaceDecl)) {
+                && !(cu.getPrimaryType() instanceof InterfaceDecl))
+        {
             return false;
         }
         TypeDecl decl = cu.getPrimaryType();
@@ -338,13 +362,16 @@ public final class TestUtils {
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(cf.getConstPool());
 
-        for (MethodDecl md : decl.getMethods()) {
-            if (md.getBody() == null) {
+        for (MethodDecl md : decl.getMethods())
+        {
+            if (md.getBody() == null)
+            {
                 continue;
             }
             MethodEntry target = findMethodEntry(cf, md.getName(),
                     methodDescriptor(md.getParameters(), resolver.descriptorOf(md.getReturnType()), resolver));
-            if (target != null) {
+            if (target != null)
+            {
                 ssa.lower(lowerer.lower(md, owner), target);
             }
         }
@@ -352,16 +379,20 @@ public final class TestUtils {
         // parameter list does not, so enum constructors keep their original bytecode.
         List<ConstructorDecl> ctors = plainClass
                 ? ((ClassDecl) decl).getConstructors() : java.util.Collections.emptyList();
-        for (ConstructorDecl ctor : ctors) {
-            if (ctor.getBody() == null) {
+        for (ConstructorDecl ctor : ctors)
+        {
+            if (ctor.getBody() == null)
+            {
                 continue;
             }
             MethodEntry target = findMethodEntry(cf, "<init>", methodDescriptor(ctor.getParameters(), "V", resolver));
-            if (target == null) {
+            if (target == null)
+            {
                 continue;
             }
             MethodDecl init = new MethodDecl("<init>", VoidSourceType.INSTANCE).withModifiers(ctor.getModifiers());
-            for (ParameterDecl pp : ctor.getParameters()) {
+            for (ParameterDecl pp : ctor.getParameters())
+            {
                 init.addParameter(pp);
             }
             init.withBody(ctor.getBody());
@@ -371,8 +402,11 @@ public final class TestUtils {
         return true;
     }
 
-    /** True when {@code cf} passes the bytecode verifier with no error-level findings. */
-    public static boolean verifies(ClassFile cf, ClassPool pool) {
+    /**
+     * True when {@code cf} passes the bytecode verifier with no error-level findings.
+     */
+    public static boolean verifies(ClassFile cf, ClassPool pool)
+    {
         return Verifier.builder().classPool(pool).build().verify(cf).getErrors()
                 .stream().noneMatch(VerificationError::isError);
     }
@@ -385,7 +419,8 @@ public final class TestUtils {
      * (stack, type, frame) are re-lowering-pipeline artifacts, not recovery drops, and are ignored - so
      * this isolates genuine miscompiles from the pipeline noise a large jar produces.
      */
-    public static boolean hasControlFlowDrop(ClassFile cf, ClassPool pool) {
+    public static boolean hasControlFlowDrop(ClassFile cf, ClassPool pool)
+    {
         return Verifier.builder().classPool(pool).build().verify(cf).getErrors().stream()
                 .anyMatch(e -> e.isError()
                         && (e.getType() == VerificationErrorType.INSTRUCTION_FALLS_OFF_END
@@ -396,17 +431,22 @@ public final class TestUtils {
                                     || e.getMessage().contains("Non-RETURN instruction used in void")))));
     }
 
-    private static String methodDescriptor(List<ParameterDecl> params, String ret, TypeResolver resolver) {
+    private static String methodDescriptor(List<ParameterDecl> params, String ret, TypeResolver resolver)
+    {
         StringBuilder d = new StringBuilder("(");
-        for (ParameterDecl pp : params) {
+        for (ParameterDecl pp : params)
+        {
             d.append(resolver.descriptorOf(pp));
         }
         return d.append(")").append(ret).toString();
     }
 
-    private static MethodEntry findMethodEntry(ClassFile cf, String name, String desc) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name) && m.getDesc().contentEquals(desc)) {
+    private static MethodEntry findMethodEntry(ClassFile cf, String name, String desc)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name) && m.getDesc().contentEquals(desc))
+            {
                 return m;
             }
         }
@@ -419,7 +459,8 @@ public final class TestUtils {
      * @param expected expected ClassFile
      * @param actual actual ClassFile
      */
-    public static void assertClassFilesEqual(ClassFile expected, ClassFile actual) {
+    public static void assertClassFilesEqual(ClassFile expected, ClassFile actual)
+    {
         assertEquals(expected.getClassName(), actual.getClassName(), "Class name mismatch");
         assertEquals(expected.getSuperClassName(), actual.getSuperClassName(), "Super class mismatch");
         assertEquals(expected.getMajorVersion(), actual.getMajorVersion(), "Major version mismatch");
@@ -435,7 +476,8 @@ public final class TestUtils {
      * @param method the IR method
      * @param expected expected block count
      */
-    public static void assertBlockCount(IRMethod method, int expected) {
+    public static void assertBlockCount(IRMethod method, int expected)
+    {
         assertEquals(expected, method.getBlockCount(),
                 "Expected " + expected + " blocks but found " + method.getBlockCount());
     }
@@ -446,17 +488,19 @@ public final class TestUtils {
      * @param block the IR block
      * @param expected expected instruction count
      */
-    public static void assertInstructionCount(IRBlock block, int expected) {
+    public static void assertInstructionCount(IRBlock block, int expected)
+    {
         assertEquals(expected, block.getInstructions().size(),
                 "Expected " + expected + " instructions but found " + block.getInstructions().size());
     }
 
-    // ========== Debug Utilities ==========
+    // Debug Utilities
 
     /**
-     * Resets SSA ID counters for deterministic test output.
+     * * Resets SSA ID counters for deterministic test output.
      */
-    public static void resetSSACounters() {
+    public static void resetSSACounters()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }

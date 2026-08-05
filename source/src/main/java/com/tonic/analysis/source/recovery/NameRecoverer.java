@@ -21,7 +21,8 @@ import java.util.Map;
 /**
  * Recovers variable names from debug info or generates synthetic names.
  */
-public class NameRecoverer {
+public class NameRecoverer
+{
 
     private final NameRecoveryStrategy strategy;
     private final IRMethod irMethod;
@@ -31,7 +32,16 @@ public class NameRecoverer {
     private final Map<Integer, String> unambiguousSlotName = new HashMap<>();
     private int syntheticCounter = 0;
 
-    public NameRecoverer(IRMethod irMethod, MethodEntry sourceMethod, NameRecoveryStrategy strategy) {
+    /**
+     * Creates a recoverer and eagerly indexes the method's local variable table and lifted instruction offsets.
+     *
+     * @param irMethod the lifted method
+     * @param sourceMethod the method the IR came from
+     * @param strategy whether debug names are preferred over synthetic ones
+     * @throws NullPointerException if the source method has no owning class file
+     */
+    public NameRecoverer(IRMethod irMethod, MethodEntry sourceMethod, NameRecoveryStrategy strategy)
+    {
         this.irMethod = irMethod;
         this.sourceMethod = sourceMethod;
         this.strategy = strategy;
@@ -41,15 +51,22 @@ public class NameRecoverer {
         buildSortedOffsets();
     }
 
-    /** Every lifted instruction offset, sorted - the instruction boundaries for exact range probes. */
+    /**
+     * Every lifted instruction offset, sorted - the instruction boundaries for exact range probes.
+     */
     private int[] sortedOffsets = new int[0];
 
-    private void buildSortedOffsets() {
+    private void buildSortedOffsets()
+    {
         java.util.TreeSet<Integer> offs = new java.util.TreeSet<>();
-        if (irMethod != null) {
-            for (IRBlock block : irMethod.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr.getBytecodeOffset() >= 0) {
+        if (irMethod != null)
+        {
+            for (IRBlock block : irMethod.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr.getBytecodeOffset() >= 0)
+                    {
                         offs.add(instr.getBytecodeOffset());
                     }
                 }
@@ -58,15 +75,25 @@ public class NameRecoverer {
         sortedOffsets = offs.stream().mapToInt(Integer::intValue).toArray();
     }
 
-    /** The smallest instruction offset strictly greater than {@code off}, or {@code off + 1} if none known. */
-    public int nextOffsetAfter(int off) {
+    /**
+     * The smallest instruction offset strictly greater than {@code off}, or {@code off + 1} if none known.
+     *
+     * @param off the bytecode offset to search past
+     * @return the next known instruction offset, or one past the given offset
+     */
+    public int nextOffsetAfter(int off)
+    {
         int lo = 0;
         int hi = sortedOffsets.length;
-        while (lo < hi) {
+        while (lo < hi)
+        {
             int mid = (lo + hi) >>> 1;
-            if (sortedOffsets[mid] <= off) {
+            if (sortedOffsets[mid] <= off)
+            {
                 lo = mid + 1;
-            } else {
+            }
+            else
+            {
                 hi = mid;
             }
         }
@@ -77,46 +104,72 @@ public class NameRecoverer {
      * The LVT name for {@code slot} at the pc where a STORE at {@code storeOffset} takes effect - the
      * following instruction, which is where javac opens the variable's range. This is the exact form
      * of the old fixed-width forward probe, which a wide store or multi-byte neighbor escaped.
+     *
+     * @param slot the local slot written
+     * @param storeOffset the bytecode offset of the store
+     * @return the name in scope, falling back to the name at the store itself, or null when neither
+     *         has an entry
      */
-    public String debugNameAtStore(int slot, int storeOffset) {
+    public String debugNameAtStore(int slot, int storeOffset)
+    {
         String at = debugNameAt(slot, nextOffsetAfter(storeOffset));
         return at != null ? at : debugNameAt(slot, storeOffset);
     }
 
-    /** As {@link #debugNameAtStore} for the entry's descriptor. */
-    public String debugDescriptorAtStore(int slot, int storeOffset) {
+    /**
+     * As {@link #debugNameAtStore} for the entry's descriptor.
+     *
+     * @param slot the local slot written
+     * @param storeOffset the bytecode offset of the store
+     * @return the declared descriptor in scope, falling back to the one at the store itself, or null
+     *         when neither has an entry
+     */
+    public String debugDescriptorAtStore(int slot, int storeOffset)
+    {
         String at = debugDescriptorAt(slot, nextOffsetAfter(storeOffset));
         return at != null ? at : debugDescriptorAt(slot, storeOffset);
     }
 
-    public NameRecoveryStrategy getStrategy() {
+    /**
+     * @return the strategy
+     */
+    public NameRecoveryStrategy getStrategy()
+    {
         return strategy;
     }
 
-    private LocalVariableTableAttribute findLocalVariableTable() {
+    private LocalVariableTableAttribute findLocalVariableTable()
+    {
         CodeAttribute code = sourceMethod.getCodeAttribute();
         if (code == null) return null;
 
-        for (Attribute attr : code.getAttributes()) {
-            if (attr instanceof LocalVariableTableAttribute) {
+        for (Attribute attr : code.getAttributes())
+        {
+            if (attr instanceof LocalVariableTableAttribute)
+            {
                 return (LocalVariableTableAttribute) attr;
             }
         }
         return null;
     }
 
-    private void buildSlotNameMap() {
+    private void buildSlotNameMap()
+    {
         if (lvt == null) return;
 
         Map<Integer, java.util.Set<String>> namesPerSlot = new HashMap<>();
-        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
+        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable())
+        {
             String name = resolveUtf8(entry.getNameIndex());
-            if (name != null) {
+            if (name != null)
+            {
                 namesPerSlot.computeIfAbsent(entry.getIndex(), k -> new java.util.HashSet<>()).add(name);
             }
         }
-        for (Map.Entry<Integer, java.util.Set<String>> e : namesPerSlot.entrySet()) {
-            if (e.getValue().size() == 1) {
+        for (Map.Entry<Integer, java.util.Set<String>> e : namesPerSlot.entrySet())
+        {
+            if (e.getValue().size() == 1)
+            {
                 unambiguousSlotName.put(e.getKey(), e.getValue().iterator().next());
             }
         }
@@ -126,8 +179,12 @@ public class NameRecoverer {
      * The LVT name for {@code slot} when every entry for that slot agrees on a single name, else null
      * (no debug info, or the slot is reused under different names across scopes). Used to recover real
      * variable names without risking a wrong label on a reused slot.
+     *
+     * @param slot the local slot to name
+     * @return the single agreed name, or null when the entries disagree or the strategy forbids it
      */
-    public String unambiguousDebugName(int slot) {
+    public String unambiguousDebugName(int slot)
+    {
         return debugNamesAllowedFor(slot) ? unambiguousSlotName.get(slot) : null;
     }
 
@@ -136,8 +193,10 @@ public class NameRecoverer {
      * naming path passes through - parameter names, a slot's base name, and the partition's scope lookup all
      * arrive here - so a strategy applies uniformly instead of holding only where a caller remembered it.
      */
-    private boolean debugNamesAllowedFor(int slot) {
-        switch (strategy) {
+    private boolean debugNamesAllowedFor(int slot)
+    {
+        switch (strategy)
+        {
             case ALWAYS_SYNTHETIC:
                 return false;
             case PARAMETERS_ONLY:
@@ -152,15 +211,23 @@ public class NameRecoverer {
      * {@code [startPc, startPc + length)} range contains the offset - or null when there is no debug info
      * or no entry covers it. Unlike {@link #unambiguousDebugName} this resolves a reused slot correctly by
      * scope, so a slot holding {@code i} in one loop and {@code builder} in another names each by position.
+     *
+     * @param slot the local slot to name
+     * @param offset the bytecode offset the name must be in scope at
+     * @return the name in scope, or null when no entry covers the offset
      */
-    public String debugNameAt(int slot, int offset) {
-        if (lvt == null || !debugNamesAllowedFor(slot)) {
+    public String debugNameAt(int slot, int offset)
+    {
+        if (lvt == null || !debugNamesAllowedFor(slot))
+        {
             return null;
         }
-        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
+        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable())
+        {
             if (entry.getIndex() == slot
                     && offset >= entry.getStartPc()
-                    && offset < entry.getStartPc() + entry.getLengthPc()) {
+                    && offset < entry.getStartPc() + entry.getLengthPc())
+            {
                 return resolveUtf8(entry.getNameIndex());
             }
         }
@@ -172,51 +239,73 @@ public class NameRecoverer {
      * declared type of the variable there (e.g. {@code "C"} for {@code char}), or null when no debug info or
      * no entry covers it. This is the authoritative declared type javac recorded, distinct from the widened
      * type inferred from the (int-shaped) stored values.
+     *
+     * @param slot the local slot to type
+     * @param offset the bytecode offset the entry must be in scope at
+     * @return the declared descriptor, or null when no entry covers the offset
      */
-    public String debugDescriptorAt(int slot, int offset) {
-        if (!debugNamesAllowedFor(slot)) {
+    public String debugDescriptorAt(int slot, int offset)
+    {
+        if (!debugNamesAllowedFor(slot))
+        {
             return null;
         }
-        if (lvt == null) {
+        if (lvt == null)
+        {
             return null;
         }
-        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable()) {
+        for (LocalVariableTableEntry entry : lvt.getLocalVariableTable())
+        {
             if (entry.getIndex() == slot
                     && offset >= entry.getStartPc()
-                    && offset < entry.getStartPc() + entry.getLengthPc()) {
+                    && offset < entry.getStartPc() + entry.getLengthPc())
+            {
                 return resolveUtf8(entry.getDescriptorIndex());
             }
         }
         return null;
     }
 
-    private String resolveUtf8(int index) {
-        try {
+    private String resolveUtf8(int index)
+    {
+        try
+        {
             var item = constPool.getItem(index);
-            if (item instanceof Utf8Item) {
+            if (item instanceof Utf8Item)
+            {
                 Utf8Item utf8Item = (Utf8Item) item;
                 return utf8Item.getValue();
             }
-        } catch (Exception ignored) {
+        }
+        catch (Exception ignored)
+        {
         }
         return null;
     }
 
-    /** Parameter slot count derived from the method descriptor, for use without lifted IR. */
-    private int paramSlotsFromDescriptor() {
+    /**
+     * Parameter slot count derived from the method descriptor, for use without lifted IR.
+     */
+    private int paramSlotsFromDescriptor()
+    {
         int slots = (sourceMethod.getAccess() & 0x0008) != 0 ? 0 : 1;
         String desc = sourceMethod.getDesc();
         int i = desc.indexOf('(') + 1;
-        while (i < desc.length() && desc.charAt(i) != ')') {
+        while (i < desc.length() && desc.charAt(i) != ')')
+        {
             char c = desc.charAt(i);
             boolean array = false;
-            while (c == '[') {
+            while (c == '[')
+            {
                 array = true;
                 c = desc.charAt(++i);
             }
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 i = desc.indexOf(';', i) + 1;
-            } else {
+            }
+            else
+            {
                 i++;
             }
             slots += (!array && (c == 'J' || c == 'D')) ? 2 : 1;
@@ -224,16 +313,21 @@ public class NameRecoverer {
         return slots;
     }
 
-    private boolean isParameter(int slot) {
-        if (irMethod == null) {
+    private boolean isParameter(int slot)
+    {
+        if (irMethod == null)
+        {
             return slot < paramSlotsFromDescriptor();
         }
         int paramSlots = irMethod.isStatic() ? 0 : 1;
-        for (SSAValue param : irMethod.getParameters()) {
+        for (SSAValue param : irMethod.getParameters())
+        {
             paramSlots++;
-            if (param.getType() instanceof PrimitiveType) {
+            if (param.getType() instanceof PrimitiveType)
+            {
                 PrimitiveType p = (PrimitiveType) param.getType();
-                if (p == PrimitiveType.LONG || p == PrimitiveType.DOUBLE) {
+                if (p == PrimitiveType.LONG || p == PrimitiveType.DOUBLE)
+                {
                     paramSlots++;
                 }
             }
@@ -243,17 +337,24 @@ public class NameRecoverer {
 
     /**
      * Generates a synthetic name based on the value's type.
+     *
+     * @param value the value to name
+     * @return a type-prefixed name with a per-recoverer counter appended
      */
-    public String generateSyntheticName(SSAValue value) {
+    public String generateSyntheticName(SSAValue value)
+    {
         IRType type = value.getType();
         String prefix = getTypePrefix(type);
         return prefix + (syntheticCounter++);
     }
 
-    private String getTypePrefix(IRType type) {
-        if (type instanceof PrimitiveType) {
+    private String getTypePrefix(IRType type)
+    {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType p = (PrimitiveType) type;
-            switch (p) {
+            switch (p)
+            {
                 case INT:
                 case SHORT:
                 case BYTE:
@@ -272,7 +373,8 @@ public class NameRecoverer {
                     return "v";
             }
         }
-        if (type instanceof ReferenceType) {
+        if (type instanceof ReferenceType)
+        {
             ReferenceType r = (ReferenceType) type;
             String simple = ClassNameUtil.getSimpleNameWithInnerClasses(r.getInternalName());
             if (simple.isEmpty()) return "obj";

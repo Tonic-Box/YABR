@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * emitted a second time at the end of the try and executes twice on the normal path (a doubled cleanup). The
  * counter here would read 2 instead of 1 under that bug.
  */
-class FinallyInOuterCatchNoDoubleRunFidelityTest {
+class FinallyInOuterCatchNoDoubleRunFidelityTest
+{
 
     private static final String SOURCE =
             "public class FinallyInOuterCatch {\n"
@@ -52,14 +53,14 @@ class FinallyInOuterCatchNoDoubleRunFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("finally-in-outer-catch");
         Path src = dir.resolve("FinallyInOuterCatch.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("FinallyInOuterCatch.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -71,13 +72,15 @@ class FinallyInOuterCatchNoDoubleRunFidelityTest {
     }
 
     @Test
-    void isRoundTripFixedPoint() {
+    void isRoundTripFixedPoint()
+    {
         assertTrue(d1.contains("finally"), "the finally clause must be preserved:\n" + d1);
         assertEquals(d1, d2, "a try/finally nested in an outer catch must be a round-trip fixed point");
     }
 
     @Test
-    void finallyRunsExactlyOnceOnTheNormalPath() throws Exception {
+    void finallyRunsExactlyOnceOnTheNormalPath() throws Exception
+    {
         recompiledClass.getDeclaredMethod("m", int.class).invoke(null, 5);
         assertEquals(5, recompiledClass.getDeclaredMethod("result").invoke(null),
                 "the try body assigned the parameter");

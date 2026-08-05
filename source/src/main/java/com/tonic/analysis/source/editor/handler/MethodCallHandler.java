@@ -9,11 +9,11 @@ import com.tonic.analysis.source.editor.Replacement;
  * Use this to intercept and transform method calls.
  */
 @FunctionalInterface
-public interface MethodCallHandler {
+public interface MethodCallHandler
+{
 
     /**
      * Handle a method call expression.
-     *
      * @param ctx  the editing context
      * @param call the method call expression
      * @return the replacement action

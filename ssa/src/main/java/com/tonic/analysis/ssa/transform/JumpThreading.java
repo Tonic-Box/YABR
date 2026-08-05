@@ -11,33 +11,39 @@ import java.util.*;
 /**
  * Jump threading optimization.
  * Eliminates redundant jump chains by threading through empty goto blocks.
- * <p>
  * For example:
- *   goto A; A: goto B  ->  goto B
- *   if (cond) goto A; A: goto B  ->  if (cond) goto B
+ *   goto A; A: goto B  -&gt;  goto B
+ *   if (cond) goto A; A: goto B  -&gt;  if (cond) goto B
  */
-public class JumpThreading implements IRTransform {
+public class JumpThreading implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "JumpThreading";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
-        for (IRBlock block : new ArrayList<>(method.getBlocks())) {
+        for (IRBlock block : new ArrayList<>(method.getBlocks()))
+        {
             IRInstruction term = block.getTerminator();
             if (term == null) continue;
 
-            if (term instanceof SimpleInstruction) {
+            if (term instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) term;
-                if (simple.getOp() == SimpleOp.GOTO) {
+                if (simple.getOp() == SimpleOp.GOTO)
+                {
                     IRBlock original = simple.getTarget();
                     IRBlock ultimate = findUltimateTarget(original);
 
-                    if (ultimate != original) {
+                    if (ultimate != original)
+                    {
                         block.removeSuccessor(original);
                         block.addSuccessor(ultimate);
                         simple.setTarget(ultimate);
@@ -45,11 +51,14 @@ public class JumpThreading implements IRTransform {
                         changed = true;
                     }
                 }
-            } else if (term instanceof BranchInstruction) {
+            }
+            else if (term instanceof BranchInstruction)
+            {
                 BranchInstruction branch = (BranchInstruction) term;
                 IRBlock origTrue = branch.getTrueTarget();
                 IRBlock ultimateTrue = findUltimateTarget(origTrue);
-                if (ultimateTrue != origTrue) {
+                if (ultimateTrue != origTrue)
+                {
                     block.removeSuccessor(origTrue);
                     block.addSuccessor(ultimateTrue);
                     branch.setTrueTarget(ultimateTrue);
@@ -59,18 +68,22 @@ public class JumpThreading implements IRTransform {
 
                 IRBlock origFalse = branch.getFalseTarget();
                 IRBlock ultimateFalse = findUltimateTarget(origFalse);
-                if (ultimateFalse != origFalse) {
+                if (ultimateFalse != origFalse)
+                {
                     block.removeSuccessor(origFalse);
                     block.addSuccessor(ultimateFalse);
                     branch.setFalseTarget(ultimateFalse);
                     updatePhisForThreading(block, origFalse, ultimateFalse);
                     changed = true;
                 }
-            } else if (term instanceof SwitchInstruction) {
+            }
+            else if (term instanceof SwitchInstruction)
+            {
                 SwitchInstruction switchInstr = (SwitchInstruction) term;
                 IRBlock origDefault = switchInstr.getDefaultTarget();
                 IRBlock ultimateDefault = findUltimateTarget(origDefault);
-                if (ultimateDefault != origDefault) {
+                if (ultimateDefault != origDefault)
+                {
                     block.removeSuccessor(origDefault);
                     block.addSuccessor(ultimateDefault);
                     switchInstr.setDefaultTarget(ultimateDefault);
@@ -79,10 +92,12 @@ public class JumpThreading implements IRTransform {
                 }
 
                 Map<Integer, IRBlock> cases = switchInstr.getCases();
-                for (Map.Entry<Integer, IRBlock> entry : new ArrayList<>(cases.entrySet())) {
+                for (Map.Entry<Integer, IRBlock> entry : new ArrayList<>(cases.entrySet()))
+                {
                     IRBlock origCase = entry.getValue();
                     IRBlock ultimateCase = findUltimateTarget(origCase);
-                    if (ultimateCase != origCase) {
+                    if (ultimateCase != origCase)
+                    {
                         block.removeSuccessor(origCase);
                         block.addSuccessor(ultimateCase);
                         cases.put(entry.getKey(), ultimateCase);
@@ -93,7 +108,8 @@ public class JumpThreading implements IRTransform {
             }
         }
 
-        if (changed) {
+        if (changed)
+        {
             removeUnreachableBlocks(method);
         }
 
@@ -102,19 +118,20 @@ public class JumpThreading implements IRTransform {
 
     /**
      * Updates phi nodes at the ultimate target when threading through a bypassed block.
-     * <p>
      * When we thread from 'source' through 'bypassed' to 'ultimate', any phi at 'ultimate'
      * that has an incoming value from 'bypassed' needs to be updated to have that value
      * come from 'source' instead.
-     *
      * @param source the block that is being threaded (the new direct predecessor)
      * @param bypassed the original intermediate block being bypassed
      * @param ultimate the ultimate target block containing phis to update
      */
-    private void updatePhisForThreading(IRBlock source, IRBlock bypassed, IRBlock ultimate) {
-        for (PhiInstruction phi : ultimate.getPhiInstructions()) {
+    private void updatePhisForThreading(IRBlock source, IRBlock bypassed, IRBlock ultimate)
+    {
+        for (PhiInstruction phi : ultimate.getPhiInstructions())
+        {
             Value bypassedValue = phi.getIncoming(bypassed);
-            if (bypassedValue != null) {
+            if (bypassedValue != null)
+            {
                 phi.removeIncoming(bypassed);
                 phi.addIncoming(bypassedValue, source);
             }
@@ -125,20 +142,28 @@ public class JumpThreading implements IRTransform {
      * Follows a chain of empty goto blocks to find the ultimate target.
      * An empty goto block has no phi instructions and only a goto instruction.
      */
-    private IRBlock findUltimateTarget(IRBlock block) {
+    private IRBlock findUltimateTarget(IRBlock block)
+    {
         Set<IRBlock> visited = new HashSet<>();
 
-        while (isEmptyGotoBlock(block) && !visited.contains(block)) {
+        while (isEmptyGotoBlock(block) && !visited.contains(block))
+        {
             visited.add(block);
             IRInstruction term = block.getTerminator();
-            if (term instanceof SimpleInstruction) {
+            if (term instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) term;
-                if (simple.getOp() == SimpleOp.GOTO) {
+                if (simple.getOp() == SimpleOp.GOTO)
+                {
                     block = simple.getTarget();
-                } else {
+                }
+                else
+                {
                     break;
                 }
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
@@ -149,18 +174,22 @@ public class JumpThreading implements IRTransform {
     /**
      * Checks if a block is an empty goto block (contains only a goto instruction).
      */
-    private boolean isEmptyGotoBlock(IRBlock block) {
-        if (!block.getPhiInstructions().isEmpty()) {
+    private boolean isEmptyGotoBlock(IRBlock block)
+    {
+        if (!block.getPhiInstructions().isEmpty())
+        {
             return false;
         }
 
         List<IRInstruction> instrs = block.getInstructions();
-        if (instrs.size() != 1) {
+        if (instrs.size() != 1)
+        {
             return false;
         }
 
         IRInstruction instr = instrs.get(0);
-        if (instr instanceof SimpleInstruction) {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
             return simple.getOp() == SimpleOp.GOTO;
         }
@@ -170,20 +199,24 @@ public class JumpThreading implements IRTransform {
     /**
      * Removes unreachable blocks from the method.
      */
-    private void removeUnreachableBlocks(IRMethod method) {
+    private void removeUnreachableBlocks(IRMethod method)
+    {
         if (method.getEntryBlock() == null) return;
 
         Set<IRBlock> reachable = new HashSet<>();
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(method.getEntryBlock());
 
-        for (ExceptionHandler h : method.getExceptionHandlers()) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : method.getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 worklist.add(h.getHandlerBlock());
             }
         }
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock block = worklist.poll();
             if (reachable.contains(block)) continue;
             reachable.add(block);
@@ -191,13 +224,16 @@ public class JumpThreading implements IRTransform {
         }
 
         List<IRBlock> toRemove = new ArrayList<>();
-        for (IRBlock block : method.getBlocks()) {
-            if (!reachable.contains(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (!reachable.contains(block))
+            {
                 toRemove.add(block);
             }
         }
 
-        for (IRBlock block : toRemove) {
+        for (IRBlock block : toRemove)
+        {
             method.removeBlock(block);
         }
     }

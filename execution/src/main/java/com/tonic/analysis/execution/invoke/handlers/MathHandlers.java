@@ -11,17 +11,24 @@ import static com.tonic.analysis.execution.invoke.handlers.Numerics.unaryDouble;
 import static com.tonic.analysis.execution.invoke.handlers.Numerics.unaryInt;
 import static com.tonic.analysis.execution.invoke.handlers.Numerics.unaryLong;
 
-public final class MathHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for java.lang.Math, StrictMath, Float and Double, evaluated with the host JDK's
+ * own implementations.
+ */
+public final class MathHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerMathHandlers(registry);
         registerStrictMathHandlers(registry);
         registerFloatHandlers(registry);
         registerDoubleHandlers(registry);
     }
 
-    private void registerMathHandlers(NativeRegistry registry) {
+    private void registerMathHandlers(NativeRegistry registry)
+    {
         unaryInt(registry, "java/lang/Math", "abs", "(I)I", Math::abs);
         unaryLong(registry, "java/lang/Math", "abs", "(J)J", Math::abs);
         registry.register("java/lang/Math", "abs", "(F)F",
@@ -57,7 +64,8 @@ public final class MathHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.intValue(Math.round(args[0].asFloat())));
     }
 
-    private void registerStrictMathHandlers(NativeRegistry registry) {
+    private void registerStrictMathHandlers(NativeRegistry registry)
+    {
         unaryDouble(registry, "java/lang/StrictMath", "sin", "(D)D", StrictMath::sin);
         unaryDouble(registry, "java/lang/StrictMath", "cos", "(D)D", StrictMath::cos);
         unaryDouble(registry, "java/lang/StrictMath", "tan", "(D)D", StrictMath::tan);
@@ -75,14 +83,16 @@ public final class MathHandlers implements NativeHandlerProvider {
         binaryDouble(registry, "java/lang/StrictMath", "IEEEremainder", "(DD)D", StrictMath::IEEEremainder);
     }
 
-    private void registerFloatHandlers(NativeRegistry registry) {
+    private void registerFloatHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/Float", "floatToRawIntBits", "(F)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(Float.floatToRawIntBits(args[0].asFloat())));
         registry.register("java/lang/Float", "intBitsToFloat", "(I)F",
             (receiver, args, ctx) -> ConcreteValue.floatValue(Float.intBitsToFloat(args[0].asInt())));
     }
 
-    private void registerDoubleHandlers(NativeRegistry registry) {
+    private void registerDoubleHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/Double", "doubleToRawLongBits", "(D)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(Double.doubleToRawLongBits(args[0].asDouble())));
         registry.register("java/lang/Double", "longBitsToDouble", "(J)D",

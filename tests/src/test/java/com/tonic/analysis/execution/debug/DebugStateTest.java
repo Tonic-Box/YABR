@@ -9,10 +9,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DebugStateTest {
+class DebugStateTest
+{
 
     @Test
-    void testBuilderCreatesValidState() {
+    void testBuilderCreatesValidState()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.RUNNING)
                 .currentMethod("Test.method()V")
@@ -32,7 +34,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testAllAccessorsWork() {
+    void testAllAccessorsWork()
+    {
         Breakpoint bp = new Breakpoint("com/test/Test", "method", "()V", 10);
         ConcreteLocals locals = new ConcreteLocals(5);
         locals.setInt(0, 42);
@@ -70,7 +73,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsPausedWhenStatusPaused() {
+    void testIsPausedWhenStatusPaused()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.PAUSED)
                 .build();
@@ -81,7 +85,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsRunningWhenStatusRunning() {
+    void testIsRunningWhenStatusRunning()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.RUNNING)
                 .build();
@@ -92,7 +97,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsRunningWhenStatusStepping() {
+    void testIsRunningWhenStatusStepping()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.STEPPING)
                 .build();
@@ -103,7 +109,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsFinishedWhenStatusCompleted() {
+    void testIsFinishedWhenStatusCompleted()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.COMPLETED)
                 .build();
@@ -114,7 +121,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsFinishedWhenStatusException() {
+    void testIsFinishedWhenStatusException()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.EXCEPTION)
                 .build();
@@ -125,7 +133,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsFinishedWhenStatusAborted() {
+    void testIsFinishedWhenStatusAborted()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.ABORTED)
                 .build();
@@ -136,7 +145,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsAtBreakpointWhenBreakpointPresent() {
+    void testIsAtBreakpointWhenBreakpointPresent()
+    {
         Breakpoint bp = new Breakpoint("com/test/Test", "method", "()V", 10);
         DebugState state = new DebugState.Builder()
                 .hitBreakpoint(bp)
@@ -146,13 +156,15 @@ class DebugStateTest {
     }
 
     @Test
-    void testIsAtBreakpointWhenBreakpointAbsent() {
+    void testIsAtBreakpointWhenBreakpointAbsent()
+    {
         DebugState state = new DebugState.Builder().build();
         assertFalse(state.isAtBreakpoint());
     }
 
     @Test
-    void testBuilderDefaults() {
+    void testBuilderDefaults()
+    {
         DebugState state = new DebugState.Builder().build();
 
         assertEquals(DebugState.Status.IDLE, state.getStatus());
@@ -167,7 +179,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testImmutability() {
+    void testImmutability()
+    {
         List<StackFrameInfo> originalList = new ArrayList<>();
         DebugState state = new DebugState.Builder()
                 .callStack(originalList)
@@ -178,7 +191,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.RUNNING)
                 .currentMethod("Test.method()V")
@@ -196,7 +210,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testBuilderChaining() {
+    void testBuilderChaining()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.IDLE)
                 .currentMethod("method")
@@ -210,7 +225,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testStatusIdle() {
+    void testStatusIdle()
+    {
         DebugState state = new DebugState.Builder()
                 .status(DebugState.Status.IDLE)
                 .build();
@@ -221,7 +237,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testNullCallStackBecomesEmpty() {
+    void testNullCallStackBecomesEmpty()
+    {
         DebugState state = new DebugState.Builder()
                 .callStack(null)
                 .build();
@@ -231,7 +248,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testNegativeLineNumber() {
+    void testNegativeLineNumber()
+    {
         DebugState state = new DebugState.Builder()
                 .currentLine(-1)
                 .build();
@@ -240,7 +258,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testZeroInstructionCount() {
+    void testZeroInstructionCount()
+    {
         DebugState state = new DebugState.Builder()
                 .instructionCount(0)
                 .build();
@@ -249,7 +268,8 @@ class DebugStateTest {
     }
 
     @Test
-    void testLargeInstructionCount() {
+    void testLargeInstructionCount()
+    {
         DebugState state = new DebugState.Builder()
                 .instructionCount(Long.MAX_VALUE)
                 .build();

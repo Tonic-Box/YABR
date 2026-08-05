@@ -16,12 +16,14 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherStackNegTest {
+class OpcodeDispatcherStackNegTest
+{
 
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -29,13 +31,17 @@ class OpcodeDispatcherStackNegTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -43,10 +49,12 @@ class OpcodeDispatcherStackNegTest {
     }
 
     @Nested
-    class NegationOperationsTest {
+    class NegationOperationsTest
+    {
 
         @Test
-        void testINeg_PositiveValue() throws IOException {
+        void testINeg_PositiveValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateInt", "(I)I")
                     .iload(0)
@@ -62,7 +70,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testINeg_NegativeValue() throws IOException {
+        void testINeg_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateInt", "(I)I")
                     .iload(0)
@@ -78,7 +87,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testINeg_Zero() throws IOException {
+        void testINeg_Zero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateInt", "(I)I")
                     .iload(0)
@@ -94,7 +104,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testLNeg_PositiveValue() throws IOException {
+        void testLNeg_PositiveValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateLong", "(J)J")
                     .lload(0)
@@ -110,7 +121,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testLNeg_NegativeValue() throws IOException {
+        void testLNeg_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateLong", "(J)J")
                     .lload(0)
@@ -126,7 +138,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testFNeg_PositiveValue() throws IOException {
+        void testFNeg_PositiveValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateFloat", "(F)F")
                     .fload(0)
@@ -142,7 +155,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testFNeg_NegativeValue() throws IOException {
+        void testFNeg_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateFloat", "(F)F")
                     .fload(0)
@@ -158,7 +172,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testFNeg_Zero() throws IOException {
+        void testFNeg_Zero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateFloat", "(F)F")
                     .fload(0)
@@ -174,7 +189,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDNeg_PositiveValue() throws IOException {
+        void testDNeg_PositiveValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateDouble", "(D)D")
                     .dload(0)
@@ -190,7 +206,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDNeg_NegativeValue() throws IOException {
+        void testDNeg_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("negateDouble", "(D)D")
                     .dload(0)
@@ -207,10 +224,12 @@ class OpcodeDispatcherStackNegTest {
     }
 
     @Nested
-    class StackManipulationTest {
+    class StackManipulationTest
+    {
 
         @Test
-        void testDupX1_SingleWordValues() throws IOException {
+        void testDupX1_SingleWordValues() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDupX1", "(II)I")
                     .iload(0)
@@ -229,7 +248,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDupX2_Form1() throws IOException {
+        void testDupX2_Form1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDupX2", "(III)I")
                     .iload(0)
@@ -253,7 +273,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDupX2_Form2_WithLong() throws IOException {
+        void testDupX2_Form2_WithLong() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDupX2Long", "(III)I")
                     .iload(0)
@@ -277,7 +298,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDup2X1_Form1_TwoSingleWords() throws IOException {
+        void testDup2X1_Form1_TwoSingleWords() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDup2X1", "(III)I")
                     .iload(0)
@@ -301,7 +323,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDup2X1_Form2_TwoSingleWordsOnTop() throws IOException {
+        void testDup2X1_Form2_TwoSingleWordsOnTop() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDup2X1Simple", "(III)I")
                     .iload(0)
@@ -325,7 +348,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDup2X2_Form1_AllSingleWords() throws IOException {
+        void testDup2X2_Form1_AllSingleWords() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDup2X2", "(IIII)I")
                     .iload(0)
@@ -351,7 +375,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDup2X2_Form2_FourInts() throws IOException {
+        void testDup2X2_Form2_FourInts() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDup2X2Mixed", "(IIII)I")
                     .iload(0)
@@ -377,7 +402,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDup2X2_Form3_AllInts() throws IOException {
+        void testDup2X2_Form3_AllInts() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDup2X2Form3", "(IIII)I")
                     .iload(0)
@@ -404,7 +430,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testDup2X2_Form4_VerifyDuplication() throws IOException {
+        void testDup2X2_Form4_VerifyDuplication() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testDup2X2Doubles", "(IIII)I")
                     .iload(0)
@@ -433,10 +460,12 @@ class OpcodeDispatcherStackNegTest {
     }
 
     @Nested
-    class MiscellaneousOperationsTest {
+    class MiscellaneousOperationsTest
+    {
 
         @Test
-        void testNop_DoesNothing() throws IOException {
+        void testNop_DoesNothing() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testNop", "(I)I")
                     .iload(0)
@@ -454,7 +483,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testNop_InComplexFlow() throws IOException {
+        void testNop_InComplexFlow() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("testNopInFlow", "(II)I")
                     .iload(0)
@@ -467,16 +497,15 @@ class OpcodeDispatcherStackNegTest {
                 .build();
 
             MethodEntry method = findMethod(cf, "testNopInFlow");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(20));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(20));
 
             assertTrue(result.isSuccess());
             assertEquals(30, result.getReturnValue().asInt());
         }
 
         @Test
-        void testGotoW_ForwardJump() throws IOException {
+        void testGotoW_ForwardJump() throws IOException
+        {
             BytecodeBuilder.Label target = new BytecodeBuilder.Label();
 
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
@@ -499,7 +528,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testGotoW_BackwardJump() throws IOException {
+        void testGotoW_BackwardJump() throws IOException
+        {
             BytecodeBuilder.Label loopStart = new BytecodeBuilder.Label();
             BytecodeBuilder.Label loopEnd = new BytecodeBuilder.Label();
 
@@ -529,7 +559,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testI2L_PositiveValue() throws IOException {
+        void testI2L_PositiveValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("intToLong", "(I)J")
                     .iload(0)
@@ -545,7 +576,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testI2L_NegativeValue() throws IOException {
+        void testI2L_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("intToLong", "(I)J")
                     .iload(0)
@@ -561,7 +593,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testI2L_Zero() throws IOException {
+        void testI2L_Zero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("intToLong", "(I)J")
                     .iload(0)
@@ -577,7 +610,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testI2L_MaxInt() throws IOException {
+        void testI2L_MaxInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("intToLong", "(I)J")
                     .iload(0)
@@ -593,7 +627,8 @@ class OpcodeDispatcherStackNegTest {
         }
 
         @Test
-        void testI2L_MinInt() throws IOException {
+        void testI2L_MinInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("intToLong", "(I)J")
                     .iload(0)

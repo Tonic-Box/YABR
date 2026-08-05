@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * otherwise re-enter try recovery inside the clause), and the finally template is folded out of the user
  * catch bodies as well as the try body.
  */
-class MixedCatchFinallyClauseFidelityTest {
+class MixedCatchFinallyClauseFidelityTest
+{
 
     private static final String SOURCE =
             "import java.io.DataOutputStream;\n"
@@ -61,14 +62,14 @@ class MixedCatchFinallyClauseFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndDecompile() throws Exception {
+    static void compileAndDecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("mixed-fin");
         Path src = dir.resolve("MixedFin.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("MixedFin.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -78,9 +79,9 @@ class MixedCatchFinallyClauseFidelityTest {
     }
 
     @Test
-    void finallyClauseKeepsItsCleanup() {
-        assertFalse(d1.contains("finally {}"),
-                "the finally clause must not collapse to an empty block:\n" + d1);
+    void finallyClauseKeepsItsCleanup()
+    {
+        assertFalse(d1.contains("finally {}"), "the finally clause must not collapse to an empty block:\n" + d1);
         int finallyAt = d1.indexOf("finally");
         assertTrue(finallyAt > 0, "the finally clause must be present:\n" + d1);
         assertTrue(d1.indexOf("fos.close", finallyAt) > 0 && d1.indexOf("dos.close", finallyAt) > 0,
@@ -88,7 +89,8 @@ class MixedCatchFinallyClauseFidelityTest {
     }
 
     @Test
-    void catchPathsReturnFalseAndNormalPathReturnsTrue() throws Exception {
+    void catchPathsReturnFalseAndNormalPathReturnsTrue() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         Path ok = Files.createTempDirectory("mixed-fin-run").resolve("out.bin");
         Object normal = recompiledClass.getMethod("save", String.class).invoke(inst, ok.toString());
@@ -101,7 +103,8 @@ class MixedCatchFinallyClauseFidelityTest {
     }
 
     @Test
-    void userCatchesStayFlatClauses() {
+    void userCatchesStayFlatClauses()
+    {
         assertTrue(d1.contains("catch (FileNotFoundException"),
                 "the user catches must remain flat clauses of the same try:\n" + d1);
         assertTrue(d1.contains("catch (IOException"),

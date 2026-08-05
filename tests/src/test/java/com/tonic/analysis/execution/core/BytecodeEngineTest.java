@@ -18,14 +18,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class BytecodeEngineTest {
+class BytecodeEngineTest
+{
 
     private HeapManager heapManager;
     private ClassResolver classResolver;
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() throws Exception
+    {
         heapManager = new SimpleHeapManager();
         ClassPool pool = new ClassPool();
         classResolver = new ClassResolver(pool);
@@ -40,7 +42,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testEngineConstruction() {
+    void testEngineConstruction()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         assertNotNull(engine);
         assertNotNull(engine.getCallStack());
@@ -48,14 +51,16 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testEngineRejectsNullContext() {
+    void testEngineRejectsNullContext()
+    {
         assertThrows(IllegalArgumentException.class, () -> {
             new BytecodeEngine(null);
         });
     }
 
     @Test
-    void testReset() {
+    void testReset()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         engine.reset();
 
@@ -64,7 +69,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testInterrupt() {
+    void testInterrupt()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         engine.interrupt();
 
@@ -75,13 +81,15 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testGetCurrentFrameWhenEmpty() {
+    void testGetCurrentFrameWhenEmpty()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         assertNull(engine.getCurrentFrame());
     }
 
     @Test
-    void testAddListener() {
+    void testAddListener()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         TestListener listener = new TestListener();
 
@@ -90,13 +98,15 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testAddNullListenerIsIgnored() {
+    void testAddNullListenerIsIgnored()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         assertDoesNotThrow(() -> engine.addListener(null));
     }
 
     @Test
-    void testListenerNotification() {
+    void testListenerNotification()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         TestListener listener = new TestListener();
         engine.addListener(listener);
@@ -108,7 +118,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testInstructionLimit() {
+    void testInstructionLimit()
+    {
         BytecodeContext limitedContext = new BytecodeContext.Builder()
             .heapManager(heapManager)
             .classResolver(classResolver)
@@ -124,7 +135,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testDepthLimit() {
+    void testDepthLimit()
+    {
         BytecodeContext limitedContext = new BytecodeContext.Builder()
             .heapManager(heapManager)
             .classResolver(classResolver)
@@ -138,20 +150,23 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testStepExecution() {
+    void testStepExecution()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         assertFalse(engine.step());
     }
 
     @Test
-    void testStepWhenInterrupted() {
+    void testStepWhenInterrupted()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         engine.interrupt();
         assertFalse(engine.step());
     }
 
     @Test
-    void testInstructionCountIncreases() {
+    void testInstructionCountIncreases()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethodWithManyInstructions(3);
 
@@ -161,7 +176,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testExecutionStatistics() {
+    void testExecutionStatistics()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethod();
 
@@ -172,7 +188,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testCallStackManagement() {
+    void testCallStackManagement()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethod();
 
@@ -182,7 +199,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testMultipleExecutions() {
+    void testMultipleExecutions()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethod();
 
@@ -194,7 +212,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testExecutionWithArguments() {
+    void testExecutionWithArguments()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethod();
 
@@ -207,7 +226,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testExecutionWithNoArguments() {
+    void testExecutionWithNoArguments()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethod();
 
@@ -217,7 +237,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testNewObjectCreation() {
+    void testNewObjectCreation()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
 
         long initialCount = heapManager.objectCount();
@@ -228,7 +249,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testExceptionHandling() {
+    void testExceptionHandling()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethodThatThrows();
 
@@ -238,7 +260,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testResetClearsState() {
+    void testResetClearsState()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         MethodEntry method = createMockMethod();
 
@@ -256,14 +279,16 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testGetCallStackReturnsCorrectInstance() {
+    void testGetCallStackReturnsCorrectInstance()
+    {
         BytecodeEngine engine = new BytecodeEngine(context);
         assertNotNull(engine.getCallStack());
         assertSame(engine.getCallStack(), engine.getCallStack());
     }
 
     @Test
-    void testDelegatedMode() {
+    void testDelegatedMode()
+    {
         BytecodeContext delegatedContext = new BytecodeContext.Builder()
             .mode(ExecutionMode.DELEGATED)
             .heapManager(heapManager)
@@ -279,7 +304,8 @@ class BytecodeEngineTest {
     }
 
     @Test
-    void testRecursiveMode() {
+    void testRecursiveMode()
+    {
         BytecodeContext recursiveContext = new BytecodeContext.Builder()
             .mode(ExecutionMode.RECURSIVE)
             .heapManager(heapManager)
@@ -294,7 +320,8 @@ class BytecodeEngineTest {
         assertNotNull(result);
     }
 
-    private MethodEntry createMockMethod() {
+    private MethodEntry createMockMethod()
+    {
         MethodEntry method = mock(MethodEntry.class);
         CodeAttribute codeAttr = mock(CodeAttribute.class);
         ClassFile classFile = mock(ClassFile.class);
@@ -313,7 +340,8 @@ class BytecodeEngineTest {
         return method;
     }
 
-    private MethodEntry createMockMethodWithManyInstructions(int count) {
+    private MethodEntry createMockMethodWithManyInstructions(int count)
+    {
         MethodEntry method = mock(MethodEntry.class);
         CodeAttribute codeAttr = mock(CodeAttribute.class);
         ClassFile classFile = mock(ClassFile.class);
@@ -334,21 +362,25 @@ class BytecodeEngineTest {
         return method;
     }
 
-    private MethodEntry createMockMethodThatThrows() {
+    private MethodEntry createMockMethodThatThrows()
+    {
         return createMockMethod();
     }
 
-    private static class TestListener implements BytecodeListener {
+    private static class TestListener implements BytecodeListener
+    {
         boolean beforeCalled = false;
         boolean afterCalled = false;
 
         @Override
-        public void beforeInstruction(StackFrame frame, Instruction instruction) {
+        public void beforeInstruction(StackFrame frame, Instruction instruction)
+        {
             beforeCalled = true;
         }
 
         @Override
-        public void afterInstruction(StackFrame frame, Instruction instruction) {
+        public void afterInstruction(StackFrame frame, Instruction instruction)
+        {
             afterCalled = true;
         }
     }

@@ -11,47 +11,56 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LambdaProxyFactoryTest {
+class LambdaProxyFactoryTest
+{
 
     private LambdaProxyFactory factory;
     private HeapManager heapManager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heapManager = new SimpleHeapManager();
         factory = new LambdaProxyFactory(heapManager);
     }
 
     @Nested
-    class IsLambdaFactoryTests {
+    class IsLambdaFactoryTests
+    {
         @Test
-        void shouldIdentifyMetafactory() {
+        void shouldIdentifyMetafactory()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "()Ljava/util/function/Function;", 1);
             assertTrue(factory.isLambdaFactory(info));
         }
 
         @Test
-        void shouldIdentifyAltMetafactory() {
+        void shouldIdentifyAltMetafactory()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "altMetafactory", "()Ljava/util/function/Consumer;", 1);
             assertTrue(factory.isLambdaFactory(info));
         }
 
         @Test
-        void shouldNotIdentifyMakeConcatWithConstants() {
+        void shouldNotIdentifyMakeConcatWithConstants()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             assertFalse(factory.isLambdaFactory(info));
         }
 
         @Test
-        void shouldHandleNull() {
+        void shouldHandleNull()
+        {
             assertFalse(factory.isLambdaFactory(null));
         }
     }
 
     @Nested
-    class CreateProxyTests {
+    class CreateProxyTests
+    {
         @Test
-        void shouldCreateProxyWithNoCapturedArgs() {
+        void shouldCreateProxyWithNoCapturedArgs()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "()Ljava/util/function/Runnable;", 1);
             ConcreteValue[] capturedArgs = {};
 
@@ -62,7 +71,8 @@ class LambdaProxyFactoryTest {
         }
 
         @Test
-        void shouldCreateProxyWithIntCapturedArg() {
+        void shouldCreateProxyWithIntCapturedArg()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "(I)Ljava/util/function/Supplier;", 1);
             ConcreteValue[] capturedArgs = { ConcreteValue.intValue(42) };
 
@@ -74,7 +84,8 @@ class LambdaProxyFactoryTest {
         }
 
         @Test
-        void shouldCreateProxyWithLongCapturedArg() {
+        void shouldCreateProxyWithLongCapturedArg()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "(J)Ljava/util/function/Supplier;", 1);
             ConcreteValue[] capturedArgs = { ConcreteValue.longValue(123456789L) };
 
@@ -86,7 +97,8 @@ class LambdaProxyFactoryTest {
         }
 
         @Test
-        void shouldCreateProxyWithMultipleCapturedArgs() {
+        void shouldCreateProxyWithMultipleCapturedArgs()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "(IJ)Ljava/util/function/BiFunction;", 1);
             ConcreteValue[] capturedArgs = {
                 ConcreteValue.intValue(10),
@@ -103,7 +115,8 @@ class LambdaProxyFactoryTest {
         }
 
         @Test
-        void shouldCreateUniqueProxyClassNames() {
+        void shouldCreateUniqueProxyClassNames()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "()Ljava/util/function/Runnable;", 1);
             ConcreteValue[] capturedArgs = {};
 
@@ -115,116 +128,139 @@ class LambdaProxyFactoryTest {
     }
 
     @Nested
-    class GetCapturedArgCountTests {
+    class GetCapturedArgCountTests
+    {
         @Test
-        void shouldReturnZeroForNoCapturedArgs() {
+        void shouldReturnZeroForNoCapturedArgs()
+        {
             assertEquals(0, factory.getCapturedArgCount("()Ljava/util/function/Runnable;"));
         }
 
         @Test
-        void shouldCountIntCapturedArg() {
+        void shouldCountIntCapturedArg()
+        {
             assertEquals(1, factory.getCapturedArgCount("(I)Ljava/util/function/Supplier;"));
         }
 
         @Test
-        void shouldCountLongCapturedArg() {
+        void shouldCountLongCapturedArg()
+        {
             assertEquals(1, factory.getCapturedArgCount("(J)Ljava/util/function/Supplier;"));
         }
 
         @Test
-        void shouldCountMultiplePrimitiveCapturedArgs() {
+        void shouldCountMultiplePrimitiveCapturedArgs()
+        {
             assertEquals(4, factory.getCapturedArgCount("(IJFD)Ljava/util/function/Supplier;"));
         }
 
         @Test
-        void shouldCountObjectCapturedArg() {
+        void shouldCountObjectCapturedArg()
+        {
             assertEquals(1, factory.getCapturedArgCount("(Ljava/lang/String;)Ljava/util/function/Function;"));
         }
 
         @Test
-        void shouldCountArrayCapturedArg() {
+        void shouldCountArrayCapturedArg()
+        {
             assertEquals(1, factory.getCapturedArgCount("([I)Ljava/util/function/Function;"));
         }
 
         @Test
-        void shouldCountMixedCapturedArgs() {
+        void shouldCountMixedCapturedArgs()
+        {
             assertEquals(3, factory.getCapturedArgCount("(ILjava/lang/Object;[D)Ljava/util/function/Function;"));
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             assertEquals(0, factory.getCapturedArgCount(null));
         }
 
         @Test
-        void shouldHandleMalformedDescriptor() {
+        void shouldHandleMalformedDescriptor()
+        {
             assertEquals(0, factory.getCapturedArgCount("invalid"));
         }
 
         @Test
-        void shouldHandleEmptyParens() {
+        void shouldHandleEmptyParens()
+        {
             assertEquals(0, factory.getCapturedArgCount("()V"));
         }
     }
 
     @Nested
-    class ExtractInterfaceTypeTests {
+    class ExtractInterfaceTypeTests
+    {
         @Test
-        void shouldExtractRunnableInterface() {
+        void shouldExtractRunnableInterface()
+        {
             String result = factory.extractInterfaceType("()Ljava/util/function/Runnable;");
             assertEquals("java/util/function/Runnable", result);
         }
 
         @Test
-        void shouldExtractFunctionInterface() {
+        void shouldExtractFunctionInterface()
+        {
             String result = factory.extractInterfaceType("(Ljava/lang/Object;)Ljava/util/function/Function;");
             assertEquals("java/util/function/Function", result);
         }
 
         @Test
-        void shouldExtractConsumerInterface() {
+        void shouldExtractConsumerInterface()
+        {
             String result = factory.extractInterfaceType("(I)Ljava/util/function/Consumer;");
             assertEquals("java/util/function/Consumer", result);
         }
 
         @Test
-        void shouldHandlePrimitiveReturn() {
+        void shouldHandlePrimitiveReturn()
+        {
             String result = factory.extractInterfaceType("()I");
             assertEquals("I", result);
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             String result = factory.extractInterfaceType(null);
             assertEquals("java/lang/Object", result);
         }
 
         @Test
-        void shouldHandleMalformedDescriptor() {
+        void shouldHandleMalformedDescriptor()
+        {
             String result = factory.extractInterfaceType("invalid");
             assertEquals("java/lang/Object", result);
         }
     }
 
     @Nested
-    class GetTargetMethodNameTests {
+    class GetTargetMethodNameTests
+    {
         @Test
-        void shouldReturnMethodName() {
+        void shouldReturnMethodName()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "()Ljava/util/function/Function;", 1);
             assertEquals("apply", factory.getTargetMethodName(info));
         }
 
         @Test
-        void shouldReturnRunMethodName() {
+        void shouldReturnRunMethodName()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()Ljava/util/function/Runnable;", 1);
             assertEquals("run", factory.getTargetMethodName(info));
         }
     }
 
     @Nested
-    class CapturedValueTypesTests {
+    class CapturedValueTypesTests
+    {
         @Test
-        void shouldCaptureFloatValue() {
+        void shouldCaptureFloatValue()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "(F)Ljava/util/function/Supplier;", 1);
             ConcreteValue[] capturedArgs = { ConcreteValue.floatValue(3.14f) };
 
@@ -235,7 +271,8 @@ class LambdaProxyFactoryTest {
         }
 
         @Test
-        void shouldCaptureDoubleValue() {
+        void shouldCaptureDoubleValue()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "(D)Ljava/util/function/Supplier;", 1);
             ConcreteValue[] capturedArgs = { ConcreteValue.doubleValue(2.718) };
 
@@ -246,7 +283,8 @@ class LambdaProxyFactoryTest {
         }
 
         @Test
-        void shouldCaptureReferenceValue() {
+        void shouldCaptureReferenceValue()
+        {
             ObjectInstance captured = heapManager.newObject("java/lang/String");
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "(Ljava/lang/String;)Ljava/util/function/Function;", 1);
             ConcreteValue[] capturedArgs = { ConcreteValue.reference(captured) };

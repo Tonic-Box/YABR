@@ -29,7 +29,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * classification now also requires the handler's declared type to be one a finally can carry
  * (catch-any or {@code Throwable}), so this shape structures natively as a flat multi-catch.
  */
-class TypedRethrowCatchFidelityTest {
+class TypedRethrowCatchFidelityTest
+{
 
     private static final String SOURCE =
             "import java.io.IOException;\n"
@@ -59,14 +60,14 @@ class TypedRethrowCatchFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("typed-rethrow");
         Path src = dir.resolve("TypedRethrow.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("TypedRethrow.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -76,30 +77,32 @@ class TypedRethrowCatchFidelityTest {
     }
 
     @Test
-    void decompiledShapeIsAFlatMultiCatchNotAFinally() {
-        assertFalse(d1.contains("finally"),
-                "a typed rethrowing user catch is not finally scaffolding:\n" + d1);
+    void decompiledShapeIsAFlatMultiCatchNotAFinally()
+    {
+        assertFalse(d1.contains("finally"), "a typed rethrowing user catch is not finally scaffolding:\n" + d1);
         assertTrue(d1.contains("catch (IllegalArgumentException"),
                 "the rethrowing clause must survive as a catch:\n" + d1);
-        assertTrue(d1.contains("throw ex"),
-                "the rethrow must survive inside its clause:\n" + d1);
+        assertTrue(d1.contains("throw ex"), "the rethrow must survive inside its clause:\n" + d1);
     }
 
     @Test
-    void fieldFoundReturnsItsValue() throws Exception {
+    void fieldFoundReturnsItsValue() throws Exception
+    {
         Object r = recompiledClass.getMethod("get", Class.class)
                 .invoke(null, recompiledClass);
         assertEquals(3, r, "declared field's value must be returned:\n" + d1);
     }
 
     @Test
-    void missingFieldReturnsZero() throws Exception {
+    void missingFieldReturnsZero() throws Exception
+    {
         Object r = recompiledClass.getMethod("get", Class.class).invoke(null, String.class);
         assertEquals(0, r, "NoSuchFieldException path must return 0:\n" + d1);
     }
 
     @Test
-    void nullClassPropagatesThroughTheRethrowClause() {
+    void nullClassPropagatesThroughTheRethrowClause()
+    {
         InvocationTargetException thrown = assertThrows(InvocationTargetException.class,
                 () -> recompiledClass.getMethod("get", Class.class).invoke(null, (Object) null));
         assertTrue(thrown.getCause() instanceof NullPointerException,

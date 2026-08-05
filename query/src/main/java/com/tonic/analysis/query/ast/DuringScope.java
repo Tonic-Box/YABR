@@ -7,45 +7,79 @@ import java.util.Objects;
  * Example: DURING clinit OF classes matching /Config/
  *          DURING method "Auth.login"
  */
-public final class DuringScope implements Scope {
+public final class DuringScope implements Scope
+{
 
     private final String methodPattern;
     private final boolean isClinit;
     private final ClassScope classFilter;
 
-    public DuringScope(String methodPattern, boolean isClinit, ClassScope classFilter) {
+    /**
+     * Creates a during scope.
+     * @param methodPattern the method name pattern events must occur in
+     * @param isClinit whether the scope targets static initializers
+     * @param classFilter optional class filter, may be null
+     */
+    public DuringScope(String methodPattern, boolean isClinit, ClassScope classFilter)
+    {
         this.methodPattern = methodPattern;
         this.isClinit = isClinit;
         this.classFilter = classFilter;
     }
 
-    public String methodPattern() {
+    /**
+     * @return the method name pattern
+     */
+    public String methodPattern()
+    {
         return methodPattern;
     }
 
-    public boolean isClinit() {
+    /**
+     * @return whether the scope targets static initializers
+     */
+    public boolean isClinit()
+    {
         return isClinit;
     }
 
-    public ClassScope classFilter() {
+    /**
+     * @return the class filter, or null when unrestricted
+     */
+    public ClassScope classFilter()
+    {
         return classFilter;
     }
 
-    public static DuringScope clinitOf(ClassScope classFilter) {
+    /**
+     * Creates a scope covering static initializers of the filtered classes.
+     * @param classFilter the classes whose clinit methods are in scope
+     * @return the clinit scope
+     */
+    public static DuringScope clinitOf(ClassScope classFilter)
+    {
         return new DuringScope("<clinit>", true, classFilter);
     }
 
-    public static DuringScope method(String methodPattern) {
+    /**
+     * Creates a scope covering methods matching a pattern, with no class filter.
+     * @param methodPattern the method name pattern
+     * @return the method scope
+     */
+    public static DuringScope method(String methodPattern)
+    {
         return new DuringScope(methodPattern, false, null);
     }
 
     @Override
-    public <T> T accept(ScopeVisitor<T> visitor) {
+    public <T> T accept(ScopeVisitor<T> visitor)
+    {
         return visitor.visitDuring(this);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof DuringScope)) return false;
         DuringScope that = (DuringScope) o;
@@ -55,12 +89,14 @@ public final class DuringScope implements Scope {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(methodPattern, isClinit, classFilter);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "DuringScope{methodPattern='" + methodPattern + "', isClinit=" + isClinit +
                ", classFilter=" + classFilter + "}";
     }

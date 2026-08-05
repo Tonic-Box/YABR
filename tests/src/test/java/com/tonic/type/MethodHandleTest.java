@@ -5,19 +5,17 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodHandleTest {
+class MethodHandleTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorSetsAllFields() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "abs",
-                "(I)I"
-            );
+        void constructorSetsAllFields()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "abs", "(I)I");
 
             assertEquals(MethodHandle.H_INVOKESTATIC, mh.getTag());
             assertEquals("java/lang/Math", mh.getOwner());
@@ -27,14 +25,9 @@ class MethodHandleTest {
         }
 
         @Test
-        void constructorWithIsInterface() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_INVOKEINTERFACE,
-                "java/util/List",
-                "size",
-                "()I",
-                true
-            );
+        void constructorWithIsInterface()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_INVOKEINTERFACE, "java/util/List", "size", "()I", true);
 
             assertEquals(MethodHandle.H_INVOKEINTERFACE, mh.getTag());
             assertEquals("java/util/List", mh.getOwner());
@@ -45,10 +38,12 @@ class MethodHandleTest {
     }
 
     @Nested
-    class HandleKindConstants {
+    class HandleKindConstants
+    {
 
         @Test
-        void fieldHandleKinds() {
+        void fieldHandleKinds()
+        {
             assertEquals(1, MethodHandle.H_GETFIELD);
             assertEquals(2, MethodHandle.H_GETSTATIC);
             assertEquals(3, MethodHandle.H_PUTFIELD);
@@ -56,7 +51,8 @@ class MethodHandleTest {
         }
 
         @Test
-        void methodHandleKinds() {
+        void methodHandleKinds()
+        {
             assertEquals(5, MethodHandle.H_INVOKEVIRTUAL);
             assertEquals(6, MethodHandle.H_INVOKESTATIC);
             assertEquals(7, MethodHandle.H_INVOKESPECIAL);
@@ -66,10 +62,12 @@ class MethodHandleTest {
     }
 
     @Nested
-    class GettersTests {
+    class GettersTests
+    {
 
         @Test
-        void gettersReturnCorrectValues() {
+        void gettersReturnCorrectValues()
+        {
             MethodHandle mh = new MethodHandle(
                 MethodHandle.H_INVOKEVIRTUAL,
                 "com/example/MyClass",
@@ -85,10 +83,12 @@ class MethodHandleTest {
     }
 
     @Nested
-    class IsInterfaceTests {
+    class IsInterfaceTests
+    {
 
         @Test
-        void isInterfaceDefaultsFalse() {
+        void isInterfaceDefaultsFalse()
+        {
             MethodHandle mh = new MethodHandle(
                 MethodHandle.H_INVOKEVIRTUAL,
                 "java/lang/Object",
@@ -100,7 +100,8 @@ class MethodHandleTest {
         }
 
         @Test
-        void isInterfaceCanBeTrue() {
+        void isInterfaceCanBeTrue()
+        {
             MethodHandle mh = new MethodHandle(
                 MethodHandle.H_INVOKEINTERFACE,
                 "java/util/Iterator",
@@ -114,10 +115,12 @@ class MethodHandleTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsRelevantInfo() {
+        void toStringContainsRelevantInfo()
+        {
             MethodHandle mh = new MethodHandle(
                 MethodHandle.H_INVOKESTATIC,
                 "java/lang/Integer",
@@ -134,189 +137,111 @@ class MethodHandleTest {
     }
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalHandlesAreEqual() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
+        void equalHandlesAreEqual()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
 
             assertEquals(mh1, mh2);
             assertEquals(mh1.hashCode(), mh2.hashCode());
         }
 
         @Test
-        void differentHandlesAreNotEqual() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "min",
-                "(II)I"
-            );
+        void differentHandlesAreNotEqual()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "min", "(II)I");
 
             assertNotEquals(mh1, mh2);
         }
 
         @Test
-        void interfaceFlagAffectsEquality() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKEINTERFACE,
-                "java/util/List",
-                "size",
-                "()I",
-                false
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKEINTERFACE,
-                "java/util/List",
-                "size",
-                "()I",
-                true
-            );
+        void interfaceFlagAffectsEquality()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKEINTERFACE, "java/util/List", "size", "()I", false);
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKEINTERFACE, "java/util/List", "size", "()I", true);
 
             assertNotEquals(mh1, mh2);
         }
 
         @Test
-        void equalsWithNullReturnsFalse() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
+        void equalsWithNullReturnsFalse()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
 
             assertNotEquals(null, mh);
         }
 
         @Test
-        void equalsWithDifferentClassReturnsFalse() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
+        void equalsWithDifferentClassReturnsFalse()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
 
             assertNotEquals(mh, "NotAMethodHandle");
         }
 
         @Test
-        void equalsWithDifferentTagReturnsFalse() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKEVIRTUAL,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
+        void equalsWithDifferentTagReturnsFalse()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKEVIRTUAL, "java/lang/Math", "max", "(II)I");
 
             assertNotEquals(mh1, mh2);
         }
 
         @Test
-        void equalsWithDifferentOwnerReturnsFalse() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Integer",
-                "max",
-                "(II)I"
-            );
+        void equalsWithDifferentOwnerReturnsFalse()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Integer", "max", "(II)I");
 
             assertNotEquals(mh1, mh2);
         }
 
         @Test
-        void equalsWithSameInstanceReturnsTrue() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
+        void equalsWithSameInstanceReturnsTrue()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
 
             assertEquals(mh, mh);
         }
     }
 
     @Nested
-    class HashCodeTests {
+    class HashCodeTests
+    {
 
         @Test
-        void hashCodeConsistentForEqualObjects() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "abs",
-                "(I)I"
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "abs",
-                "(I)I"
-            );
+        void hashCodeConsistentForEqualObjects()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "abs", "(I)I");
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "abs", "(I)I");
 
             assertEquals(mh1.hashCode(), mh2.hashCode());
         }
 
         @Test
-        void hashCodeDifferentForDifferentObjects() {
-            MethodHandle mh1 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "abs",
-                "(I)I"
-            );
-            MethodHandle mh2 = new MethodHandle(
-                MethodHandle.H_INVOKESTATIC,
-                "java/lang/Math",
-                "max",
-                "(II)I"
-            );
+        void hashCodeDifferentForDifferentObjects()
+        {
+            MethodHandle mh1 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "abs", "(I)I");
+            MethodHandle mh2 = new MethodHandle(MethodHandle.H_INVOKESTATIC, "java/lang/Math", "max", "(II)I");
 
             assertNotEquals(mh1.hashCode(), mh2.hashCode());
         }
     }
 
     @Nested
-    class FieldHandleTests {
+    class FieldHandleTests
+    {
 
         @Test
-        void getFieldHandle() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_GETFIELD,
-                "com/example/MyClass",
-                "value",
-                "I"
-            );
+        void getFieldHandle()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_GETFIELD, "com/example/MyClass", "value", "I");
 
             assertEquals(MethodHandle.H_GETFIELD, mh.getTag());
             assertEquals("com/example/MyClass", mh.getOwner());
@@ -325,19 +250,16 @@ class MethodHandleTest {
         }
 
         @Test
-        void putFieldHandle() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_PUTFIELD,
-                "com/example/MyClass",
-                "value",
-                "I"
-            );
+        void putFieldHandle()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_PUTFIELD, "com/example/MyClass", "value", "I");
 
             assertEquals(MethodHandle.H_PUTFIELD, mh.getTag());
         }
 
         @Test
-        void getStaticFieldHandle() {
+        void getStaticFieldHandle()
+        {
             MethodHandle mh = new MethodHandle(
                 MethodHandle.H_GETSTATIC,
                 "java/lang/System",
@@ -349,23 +271,21 @@ class MethodHandleTest {
         }
 
         @Test
-        void putStaticFieldHandle() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_PUTSTATIC,
-                "com/example/MyClass",
-                "staticField",
-                "I"
-            );
+        void putStaticFieldHandle()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_PUTSTATIC, "com/example/MyClass", "staticField", "I");
 
             assertEquals(MethodHandle.H_PUTSTATIC, mh.getTag());
         }
     }
 
     @Nested
-    class SpecialMethodHandles {
+    class SpecialMethodHandles
+    {
 
         @Test
-        void newInvokeSpecialHandle() {
+        void newInvokeSpecialHandle()
+        {
             MethodHandle mh = new MethodHandle(
                 MethodHandle.H_NEWINVOKESPECIAL,
                 "java/lang/StringBuilder",
@@ -377,13 +297,9 @@ class MethodHandleTest {
         }
 
         @Test
-        void invokeSpecialHandle() {
-            MethodHandle mh = new MethodHandle(
-                MethodHandle.H_INVOKESPECIAL,
-                "java/lang/Object",
-                "<init>",
-                "()V"
-            );
+        void invokeSpecialHandle()
+        {
+            MethodHandle mh = new MethodHandle(MethodHandle.H_INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
 
             assertEquals(MethodHandle.H_INVOKESPECIAL, mh.getTag());
         }

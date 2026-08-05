@@ -5,16 +5,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FieldMappingTest {
+class FieldMappingTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void validMappingCreatedSuccessfully() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Model", "data", "Ljava/lang/String;", "content"
-            );
+        void validMappingCreatedSuccessfully()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Model", "data", "Ljava/lang/String;", "content");
 
             assertEquals("com/example/Model", mapping.getOwner());
             assertEquals("data", mapping.getOldName());
@@ -23,63 +24,66 @@ class FieldMappingTest {
         }
 
         @Test
-        void rejectsNullOwner() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new FieldMapping(null, "field", "I", "renamed")
-            );
+        void rejectsNullOwner()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new FieldMapping(null, "field", "I", "renamed"));
         }
 
         @Test
-        void rejectsNullOldName() {
+        void rejectsNullOldName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new FieldMapping("com/example/Class", null, "I", "renamed")
             );
         }
 
         @Test
-        void rejectsNullDescriptor() {
+        void rejectsNullDescriptor()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new FieldMapping("com/example/Class", "field", null, "renamed")
             );
         }
 
         @Test
-        void rejectsNullNewName() {
+        void rejectsNullNewName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new FieldMapping("com/example/Class", "field", "I", null)
             );
         }
 
         @Test
-        void rejectsEmptyOwner() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new FieldMapping("", "field", "I", "renamed")
-            );
+        void rejectsEmptyOwner()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new FieldMapping("", "field", "I", "renamed"));
         }
 
         @Test
-        void rejectsEmptyOldName() {
+        void rejectsEmptyOldName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new FieldMapping("com/example/Class", "", "I", "renamed")
             );
         }
 
         @Test
-        void rejectsEmptyDescriptor() {
+        void rejectsEmptyDescriptor()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new FieldMapping("com/example/Class", "field", "", "renamed")
             );
         }
 
         @Test
-        void rejectsEmptyNewName() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new FieldMapping("com/example/Class", "field", "I", "")
-            );
+        void rejectsEmptyNewName()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new FieldMapping("com/example/Class", "field", "I", ""));
         }
 
         @Test
-        void rejectsSameOldAndNewName() {
+        void rejectsSameOldAndNewName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new FieldMapping("com/example/Class", "field", "I", "field")
             );
@@ -87,101 +91,88 @@ class FieldMappingTest {
     }
 
     @Nested
-    class FullyQualifiedNameTests {
+    class FullyQualifiedNameTests
+    {
 
         @Test
-        void fullyQualifiedNameHasCorrectFormat() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Model", "count", "I", "total"
-            );
+        void fullyQualifiedNameHasCorrectFormat()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Model", "count", "I", "total");
 
             assertEquals("com/example/Model.count:I", mapping.getFullyQualifiedName());
         }
 
         @Test
-        void fullyQualifiedNameWithObjectDescriptor() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Model", "data", "Ljava/lang/String;", "content"
-            );
+        void fullyQualifiedNameWithObjectDescriptor()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Model", "data", "Ljava/lang/String;", "content");
 
-            assertEquals("com/example/Model.data:Ljava/lang/String;",
-                mapping.getFullyQualifiedName());
+            assertEquals("com/example/Model.data:Ljava/lang/String;", mapping.getFullyQualifiedName());
         }
     }
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalMappingsAreEqual() {
-            FieldMapping mapping1 = new FieldMapping(
-                "com/example/Class", "field", "I", "renamed"
-            );
-            FieldMapping mapping2 = new FieldMapping(
-                "com/example/Class", "field", "I", "renamed"
-            );
+        void equalMappingsAreEqual()
+        {
+            FieldMapping mapping1 = new FieldMapping("com/example/Class", "field", "I", "renamed");
+            FieldMapping mapping2 = new FieldMapping("com/example/Class", "field", "I", "renamed");
 
             assertEquals(mapping1, mapping2);
             assertEquals(mapping1.hashCode(), mapping2.hashCode());
         }
 
         @Test
-        void differentOwnerMakesNotEqual() {
-            FieldMapping mapping1 = new FieldMapping(
-                "com/example/ClassA", "field", "I", "renamed"
-            );
-            FieldMapping mapping2 = new FieldMapping(
-                "com/example/ClassB", "field", "I", "renamed"
-            );
+        void differentOwnerMakesNotEqual()
+        {
+            FieldMapping mapping1 = new FieldMapping("com/example/ClassA", "field", "I", "renamed");
+            FieldMapping mapping2 = new FieldMapping("com/example/ClassB", "field", "I", "renamed");
 
             assertNotEquals(mapping1, mapping2);
         }
 
         @Test
-        void differentDescriptorMakesNotEqual() {
-            FieldMapping mapping1 = new FieldMapping(
-                "com/example/Class", "field", "I", "renamed"
-            );
-            FieldMapping mapping2 = new FieldMapping(
-                "com/example/Class", "field", "J", "renamed"
-            );
+        void differentDescriptorMakesNotEqual()
+        {
+            FieldMapping mapping1 = new FieldMapping("com/example/Class", "field", "I", "renamed");
+            FieldMapping mapping2 = new FieldMapping("com/example/Class", "field", "J", "renamed");
 
             assertNotEquals(mapping1, mapping2);
         }
 
         @Test
-        void equalToSelf() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Class", "field", "I", "renamed"
-            );
+        void equalToSelf()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Class", "field", "I", "renamed");
             assertEquals(mapping, mapping);
         }
 
         @Test
-        void notEqualToNull() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Class", "field", "I", "renamed"
-            );
+        void notEqualToNull()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Class", "field", "I", "renamed");
             assertNotEquals(mapping, null);
         }
 
         @Test
-        void notEqualToDifferentType() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Class", "field", "I", "renamed"
-            );
+        void notEqualToDifferentType()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Class", "field", "I", "renamed");
             assertNotEquals(mapping, "not a FieldMapping");
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsAllComponents() {
-            FieldMapping mapping = new FieldMapping(
-                "com/example/Model", "data", "Ljava/lang/String;", "content"
-            );
+        void toStringContainsAllComponents()
+        {
+            FieldMapping mapping = new FieldMapping("com/example/Model", "data", "Ljava/lang/String;", "content");
             String str = mapping.toString();
 
             assertTrue(str.contains("com/example/Model"));

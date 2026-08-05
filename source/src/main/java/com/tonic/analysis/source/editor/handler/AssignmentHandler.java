@@ -10,11 +10,11 @@ import com.tonic.analysis.source.editor.Replacement;
  * Use this to intercept and transform variable assignments.
  */
 @FunctionalInterface
-public interface AssignmentHandler {
+public interface AssignmentHandler
+{
 
     /**
      * Handle an assignment expression.
-     *
      * @param ctx        the editing context
      * @param assignment the assignment expression
      * @return the replacement action

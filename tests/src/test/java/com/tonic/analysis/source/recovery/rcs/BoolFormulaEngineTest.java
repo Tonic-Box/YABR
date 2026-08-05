@@ -15,21 +15,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * (equivalence = identity), the NNF layer must denote the same function, and switch mutual-exclusion
  * must prune impossible case combinations under the registered domain.
  */
-class BoolFormulaEngineTest {
+class BoolFormulaEngineTest
+{
 
-    /** A built formula paired with its reference boolean function over an assignment array. */
-    private static final class Built {
+    /**
+     * A built formula paired with its reference boolean function over an assignment array.
+     */
+    private static final class Built
+    {
         final BoolFormula f;
         final Predicate<boolean[]> ref;
 
-        Built(BoolFormula f, Predicate<boolean[]> ref) {
+        Built(BoolFormula f, Predicate<boolean[]> ref)
+        {
             this.f = f;
             this.ref = ref;
         }
     }
 
-    private Built build(BoolFormulaFactory ff, Random rnd, int atoms, int depth) {
-        if (depth <= 0 || rnd.nextInt(100) < 35) {
+    private Built build(BoolFormulaFactory ff, Random rnd, int atoms, int depth)
+    {
+        if (depth <= 0 || rnd.nextInt(100) < 35)
+        {
             int v = rnd.nextInt(atoms);
             boolean neg = rnd.nextBoolean();
             BoolFormula leaf = neg ? ff.not(ff.atom(v)) : ff.atom(v);
@@ -37,7 +44,8 @@ class BoolFormulaEngineTest {
         }
         Built x = build(ff, rnd, atoms, depth - 1);
         Built y = build(ff, rnd, atoms, depth - 1);
-        switch (rnd.nextInt(3)) {
+        switch (rnd.nextInt(3))
+        {
             case 0:
                 return new Built(ff.and(x.f, y.f), a -> x.ref.test(a) && y.ref.test(a));
             case 1:
@@ -47,11 +55,16 @@ class BoolFormulaEngineTest {
         }
     }
 
-    /** Runs {@code body} for every assignment over {@code atoms} boolean atoms. */
-    private void forEachAssignment(int atoms, java.util.function.Consumer<boolean[]> body) {
+    /**
+     * Runs {@code body} for every assignment over {@code atoms} boolean atoms.
+     */
+    private void forEachAssignment(int atoms, java.util.function.Consumer<boolean[]> body)
+    {
         boolean[] a = new boolean[atoms];
-        for (int mask = 0; mask < (1 << atoms); mask++) {
-            for (int i = 0; i < atoms; i++) {
+        for (int mask = 0; mask < (1 << atoms); mask++)
+        {
+            for (int i = 0; i < atoms; i++)
+            {
                 a[i] = (mask & (1 << i)) != 0;
             }
             body.accept(a);
@@ -59,11 +72,13 @@ class BoolFormulaEngineTest {
     }
 
     @Test
-    void bothLayersMatchBooleanSemanticsOnEveryAssignment() {
+    void bothLayersMatchBooleanSemanticsOnEveryAssignment()
+    {
         BoolFormulaFactory ff = new BoolFormulaFactory();
         Random rnd = new Random(0xC0FFEEL);
         int atoms = 5;
-        for (int iter = 0; iter < 2000; iter++) {
+        for (int iter = 0; iter < 2000; iter++)
+        {
             Built b = build(ff, rnd, atoms, 5);
             forEachAssignment(atoms, a -> {
                 boolean expected = b.ref.test(a);
@@ -74,11 +89,13 @@ class BoolFormulaEngineTest {
     }
 
     @Test
-    void bddEquivalenceIsExactlyAgreementOnAllAssignments() {
+    void bddEquivalenceIsExactlyAgreementOnAllAssignments()
+    {
         BoolFormulaFactory ff = new BoolFormulaFactory();
         Random rnd = new Random(0x1234L);
         int atoms = 5;
-        for (int iter = 0; iter < 3000; iter++) {
+        for (int iter = 0; iter < 3000; iter++)
+        {
             Built x = build(ff, rnd, atoms, 4);
             Built y = build(ff, rnd, atoms, 4);
             boolean agreeEverywhere = agreeOnAll(atoms, x, y);
@@ -87,13 +104,17 @@ class BoolFormulaEngineTest {
         }
     }
 
-    private boolean agreeOnAll(int atoms, Built x, Built y) {
+    private boolean agreeOnAll(int atoms, Built x, Built y)
+    {
         boolean[] a = new boolean[atoms];
-        for (int mask = 0; mask < (1 << atoms); mask++) {
-            for (int i = 0; i < atoms; i++) {
+        for (int mask = 0; mask < (1 << atoms); mask++)
+        {
+            for (int i = 0; i < atoms; i++)
+            {
                 a[i] = (mask & (1 << i)) != 0;
             }
-            if (x.ref.test(a) != y.ref.test(a)) {
+            if (x.ref.test(a) != y.ref.test(a))
+            {
                 return false;
             }
         }
@@ -101,7 +122,8 @@ class BoolFormulaEngineTest {
     }
 
     @Test
-    void constantsSatisfiabilityAndImplication() {
+    void constantsSatisfiabilityAndImplication()
+    {
         BoolFormulaFactory ff = new BoolFormulaFactory();
         BoolFormula a = ff.atom(0);
         BoolFormula b = ff.atom(1);
@@ -112,8 +134,7 @@ class BoolFormulaEngineTest {
 
         // De Morgan, distribution, absorption are all identities under canonical equivalence.
         assertTrue(ff.equivalent(ff.not(ff.and(a, b)), ff.or(ff.not(a), ff.not(b))));
-        assertTrue(ff.equivalent(ff.and(a, ff.or(b, ff.atom(2))),
-                ff.or(ff.and(a, b), ff.and(a, ff.atom(2)))));
+        assertTrue(ff.equivalent(ff.and(a, ff.or(b, ff.atom(2))), ff.or(ff.and(a, b), ff.and(a, ff.atom(2)))));
         assertTrue(ff.equivalent(ff.or(a, ff.and(a, b)), a));
 
         assertTrue(ff.implies(ff.and(a, b), a));
@@ -122,7 +143,8 @@ class BoolFormulaEngineTest {
     }
 
     @Test
-    void mutualExclusionPrunesImpossibleCaseCombinations() {
+    void mutualExclusionPrunesImpossibleCaseCombinations()
+    {
         BoolFormulaFactory ff = new BoolFormulaFactory();
         int c0 = 0;
         int c1 = 1;
@@ -147,15 +169,18 @@ class BoolFormulaEngineTest {
     }
 
     @Test
-    void largeConjunctionStaysCanonicalAndCheap() {
+    void largeConjunctionStaysCanonicalAndCheap()
+    {
         BoolFormulaFactory ff = new BoolFormulaFactory();
         BoolFormula acc = ff.truth;
-        for (int i = 0; i < 40; i++) {
+        for (int i = 0; i < 40; i++)
+        {
             acc = ff.and(acc, ff.atom(i));
         }
         // Order of conjunction must not matter (canonical form).
         BoolFormula rev = ff.truth;
-        for (int i = 39; i >= 0; i--) {
+        for (int i = 39; i >= 0; i--)
+        {
             rev = ff.and(rev, ff.atom(i));
         }
         assertTrue(ff.equivalent(acc, rev));

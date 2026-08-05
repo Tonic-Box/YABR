@@ -41,7 +41,8 @@ MethodReference target = new MethodReference(
 );
 Set<Xref> callers = db.getRefsToMethod(target);
 
-for (Xref ref : callers) {
+for (Xref ref : callers)
+{
     System.out.println(ref.getSourceDisplay() + " -> " + ref.getTargetDisplay());
 }
 
@@ -69,7 +70,8 @@ MethodReference source = new MethodReference(
 );
 Set<Xref> outgoing = db.getRefsFromMethod(source);
 
-for (Xref ref : outgoing) {
+for (Xref ref : outgoing)
+{
     System.out.println("  -> " + ref.getType() + ": " + ref.getTargetDisplay());
 }
 ```
@@ -111,7 +113,8 @@ Set<Xref> instantiations = db.getAllInstantiations();
 
 // Group incoming references by type
 Map<XrefType, Set<Xref>> grouped = db.groupIncomingByType("com/example/MyClass");
-for (Map.Entry<XrefType, Set<Xref>> entry : grouped.entrySet()) {
+for (Map.Entry<XrefType, Set<Xref>> entry : grouped.entrySet())
+{
     System.out.println(entry.getKey() + ": " + entry.getValue().size() + " refs");
 }
 ```
@@ -143,9 +146,11 @@ Set<Xref> between = db.findRefsBetweenClasses(
 Set<String> allClasses = db.getUniqueTargetClassCount() > 0
     ? /* your class list */ : Set.of();
 
-for (String className : allClasses) {
+for (String className : allClasses)
+{
     Set<Xref> incoming = db.getRefsToClass(className);
-    if (incoming.isEmpty()) {
+    if (incoming.isEmpty())
+    {
         System.out.println("Potentially unused: " + className);
     }
 }
@@ -168,7 +173,8 @@ System.out.println("Unique target fields: " + db.getUniqueTargetFieldCount());
 
 // Counts by type
 Map<XrefType, Integer> byType = db.getXrefCountByType();
-for (Map.Entry<XrefType, Integer> entry : byType.entrySet()) {
+for (Map.Entry<XrefType, Integer> entry : byType.entrySet())
+{
     System.out.println(entry.getKey() + ": " + entry.getValue());
 }
 ```

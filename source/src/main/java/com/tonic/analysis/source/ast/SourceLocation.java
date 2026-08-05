@@ -3,58 +3,81 @@ package com.tonic.analysis.source.ast;
 import java.util.Objects;
 
 /**
- * Represents source location information for AST nodes.
- * Maps back to bytecode offsets for debugging and error reporting.
+ * Position of an AST node as a bytecode offset and source line number, either of which may be absent (-1).
  */
-public final class SourceLocation {
+public final class SourceLocation
+{
     private final int bytecodeOffset;
     private final int lineNumber;
 
     public static final SourceLocation UNKNOWN = new SourceLocation(-1, -1);
 
-    public SourceLocation(int bytecodeOffset, int lineNumber) {
+    /**
+     * Creates a location; pass -1 for a missing component.
+     * @param bytecodeOffset the bytecode offset, or -1 if unknown
+     * @param lineNumber the source line number, or -1 if unknown
+     */
+    public SourceLocation(int bytecodeOffset, int lineNumber)
+    {
         this.bytecodeOffset = bytecodeOffset;
         this.lineNumber = lineNumber;
     }
 
     /**
-     * Creates a location with only bytecode offset.
+     * Creates a location with only a bytecode offset.
+     * @param offset the bytecode offset
+     * @return the location
      */
-    public static SourceLocation fromOffset(int offset) {
+    public static SourceLocation fromOffset(int offset)
+    {
         return new SourceLocation(offset, -1);
     }
 
     /**
-     * Creates a location with only line number.
+     * Creates a location with only a line number.
+     * @param line the source line number
+     * @return the location
      */
-    public static SourceLocation fromLine(int line) {
+    public static SourceLocation fromLine(int line)
+    {
         return new SourceLocation(-1, line);
     }
 
     /**
-     * Checks if this location has valid bytecode offset information.
+     * @return true if the bytecode offset is known
      */
-    public boolean hasOffset() {
+    public boolean hasOffset()
+    {
         return bytecodeOffset >= 0;
     }
 
     /**
-     * Checks if this location has valid line number information.
+     * @return true if the line number is known
      */
-    public boolean hasLineNumber() {
+    public boolean hasLineNumber()
+    {
         return lineNumber >= 0;
     }
 
-    public int bytecodeOffset() {
+    /**
+     * @return the bytecode offset, or -1 if unknown
+     */
+    public int bytecodeOffset()
+    {
         return bytecodeOffset;
     }
 
-    public int lineNumber() {
+    /**
+     * @return the line number, or -1 if unknown
+     */
+    public int lineNumber()
+    {
         return lineNumber;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof SourceLocation)) return false;
         SourceLocation that = (SourceLocation) o;
@@ -62,17 +85,24 @@ public final class SourceLocation {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(bytecodeOffset, lineNumber);
     }
 
     @Override
-    public String toString() {
-        if (hasLineNumber() && hasOffset()) {
+    public String toString()
+    {
+        if (hasLineNumber() && hasOffset())
+        {
             return "line " + lineNumber + " (offset " + bytecodeOffset + ")";
-        } else if (hasLineNumber()) {
+        }
+        else if (hasLineNumber())
+        {
             return "line " + lineNumber;
-        } else if (hasOffset()) {
+        }
+        else if (hasOffset())
+        {
             return "offset " + bytecodeOffset;
         }
         return "unknown";

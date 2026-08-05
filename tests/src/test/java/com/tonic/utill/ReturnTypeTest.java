@@ -5,202 +5,244 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ReturnTypeTest {
+class ReturnTypeTest
+{
 
     @Nested
-    class OpcodeTests {
+    class OpcodeTests
+    {
 
         @Test
-        void ireturnOpcode() {
+        void ireturnOpcode()
+        {
             assertEquals(0xAC, ReturnType.IRETURN.getOpcode());
         }
 
         @Test
-        void lreturnOpcode() {
+        void lreturnOpcode()
+        {
             assertEquals(0xAD, ReturnType.LRETURN.getOpcode());
         }
 
         @Test
-        void freturnOpcode() {
+        void freturnOpcode()
+        {
             assertEquals(0xAE, ReturnType.FRETURN.getOpcode());
         }
 
         @Test
-        void dreturnOpcode() {
+        void dreturnOpcode()
+        {
             assertEquals(0xAF, ReturnType.DRETURN.getOpcode());
         }
 
         @Test
-        void areturnOpcode() {
+        void areturnOpcode()
+        {
             assertEquals(0xB0, ReturnType.ARETURN.getOpcode());
         }
 
         @Test
-        void returnOpcode() {
+        void returnOpcode()
+        {
             assertEquals(0xB1, ReturnType.RETURN.getOpcode());
         }
     }
 
     @Nested
-    class MnemonicTests {
+    class MnemonicTests
+    {
 
         @Test
-        void ireturnMnemonic() {
+        void ireturnMnemonic()
+        {
             assertEquals("ireturn", ReturnType.IRETURN.getMnemonic());
         }
 
         @Test
-        void lreturnMnemonic() {
+        void lreturnMnemonic()
+        {
             assertEquals("lreturn", ReturnType.LRETURN.getMnemonic());
         }
 
         @Test
-        void freturnMnemonic() {
+        void freturnMnemonic()
+        {
             assertEquals("freturn", ReturnType.FRETURN.getMnemonic());
         }
 
         @Test
-        void dreturnMnemonic() {
+        void dreturnMnemonic()
+        {
             assertEquals("dreturn", ReturnType.DRETURN.getMnemonic());
         }
 
         @Test
-        void areturnMnemonic() {
+        void areturnMnemonic()
+        {
             assertEquals("areturn", ReturnType.ARETURN.getMnemonic());
         }
 
         @Test
-        void returnMnemonic() {
+        void returnMnemonic()
+        {
             assertEquals("return", ReturnType.RETURN.getMnemonic());
         }
     }
 
     @Nested
-    class FromOpcodeTests {
+    class FromOpcodeTests
+    {
 
         @Test
-        void fromOpcodeIreturn() {
+        void fromOpcodeIreturn()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.fromOpcode(0xAC));
         }
 
         @Test
-        void fromOpcodeLreturn() {
+        void fromOpcodeLreturn()
+        {
             assertEquals(ReturnType.LRETURN, ReturnType.fromOpcode(0xAD));
         }
 
         @Test
-        void fromOpcodeFreturn() {
+        void fromOpcodeFreturn()
+        {
             assertEquals(ReturnType.FRETURN, ReturnType.fromOpcode(0xAE));
         }
 
         @Test
-        void fromOpcodeDreturn() {
+        void fromOpcodeDreturn()
+        {
             assertEquals(ReturnType.DRETURN, ReturnType.fromOpcode(0xAF));
         }
 
         @Test
-        void fromOpcodeAreturn() {
+        void fromOpcodeAreturn()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromOpcode(0xB0));
         }
 
         @Test
-        void fromOpcodeReturn() {
+        void fromOpcodeReturn()
+        {
             assertEquals(ReturnType.RETURN, ReturnType.fromOpcode(0xB1));
         }
 
         @Test
-        void fromOpcodeInvalid() {
+        void fromOpcodeInvalid()
+        {
             assertNull(ReturnType.fromOpcode(0x00));
         }
 
         @Test
-        void fromOpcodeNegative() {
+        void fromOpcodeNegative()
+        {
             assertNull(ReturnType.fromOpcode(-1));
         }
 
         @Test
-        void fromOpcodeHigh() {
+        void fromOpcodeHigh()
+        {
             assertNull(ReturnType.fromOpcode(0xFF));
         }
     }
 
     @Nested
-    class FromDescriptorPrimitiveTests {
+    class FromDescriptorPrimitiveTests
+    {
 
         @Test
-        void fromDescriptorInt() {
+        void fromDescriptorInt()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.fromDescriptor("I"));
         }
 
         @Test
-        void fromDescriptorLong() {
+        void fromDescriptorLong()
+        {
             assertEquals(ReturnType.LRETURN, ReturnType.fromDescriptor("J"));
         }
 
         @Test
-        void fromDescriptorFloat() {
+        void fromDescriptorFloat()
+        {
             assertEquals(ReturnType.FRETURN, ReturnType.fromDescriptor("F"));
         }
 
         @Test
-        void fromDescriptorDouble() {
+        void fromDescriptorDouble()
+        {
             assertEquals(ReturnType.DRETURN, ReturnType.fromDescriptor("D"));
         }
 
         @Test
-        void fromDescriptorVoid() {
+        void fromDescriptorVoid()
+        {
             assertEquals(ReturnType.RETURN, ReturnType.fromDescriptor("V"));
         }
     }
 
     @Nested
-    class FromDescriptorObjectTests {
+    class FromDescriptorObjectTests
+    {
 
         @Test
-        void fromDescriptorObject() {
+        void fromDescriptorObject()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("Ljava/lang/String;"));
         }
 
         @Test
-        void fromDescriptorObjectSimple() {
+        void fromDescriptorObjectSimple()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("LObject;"));
         }
 
         @Test
-        void fromDescriptorInnerClass() {
+        void fromDescriptorInnerClass()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("Lcom/example/Outer$Inner;"));
         }
     }
 
     @Nested
-    class FromDescriptorArrayTests {
+    class FromDescriptorArrayTests
+    {
 
         @Test
-        void fromDescriptorPrimitiveArray() {
+        void fromDescriptorPrimitiveArray()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("[I"));
         }
 
         @Test
-        void fromDescriptorObjectArray() {
+        void fromDescriptorObjectArray()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("[Ljava/lang/String;"));
         }
 
         @Test
-        void fromDescriptorMultiDimensionalArray() {
+        void fromDescriptorMultiDimensionalArray()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("[[I"));
         }
 
         @Test
-        void fromDescriptor3DArray() {
+        void fromDescriptor3DArray()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.fromDescriptor("[[[Ljava/lang/Object;"));
         }
     }
 
     @Nested
-    class FromDescriptorErrorTests {
+    class FromDescriptorErrorTests
+    {
 
         @Test
-        void fromDescriptorNull() {
+        void fromDescriptorNull()
+        {
             IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> ReturnType.fromDescriptor(null)
@@ -209,7 +251,8 @@ class ReturnTypeTest {
         }
 
         @Test
-        void fromDescriptorEmpty() {
+        void fromDescriptorEmpty()
+        {
             IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> ReturnType.fromDescriptor("")
@@ -218,7 +261,8 @@ class ReturnTypeTest {
         }
 
         @Test
-        void fromDescriptorInvalidChar() {
+        void fromDescriptorInvalidChar()
+        {
             IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> ReturnType.fromDescriptor("X")
@@ -227,7 +271,8 @@ class ReturnTypeTest {
         }
 
         @Test
-        void fromDescriptorInvalidObject() {
+        void fromDescriptorInvalidObject()
+        {
             IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> ReturnType.fromDescriptor("Ljava/lang/String")
@@ -236,7 +281,8 @@ class ReturnTypeTest {
         }
 
         @Test
-        void fromDescriptorMalformedObject() {
+        void fromDescriptorMalformedObject()
+        {
             IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> ReturnType.fromDescriptor("java/lang/String;")
@@ -246,136 +292,163 @@ class ReturnTypeTest {
     }
 
     @Nested
-    class IsReturnOpcodeTests {
+    class IsReturnOpcodeTests
+    {
 
         @Test
-        void isReturnOpcodeIreturn() {
+        void isReturnOpcodeIreturn()
+        {
             assertTrue(ReturnType.isReturnOpcode(0xAC));
         }
 
         @Test
-        void isReturnOpcodeLreturn() {
+        void isReturnOpcodeLreturn()
+        {
             assertTrue(ReturnType.isReturnOpcode(0xAD));
         }
 
         @Test
-        void isReturnOpcodeFreturn() {
+        void isReturnOpcodeFreturn()
+        {
             assertTrue(ReturnType.isReturnOpcode(0xAE));
         }
 
         @Test
-        void isReturnOpcodeDreturn() {
+        void isReturnOpcodeDreturn()
+        {
             assertTrue(ReturnType.isReturnOpcode(0xAF));
         }
 
         @Test
-        void isReturnOpcodeAreturn() {
+        void isReturnOpcodeAreturn()
+        {
             assertTrue(ReturnType.isReturnOpcode(0xB0));
         }
 
         @Test
-        void isReturnOpcodeReturn() {
+        void isReturnOpcodeReturn()
+        {
             assertTrue(ReturnType.isReturnOpcode(0xB1));
         }
 
         @Test
-        void isReturnOpcodeInvalid() {
+        void isReturnOpcodeInvalid()
+        {
             assertFalse(ReturnType.isReturnOpcode(0x00));
         }
 
         @Test
-        void isReturnOpcodeNegative() {
+        void isReturnOpcodeNegative()
+        {
             assertFalse(ReturnType.isReturnOpcode(-1));
         }
 
         @Test
-        void isReturnOpcodeHigh() {
+        void isReturnOpcodeHigh()
+        {
             assertFalse(ReturnType.isReturnOpcode(0xFF));
         }
     }
 
     @Nested
-    class EnumValuesTests {
+    class EnumValuesTests
+    {
 
         @Test
-        void allValuesPresent() {
+        void allValuesPresent()
+        {
             ReturnType[] values = ReturnType.values();
             assertEquals(6, values.length);
         }
 
         @Test
-        void valueOfIreturn() {
+        void valueOfIreturn()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.valueOf("IRETURN"));
         }
 
         @Test
-        void valueOfLreturn() {
+        void valueOfLreturn()
+        {
             assertEquals(ReturnType.LRETURN, ReturnType.valueOf("LRETURN"));
         }
 
         @Test
-        void valueOfFreturn() {
+        void valueOfFreturn()
+        {
             assertEquals(ReturnType.FRETURN, ReturnType.valueOf("FRETURN"));
         }
 
         @Test
-        void valueOfDreturn() {
+        void valueOfDreturn()
+        {
             assertEquals(ReturnType.DRETURN, ReturnType.valueOf("DRETURN"));
         }
 
         @Test
-        void valueOfAreturn() {
+        void valueOfAreturn()
+        {
             assertEquals(ReturnType.ARETURN, ReturnType.valueOf("ARETURN"));
         }
 
         @Test
-        void valueOfReturn() {
+        void valueOfReturn()
+        {
             assertEquals(ReturnType.RETURN, ReturnType.valueOf("RETURN"));
         }
     }
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void roundTripOpcodeToTypeToOpcode() {
+        void roundTripOpcodeToTypeToOpcode()
+        {
             int originalOpcode = 0xAC;
             ReturnType type = ReturnType.fromOpcode(originalOpcode);
             assertEquals(originalOpcode, type.getOpcode());
         }
 
         @Test
-        void descriptorToTypeToOpcode() {
+        void descriptorToTypeToOpcode()
+        {
             ReturnType type = ReturnType.fromDescriptor("I");
             assertEquals(0xAC, type.getOpcode());
             assertEquals("ireturn", type.getMnemonic());
         }
 
         @Test
-        void allReturnOpcodesValid() {
-            for (ReturnType type : ReturnType.values()) {
+        void allReturnOpcodesValid()
+        {
+            for (ReturnType type : ReturnType.values())
+            {
                 assertTrue(ReturnType.isReturnOpcode(type.getOpcode()));
                 assertEquals(type, ReturnType.fromOpcode(type.getOpcode()));
             }
         }
 
         @Test
-        void descriptorPrimitiveBoolean() {
+        void descriptorPrimitiveBoolean()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.fromDescriptor("I"));
         }
 
         @Test
-        void descriptorPrimitiveByte() {
+        void descriptorPrimitiveByte()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.fromDescriptor("I"));
         }
 
         @Test
-        void descriptorPrimitiveShort() {
+        void descriptorPrimitiveShort()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.fromDescriptor("I"));
         }
 
         @Test
-        void descriptorPrimitiveChar() {
+        void descriptorPrimitiveChar()
+        {
             assertEquals(ReturnType.IRETURN, ReturnType.fromDescriptor("I"));
         }
     }

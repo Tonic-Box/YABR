@@ -5,23 +5,42 @@ import java.io.Writer;
 import java.io.IOException;
 import java.util.Map;
 
-public abstract class DOTExporter<T> {
+/**
+ * Base for graph-to-DOT exporters, supplying the shared node, edge, cluster and
+ * label-escaping emitters driven by a {@link DOTExporterConfig}.
+ * @param <T> the graph type this exporter renders
+ */
+public abstract class DOTExporter<T>
+{
 
     protected final DOTExporterConfig config;
 
-    protected DOTExporter(DOTExporterConfig config) {
+    protected DOTExporter(DOTExporterConfig config)
+    {
         this.config = config;
     }
 
-    public String export(T graph) {
+    /**
+     * Renders a graph to a DOT string.
+     * @param graph the graph to export
+     * @return the DOT source
+     */
+    public String export(T graph)
+    {
         StringWriter sw = new StringWriter();
         export(graph, sw);
         return sw.toString();
     }
 
+    /**
+     * Writes the DOT rendering of a graph.
+     * @param graph the graph to export
+     * @param output the writer that receives the DOT source
+     */
     public abstract void export(T graph, Writer output);
 
-    protected void writeHeader(Writer w) throws IOException {
+    protected void writeHeader(Writer w) throws IOException
+    {
         String graphType = config.isDirected() ? "digraph" : "graph";
         w.write(graphType + " " + config.getGraphName() + " {\n");
         w.write("  rankdir=" + config.getRankDir() + ";\n");
@@ -32,11 +51,13 @@ public abstract class DOTExporter<T> {
         w.write("\n");
     }
 
-    protected void writeFooter(Writer w) throws IOException {
+    protected void writeFooter(Writer w) throws IOException
+    {
         w.write("}\n");
     }
 
-    protected void writeNode(Writer w, String id, String label, String shape, String fillColor, String borderColor) throws IOException {
+    protected void writeNode(Writer w, String id, String label, String shape, String fillColor, String borderColor) throws IOException
+    {
         w.write("  " + id + " [");
         w.write("label=\"" + escapeLabel(label) + "\"");
         w.write(", shape=" + shape);
@@ -46,19 +67,23 @@ public abstract class DOTExporter<T> {
         w.write("];\n");
     }
 
-    protected void writeNode(Writer w, String id, String label, Map<String, String> attrs) throws IOException {
+    protected void writeNode(Writer w, String id, String label, Map<String, String> attrs) throws IOException
+    {
         w.write("  " + id + " [");
         w.write("label=\"" + escapeLabel(label) + "\"");
-        for (Map.Entry<String, String> attr : attrs.entrySet()) {
+        for (Map.Entry<String, String> attr : attrs.entrySet())
+        {
             w.write(", " + attr.getKey() + "=\"" + attr.getValue() + "\"");
         }
         w.write("];\n");
     }
 
-    protected void writeEdge(Writer w, String source, String target, String label, String color, String style) throws IOException {
+    protected void writeEdge(Writer w, String source, String target, String label, String color, String style) throws IOException
+    {
         String connector = config.isDirected() ? " -> " : " -- ";
         w.write("  " + source + connector + target + " [");
-        if (label != null && !label.isEmpty()) {
+        if (label != null && !label.isEmpty())
+        {
             w.write("label=\"" + escapeLabel(label) + "\"");
             w.write(", ");
         }
@@ -67,13 +92,16 @@ public abstract class DOTExporter<T> {
         w.write("];\n");
     }
 
-    protected void writeEdge(Writer w, String source, String target, Map<String, String> attrs) throws IOException {
+    protected void writeEdge(Writer w, String source, String target, Map<String, String> attrs) throws IOException
+    {
         String connector = config.isDirected() ? " -> " : " -- ";
         w.write("  " + source + connector + target);
-        if (!attrs.isEmpty()) {
+        if (!attrs.isEmpty())
+        {
             w.write(" [");
             boolean first = true;
-            for (Map.Entry<String, String> attr : attrs.entrySet()) {
+            for (Map.Entry<String, String> attr : attrs.entrySet())
+            {
                 if (!first) w.write(", ");
                 w.write(attr.getKey() + "=\"" + attr.getValue() + "\"");
                 first = false;
@@ -83,25 +111,29 @@ public abstract class DOTExporter<T> {
         w.write(";\n");
     }
 
-    protected void startCluster(Writer w, String name, String label) throws IOException {
+    protected void startCluster(Writer w, String name, String label) throws IOException
+    {
         w.write("  subgraph cluster_" + name + " {\n");
         w.write("    label=\"" + escapeLabel(label) + "\";\n");
         w.write("    style=rounded;\n");
         w.write("    bgcolor=\"#f0f0f0\";\n");
     }
 
-    protected void endCluster(Writer w) throws IOException {
+    protected void endCluster(Writer w) throws IOException
+    {
         w.write("  }\n");
     }
 
-    protected void writeLegend(Writer w, Map<String, String> items) throws IOException {
+    protected void writeLegend(Writer w, Map<String, String> items) throws IOException
+    {
         w.write("  subgraph cluster_legend {\n");
         w.write("    label=\"Legend\";\n");
         w.write("    style=rounded;\n");
         w.write("    bgcolor=\"#fffff0\";\n");
 
         int i = 0;
-        for (Map.Entry<String, String> item : items.entrySet()) {
+        for (Map.Entry<String, String> item : items.entrySet())
+        {
             w.write("    legend_" + i + " [label=\"" + item.getKey() + "\", shape=plaintext];\n");
             i++;
         }
@@ -109,7 +141,8 @@ public abstract class DOTExporter<T> {
         w.write("  }\n");
     }
 
-    protected String escapeLabel(String label) {
+    protected String escapeLabel(String label)
+    {
         if (label == null) return "";
         String escaped = label
             .replace("\\", "\\\\")
@@ -121,14 +154,16 @@ public abstract class DOTExporter<T> {
             .replace("{", "\\{")
             .replace("}", "\\}");
 
-        if (config.isTruncateLabels() && escaped.length() > config.getMaxLabelLength()) {
+        if (config.isTruncateLabels() && escaped.length() > config.getMaxLabelLength())
+        {
             escaped = escaped.substring(0, config.getMaxLabelLength() - 3) + "...";
         }
 
         return escaped;
     }
 
-    protected String sanitizeId(String id) {
+    protected String sanitizeId(String id)
+    {
         return "n" + id.replaceAll("[^a-zA-Z0-9_]", "_");
     }
 }

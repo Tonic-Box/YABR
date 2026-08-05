@@ -19,18 +19,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for SourceEmitter - emitting Java source code from AST nodes.
  * Uses lenient assertions focusing on successful emission rather than exact formatting.
  */
-class SourceEmitterTest {
+class SourceEmitterTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Statement Emission Tests ==========
+    // Basic Statement Emission Tests
 
     @Test
-    void emitReturnStatementWithValue() {
+    void emitReturnStatementWithValue()
+    {
         ReturnStmt returnStmt = new ReturnStmt(LiteralExpr.ofInt(42));
 
         String result = SourceEmitter.emit(returnStmt);
@@ -41,7 +44,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitVoidReturnStatement() {
+    void emitVoidReturnStatement()
+    {
         ReturnStmt returnStmt = new ReturnStmt();
 
         String result = SourceEmitter.emit(returnStmt);
@@ -51,11 +55,9 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitVariableDeclarationWithoutInitializer() {
-        VarDeclStmt varDecl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x"
-        );
+    void emitVariableDeclarationWithoutInitializer()
+    {
+        VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x");
 
         String result = SourceEmitter.emit(varDecl);
 
@@ -65,12 +67,9 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitVariableDeclarationWithInitializer() {
-        VarDeclStmt varDecl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(10)
-        );
+    void emitVariableDeclarationWithInitializer()
+    {
+        VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(10));
 
         String result = SourceEmitter.emit(varDecl);
 
@@ -81,7 +80,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitFinalVariableDeclaration() {
+    void emitFinalVariableDeclaration()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(
             PrimitiveSourceType.INT,
             "CONSTANT",
@@ -99,7 +99,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitExpressionStatement() {
+    void emitExpressionStatement()
+    {
         Expression assignment = new BinaryExpr(
             BinaryOperator.ASSIGN,
             new VarRefExpr("x", PrimitiveSourceType.INT),
@@ -116,7 +117,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBlockStatement() {
+    void emitBlockStatement()
+    {
         List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
         stmts.add(new ReturnStmt(new VarRefExpr("x", PrimitiveSourceType.INT)));
@@ -130,10 +132,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("x"));
     }
 
-    // ========== Control Flow Statement Tests ==========
+    // Control Flow Statement Tests
 
     @Test
-    void emitIfStatementWithoutElse() {
+    void emitIfStatementWithoutElse()
+    {
         Expression condition = new BinaryExpr(
             BinaryOperator.GT,
             new VarRefExpr("x", PrimitiveSourceType.INT),
@@ -150,7 +153,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitIfStatementWithElse() {
+    void emitIfStatementWithElse()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement thenBranch = new ReturnStmt(LiteralExpr.ofInt(1));
         Statement elseBranch = new ReturnStmt(LiteralExpr.ofInt(0));
@@ -164,7 +168,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitIfStatementWithEmptyBlocks() {
+    void emitIfStatementWithEmptyBlocks()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement thenBranch = new BlockStmt();
         Statement elseBranch = new BlockStmt();
@@ -176,7 +181,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitWhileStatement() {
+    void emitWhileStatement()
+    {
         Expression condition = new BinaryExpr(
             BinaryOperator.LT,
             new VarRefExpr("i", PrimitiveSourceType.INT),
@@ -195,7 +201,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBreakStatement() {
+    void emitBreakStatement()
+    {
         BreakStmt breakStmt = new BreakStmt(null);
 
         String result = SourceEmitter.emit(breakStmt);
@@ -205,7 +212,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBreakStatementWithLabel() {
+    void emitBreakStatementWithLabel()
+    {
         BreakStmt breakStmt = new BreakStmt("outer");
 
         String result = SourceEmitter.emit(breakStmt);
@@ -216,7 +224,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitContinueStatement() {
+    void emitContinueStatement()
+    {
         ContinueStmt continueStmt = new ContinueStmt(null);
 
         String result = SourceEmitter.emit(continueStmt);
@@ -225,10 +234,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("continue"));
     }
 
-    // ========== Expression Emission Tests ==========
+    // Expression Emission Tests
 
     @Test
-    void emitIntegerLiteral() {
+    void emitIntegerLiteral()
+    {
         Expression expr = LiteralExpr.ofInt(42);
 
         String result = SourceEmitter.emit(expr);
@@ -238,7 +248,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitLongLiteral() {
+    void emitLongLiteral()
+    {
         Expression expr = LiteralExpr.ofLong(12345L);
 
         String result = SourceEmitter.emit(expr);
@@ -249,7 +260,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitFloatLiteral() {
+    void emitFloatLiteral()
+    {
         Expression expr = LiteralExpr.ofFloat(3.14f);
 
         String result = SourceEmitter.emit(expr);
@@ -260,7 +272,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitDoubleLiteral() {
+    void emitDoubleLiteral()
+    {
         Expression expr = LiteralExpr.ofDouble(2.718);
 
         String result = SourceEmitter.emit(expr);
@@ -271,7 +284,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBooleanLiteral() {
+    void emitBooleanLiteral()
+    {
         Expression trueExpr = LiteralExpr.ofBoolean(true);
         Expression falseExpr = LiteralExpr.ofBoolean(false);
 
@@ -283,7 +297,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitStringLiteral() {
+    void emitStringLiteral()
+    {
         Expression expr = LiteralExpr.ofString("Hello, World!");
 
         String result = SourceEmitter.emit(expr);
@@ -293,7 +308,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitStringLiteralWithEscapes() {
+    void emitStringLiteralWithEscapes()
+    {
         Expression expr = LiteralExpr.ofString("Line1\nLine2\tTabbed");
 
         String result = SourceEmitter.emit(expr);
@@ -304,7 +320,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitNullLiteral() {
+    void emitNullLiteral()
+    {
         Expression expr = LiteralExpr.ofNull();
 
         String result = SourceEmitter.emit(expr);
@@ -314,7 +331,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitCharLiteral() {
+    void emitCharLiteral()
+    {
         Expression expr = LiteralExpr.ofChar('A');
 
         String result = SourceEmitter.emit(expr);
@@ -324,7 +342,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitVariableReference() {
+    void emitVariableReference()
+    {
         Expression expr = new VarRefExpr("myVariable", PrimitiveSourceType.INT);
 
         String result = SourceEmitter.emit(expr);
@@ -333,10 +352,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("myVariable"));
     }
 
-    // ========== Binary Expression Tests ==========
+    // Binary Expression Tests
 
     @Test
-    void emitBinaryAddition() {
+    void emitBinaryAddition()
+    {
         Expression expr = new BinaryExpr(
             BinaryOperator.ADD,
             LiteralExpr.ofInt(1),
@@ -353,7 +373,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBinaryComparison() {
+    void emitBinaryComparison()
+    {
         Expression expr = new BinaryExpr(
             BinaryOperator.EQ,
             new VarRefExpr("x", PrimitiveSourceType.INT),
@@ -370,7 +391,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBinaryLogicalAnd() {
+    void emitBinaryLogicalAnd()
+    {
         Expression expr = new BinaryExpr(
             BinaryOperator.AND,
             LiteralExpr.ofBoolean(true),
@@ -385,7 +407,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitBinaryAssignment() {
+    void emitBinaryAssignment()
+    {
         Expression expr = new BinaryExpr(
             BinaryOperator.ASSIGN,
             new VarRefExpr("x", PrimitiveSourceType.INT),
@@ -401,15 +424,12 @@ class SourceEmitterTest {
         assertTrue(result.contains("="));
     }
 
-    // ========== Unary Expression Tests ==========
+    // Unary Expression Tests
 
     @Test
-    void emitUnaryNegation() {
-        Expression expr = new UnaryExpr(
-            UnaryOperator.NEG,
-            LiteralExpr.ofInt(5),
-            PrimitiveSourceType.INT
-        );
+    void emitUnaryNegation()
+    {
+        Expression expr = new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(5), PrimitiveSourceType.INT);
 
         String result = SourceEmitter.emit(expr);
 
@@ -419,12 +439,9 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitUnaryLogicalNot() {
-        Expression expr = new UnaryExpr(
-            UnaryOperator.NOT,
-            LiteralExpr.ofBoolean(true),
-            PrimitiveSourceType.BOOLEAN
-        );
+    void emitUnaryLogicalNot()
+    {
+        Expression expr = new UnaryExpr(UnaryOperator.NOT, LiteralExpr.ofBoolean(true), PrimitiveSourceType.BOOLEAN);
 
         String result = SourceEmitter.emit(expr);
 
@@ -433,7 +450,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitUnaryPreIncrement() {
+    void emitUnaryPreIncrement()
+    {
         Expression expr = new UnaryExpr(
             UnaryOperator.PRE_INC,
             new VarRefExpr("i", PrimitiveSourceType.INT),
@@ -448,7 +466,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitUnaryPostIncrement() {
+    void emitUnaryPostIncrement()
+    {
         Expression expr = new UnaryExpr(
             UnaryOperator.POST_INC,
             new VarRefExpr("i", PrimitiveSourceType.INT),
@@ -462,14 +481,12 @@ class SourceEmitterTest {
         assertTrue(result.contains("i"));
     }
 
-    // ========== Other Expression Tests ==========
+    // Other Expression Tests
 
     @Test
-    void emitCastExpression() {
-        Expression expr = new CastExpr(
-            PrimitiveSourceType.INT,
-            LiteralExpr.ofDouble(3.14)
-        );
+    void emitCastExpression()
+    {
+        Expression expr = new CastExpr(PrimitiveSourceType.INT, LiteralExpr.ofDouble(3.14));
 
         String result = SourceEmitter.emit(expr);
 
@@ -478,7 +495,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitTernaryExpression() {
+    void emitTernaryExpression()
+    {
         Expression expr = new TernaryExpr(
             LiteralExpr.ofBoolean(true),
             LiteralExpr.ofInt(1),
@@ -494,7 +512,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitMethodCall() {
+    void emitMethodCall()
+    {
         List<Expression> args = new ArrayList<>();
         args.add(LiteralExpr.ofString("test"));
         Expression expr = new MethodCallExpr(
@@ -514,7 +533,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitFieldAccess() {
+    void emitFieldAccess()
+    {
         // FieldAccessExpr(receiver, fieldName, ownerClass, isStatic, type)
         Expression expr = new FieldAccessExpr(
             new VarRefExpr("obj", new ReferenceSourceType("com/test/MyClass")),
@@ -531,7 +551,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitArrayAccess() {
+    void emitArrayAccess()
+    {
         Expression expr = new ArrayAccessExpr(
             new VarRefExpr("array", new ReferenceSourceType("[I")),
             LiteralExpr.ofInt(0),
@@ -546,14 +567,11 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitNewExpression() {
+    void emitNewExpression()
+    {
         List<Expression> args = new ArrayList<>();
         args.add(LiteralExpr.ofString("test"));
-        Expression expr = new NewExpr(
-            "java/lang/String",
-            args,
-            new ReferenceSourceType("java/lang/String")
-        );
+        Expression expr = new NewExpr("java/lang/String", args, new ReferenceSourceType("java/lang/String"));
 
         String result = SourceEmitter.emit(expr);
 
@@ -563,17 +581,12 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitNewArrayExpression() {
+    void emitNewArrayExpression()
+    {
         List<Expression> dims = new ArrayList<>();
         dims.add(LiteralExpr.ofInt(10));
         // NewArrayExpr(elementType, dimensions, initializer, type, location)
-        Expression expr = new NewArrayExpr(
-            PrimitiveSourceType.INT,
-            dims,
-            null,
-            new ReferenceSourceType("[I"),
-            null
-        );
+        Expression expr = new NewArrayExpr(PrimitiveSourceType.INT, dims, null, new ReferenceSourceType("[I"), null);
 
         String result = SourceEmitter.emit(expr);
 
@@ -583,7 +596,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitThisExpression() {
+    void emitThisExpression()
+    {
         Expression expr = new ThisExpr(new ReferenceSourceType("com/test/MyClass"));
 
         String result = SourceEmitter.emit(expr);
@@ -593,7 +607,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitSuperExpression() {
+    void emitSuperExpression()
+    {
         Expression expr = new SuperExpr(new ReferenceSourceType("com/test/MyClass"));
 
         String result = SourceEmitter.emit(expr);
@@ -602,10 +617,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("super"));
     }
 
-    // ========== Complex Statement Tests ==========
+    // Complex Statement Tests
 
     @Test
-    void emitNestedBlocks() {
+    void emitNestedBlocks()
+    {
         List<Statement> inner = new ArrayList<>();
         inner.add(new ReturnStmt(LiteralExpr.ofInt(1)));
         BlockStmt innerBlock = new BlockStmt(inner);
@@ -622,7 +638,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitMultipleStatements() {
+    void emitMultipleStatements()
+    {
         List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1)));
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "b", LiteralExpr.ofInt(2)));
@@ -637,10 +654,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("c"));
     }
 
-    // ========== Formatting Configuration Tests ==========
+    // Formatting Configuration Tests
 
     @Test
-    void emitWithCustomConfig() {
+    void emitWithCustomConfig()
+    {
         // SourceEmitterConfig uses the builder pattern
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .alwaysUseBraces(true)
@@ -657,21 +675,12 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitDoesNotThrowOnComplexExpression() {
+    void emitDoesNotThrowOnComplexExpression()
+    {
         Expression complex = new BinaryExpr(
             BinaryOperator.ADD,
-            new BinaryExpr(
-                BinaryOperator.MUL,
-                LiteralExpr.ofInt(2),
-                LiteralExpr.ofInt(3),
-                PrimitiveSourceType.INT
-            ),
-            new BinaryExpr(
-                BinaryOperator.SUB,
-                LiteralExpr.ofInt(5),
-                LiteralExpr.ofInt(1),
-                PrimitiveSourceType.INT
-            ),
+            new BinaryExpr(BinaryOperator.MUL, LiteralExpr.ofInt(2), LiteralExpr.ofInt(3), PrimitiveSourceType.INT),
+            new BinaryExpr(BinaryOperator.SUB, LiteralExpr.ofInt(5), LiteralExpr.ofInt(1), PrimitiveSourceType.INT),
             PrimitiveSourceType.INT
         );
 
@@ -679,7 +688,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitHandlesEmptyBlock() {
+    void emitHandlesEmptyBlock()
+    {
         BlockStmt emptyBlock = new BlockStmt();
 
         String result = SourceEmitter.emit(emptyBlock);
@@ -690,7 +700,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitInstanceOfExpression() {
+    void emitInstanceOfExpression()
+    {
         Expression expr = new InstanceOfExpr(
             new VarRefExpr("obj", ReferenceSourceType.OBJECT),
             new ReferenceSourceType("java/lang/String"),
@@ -703,10 +714,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("instanceof"));
     }
 
-    // ========== DynamicConstantExpr Tests ==========
+    // DynamicConstantExpr Tests
 
     @Test
-    void emitDynamicConstantExprWithBootstrapInfo() {
+    void emitDynamicConstantExprWithBootstrapInfo()
+    {
         Expression expr = new DynamicConstantExpr(
             "myConst",
             "Ljava/lang/Object;",
@@ -725,13 +737,9 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitDynamicConstantExprWithMinimalInfo() {
-        Expression expr = new DynamicConstantExpr(
-            "unnamed",
-            "I",
-            5,
-            PrimitiveSourceType.INT
-        );
+    void emitDynamicConstantExprWithMinimalInfo()
+    {
+        Expression expr = new DynamicConstantExpr("unnamed", "I", 5, PrimitiveSourceType.INT);
 
         String result = SourceEmitter.emit(expr);
 
@@ -740,7 +748,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitDynamicConstantExprWithBootstrapResolution() {
+    void emitDynamicConstantExprWithBootstrapResolution()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .resolveBootstrapMethods(true)
             .build();
@@ -763,10 +772,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("/* condy */"));
     }
 
-    // ========== InvokeDynamicExpr Tests ==========
+    // InvokeDynamicExpr Tests
 
     @Test
-    void emitInvokeDynamicExprWithBootstrapInfo() {
+    void emitInvokeDynamicExprWithBootstrapInfo()
+    {
         List<Expression> args = new ArrayList<>();
         args.add(LiteralExpr.ofString("arg1"));
 
@@ -788,7 +798,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitInvokeDynamicExprWithoutArgs() {
+    void emitInvokeDynamicExprWithoutArgs()
+    {
         Expression expr = new InvokeDynamicExpr(
             "noArgMethod",
             "()I",
@@ -806,7 +817,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitInvokeDynamicExprWithBootstrapResolution() {
+    void emitInvokeDynamicExprWithBootstrapResolution()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .resolveBootstrapMethods(true)
             .build();
@@ -833,17 +845,13 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitInvokeDynamicExprWithUnknownBootstrap() {
+    void emitInvokeDynamicExprWithUnknownBootstrap()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .resolveBootstrapMethods(true)
             .build();
 
-        Expression expr = new InvokeDynamicExpr(
-            "unknownMethod",
-            "()V",
-            new ArrayList<>(),
-            VoidSourceType.INSTANCE
-        );
+        Expression expr = new InvokeDynamicExpr("unknownMethod", "()V", new ArrayList<>(), VoidSourceType.INSTANCE);
 
         String result = SourceEmitter.emit(new ExprStmt(expr), config);
 
@@ -852,20 +860,17 @@ class SourceEmitterTest {
         assertTrue(result.contains("invokedynamic"));
     }
 
-    // ========== Identifier Mode Tests ==========
+    // Identifier Mode Tests
 
     @Test
-    void emitWithUnicodeEscapeMode() {
+    void emitWithUnicodeEscapeMode()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .identifierMode(IdentifierMode.UNICODE_ESCAPE)
             .build();
 
         // Variable with invalid start character
-        VarDeclStmt varDecl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "1invalid",
-            LiteralExpr.ofInt(10)
-        );
+        VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "1invalid", LiteralExpr.ofInt(10));
 
         String result = SourceEmitter.emit(varDecl, config);
 
@@ -874,7 +879,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitWithSemanticRenameMode() {
+    void emitWithSemanticRenameMode()
+    {
         // Method call with invalid name
         List<Expression> args = new ArrayList<>();
         Expression expr = new MethodCallExpr(
@@ -894,7 +900,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitWithSemanticRenameModeRenamesFields() {
+    void emitWithSemanticRenameModeRenamesFields()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .identifierMode(IdentifierMode.SEMANTIC_RENAME)
             .build();
@@ -913,10 +920,11 @@ class SourceEmitterTest {
         assertTrue(result.contains("field_"));
     }
 
-    // ========== Combined Feature Tests ==========
+    // Combined Feature Tests
 
     @Test
-    void emitDynamicConstantWithUnicodeEscape() {
+    void emitDynamicConstantWithUnicodeEscape()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .identifierMode(IdentifierMode.UNICODE_ESCAPE)
             .resolveBootstrapMethods(false)
@@ -939,7 +947,8 @@ class SourceEmitterTest {
     }
 
     @Test
-    void emitInvokeDynamicWithSemanticRename() {
+    void emitInvokeDynamicWithSemanticRename()
+    {
         SourceEmitterConfig config = SourceEmitterConfig.builder()
             .identifierMode(IdentifierMode.SEMANTIC_RENAME)
             .resolveBootstrapMethods(true)

@@ -9,7 +9,8 @@ import java.util.Map;
 /**
  * Represents the LOOKUPSWITCH instruction (0xAB).
  */
-public class LookupSwitchInstruction extends Instruction {
+public class LookupSwitchInstruction extends Instruction
+{
     private final int padding;
     private final int defaultOffset;
     private final int npairs;
@@ -17,7 +18,6 @@ public class LookupSwitchInstruction extends Instruction {
 
     /**
      * Constructs a LookupSwitchInstruction.
-     *
      * @param opcode        The opcode of the instruction.
      * @param offset        The bytecode offset of the instruction.
      * @param padding       The number of padding bytes.
@@ -25,9 +25,11 @@ public class LookupSwitchInstruction extends Instruction {
      * @param npairs        The number of key-offset pairs.
      * @param matchOffsets  The map of keys to branch target offsets.
      */
-    public LookupSwitchInstruction(int opcode, int offset, int padding, int defaultOffset, int npairs, Map<Integer, Integer> matchOffsets) {
+    public LookupSwitchInstruction(int opcode, int offset, int padding, int defaultOffset, int npairs, Map<Integer, Integer> matchOffsets)
+    {
         super(opcode, offset, 1 + padding + 8 + (npairs * 8));
-        if (opcode != 0xAB) {
+        if (opcode != 0xAB)
+        {
             throw new IllegalArgumentException("Invalid opcode for LookupSwitchInstruction: " + opcode);
         }
         this.padding = padding;
@@ -36,38 +38,53 @@ public class LookupSwitchInstruction extends Instruction {
         this.matchOffsets = matchOffsets;
     }
 
-    public int getDefaultOffset() {
+    /**
+     * @return the default offset
+     */
+    public int getDefaultOffset()
+    {
         return defaultOffset;
     }
 
-    public int getNpairs() {
+    /**
+     * @return the npairs
+     */
+    public int getNpairs()
+    {
         return npairs;
     }
 
-    public Map<Integer, Integer> getMatchOffsets() {
+    /**
+     * @return the match offsets
+     */
+    public Map<Integer, Integer> getMatchOffsets()
+    {
         return matchOffsets;
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     /**
      * Writes the LOOKUPSWITCH opcode and its operands to the DataOutputStream.
-     *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
-        for (int i = 0; i < padding; i++) {
+        for (int i = 0; i < padding; i++)
+        {
             dos.writeByte(0);
         }
         dos.writeInt(defaultOffset);
         dos.writeInt(npairs);
-        for (Map.Entry<Integer, Integer> entry : matchOffsets.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : matchOffsets.entrySet())
+        {
             dos.writeInt(entry.getKey());
             dos.writeInt(entry.getValue());
         }
@@ -75,37 +92,39 @@ public class LookupSwitchInstruction extends Instruction {
 
     /**
      * Returns the change in stack size caused by this instruction.
-     *
      * @return The stack size change (pops one int).
      */
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         return -1;
     }
 
     /**
      * Returns the change in local variables caused by this instruction.
-     *
      * @return The local variables size change (none).
      */
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     /**
      * Returns a string representation of the instruction.
-     *
      * @return The mnemonic, default offset, number of pairs, and key-offset mappings.
      */
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("LOOKUPSWITCH default=").append(defaultOffset).append(", npairs=").append(npairs).append(" {");
-        for (Map.Entry<Integer, Integer> entry : matchOffsets.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : matchOffsets.entrySet())
+        {
             sb.append(entry.getKey()).append("->").append(entry.getValue()).append(", ");
         }
-        if (!matchOffsets.isEmpty()) {
+        if (!matchOffsets.isEmpty())
+        {
             sb.setLength(sb.length() - 2);
         }
         sb.append("}");

@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * doing so duplicated it ({@code long v = seed; try { v = seed; while ... }}), which produced a broken frame
  * and a {@code VerifyError} on recompile. Asserts a single init and a recompile that verifies and executes.
  */
-class NonCountedLoopInTryRecompileFidelityTest {
+class NonCountedLoopInTryRecompileFidelityTest
+{
 
     private static final String SOURCE =
             "public class NonCountedLoop {\n"
@@ -54,14 +55,14 @@ class NonCountedLoopInTryRecompileFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("non-counted-loop");
         Path src = dir.resolve("NonCountedLoop.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("NonCountedLoop.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -72,7 +73,8 @@ class NonCountedLoopInTryRecompileFidelityTest {
     }
 
     @Test
-    void theInitIsNotDuplicated() {
+    void theInitIsNotDuplicated()
+    {
         int first = d1.indexOf("v = seed");
         assertTrue(first >= 0, "the loop variable must be initialized:\n" + d1);
         assertEquals(-1, d1.indexOf("v = seed", first + 1),
@@ -80,7 +82,8 @@ class NonCountedLoopInTryRecompileFidelityTest {
     }
 
     @Test
-    void recompilesVerifiesAndExecutes() throws Exception {
+    void recompilesVerifiesAndExecutes() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         // 40 + 20 + 10 + 5 + 2 + 1 = 78 (halving to zero, never equal to 66)
         assertEquals(78L, recompiledClass.getMethod("run", long.class).invoke(inst, 40L),

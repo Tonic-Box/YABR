@@ -14,506 +14,605 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for OperatorMapper class.
  * Tests all static mapping methods for IR to source operator conversion.
  */
-class OperatorMapperTest {
+class OperatorMapperTest
+{
 
-    // ========== BinaryOp Mapping Tests ==========
+    // BinaryOp Mapping Tests
 
     @Nested
-    class MapBinaryOpTests {
+    class MapBinaryOpTests
+    {
 
         @Test
-        void mapBinaryOpAdd() {
+        void mapBinaryOpAdd()
+        {
             assertEquals(BinaryOperator.ADD, OperatorMapper.mapBinaryOp(BinaryOp.ADD));
         }
 
         @Test
-        void mapBinaryOpSub() {
+        void mapBinaryOpSub()
+        {
             assertEquals(BinaryOperator.SUB, OperatorMapper.mapBinaryOp(BinaryOp.SUB));
         }
 
         @Test
-        void mapBinaryOpMul() {
+        void mapBinaryOpMul()
+        {
             assertEquals(BinaryOperator.MUL, OperatorMapper.mapBinaryOp(BinaryOp.MUL));
         }
 
         @Test
-        void mapBinaryOpDiv() {
+        void mapBinaryOpDiv()
+        {
             assertEquals(BinaryOperator.DIV, OperatorMapper.mapBinaryOp(BinaryOp.DIV));
         }
 
         @Test
-        void mapBinaryOpRem() {
+        void mapBinaryOpRem()
+        {
             assertEquals(BinaryOperator.MOD, OperatorMapper.mapBinaryOp(BinaryOp.REM));
         }
 
         @Test
-        void mapBinaryOpShl() {
+        void mapBinaryOpShl()
+        {
             assertEquals(BinaryOperator.SHL, OperatorMapper.mapBinaryOp(BinaryOp.SHL));
         }
 
         @Test
-        void mapBinaryOpShr() {
+        void mapBinaryOpShr()
+        {
             assertEquals(BinaryOperator.SHR, OperatorMapper.mapBinaryOp(BinaryOp.SHR));
         }
 
         @Test
-        void mapBinaryOpUshr() {
+        void mapBinaryOpUshr()
+        {
             assertEquals(BinaryOperator.USHR, OperatorMapper.mapBinaryOp(BinaryOp.USHR));
         }
 
         @Test
-        void mapBinaryOpAnd() {
+        void mapBinaryOpAnd()
+        {
             assertEquals(BinaryOperator.BAND, OperatorMapper.mapBinaryOp(BinaryOp.AND));
         }
 
         @Test
-        void mapBinaryOpOr() {
+        void mapBinaryOpOr()
+        {
             assertEquals(BinaryOperator.BOR, OperatorMapper.mapBinaryOp(BinaryOp.OR));
         }
 
         @Test
-        void mapBinaryOpXor() {
+        void mapBinaryOpXor()
+        {
             assertEquals(BinaryOperator.BXOR, OperatorMapper.mapBinaryOp(BinaryOp.XOR));
         }
 
         @Test
-        void mapBinaryOpLcmp() {
+        void mapBinaryOpLcmp()
+        {
             // LCMP maps to SUB as placeholder
             assertEquals(BinaryOperator.SUB, OperatorMapper.mapBinaryOp(BinaryOp.LCMP));
         }
 
         @Test
-        void mapBinaryOpFcmpl() {
+        void mapBinaryOpFcmpl()
+        {
             // FCMPL maps to SUB as placeholder
             assertEquals(BinaryOperator.SUB, OperatorMapper.mapBinaryOp(BinaryOp.FCMPL));
         }
 
         @Test
-        void mapBinaryOpFcmpg() {
+        void mapBinaryOpFcmpg()
+        {
             // FCMPG maps to SUB as placeholder
             assertEquals(BinaryOperator.SUB, OperatorMapper.mapBinaryOp(BinaryOp.FCMPG));
         }
 
         @Test
-        void mapBinaryOpDcmpl() {
+        void mapBinaryOpDcmpl()
+        {
             // DCMPL maps to SUB as placeholder
             assertEquals(BinaryOperator.SUB, OperatorMapper.mapBinaryOp(BinaryOp.DCMPL));
         }
 
         @Test
-        void mapBinaryOpDcmpg() {
+        void mapBinaryOpDcmpg()
+        {
             // DCMPG maps to SUB as placeholder
             assertEquals(BinaryOperator.SUB, OperatorMapper.mapBinaryOp(BinaryOp.DCMPG));
         }
     }
 
-    // ========== CompareOp Mapping Tests ==========
+    // CompareOp Mapping Tests
 
     @Nested
-    class MapCompareOpTests {
+    class MapCompareOpTests
+    {
 
         @Test
-        void mapCompareOpEq() {
+        void mapCompareOpEq()
+        {
             assertEquals(BinaryOperator.EQ, OperatorMapper.mapCompareOp(CompareOp.EQ));
         }
 
         @Test
-        void mapCompareOpNe() {
+        void mapCompareOpNe()
+        {
             assertEquals(BinaryOperator.NE, OperatorMapper.mapCompareOp(CompareOp.NE));
         }
 
         @Test
-        void mapCompareOpLt() {
+        void mapCompareOpLt()
+        {
             assertEquals(BinaryOperator.LT, OperatorMapper.mapCompareOp(CompareOp.LT));
         }
 
         @Test
-        void mapCompareOpGe() {
+        void mapCompareOpGe()
+        {
             assertEquals(BinaryOperator.GE, OperatorMapper.mapCompareOp(CompareOp.GE));
         }
 
         @Test
-        void mapCompareOpGt() {
+        void mapCompareOpGt()
+        {
             assertEquals(BinaryOperator.GT, OperatorMapper.mapCompareOp(CompareOp.GT));
         }
 
         @Test
-        void mapCompareOpLe() {
+        void mapCompareOpLe()
+        {
             assertEquals(BinaryOperator.LE, OperatorMapper.mapCompareOp(CompareOp.LE));
         }
 
         @Test
-        void mapCompareOpIfeq() {
+        void mapCompareOpIfeq()
+        {
             assertEquals(BinaryOperator.EQ, OperatorMapper.mapCompareOp(CompareOp.IFEQ));
         }
 
         @Test
-        void mapCompareOpIfne() {
+        void mapCompareOpIfne()
+        {
             assertEquals(BinaryOperator.NE, OperatorMapper.mapCompareOp(CompareOp.IFNE));
         }
 
         @Test
-        void mapCompareOpIflt() {
+        void mapCompareOpIflt()
+        {
             assertEquals(BinaryOperator.LT, OperatorMapper.mapCompareOp(CompareOp.IFLT));
         }
 
         @Test
-        void mapCompareOpIfge() {
+        void mapCompareOpIfge()
+        {
             assertEquals(BinaryOperator.GE, OperatorMapper.mapCompareOp(CompareOp.IFGE));
         }
 
         @Test
-        void mapCompareOpIfgt() {
+        void mapCompareOpIfgt()
+        {
             assertEquals(BinaryOperator.GT, OperatorMapper.mapCompareOp(CompareOp.IFGT));
         }
 
         @Test
-        void mapCompareOpIfle() {
+        void mapCompareOpIfle()
+        {
             assertEquals(BinaryOperator.LE, OperatorMapper.mapCompareOp(CompareOp.IFLE));
         }
 
         @Test
-        void mapCompareOpIfnull() {
+        void mapCompareOpIfnull()
+        {
             assertEquals(BinaryOperator.EQ, OperatorMapper.mapCompareOp(CompareOp.IFNULL));
         }
 
         @Test
-        void mapCompareOpIfnonnull() {
+        void mapCompareOpIfnonnull()
+        {
             assertEquals(BinaryOperator.NE, OperatorMapper.mapCompareOp(CompareOp.IFNONNULL));
         }
 
         @Test
-        void mapCompareOpAcmpeq() {
+        void mapCompareOpAcmpeq()
+        {
             assertEquals(BinaryOperator.EQ, OperatorMapper.mapCompareOp(CompareOp.ACMPEQ));
         }
 
         @Test
-        void mapCompareOpAcmpne() {
+        void mapCompareOpAcmpne()
+        {
             assertEquals(BinaryOperator.NE, OperatorMapper.mapCompareOp(CompareOp.ACMPNE));
         }
     }
 
-    // ========== UnaryOp Mapping Tests ==========
+    // UnaryOp Mapping Tests
 
     @Nested
-    class MapUnaryOpTests {
+    class MapUnaryOpTests
+    {
 
         @Test
-        void mapUnaryOpNeg() {
+        void mapUnaryOpNeg()
+        {
             assertEquals(UnaryOperator.NEG, OperatorMapper.mapUnaryOp(UnaryOp.NEG));
         }
 
         @Test
-        void mapUnaryOpI2lReturnsNull() {
+        void mapUnaryOpI2lReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.I2L));
         }
 
         @Test
-        void mapUnaryOpI2fReturnsNull() {
+        void mapUnaryOpI2fReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.I2F));
         }
 
         @Test
-        void mapUnaryOpI2dReturnsNull() {
+        void mapUnaryOpI2dReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.I2D));
         }
 
         @Test
-        void mapUnaryOpL2iReturnsNull() {
+        void mapUnaryOpL2iReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.L2I));
         }
 
         @Test
-        void mapUnaryOpL2fReturnsNull() {
+        void mapUnaryOpL2fReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.L2F));
         }
 
         @Test
-        void mapUnaryOpL2dReturnsNull() {
+        void mapUnaryOpL2dReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.L2D));
         }
 
         @Test
-        void mapUnaryOpF2iReturnsNull() {
+        void mapUnaryOpF2iReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.F2I));
         }
 
         @Test
-        void mapUnaryOpF2lReturnsNull() {
+        void mapUnaryOpF2lReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.F2L));
         }
 
         @Test
-        void mapUnaryOpF2dReturnsNull() {
+        void mapUnaryOpF2dReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.F2D));
         }
 
         @Test
-        void mapUnaryOpD2iReturnsNull() {
+        void mapUnaryOpD2iReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.D2I));
         }
 
         @Test
-        void mapUnaryOpD2lReturnsNull() {
+        void mapUnaryOpD2lReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.D2L));
         }
 
         @Test
-        void mapUnaryOpD2fReturnsNull() {
+        void mapUnaryOpD2fReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.D2F));
         }
 
         @Test
-        void mapUnaryOpI2bReturnsNull() {
+        void mapUnaryOpI2bReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.I2B));
         }
 
         @Test
-        void mapUnaryOpI2cReturnsNull() {
+        void mapUnaryOpI2cReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.I2C));
         }
 
         @Test
-        void mapUnaryOpI2sReturnsNull() {
+        void mapUnaryOpI2sReturnsNull()
+        {
             assertNull(OperatorMapper.mapUnaryOp(UnaryOp.I2S));
         }
     }
 
-    // ========== Null Check Tests ==========
+    // Null Check Tests
 
     @Nested
-    class NullCheckTests {
+    class NullCheckTests
+    {
 
         @Test
-        void isNullCheckForIfnull() {
+        void isNullCheckForIfnull()
+        {
             assertTrue(OperatorMapper.isNullCheck(CompareOp.IFNULL));
         }
 
         @Test
-        void isNullCheckForIfnonnull() {
+        void isNullCheckForIfnonnull()
+        {
             assertTrue(OperatorMapper.isNullCheck(CompareOp.IFNONNULL));
         }
 
         @Test
-        void isNullCheckForEqReturnsFalse() {
+        void isNullCheckForEqReturnsFalse()
+        {
             assertFalse(OperatorMapper.isNullCheck(CompareOp.EQ));
         }
 
         @Test
-        void isNullCheckForIfeqReturnsFalse() {
+        void isNullCheckForIfeqReturnsFalse()
+        {
             assertFalse(OperatorMapper.isNullCheck(CompareOp.IFEQ));
         }
 
         @Test
-        void isNullCheckForAcmpeqReturnsFalse() {
+        void isNullCheckForAcmpeqReturnsFalse()
+        {
             assertFalse(OperatorMapper.isNullCheck(CompareOp.ACMPEQ));
         }
     }
 
-    // ========== Single Operand Check Tests ==========
+    // Single Operand Check Tests
 
     @Nested
-    class SingleOperandCheckTests {
+    class SingleOperandCheckTests
+    {
 
         @Test
-        void isSingleOperandCheckForIfeq() {
+        void isSingleOperandCheckForIfeq()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFEQ));
         }
 
         @Test
-        void isSingleOperandCheckForIfne() {
+        void isSingleOperandCheckForIfne()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFNE));
         }
 
         @Test
-        void isSingleOperandCheckForIflt() {
+        void isSingleOperandCheckForIflt()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFLT));
         }
 
         @Test
-        void isSingleOperandCheckForIfge() {
+        void isSingleOperandCheckForIfge()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFGE));
         }
 
         @Test
-        void isSingleOperandCheckForIfgt() {
+        void isSingleOperandCheckForIfgt()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFGT));
         }
 
         @Test
-        void isSingleOperandCheckForIfle() {
+        void isSingleOperandCheckForIfle()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFLE));
         }
 
         @Test
-        void isSingleOperandCheckForIfnull() {
+        void isSingleOperandCheckForIfnull()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFNULL));
         }
 
         @Test
-        void isSingleOperandCheckForIfnonnull() {
+        void isSingleOperandCheckForIfnonnull()
+        {
             assertTrue(OperatorMapper.isSingleOperandCheck(CompareOp.IFNONNULL));
         }
 
         @Test
-        void isSingleOperandCheckForEqReturnsFalse() {
+        void isSingleOperandCheckForEqReturnsFalse()
+        {
             assertFalse(OperatorMapper.isSingleOperandCheck(CompareOp.EQ));
         }
 
         @Test
-        void isSingleOperandCheckForNeReturnsFalse() {
+        void isSingleOperandCheckForNeReturnsFalse()
+        {
             assertFalse(OperatorMapper.isSingleOperandCheck(CompareOp.NE));
         }
 
         @Test
-        void isSingleOperandCheckForAcmpeqReturnsFalse() {
+        void isSingleOperandCheckForAcmpeqReturnsFalse()
+        {
             assertFalse(OperatorMapper.isSingleOperandCheck(CompareOp.ACMPEQ));
         }
 
         @Test
-        void isSingleOperandCheckForAcmpneReturnsFalse() {
+        void isSingleOperandCheckForAcmpneReturnsFalse()
+        {
             assertFalse(OperatorMapper.isSingleOperandCheck(CompareOp.ACMPNE));
         }
     }
 
-    // ========== Type Conversion Tests ==========
+    // Type Conversion Tests
 
     @Nested
-    class TypeConversionTests {
+    class TypeConversionTests
+    {
 
         @Test
-        void isTypeConversionForNegReturnsFalse() {
+        void isTypeConversionForNegReturnsFalse()
+        {
             assertFalse(OperatorMapper.isTypeConversion(UnaryOp.NEG));
         }
 
         @Test
-        void isTypeConversionForI2l() {
+        void isTypeConversionForI2l()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.I2L));
         }
 
         @Test
-        void isTypeConversionForI2f() {
+        void isTypeConversionForI2f()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.I2F));
         }
 
         @Test
-        void isTypeConversionForI2d() {
+        void isTypeConversionForI2d()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.I2D));
         }
 
         @Test
-        void isTypeConversionForL2i() {
+        void isTypeConversionForL2i()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.L2I));
         }
 
         @Test
-        void isTypeConversionForF2d() {
+        void isTypeConversionForF2d()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.F2D));
         }
 
         @Test
-        void isTypeConversionForD2f() {
+        void isTypeConversionForD2f()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.D2F));
         }
 
         @Test
-        void isTypeConversionForI2b() {
+        void isTypeConversionForI2b()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.I2B));
         }
 
         @Test
-        void isTypeConversionForI2c() {
+        void isTypeConversionForI2c()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.I2C));
         }
 
         @Test
-        void isTypeConversionForI2s() {
+        void isTypeConversionForI2s()
+        {
             assertTrue(OperatorMapper.isTypeConversion(UnaryOp.I2S));
         }
     }
 
-    // ========== Conversion Target Type Tests ==========
+    // Conversion Target Type Tests
 
     @Nested
-    class ConversionTargetTypeTests {
+    class ConversionTargetTypeTests
+    {
 
         @Test
-        void getConversionTargetTypeI2l() {
+        void getConversionTargetTypeI2l()
+        {
             assertEquals("J", OperatorMapper.getConversionTargetType(UnaryOp.I2L));
         }
 
         @Test
-        void getConversionTargetTypeI2f() {
+        void getConversionTargetTypeI2f()
+        {
             assertEquals("F", OperatorMapper.getConversionTargetType(UnaryOp.I2F));
         }
 
         @Test
-        void getConversionTargetTypeI2d() {
+        void getConversionTargetTypeI2d()
+        {
             assertEquals("D", OperatorMapper.getConversionTargetType(UnaryOp.I2D));
         }
 
         @Test
-        void getConversionTargetTypeL2i() {
+        void getConversionTargetTypeL2i()
+        {
             assertEquals("I", OperatorMapper.getConversionTargetType(UnaryOp.L2I));
         }
 
         @Test
-        void getConversionTargetTypeL2f() {
+        void getConversionTargetTypeL2f()
+        {
             assertEquals("F", OperatorMapper.getConversionTargetType(UnaryOp.L2F));
         }
 
         @Test
-        void getConversionTargetTypeL2d() {
+        void getConversionTargetTypeL2d()
+        {
             assertEquals("D", OperatorMapper.getConversionTargetType(UnaryOp.L2D));
         }
 
         @Test
-        void getConversionTargetTypeF2i() {
+        void getConversionTargetTypeF2i()
+        {
             assertEquals("I", OperatorMapper.getConversionTargetType(UnaryOp.F2I));
         }
 
         @Test
-        void getConversionTargetTypeF2l() {
+        void getConversionTargetTypeF2l()
+        {
             assertEquals("J", OperatorMapper.getConversionTargetType(UnaryOp.F2L));
         }
 
         @Test
-        void getConversionTargetTypeF2d() {
+        void getConversionTargetTypeF2d()
+        {
             assertEquals("D", OperatorMapper.getConversionTargetType(UnaryOp.F2D));
         }
 
         @Test
-        void getConversionTargetTypeD2i() {
+        void getConversionTargetTypeD2i()
+        {
             assertEquals("I", OperatorMapper.getConversionTargetType(UnaryOp.D2I));
         }
 
         @Test
-        void getConversionTargetTypeD2l() {
+        void getConversionTargetTypeD2l()
+        {
             assertEquals("J", OperatorMapper.getConversionTargetType(UnaryOp.D2L));
         }
 
         @Test
-        void getConversionTargetTypeD2f() {
+        void getConversionTargetTypeD2f()
+        {
             assertEquals("F", OperatorMapper.getConversionTargetType(UnaryOp.D2F));
         }
 
         @Test
-        void getConversionTargetTypeI2b() {
+        void getConversionTargetTypeI2b()
+        {
             assertEquals("B", OperatorMapper.getConversionTargetType(UnaryOp.I2B));
         }
 
         @Test
-        void getConversionTargetTypeI2c() {
+        void getConversionTargetTypeI2c()
+        {
             assertEquals("C", OperatorMapper.getConversionTargetType(UnaryOp.I2C));
         }
 
         @Test
-        void getConversionTargetTypeI2s() {
+        void getConversionTargetTypeI2s()
+        {
             assertEquals("S", OperatorMapper.getConversionTargetType(UnaryOp.I2S));
         }
 
         @Test
-        void getConversionTargetTypeNegThrowsException() {
+        void getConversionTargetTypeNegThrowsException()
+        {
             IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> OperatorMapper.getConversionTargetType(UnaryOp.NEG)
@@ -522,79 +621,94 @@ class OperatorMapperTest {
         }
     }
 
-    // ========== Float Comparison Tests ==========
+    // Float Comparison Tests
 
     @Nested
-    class FloatComparisonTests {
+    class FloatComparisonTests
+    {
 
         @Test
-        void isFloatComparisonForFcmpl() {
+        void isFloatComparisonForFcmpl()
+        {
             assertTrue(OperatorMapper.isFloatComparison(BinaryOp.FCMPL));
         }
 
         @Test
-        void isFloatComparisonForFcmpg() {
+        void isFloatComparisonForFcmpg()
+        {
             assertTrue(OperatorMapper.isFloatComparison(BinaryOp.FCMPG));
         }
 
         @Test
-        void isFloatComparisonForDcmpl() {
+        void isFloatComparisonForDcmpl()
+        {
             assertTrue(OperatorMapper.isFloatComparison(BinaryOp.DCMPL));
         }
 
         @Test
-        void isFloatComparisonForDcmpg() {
+        void isFloatComparisonForDcmpg()
+        {
             assertTrue(OperatorMapper.isFloatComparison(BinaryOp.DCMPG));
         }
 
         @Test
-        void isFloatComparisonForLcmpReturnsFalse() {
+        void isFloatComparisonForLcmpReturnsFalse()
+        {
             assertFalse(OperatorMapper.isFloatComparison(BinaryOp.LCMP));
         }
 
         @Test
-        void isFloatComparisonForAddReturnsFalse() {
+        void isFloatComparisonForAddReturnsFalse()
+        {
             assertFalse(OperatorMapper.isFloatComparison(BinaryOp.ADD));
         }
 
         @Test
-        void isFloatComparisonForSubReturnsFalse() {
+        void isFloatComparisonForSubReturnsFalse()
+        {
             assertFalse(OperatorMapper.isFloatComparison(BinaryOp.SUB));
         }
 
         @Test
-        void isFloatComparisonForMulReturnsFalse() {
+        void isFloatComparisonForMulReturnsFalse()
+        {
             assertFalse(OperatorMapper.isFloatComparison(BinaryOp.MUL));
         }
     }
 
-    // ========== Long Comparison Tests ==========
+    // Long Comparison Tests
 
     @Nested
-    class LongComparisonTests {
+    class LongComparisonTests
+    {
 
         @Test
-        void isLongComparisonForLcmp() {
+        void isLongComparisonForLcmp()
+        {
             assertTrue(OperatorMapper.isLongComparison(BinaryOp.LCMP));
         }
 
         @Test
-        void isLongComparisonForFcmplReturnsFalse() {
+        void isLongComparisonForFcmplReturnsFalse()
+        {
             assertFalse(OperatorMapper.isLongComparison(BinaryOp.FCMPL));
         }
 
         @Test
-        void isLongComparisonForDcmplReturnsFalse() {
+        void isLongComparisonForDcmplReturnsFalse()
+        {
             assertFalse(OperatorMapper.isLongComparison(BinaryOp.DCMPL));
         }
 
         @Test
-        void isLongComparisonForAddReturnsFalse() {
+        void isLongComparisonForAddReturnsFalse()
+        {
             assertFalse(OperatorMapper.isLongComparison(BinaryOp.ADD));
         }
 
         @Test
-        void isLongComparisonForAndReturnsFalse() {
+        void isLongComparisonForAndReturnsFalse()
+        {
             assertFalse(OperatorMapper.isLongComparison(BinaryOp.AND));
         }
     }

@@ -3,7 +3,8 @@ package com.tonic.analysis.simulation.heap;
 /**
  * Configuration for heap behavior during simulation.
  */
-public enum HeapMode {
+public enum HeapMode
+{
 
     /**
      * Copy-on-write semantics. All modifications create new heap instances.

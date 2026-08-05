@@ -13,23 +13,25 @@ import java.io.IOException;
 /**
  * Represents the INVOKEINTERFACE instruction (0xB9).
  */
-public class InvokeInterfaceInstruction extends Instruction implements InvokeInsn {
+public class InvokeInterfaceInstruction extends Instruction implements InvokeInsn
+{
     private final int methodIndex;
     private final int count;
     private final ConstPool constPool;
 
     /**
      * Constructs an InvokeInterfaceInstruction.
-     *
      * @param constPool  The constant pool associated with the class.
      * @param opcode     The opcode of the instruction.
      * @param offset     The bytecode offset of the instruction.
      * @param methodIndex The constant pool index for the interface method reference.
      * @param count      The number of arguments the method takes (including the object reference).
      */
-    public InvokeInterfaceInstruction(ConstPool constPool, int opcode, int offset, int methodIndex, int count) {
+    public InvokeInterfaceInstruction(ConstPool constPool, int opcode, int offset, int methodIndex, int count)
+    {
         super(opcode, offset, 5); // opcode + two bytes method index + one byte count + one byte zero
-        if (opcode != 0xB9) {
+        if (opcode != 0xB9)
+        {
             throw new IllegalArgumentException("Invalid opcode for InvokeInterfaceInstruction: " + opcode);
         }
         this.methodIndex = methodIndex;
@@ -37,27 +39,36 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
         this.constPool = constPool;
     }
 
-    public int getMethodIndex() {
+    /**
+     * @return the method index
+     */
+    public int getMethodIndex()
+    {
         return methodIndex;
     }
 
-    public int getCount() {
+    /**
+     * @return the count
+     */
+    public int getCount()
+    {
         return count;
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     /**
      * Writes the INVOKEINTERFACE opcode and its operands to the DataOutputStream.
-     *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
         dos.writeShort(methodIndex);
         dos.writeByte(count);
@@ -66,11 +77,11 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
 
     /**
      * Returns the change in stack size caused by this instruction.
-     *
      * @return The stack size change (depends on method signature).
      */
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         int params = method.getParameterCount();
         int returnSlots = method.getReturnTypeSlots();
@@ -79,30 +90,30 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
 
     /**
      * Returns the change in local variables caused by this instruction.
-     *
      * @return The local variables size change (none).
      */
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     /**
      * Resolves and returns a string representation of the interface method.
-     *
      * @return The interface method as a string.
      */
-    public String resolveMethod() {
+    public String resolveMethod()
+    {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         return method.toString();
     }
 
     /**
      * Returns the method name.
-     *
      * @return The method name.
      */
-    public String getMethodName() {
+    public String getMethodName()
+    {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         int nameAndTypeIndex = method.getValue().getNameAndTypeIndex();
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
@@ -112,10 +123,10 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
 
     /**
      * Returns the method descriptor.
-     *
      * @return The method descriptor.
      */
-    public String getMethodDescriptor() {
+    public String getMethodDescriptor()
+    {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         int nameAndTypeIndex = method.getValue().getNameAndTypeIndex();
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
@@ -125,10 +136,10 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
 
     /**
      * Returns the owner interface name.
-     *
      * @return The owner interface internal name.
      */
-    public String getOwnerClass() {
+    public String getOwnerClass()
+    {
         InterfaceRefItem method = (InterfaceRefItem) constPool.getItem(methodIndex);
         int classIndex = method.getValue().getClassIndex();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
@@ -138,11 +149,11 @@ public class InvokeInterfaceInstruction extends Instruction implements InvokeIns
 
     /**
      * Returns a string representation of the instruction.
-     *
      * @return The mnemonic, method index, count, and resolved method.
      */
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("INVOKEINTERFACE #%d %d // %s", methodIndex, count, resolveMethod());
     }
 }

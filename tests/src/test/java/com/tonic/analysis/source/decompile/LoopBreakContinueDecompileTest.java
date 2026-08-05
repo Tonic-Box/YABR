@@ -11,11 +11,15 @@ import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regression for bug 2: mid-loop break/continue, including labeled break/continue to an outer loop. */
-public class LoopBreakContinueDecompileTest {
+/**
+ * Regression for bug 2: mid-loop break/continue, including labeled break/continue to an outer loop.
+ */
+public class LoopBreakContinueDecompileTest
+{
 
     @Test
-    public void labeledBreakAndContinueReconstruct() throws Exception {
+    public void labeledBreakAndContinueReconstruct() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S01_ControlFlow.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

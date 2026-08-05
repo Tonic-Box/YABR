@@ -18,50 +18,67 @@ import java.util.*;
 import static com.tonic.util.Opcode.*;
 
 /**
- * Translates JVM bytecode instructions to IR instructions.
+ * Translator from JVM bytecode instructions to IR instructions during lifting.
  */
-public class InstructionTranslator {
+public class InstructionTranslator
+{
 
     private final ConstPool constPool;
     private final BootstrapMethodsAttribute bsmAttr;
     private final Map<Integer, IRBlock> offsetToBlock;
 
-    public InstructionTranslator(ConstPool constPool) {
+    /**
+     * Creates a translator with no bootstrap methods attribute.
+     * @param constPool the constant pool of the class being lifted
+     */
+    public InstructionTranslator(ConstPool constPool)
+    {
         this(constPool, null);
     }
 
-    public InstructionTranslator(ConstPool constPool, BootstrapMethodsAttribute bsmAttr) {
+    /**
+     * Creates a translator.
+     * @param constPool the constant pool of the class being lifted
+     * @param bsmAttr the bootstrap methods attribute for invokedynamic resolution, or null
+     */
+    public InstructionTranslator(ConstPool constPool, BootstrapMethodsAttribute bsmAttr)
+    {
         this.constPool = constPool;
         this.bsmAttr = bsmAttr;
         this.offsetToBlock = new HashMap<>();
     }
 
-    public Map<Integer, IRBlock> getOffsetToBlock() {
+    /**
+     * @return the offset to block
+     */
+    public Map<Integer, IRBlock> getOffsetToBlock()
+    {
         return offsetToBlock;
     }
 
     /**
      * Registers a block at a bytecode offset.
-     *
      * @param offset the bytecode offset
      * @param block the IR block
      */
-    public void registerBlock(int offset, IRBlock block) {
+    public void registerBlock(int offset, IRBlock block)
+    {
         offsetToBlock.put(offset, block);
     }
 
     /**
      * Translates a bytecode instruction to IR.
-     *
      * @param instr the bytecode instruction
      * @param state the abstract interpreter state
      * @param block the current IR block
      */
-    public void translate(Instruction instr, AbstractState state, IRBlock block) {
+    public void translate(Instruction instr, AbstractState state, IRBlock block)
+    {
         int opcode = instr.getOpcode();
         int emittedFrom = block.getInstructions().size();
 
-        switch (opcode) {
+        switch (opcode)
+        {
             case 0x00: break;
             case 0x01: translateAConstNull(state, block); break;
             case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: case 0x08: translateIConst(opcode - 0x03, state, block); break;
@@ -173,57 +190,67 @@ public class InstructionTranslator {
         }
 
         List<IRInstruction> emitted = block.getInstructions();
-        for (int i = emittedFrom; i < emitted.size(); i++) {
+        for (int i = emittedFrom; i < emitted.size(); i++)
+        {
             IRInstruction ir = emitted.get(i);
-            if (ir.getBytecodeOffset() < 0) {
+            if (ir.getBytecodeOffset() < 0)
+            {
                 ir.setBytecodeOffset(instr.getOffset());
             }
         }
     }
 
-    private void translateAConstNull(AbstractState state, IRBlock block) {
+    private void translateAConstNull(AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(ReferenceType.OBJECT);
         block.addInstruction(new ConstantInstruction(result, NullConstant.INSTANCE));
         state.push(result);
     }
 
-    private void translateIConst(int value, AbstractState state, IRBlock block) {
+    private void translateIConst(int value, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.INT);
         block.addInstruction(new ConstantInstruction(result, IntConstant.of(value)));
         state.push(result);
     }
 
-    private void translateLConst(int value, AbstractState state, IRBlock block) {
+    private void translateLConst(int value, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.LONG);
         block.addInstruction(new ConstantInstruction(result, LongConstant.of(value)));
         state.push(result);
     }
 
-    private void translateFConst(int value, AbstractState state, IRBlock block) {
+    private void translateFConst(int value, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.FLOAT);
         block.addInstruction(new ConstantInstruction(result, FloatConstant.of(value)));
         state.push(result);
     }
 
-    private void translateDConst(int value, AbstractState state, IRBlock block) {
+    private void translateDConst(int value, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.DOUBLE);
         block.addInstruction(new ConstantInstruction(result, DoubleConstant.of(value)));
         state.push(result);
     }
 
-    private void translateBipush(BipushInstruction instr, AbstractState state, IRBlock block) {
+    private void translateBipush(BipushInstruction instr, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.INT);
         block.addInstruction(new ConstantInstruction(result, IntConstant.of(instr.getValue())));
         state.push(result);
     }
 
-    private void translateSipush(SipushInstruction instr, AbstractState state, IRBlock block) {
+    private void translateSipush(SipushInstruction instr, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.INT);
         block.addInstruction(new ConstantInstruction(result, IntConstant.of(instr.getValue())));
         state.push(result);
     }
 
-    private void translateLdc(LdcInstruction instr, AbstractState state, IRBlock block) {
+    private void translateLdc(LdcInstruction instr, AbstractState state, IRBlock block)
+    {
         int cpIndex = instr.getCpIndex();
         Item<?> item = constPool.getItem(cpIndex);
         Constant constant = itemToConstant(item, cpIndex);
@@ -232,7 +259,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateLdcW(LdcWInstruction instr, AbstractState state, IRBlock block) {
+    private void translateLdcW(LdcWInstruction instr, AbstractState state, IRBlock block)
+    {
         int cpIndex = instr.getCpIndex();
         Item<?> item = constPool.getItem(cpIndex);
         Constant constant = itemToConstant(item, cpIndex);
@@ -241,7 +269,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateLdc2W(Ldc2WInstruction instr, AbstractState state, IRBlock block) {
+    private void translateLdc2W(Ldc2WInstruction instr, AbstractState state, IRBlock block)
+    {
         int cpIndex = instr.getCpIndex();
         Item<?> item = constPool.getItem(cpIndex);
         Constant constant = itemToConstant(item, cpIndex);
@@ -250,35 +279,53 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private Constant itemToConstant(Item<?> item, int cpIndex) {
-        if (item instanceof IntegerItem) {
+    private Constant itemToConstant(Item<?> item, int cpIndex)
+    {
+        if (item instanceof IntegerItem)
+        {
             IntegerItem intItem = (IntegerItem) item;
             return IntConstant.of(intItem.getValue());
-        } else if (item instanceof LongItem) {
+        }
+        else if (item instanceof LongItem)
+        {
             LongItem longItem = (LongItem) item;
             return LongConstant.of(longItem.getValue());
-        } else if (item instanceof FloatItem) {
+        }
+        else if (item instanceof FloatItem)
+        {
             FloatItem floatItem = (FloatItem) item;
             return FloatConstant.of(floatItem.getValue());
-        } else if (item instanceof DoubleItem) {
+        }
+        else if (item instanceof DoubleItem)
+        {
             DoubleItem doubleItem = (DoubleItem) item;
             return DoubleConstant.of(doubleItem.getValue());
-        } else if (item instanceof StringRefItem) {
+        }
+        else if (item instanceof StringRefItem)
+        {
             StringRefItem stringItem = (StringRefItem) item;
             Utf8Item utf8 = (Utf8Item) constPool.getItem(stringItem.getValue());
             return new StringConstant(utf8.getValue());
-        } else if (item instanceof ClassRefItem) {
+        }
+        else if (item instanceof ClassRefItem)
+        {
             ClassRefItem classItem = (ClassRefItem) item;
             return new ClassConstant(classItem.getClassName());
-        } else if (item instanceof MethodHandleItem) {
+        }
+        else if (item instanceof MethodHandleItem)
+        {
             MethodHandleItem mhItem = (MethodHandleItem) item;
             return resolveMethodHandle(mhItem);
-        } else if (item instanceof MethodTypeItem) {
+        }
+        else if (item instanceof MethodTypeItem)
+        {
             MethodTypeItem mtItem = (MethodTypeItem) item;
             int descIndex = mtItem.getValue();
             Utf8Item utf8 = (Utf8Item) constPool.getItem(descIndex);
             return new MethodTypeConstant(utf8.getValue());
-        } else if (item instanceof ConstantDynamicItem) {
+        }
+        else if (item instanceof ConstantDynamicItem)
+        {
             ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
             return resolveDynamicConstant(cdItem, cpIndex);
         }
@@ -288,7 +335,8 @@ public class InstructionTranslator {
     /**
      * Resolves a MethodHandle constant pool item to an IR MethodHandleConstant.
      */
-    private MethodHandleConstant resolveMethodHandle(MethodHandleItem mhItem) {
+    private MethodHandleConstant resolveMethodHandle(MethodHandleItem mhItem)
+    {
         MethodHandle mh = mhItem.getValue();
         int refKind = mh.getReferenceKind();
         int refIndex = mh.getReferenceIndex();
@@ -299,24 +347,30 @@ public class InstructionTranslator {
         String desc;
 
         // The reference index points to different item types based on reference kind
-        if (refItem instanceof FieldRefItem) {
+        if (refItem instanceof FieldRefItem)
+        {
             FieldRefItem fieldRef = (FieldRefItem) refItem;
             owner = fieldRef.getOwner();
             name = fieldRef.getName();
             desc = fieldRef.getDescriptor();
-        } else if (refItem instanceof MethodRefItem) {
+        }
+        else if (refItem instanceof MethodRefItem)
+        {
             MethodRefItem methodRef = (MethodRefItem) refItem;
             owner = methodRef.getOwner();
             name = methodRef.getName();
             desc = methodRef.getDescriptor();
-        } else if (refItem instanceof InterfaceRefItem) {
+        }
+        else if (refItem instanceof InterfaceRefItem)
+        {
             InterfaceRefItem interfaceRef = (InterfaceRefItem) refItem;
             owner = interfaceRef.getOwner();
             name = interfaceRef.getName();
             desc = interfaceRef.getDescriptor();
-        } else {
-            throw new UnsupportedOperationException(
-                    "Unsupported MethodHandle reference type: " + refItem.getClass());
+        }
+        else
+        {
+            throw new UnsupportedOperationException("Unsupported MethodHandle reference type: " + refItem.getClass());
         }
 
         return new MethodHandleConstant(refKind, owner, name, desc);
@@ -325,48 +379,55 @@ public class InstructionTranslator {
     /**
      * Resolves a ConstantDynamic constant pool item to an IR DynamicConstant.
      */
-    private DynamicConstant resolveDynamicConstant(ConstantDynamicItem cdItem, int cpIndex) {
+    private DynamicConstant resolveDynamicConstant(ConstantDynamicItem cdItem, int cpIndex)
+    {
         String name = cdItem.getName();
         String desc = cdItem.getDescriptor();
         int bsmIndex = cdItem.getBootstrapMethodAttrIndex();
         return new DynamicConstant(name, desc, bsmIndex, cpIndex);
     }
 
-    private void translateILoad(int index, AbstractState state, IRBlock block) {
+    private void translateILoad(int index, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.INT);
         block.addInstruction(new LoadLocalInstruction(result, index));
         state.push(result);
     }
 
-    private void translateLLoad(int index, AbstractState state, IRBlock block) {
+    private void translateLLoad(int index, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.LONG);
         block.addInstruction(new LoadLocalInstruction(result, index));
         state.push(result);
     }
 
-    private void translateFLoad(int index, AbstractState state, IRBlock block) {
+    private void translateFLoad(int index, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.FLOAT);
         block.addInstruction(new LoadLocalInstruction(result, index));
         state.push(result);
     }
 
-    private void translateDLoad(int index, AbstractState state, IRBlock block) {
+    private void translateDLoad(int index, AbstractState state, IRBlock block)
+    {
         SSAValue result = new SSAValue(PrimitiveType.DOUBLE);
         block.addInstruction(new LoadLocalInstruction(result, index));
         state.push(result);
     }
 
-    private void translateALoad(int index, AbstractState state, IRBlock block) {
+    private void translateALoad(int index, AbstractState state, IRBlock block)
+    {
         Value local = state.getLocal(index);
         // A caught-exception value (named "exc_<handler>", seeded onto the handler's entry stack) is a
-        // free-standing SSA value captured at handler entry into its OWN register by the capture marker — it
+        // free-standing SSA value captured at handler entry into its OWN register by the capture marker - it
         // is not tied to this local's index slot. Forward it directly instead of emitting a LoadLocal that
         // would read the (separately allocated) local-index slot: otherwise the capture register and the load
         // slot diverge and the handler body reads an unwritten slot (a corrupt, un-decompilable handler).
         // Reassigning the local makes its current value no longer the exception, so normal loads are
-        // unaffected — only a direct re-load of the still-live caught exception is forwarded.
+        // unaffected - only a direct re-load of the still-live caught exception is forwarded.
         if (local instanceof SSAValue && ((SSAValue) local).getName() != null
-                && ((SSAValue) local).getName().startsWith("exc_")) {
+                && ((SSAValue) local).getName().startsWith("exc_"))
+        {
             state.push(local);
             return;
         }
@@ -377,11 +438,13 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateArrayLoad(int opcode, AbstractState state, IRBlock block) {
+    private void translateArrayLoad(int opcode, AbstractState state, IRBlock block)
+    {
         Value index = state.pop();
         Value array = state.pop();
         IRType elemType = getArrayElementType(opcode);
-        if (opcode == AALOAD.getCode() && array.getType() instanceof ArrayType) {
+        if (opcode == AALOAD.getCode() && array.getType() instanceof ArrayType)
+        {
             ArrayType arrayType = (ArrayType) array.getType();
             elemType = arrayType.getDimensions() > 1
                     ? new ArrayType(arrayType.getElementType(), arrayType.getDimensions() - 1)
@@ -392,37 +455,43 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateIStore(int index, AbstractState state, IRBlock block) {
+    private void translateIStore(int index, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         state.setLocal(index, value);
         block.addInstruction(new StoreLocalInstruction(index, value));
     }
 
-    private void translateLStore(int index, AbstractState state, IRBlock block) {
+    private void translateLStore(int index, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         state.setLocal(index, value);
         block.addInstruction(new StoreLocalInstruction(index, value));
     }
 
-    private void translateFStore(int index, AbstractState state, IRBlock block) {
+    private void translateFStore(int index, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         state.setLocal(index, value);
         block.addInstruction(new StoreLocalInstruction(index, value));
     }
 
-    private void translateDStore(int index, AbstractState state, IRBlock block) {
+    private void translateDStore(int index, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         state.setLocal(index, value);
         block.addInstruction(new StoreLocalInstruction(index, value));
     }
 
-    private void translateAStore(int index, AbstractState state, IRBlock block) {
+    private void translateAStore(int index, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         state.setLocal(index, value);
         block.addInstruction(new StoreLocalInstruction(index, value));
     }
 
-    private void translateArrayStore(AbstractState state, IRBlock block) {
+    private void translateArrayStore(AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         Value index = state.pop();
         Value array = state.pop();
@@ -437,24 +506,30 @@ public class InstructionTranslator {
      * In our SSA representation, longs and doubles are single Values with
      * a type marker, so we check the type to determine how many pops to do.
      */
-    private void translatePop2(AbstractState state) {
+    private void translatePop2(AbstractState state)
+    {
         Value top = state.peek();
-        if (top.getType() != null && top.getType().isTwoSlot()) {
+        if (top.getType() != null && top.getType().isTwoSlot())
+        {
             // Category-2 value (long/double) - single pop
             state.pop();
-        } else {
+        }
+        else
+        {
             // Two category-1 values - double pop
             state.pop();
             state.pop();
         }
     }
 
-    private void translateDup(AbstractState state) {
+    private void translateDup(AbstractState state)
+    {
         Value top = state.peek();
         state.push(top);
     }
 
-    private void translateDupX1(AbstractState state) {
+    private void translateDupX1(AbstractState state)
+    {
         Value v1 = state.pop();
         Value v2 = state.pop();
         state.push(v1);
@@ -464,19 +539,23 @@ public class InstructionTranslator {
 
     /**
      * dup_x2 - duplicate top value and insert two or three down:
-     * Form 1 (all category-1): ..., value3, value2, value1 → ..., value1, value3, value2, value1
-     * Form 2 (value2 is category-2): ..., value2, value1 → ..., value1, value2, value1
+     * Form 1 (all category-1): ..., value3, value2, value1 -&gt; ..., value1, value3, value2, value1
+     * Form 2 (value2 is category-2): ..., value2, value1 -&gt; ..., value1, value2, value1
      */
-    private void translateDupX2(AbstractState state) {
+    private void translateDupX2(AbstractState state)
+    {
         Value v1 = state.pop();
         Value v2 = state.peek();
 
-        if (v2.getType() != null && v2.getType().isTwoSlot()) {
+        if (v2.getType() != null && v2.getType().isTwoSlot())
+        {
             v2 = state.pop();
             state.push(v1);
             state.push(v2);
             state.push(v1);
-        } else {
+        }
+        else
+        {
             v2 = state.pop();
             Value v3 = state.pop();
             state.push(v1);
@@ -488,15 +567,19 @@ public class InstructionTranslator {
 
     /**
      * dup2 - duplicate top one or two values:
-     * Form 1 (category-2): ..., value → ..., value, value
-     * Form 2 (two category-1): ..., value2, value1 → ..., value2, value1, value2, value1
+     * Form 1 (category-2): ..., value -&gt; ..., value, value
+     * Form 2 (two category-1): ..., value2, value1 -&gt; ..., value2, value1, value2, value1
      */
-    private void translateDup2(AbstractState state) {
+    private void translateDup2(AbstractState state)
+    {
         Value v1 = state.peek();
-        if (v1.getType() != null && v1.getType().isTwoSlot()) {
+        if (v1.getType() != null && v1.getType().isTwoSlot())
+        {
             // Form 1: single category-2 value
             state.push(v1);
-        } else {
+        }
+        else
+        {
             // Form 2: two category-1 values
             v1 = state.pop();
             Value v2 = state.peek();
@@ -508,19 +591,23 @@ public class InstructionTranslator {
 
     /**
      * dup2_x1 - duplicate top one or two values and insert beneath:
-     * Form 1 (category-2): ..., value2, value1 → ..., value1, value2, value1
-     * Form 2 (two category-1): ..., value3, value2, value1 → ..., value2, value1, value3, value2, value1
+     * Form 1 (category-2): ..., value2, value1 -&gt; ..., value1, value2, value1
+     * Form 2 (two category-1): ..., value3, value2, value1 -&gt; ..., value2, value1, value3, value2, value1
      */
-    private void translateDup2X1(AbstractState state) {
+    private void translateDup2X1(AbstractState state)
+    {
         Value v1 = state.peek();
-        if (v1.getType() != null && v1.getType().isTwoSlot()) {
+        if (v1.getType() != null && v1.getType().isTwoSlot())
+        {
             // Form 1: category-2 value over category-1 value
             v1 = state.pop();
             Value v2 = state.pop();
             state.push(v1);
             state.push(v2);
             state.push(v1);
-        } else {
+        }
+        else
+        {
             // Form 2: two category-1 values over one category-1 value
             v1 = state.pop();
             Value v2 = state.pop();
@@ -540,23 +627,28 @@ public class InstructionTranslator {
      * Form 3: category-2 over two category-1
      * Form 4: two category-1 over two category-1
      */
-    private void translateDup2X2(AbstractState state) {
+    private void translateDup2X2(AbstractState state)
+    {
         Value v1 = state.peek();
         boolean v1TwoSlot = v1.getType() != null && v1.getType().isTwoSlot();
 
         v1 = state.pop();
         Value v2;
-        if (v1TwoSlot) {
+        if (v1TwoSlot)
+        {
             // Forms 1 or 3: category-2 on top
             v2 = state.peek();
             boolean v2TwoSlot = v2.getType() != null && v2.getType().isTwoSlot();
 
-            if (v2TwoSlot) {
+            if (v2TwoSlot)
+            {
                 // Form 1: category-2 over category-2
                 state.push(v1);
                 state.push(v2);
                 state.push(v1);
-            } else {
+            }
+            else
+            {
                 // Form 3: category-2 over two category-1
                 v2 = state.pop();
                 Value v3 = state.pop();
@@ -565,20 +657,25 @@ public class InstructionTranslator {
                 state.push(v2);
                 state.push(v1);
             }
-        } else {
+        }
+        else
+        {
             // Forms 2 or 4: two category-1 on top
             v2 = state.pop();
             Value v3 = state.peek();
             boolean v3TwoSlot = v3.getType() != null && v3.getType().isTwoSlot();
 
-            if (v3TwoSlot) {
+            if (v3TwoSlot)
+            {
                 // Form 2: two category-1 over category-2
                 state.push(v2);
                 state.push(v1);
                 state.push(v3);
                 state.push(v2);
                 state.push(v1);
-            } else {
+            }
+            else
+            {
                 // Form 4: two category-1 over two category-1
                 v3 = state.pop();
                 Value v4 = state.pop();
@@ -592,14 +689,16 @@ public class InstructionTranslator {
         }
     }
 
-    private void translateSwap(AbstractState state) {
+    private void translateSwap(AbstractState state)
+    {
         Value v1 = state.pop();
         Value v2 = state.pop();
         state.push(v1);
         state.push(v2);
     }
 
-    private void translateBinaryOp(BinaryOp op, int opcode, AbstractState state, IRBlock block) {
+    private void translateBinaryOp(BinaryOp op, int opcode, AbstractState state, IRBlock block)
+    {
         Value right = state.pop();
         Value left = state.pop();
         IRType resultType = getBinaryOpResultType(opcode);
@@ -608,7 +707,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateNeg(int opcode, AbstractState state, IRBlock block) {
+    private void translateNeg(int opcode, AbstractState state, IRBlock block)
+    {
         Value operand = state.pop();
         IRType resultType = getNegResultType(opcode);
         SSAValue result = new SSAValue(resultType);
@@ -616,7 +716,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateIinc(IIncInstruction instr, AbstractState state, IRBlock block) {
+    private void translateIinc(IIncInstruction instr, AbstractState state, IRBlock block)
+    {
         int index = instr.getVarIndex();
         int increment = instr.getConstValue();
 
@@ -633,14 +734,16 @@ public class InstructionTranslator {
         block.addInstruction(new StoreLocalInstruction(index, result));
     }
 
-    private void translateConvert(UnaryOp op, AbstractState state, IRBlock block, IRType resultType) {
+    private void translateConvert(UnaryOp op, AbstractState state, IRBlock block, IRType resultType)
+    {
         Value operand = state.pop();
         SSAValue result = new SSAValue(resultType);
         block.addInstruction(new UnaryOpInstruction(result, op, operand));
         state.push(result);
     }
 
-    private void translateCmp(BinaryOp op, AbstractState state, IRBlock block) {
+    private void translateCmp(BinaryOp op, AbstractState state, IRBlock block)
+    {
         Value right = state.pop();
         Value left = state.pop();
         SSAValue result = new SSAValue(PrimitiveType.INT);
@@ -648,7 +751,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateIfZero(ConditionalBranchInstruction instr, int opcode, AbstractState state, IRBlock block) {
+    private void translateIfZero(ConditionalBranchInstruction instr, int opcode, AbstractState state, IRBlock block)
+    {
         Value operand = state.pop();
         int target = instr.getOffset() + instr.getBranchOffset();
         int fallthrough = instr.getOffset() + instr.getLength();
@@ -668,7 +772,8 @@ public class InstructionTranslator {
         block.addInstruction(new BranchInstruction(cmpOp, operand, trueBlock, falseBlock));
     }
 
-    private void translateIfICmp(ConditionalBranchInstruction instr, int opcode, AbstractState state, IRBlock block) {
+    private void translateIfICmp(ConditionalBranchInstruction instr, int opcode, AbstractState state, IRBlock block)
+    {
         Value right = state.pop();
         Value left = state.pop();
         int target = instr.getOffset() + instr.getBranchOffset();
@@ -689,7 +794,8 @@ public class InstructionTranslator {
         block.addInstruction(new BranchInstruction(cmpOp, left, right, trueBlock, falseBlock));
     }
 
-    private void translateIfACmp(ConditionalBranchInstruction instr, int opcode, AbstractState state, IRBlock block) {
+    private void translateIfACmp(ConditionalBranchInstruction instr, int opcode, AbstractState state, IRBlock block)
+    {
         Value right = state.pop();
         Value left = state.pop();
         int target = instr.getOffset() + instr.getBranchOffset();
@@ -703,7 +809,8 @@ public class InstructionTranslator {
         block.addInstruction(new BranchInstruction(cmpOp, left, right, trueBlock, falseBlock));
     }
 
-    private void translateIfNull(ConditionalBranchInstruction instr, AbstractState state, IRBlock block) {
+    private void translateIfNull(ConditionalBranchInstruction instr, AbstractState state, IRBlock block)
+    {
         Value operand = state.pop();
         int target = instr.getOffset() + instr.getBranchOffset();
         int fallthrough = instr.getOffset() + instr.getLength();
@@ -714,7 +821,8 @@ public class InstructionTranslator {
         block.addInstruction(new BranchInstruction(CompareOp.IFNULL, operand, trueBlock, falseBlock));
     }
 
-    private void translateIfNonNull(ConditionalBranchInstruction instr, AbstractState state, IRBlock block) {
+    private void translateIfNonNull(ConditionalBranchInstruction instr, AbstractState state, IRBlock block)
+    {
         Value operand = state.pop();
         int target = instr.getOffset() + instr.getBranchOffset();
         int fallthrough = instr.getOffset() + instr.getLength();
@@ -725,7 +833,8 @@ public class InstructionTranslator {
         block.addInstruction(new BranchInstruction(CompareOp.IFNONNULL, operand, trueBlock, falseBlock));
     }
 
-    private void translateGoto(GotoInstruction instr, IRBlock block) {
+    private void translateGoto(GotoInstruction instr, IRBlock block)
+    {
         int target = instr.getOffset() + instr.getBranchOffset();
         IRBlock targetBlock = offsetToBlock.get(target);
         block.addInstruction(SimpleInstruction.createGoto(targetBlock));
@@ -742,7 +851,8 @@ public class InstructionTranslator {
      * JSR pushes the return address (continuation offset) and jumps to the subroutine.
      * We convert this to a GOTO to the subroutine and track the continuation for RET.
      */
-    private void translateJsr(JsrInstruction instr, AbstractState state, IRBlock block) {
+    private void translateJsr(JsrInstruction instr, AbstractState state, IRBlock block)
+    {
         int jsrOffset = instr.getOffset();
         int subroutineEntry = jsrOffset + instr.getBranchOffset();
         int continuationOffset = jsrOffset + instr.getLength();
@@ -773,18 +883,21 @@ public class InstructionTranslator {
      * RET returns from a subroutine to the address stored in a local variable.
      * Since we track JSR continuations, we convert RET to GOTO the continuation.
      */
-    private void translateRet(IRBlock block) {
+    private void translateRet(IRBlock block)
+    {
         // Find all possible continuations for this subroutine
         // In the simple case (single JSR to this subroutine), there's exactly one continuation
         // For multiple JSRs, we need to handle all possible return targets
 
         // Collect all continuation blocks from all JSR call sites
         List<IRBlock> allContinuations = new ArrayList<>();
-        for (List<IRBlock> continuations : jsrContinuations.values()) {
+        for (List<IRBlock> continuations : jsrContinuations.values())
+        {
             allContinuations.addAll(continuations);
         }
 
-        if (allContinuations.isEmpty()) {
+        if (allContinuations.isEmpty())
+        {
             // No JSR was found - this shouldn't happen in valid bytecode
             throw new IllegalStateException("RET instruction without corresponding JSR");
         }
@@ -793,13 +906,15 @@ public class InstructionTranslator {
         block.addInstruction(SimpleInstruction.createGoto(continuation));
     }
 
-    private void translateTableSwitch(TableSwitchInstruction instr, AbstractState state, IRBlock block) {
+    private void translateTableSwitch(TableSwitchInstruction instr, AbstractState state, IRBlock block)
+    {
         Value key = state.pop();
         int defaultTarget = instr.getOffset() + instr.getDefaultOffset();
         IRBlock defaultBlock = offsetToBlock.get(defaultTarget);
 
         SwitchInstruction switchInstr = new SwitchInstruction(key, defaultBlock);
-        for (Map.Entry<Integer, Integer> entry : instr.getJumpOffsets().entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : instr.getJumpOffsets().entrySet())
+        {
             int caseTarget = instr.getOffset() + entry.getValue();
             IRBlock caseBlock = offsetToBlock.get(caseTarget);
             switchInstr.addCase(entry.getKey(), caseBlock);
@@ -807,13 +922,15 @@ public class InstructionTranslator {
         block.addInstruction(switchInstr);
     }
 
-    private void translateLookupSwitch(LookupSwitchInstruction instr, AbstractState state, IRBlock block) {
+    private void translateLookupSwitch(LookupSwitchInstruction instr, AbstractState state, IRBlock block)
+    {
         Value key = state.pop();
         int defaultTarget = instr.getOffset() + instr.getDefaultOffset();
         IRBlock defaultBlock = offsetToBlock.get(defaultTarget);
 
         SwitchInstruction switchInstr = new SwitchInstruction(key, defaultBlock);
-        for (Map.Entry<Integer, Integer> entry : instr.getMatchOffsets().entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : instr.getMatchOffsets().entrySet())
+        {
             int caseTarget = instr.getOffset() + entry.getValue();
             IRBlock caseBlock = offsetToBlock.get(caseTarget);
             switchInstr.addCase(entry.getKey(), caseBlock);
@@ -821,16 +938,19 @@ public class InstructionTranslator {
         block.addInstruction(switchInstr);
     }
 
-    private void translateReturn(AbstractState state, IRBlock block) {
+    private void translateReturn(AbstractState state, IRBlock block)
+    {
         Value returnValue = state.pop();
         block.addInstruction(new ReturnInstruction(returnValue));
     }
 
-    private void translateVoidReturn(IRBlock block) {
+    private void translateVoidReturn(IRBlock block)
+    {
         block.addInstruction(new ReturnInstruction());
     }
 
-    private void translateGetStatic(GetFieldInstruction instr, AbstractState state, IRBlock block) {
+    private void translateGetStatic(GetFieldInstruction instr, AbstractState state, IRBlock block)
+    {
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
         String owner = fieldRef.getOwner();
         String name = fieldRef.getName();
@@ -841,14 +961,16 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translatePutStatic(PutFieldInstruction instr, AbstractState state, IRBlock block) {
+    private void translatePutStatic(PutFieldInstruction instr, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
         block.addInstruction(FieldAccessInstruction.createStaticStore(
                 fieldRef.getOwner(), fieldRef.getName(), fieldRef.getDescriptor(), value));
     }
 
-    private void translateGetField(GetFieldInstruction instr, AbstractState state, IRBlock block) {
+    private void translateGetField(GetFieldInstruction instr, AbstractState state, IRBlock block)
+    {
         Value objectRef = state.pop();
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
         IRType fieldType = IRType.fromDescriptor(fieldRef.getDescriptor());
@@ -858,7 +980,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translatePutField(PutFieldInstruction instr, AbstractState state, IRBlock block) {
+    private void translatePutField(PutFieldInstruction instr, AbstractState state, IRBlock block)
+    {
         Value value = state.pop();
         Value objectRef = state.pop();
         FieldRefItem fieldRef = (FieldRefItem) constPool.getItem(instr.getFieldIndex());
@@ -866,22 +989,26 @@ public class InstructionTranslator {
                 fieldRef.getOwner(), fieldRef.getName(), fieldRef.getDescriptor(), objectRef, value));
     }
 
-    private void translateInvokeVirtual(InvokeVirtualInstruction instr, AbstractState state, IRBlock block) {
+    private void translateInvokeVirtual(InvokeVirtualInstruction instr, AbstractState state, IRBlock block)
+    {
         String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokevirtual");
         translateInvoke(InvokeType.VIRTUAL, ref[0], ref[1], ref[2], false, state, block);
     }
 
-    private void translateInvokeSpecial(InvokeSpecialInstruction instr, AbstractState state, IRBlock block) {
+    private void translateInvokeSpecial(InvokeSpecialInstruction instr, AbstractState state, IRBlock block)
+    {
         String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokespecial");
         translateInvoke(InvokeType.SPECIAL, ref[0], ref[1], ref[2], false, state, block);
     }
 
-    private void translateInvokeStatic(InvokeStaticInstruction instr, AbstractState state, IRBlock block) {
+    private void translateInvokeStatic(InvokeStaticInstruction instr, AbstractState state, IRBlock block)
+    {
         String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokestatic");
         translateInvoke(InvokeType.STATIC, ref[0], ref[1], ref[2], true, state, block);
     }
 
-    private void translateInvokeInterface(InvokeInterfaceInstruction instr, AbstractState state, IRBlock block) {
+    private void translateInvokeInterface(InvokeInterfaceInstruction instr, AbstractState state, IRBlock block)
+    {
         String[] ref = getMethodRefInfo(instr.getMethodIndex(), "invokeinterface");
         translateInvoke(InvokeType.INTERFACE, ref[0], ref[1], ref[2], false, state, block);
     }
@@ -891,19 +1018,24 @@ public class InstructionTranslator {
      * Since Java 8, invokestatic and invokespecial can reference InterfaceMethodRef.
      * @return array of [owner, name, descriptor]
      */
-    private String[] getMethodRefInfo(int cpIndex, String opcode) {
+    private String[] getMethodRefInfo(int cpIndex, String opcode)
+    {
         Item<?> refItem = constPool.getItem(cpIndex);
-        if (refItem instanceof MethodRefItem) {
+        if (refItem instanceof MethodRefItem)
+        {
             MethodRefItem methodRef = (MethodRefItem) refItem;
             return new String[] { methodRef.getOwner(), methodRef.getName(), methodRef.getDescriptor() };
-        } else if (refItem instanceof InterfaceRefItem) {
+        }
+        else if (refItem instanceof InterfaceRefItem)
+        {
             InterfaceRefItem ifaceRef = (InterfaceRefItem) refItem;
             return new String[] { ifaceRef.getOwner(), ifaceRef.getName(), ifaceRef.getDescriptor() };
         }
         throw new IllegalStateException("Unexpected ref type for " + opcode + ": " + refItem.getClass());
     }
 
-    private void translateInvokeDynamic(InvokeDynamicInstruction instr, AbstractState state, IRBlock block) {
+    private void translateInvokeDynamic(InvokeDynamicInstruction instr, AbstractState state, IRBlock block)
+    {
         int cpIndex = instr.getCpIndex();
         InvokeDynamicItem item = (InvokeDynamicItem) constPool.getItem(cpIndex);
         String desc = item.getDescriptor();
@@ -911,7 +1043,8 @@ public class InstructionTranslator {
         int argCount = countMethodArgs(desc);
 
         List<Value> args = new ArrayList<>();
-        for (int i = 0; i < argCount; i++) {
+        for (int i = 0; i < argCount; i++)
+        {
             args.add(0, state.pop());
         }
 
@@ -919,9 +1052,12 @@ public class InstructionTranslator {
         BootstrapMethodInfo bootstrapInfo = extractBootstrapInfo(bsmIndex);
 
         String returnDesc = desc.substring(desc.indexOf(')') + 1);
-        if (returnDesc.equals("V")) {
+        if (returnDesc.equals("V"))
+        {
             block.addInstruction(new InvokeInstruction(InvokeType.DYNAMIC, "", name, desc, args, cpIndex, bootstrapInfo));
-        } else {
+        }
+        else
+        {
             IRType returnType = IRType.fromDescriptor(returnDesc);
             SSAValue result = new SSAValue(returnType);
             block.addInstruction(new InvokeInstruction(result, InvokeType.DYNAMIC, "", name, desc, args, cpIndex, bootstrapInfo));
@@ -929,42 +1065,51 @@ public class InstructionTranslator {
         }
     }
 
-    private BootstrapMethodInfo extractBootstrapInfo(int bsmIndex) {
-        if (bsmAttr == null || bsmIndex < 0 || bsmIndex >= bsmAttr.getBootstrapMethods().size()) {
+    private BootstrapMethodInfo extractBootstrapInfo(int bsmIndex)
+    {
+        if (bsmAttr == null || bsmIndex < 0 || bsmIndex >= bsmAttr.getBootstrapMethods().size())
+        {
             return null;
         }
         BootstrapMethod bsm = bsmAttr.getBootstrapMethods().get(bsmIndex);
 
         Item<?> bsmItem = constPool.getItem(bsm.getBootstrapMethodRef());
-        if (!(bsmItem instanceof MethodHandleItem)) {
+        if (!(bsmItem instanceof MethodHandleItem))
+        {
             return null;
         }
         MethodHandleConstant bsmHandle = resolveMethodHandle((MethodHandleItem) bsmItem);
 
         List<Constant> bsmArgs = new ArrayList<>();
-        for (Integer argIndex : bsm.getBootstrapArguments()) {
+        for (Integer argIndex : bsm.getBootstrapArguments())
+        {
             Item<?> argItem = constPool.getItem(argIndex);
             bsmArgs.add(itemToConstant(argItem, argIndex));
         }
         return new BootstrapMethodInfo(bsmHandle, bsmArgs);
     }
 
-    private void translateInvoke(InvokeType invokeType, String owner, String name, String desc,
-                                  boolean isStatic, AbstractState state, IRBlock block) {
+    private void translateInvoke(InvokeType invokeType, String owner, String name, String desc, boolean isStatic, AbstractState state, IRBlock block)
+    {
         int argCount = countMethodArgs(desc);
-        if (!isStatic) {
+        if (!isStatic)
+        {
             argCount++;
         }
 
         List<Value> args = new ArrayList<>();
-        for (int i = 0; i < argCount; i++) {
+        for (int i = 0; i < argCount; i++)
+        {
             args.add(0, state.pop());
         }
 
         String returnDesc = desc.substring(desc.indexOf(')') + 1);
-        if (returnDesc.equals("V")) {
+        if (returnDesc.equals("V"))
+        {
             block.addInstruction(new InvokeInstruction(invokeType, owner, name, desc, args));
-        } else {
+        }
+        else
+        {
             IRType returnType = IRType.fromDescriptor(returnDesc);
             SSAValue result = new SSAValue(returnType);
             block.addInstruction(new InvokeInstruction(result, invokeType, owner, name, desc, args));
@@ -972,7 +1117,8 @@ public class InstructionTranslator {
         }
     }
 
-    private void translateNew(NewObjectInstruction instr, AbstractState state, IRBlock block) {
+    private void translateNew(NewObjectInstruction instr, AbstractState state, IRBlock block)
+    {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         String className = classRef.getClassName();
         SSAValue result = new SSAValue(new ReferenceType(className));
@@ -980,7 +1126,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateNewArray(NewPrimitiveArrayInstruction instr, AbstractState state, IRBlock block) {
+    private void translateNewArray(NewPrimitiveArrayInstruction instr, AbstractState state, IRBlock block)
+    {
         Value length = state.pop();
         IRType elemType = getNewArrayElementType(instr.getArrayType().getCode());
         SSAValue result = new SSAValue(new ArrayType(elemType));
@@ -988,7 +1135,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateANewArray(ANewArrayInstruction instr, AbstractState state, IRBlock block) {
+    private void translateANewArray(ANewArrayInstruction instr, AbstractState state, IRBlock block)
+    {
         Value length = state.pop();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         String elemName = classRef.getClassName();
@@ -1000,10 +1148,12 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateMultiANewArray(MultiANewArrayInstruction instr, AbstractState state, IRBlock block) {
+    private void translateMultiANewArray(MultiANewArrayInstruction instr, AbstractState state, IRBlock block)
+    {
         int dims = instr.getDimensions();
         List<Value> dimensions = new ArrayList<>();
-        for (int i = 0; i < dims; i++) {
+        for (int i = 0; i < dims; i++)
+        {
             dimensions.add(0, state.pop());
         }
 
@@ -1015,19 +1165,22 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateArrayLength(AbstractState state, IRBlock block) {
+    private void translateArrayLength(AbstractState state, IRBlock block)
+    {
         Value array = state.pop();
         SSAValue result = new SSAValue(PrimitiveType.INT);
         block.addInstruction(SimpleInstruction.createArrayLength(result, array));
         state.push(result);
     }
 
-    private void translateAThrow(AbstractState state, IRBlock block) {
+    private void translateAThrow(AbstractState state, IRBlock block)
+    {
         Value exception = state.pop();
         block.addInstruction(SimpleInstruction.createThrow(exception));
     }
 
-    private void translateCheckCast(CheckCastInstruction instr, AbstractState state, IRBlock block) {
+    private void translateCheckCast(CheckCastInstruction instr, AbstractState state, IRBlock block)
+    {
         Value objectRef = state.pop();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         IRType targetType = IRType.fromInternalName(classRef.getClassName());
@@ -1036,7 +1189,8 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateInstanceOf(InstanceOfInstruction instr, AbstractState state, IRBlock block) {
+    private void translateInstanceOf(InstanceOfInstruction instr, AbstractState state, IRBlock block)
+    {
         Value objectRef = state.pop();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         IRType checkType = IRType.fromInternalName(classRef.getClassName());
@@ -1045,17 +1199,20 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateMonitorEnter(AbstractState state, IRBlock block) {
+    private void translateMonitorEnter(AbstractState state, IRBlock block)
+    {
         Value objectRef = state.pop();
         block.addInstruction(SimpleInstruction.createMonitorEnter(objectRef));
     }
 
-    private void translateMonitorExit(AbstractState state, IRBlock block) {
+    private void translateMonitorExit(AbstractState state, IRBlock block)
+    {
         Value objectRef = state.pop();
         block.addInstruction(SimpleInstruction.createMonitorExit(objectRef));
     }
 
-    private IRType getArrayElementType(int opcode) {
+    private IRType getArrayElementType(int opcode)
+    {
         if (opcode == IALOAD.getCode()) return PrimitiveType.INT;
         if (opcode == LALOAD.getCode()) return PrimitiveType.LONG;
         if (opcode == FALOAD.getCode()) return PrimitiveType.FLOAT;
@@ -1067,8 +1224,10 @@ public class InstructionTranslator {
         return PrimitiveType.INT;
     }
 
-    private IRType getBinaryOpResultType(int opcode) {
-        if (opcode >= ISHL.getCode() && opcode <= LXOR.getCode()) {
+    private IRType getBinaryOpResultType(int opcode)
+    {
+        if (opcode >= ISHL.getCode() && opcode <= LXOR.getCode())
+        {
             return (opcode % 2 == 0) ? PrimitiveType.INT : PrimitiveType.LONG;
         }
         int typeVariant = (opcode - IADD.getCode()) % 4;
@@ -1079,7 +1238,8 @@ public class InstructionTranslator {
         return PrimitiveType.INT;
     }
 
-    private IRType getNegResultType(int opcode) {
+    private IRType getNegResultType(int opcode)
+    {
         if (opcode == INEG.getCode()) return PrimitiveType.INT;
         if (opcode == LNEG.getCode()) return PrimitiveType.LONG;
         if (opcode == FNEG.getCode()) return PrimitiveType.FLOAT;
@@ -1087,8 +1247,10 @@ public class InstructionTranslator {
         return PrimitiveType.INT;
     }
 
-    private IRType getNewArrayElementType(int atype) {
-        switch (atype) {
+    private IRType getNewArrayElementType(int atype)
+    {
+        switch (atype)
+        {
             case 4: return PrimitiveType.BOOLEAN;
             case 5: return PrimitiveType.CHAR;
             case 6: return PrimitiveType.FLOAT;
@@ -1101,17 +1263,24 @@ public class InstructionTranslator {
         }
     }
 
-    private int countMethodArgs(String descriptor) {
+    private int countMethodArgs(String descriptor)
+    {
         int count = 0;
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             char c = descriptor.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 i = descriptor.indexOf(';', i) + 1;
                 count++;
-            } else if (c == '[') {
+            }
+            else if (c == '[')
+            {
                 i++;
-            } else {
+            }
+            else
+            {
                 i++;
                 count++;
             }
@@ -1119,21 +1288,25 @@ public class InstructionTranslator {
         return count;
     }
 
-    private void translateWide(Instruction instr, AbstractState state, IRBlock block) {
+    private void translateWide(Instruction instr, AbstractState state, IRBlock block)
+    {
         // Handle WideIIncInstruction (wide iinc) separately from WideInstruction
-        if (instr instanceof WideIIncInstruction) {
+        if (instr instanceof WideIIncInstruction)
+        {
             WideIIncInstruction wideIInc = (WideIIncInstruction) instr;
             translateWideIInc(wideIInc, state, block);
             return;
         }
 
-        if (!(instr instanceof WideInstruction)) {
+        if (!(instr instanceof WideInstruction))
+        {
             throw new UnsupportedOperationException("Expected WideInstruction or WideIIncInstruction, got: " + instr.getClass().getName());
         }
         WideInstruction wide = (WideInstruction) instr;
 
         int varIndex = wide.getVarIndex();
-        switch (wide.getModifiedOpcode()) {
+        switch (wide.getModifiedOpcode())
+        {
             case ILOAD: translateILoad(varIndex, state, block); break;
             case LLOAD: translateLLoad(varIndex, state, block); break;
             case FLOAD: translateFLoad(varIndex, state, block); break;
@@ -1144,7 +1317,8 @@ public class InstructionTranslator {
             case FSTORE: translateFStore(varIndex, state, block); break;
             case DSTORE: translateDStore(varIndex, state, block); break;
             case ASTORE: translateAStore(varIndex, state, block); break;
-            case IINC: {
+            case IINC:
+            {
                 int increment = wide.getConstValue();
                 SSAValue loaded = new SSAValue(PrimitiveType.INT);
                 block.addInstruction(new LoadLocalInstruction(loaded, varIndex));
@@ -1160,7 +1334,8 @@ public class InstructionTranslator {
         }
     }
 
-    private void translateWideIInc(WideIIncInstruction instr, AbstractState state, IRBlock block) {
+    private void translateWideIInc(WideIIncInstruction instr, AbstractState state, IRBlock block)
+    {
         int varIndex = instr.getVarIndex();
         int increment = instr.getConstValue();
 

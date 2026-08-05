@@ -24,25 +24,31 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * continuation label that auto-binds to the insertion successor. Bound branches participate in the
  * host's identity-based relink, so they survive later offset shifts.
  */
-class CodeBuilderExternalBranchTest {
+class CodeBuilderExternalBranchTest
+{
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException(name);
     }
 
-    private static List<Instruction> list(CodeWriter cw) {
+    private static List<Instruction> list(CodeWriter cw)
+    {
         List<Instruction> out = new ArrayList<>();
         cw.getInstructions().forEach(out::add);
         return out;
     }
 
     @Test
-    void externalLabelBranchesToHostInstruction() throws Exception {
+    void externalLabelBranchesToHostInstruction() throws Exception
+    {
         // host f(n): return n*2; with a separate `neg: return -1` block to branch into.
         ClassFile cf = ClassBuilder.create("Ext")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -72,7 +78,8 @@ class CodeBuilderExternalBranchTest {
     }
 
     @Test
-    void continuationLabelFallsThroughOnInsertBefore() throws Exception {
+    void continuationLabelFallsThroughOnInsertBefore() throws Exception
+    {
         // Prepend a counted loop whose exit edge (the tail `done` label) continues into the host body.
         ClassFile cf = ClassBuilder.create("ContB")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -99,7 +106,8 @@ class CodeBuilderExternalBranchTest {
     }
 
     @Test
-    void continuationLabelFallsThroughOnInsertAfter() throws Exception {
+    void continuationLabelFallsThroughOnInsertAfter() throws Exception
+    {
         // host h(): x=7; return x;  Insert a no-op `goto done` after the store; `done` continues to iload.
         ClassFile cf = ClassBuilder.create("ContA")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -122,7 +130,8 @@ class CodeBuilderExternalBranchTest {
     }
 
     @Test
-    void externalBranchSurvivesFurtherHostEdits() throws Exception {
+    void externalBranchSurvivesFurtherHostEdits() throws Exception
+    {
         ClassFile cf = ClassBuilder.create("Dur")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "f", "(I)I")
@@ -150,7 +159,8 @@ class CodeBuilderExternalBranchTest {
     }
 
     @Test
-    void unboundExternalLabelThrowsAtSplice() throws Exception {
+    void unboundExternalLabelThrowsAtSplice() throws Exception
+    {
         ClassFile cf = ClassBuilder.create("Unb")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "f", "(I)I")
@@ -165,7 +175,8 @@ class CodeBuilderExternalBranchTest {
     }
 
     @Test
-    void replaceBodyRejectsContinuationBranch() throws Exception {
+    void replaceBodyRejectsContinuationBranch() throws Exception
+    {
         ClassFile cf = ClassBuilder.create("RB")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "f", "()I")
@@ -179,7 +190,8 @@ class CodeBuilderExternalBranchTest {
     }
 
     @Test
-    void externalTargetFromAnotherMethodThrows() throws Exception {
+    void externalTargetFromAnotherMethodThrows() throws Exception
+    {
         ClassFile cf = ClassBuilder.create("Wrong")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "a", "(I)I")

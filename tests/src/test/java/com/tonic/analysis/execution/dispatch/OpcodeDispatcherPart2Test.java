@@ -10,13 +10,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherPart2Test {
+class OpcodeDispatcherPart2Test
+{
 
     private ConcreteStack stack;
     private ConcreteLocals locals;
 
-    private static class SimpleInstruction extends Instruction {
-        public SimpleInstruction(int opcode, int offset, int length) {
+    private static class SimpleInstruction extends Instruction
+    {
+        public SimpleInstruction(int opcode, int offset, int length)
+        {
             super(opcode, offset, length);
         }
 
@@ -27,69 +30,83 @@ class OpcodeDispatcherPart2Test {
         public void write(java.io.DataOutputStream dos) {}
 
         @Override
-        public int getStackChange() {
+        public int getStackChange()
+        {
             return 0;
         }
 
         @Override
-        public int getLocalChange() {
+        public int getLocalChange()
+        {
             return 0;
         }
     }
 
-    private static class SimpleStackFrame {
+    private static class SimpleStackFrame
+    {
         private Instruction currentInstruction;
         private ConcreteStack stack;
         private ConcreteLocals locals;
         private int pc;
 
-        public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals) {
+        public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals)
+        {
             this.stack = stack;
             this.locals = locals;
             this.pc = 0;
         }
 
-        public void setCurrentInstruction(Instruction instr) {
+        public void setCurrentInstruction(Instruction instr)
+        {
             this.currentInstruction = instr;
         }
 
-        public Instruction getCurrentInstruction() {
+        public Instruction getCurrentInstruction()
+        {
             return currentInstruction;
         }
 
-        public ConcreteStack getStack() {
+        public ConcreteStack getStack()
+        {
             return stack;
         }
 
-        public ConcreteLocals getLocals() {
+        public ConcreteLocals getLocals()
+        {
             return locals;
         }
 
-        public int getPC() {
+        public int getPC()
+        {
             return pc;
         }
 
-        public void advancePC(int delta) {
+        public void advancePC(int delta)
+        {
             pc += delta;
         }
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         OpcodeDispatcher dispatcher = new OpcodeDispatcher();
         stack = new ConcreteStack(20);
         locals = new ConcreteLocals(10);
         StubDispatchContext context = new StubDispatchContext();
     }
 
-    private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr) {
+    private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr)
+    {
         SimpleStackFrame frame = new SimpleStackFrame(stack, locals);
         frame.setCurrentInstruction(instr);
         return dispatchByOpcode(instr.getOpcode(), instr, frame);
     }
 
-    private OpcodeDispatcher.DispatchResult dispatchByOpcode(int opcode, Instruction instr, SimpleStackFrame frame) {
-        switch (opcode) {
+    private OpcodeDispatcher.DispatchResult dispatchByOpcode(int opcode, Instruction instr, SimpleStackFrame frame)
+    {
+        switch (opcode)
+        {
             case 0x85:
                 stack.pushLong((long) stack.popInt());
                 frame.advancePC(instr.getLength());
@@ -171,7 +188,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2L_PositiveValue() {
+    void testI2L_PositiveValue()
+    {
         stack.pushInt(42);
         SimpleInstruction instr = new SimpleInstruction(0x85, 0, 1);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
@@ -180,7 +198,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2L_Zero() {
+    void testI2L_Zero()
+    {
         stack.pushInt(0);
         SimpleInstruction instr = new SimpleInstruction(0x85, 0, 1);
         dispatchSimple(instr);
@@ -188,7 +207,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2L_NegativeValue() {
+    void testI2L_NegativeValue()
+    {
         stack.pushInt(-100);
         SimpleInstruction instr = new SimpleInstruction(0x85, 0, 1);
         dispatchSimple(instr);
@@ -196,7 +216,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2L_MaxValue() {
+    void testI2L_MaxValue()
+    {
         stack.pushInt(Integer.MAX_VALUE);
         SimpleInstruction instr = new SimpleInstruction(0x85, 0, 1);
         dispatchSimple(instr);
@@ -204,7 +225,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2F_PositiveValue() {
+    void testI2F_PositiveValue()
+    {
         stack.pushInt(42);
         SimpleInstruction instr = new SimpleInstruction(0x86, 0, 1);
         dispatchSimple(instr);
@@ -212,7 +234,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2F_Zero() {
+    void testI2F_Zero()
+    {
         stack.pushInt(0);
         SimpleInstruction instr = new SimpleInstruction(0x86, 0, 1);
         dispatchSimple(instr);
@@ -220,7 +243,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2F_NegativeValue() {
+    void testI2F_NegativeValue()
+    {
         stack.pushInt(-123);
         SimpleInstruction instr = new SimpleInstruction(0x86, 0, 1);
         dispatchSimple(instr);
@@ -228,7 +252,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2D_PositiveValue() {
+    void testI2D_PositiveValue()
+    {
         stack.pushInt(100);
         SimpleInstruction instr = new SimpleInstruction(0x87, 0, 1);
         dispatchSimple(instr);
@@ -236,7 +261,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2D_Zero() {
+    void testI2D_Zero()
+    {
         stack.pushInt(0);
         SimpleInstruction instr = new SimpleInstruction(0x87, 0, 1);
         dispatchSimple(instr);
@@ -244,7 +270,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2D_NegativeValue() {
+    void testI2D_NegativeValue()
+    {
         stack.pushInt(-500);
         SimpleInstruction instr = new SimpleInstruction(0x87, 0, 1);
         dispatchSimple(instr);
@@ -252,7 +279,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2I_PositiveValue() {
+    void testL2I_PositiveValue()
+    {
         stack.pushLong(12345L);
         SimpleInstruction instr = new SimpleInstruction(0x88, 0, 1);
         dispatchSimple(instr);
@@ -260,7 +288,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2I_Zero() {
+    void testL2I_Zero()
+    {
         stack.pushLong(0L);
         SimpleInstruction instr = new SimpleInstruction(0x88, 0, 1);
         dispatchSimple(instr);
@@ -268,7 +297,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2I_NegativeValue() {
+    void testL2I_NegativeValue()
+    {
         stack.pushLong(-999L);
         SimpleInstruction instr = new SimpleInstruction(0x88, 0, 1);
         dispatchSimple(instr);
@@ -276,7 +306,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2I_TruncationOverflow() {
+    void testL2I_TruncationOverflow()
+    {
         stack.pushLong(0x1FFFFFFFFL);
         SimpleInstruction instr = new SimpleInstruction(0x88, 0, 1);
         dispatchSimple(instr);
@@ -284,7 +315,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2F_PositiveValue() {
+    void testL2F_PositiveValue()
+    {
         stack.pushLong(50000L);
         SimpleInstruction instr = new SimpleInstruction(0x89, 0, 1);
         dispatchSimple(instr);
@@ -292,7 +324,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2F_Zero() {
+    void testL2F_Zero()
+    {
         stack.pushLong(0L);
         SimpleInstruction instr = new SimpleInstruction(0x89, 0, 1);
         dispatchSimple(instr);
@@ -300,7 +333,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2F_NegativeValue() {
+    void testL2F_NegativeValue()
+    {
         stack.pushLong(-77777L);
         SimpleInstruction instr = new SimpleInstruction(0x89, 0, 1);
         dispatchSimple(instr);
@@ -308,7 +342,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2D_PositiveValue() {
+    void testL2D_PositiveValue()
+    {
         stack.pushLong(999999L);
         SimpleInstruction instr = new SimpleInstruction(0x8A, 0, 1);
         dispatchSimple(instr);
@@ -316,7 +351,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2D_Zero() {
+    void testL2D_Zero()
+    {
         stack.pushLong(0L);
         SimpleInstruction instr = new SimpleInstruction(0x8A, 0, 1);
         dispatchSimple(instr);
@@ -324,7 +360,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testL2D_NegativeValue() {
+    void testL2D_NegativeValue()
+    {
         stack.pushLong(-123456789L);
         SimpleInstruction instr = new SimpleInstruction(0x8A, 0, 1);
         dispatchSimple(instr);
@@ -332,7 +369,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2I_PositiveValue() {
+    void testF2I_PositiveValue()
+    {
         stack.pushFloat(42.7f);
         SimpleInstruction instr = new SimpleInstruction(0x8B, 0, 1);
         dispatchSimple(instr);
@@ -340,7 +378,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2I_Zero() {
+    void testF2I_Zero()
+    {
         stack.pushFloat(0.0f);
         SimpleInstruction instr = new SimpleInstruction(0x8B, 0, 1);
         dispatchSimple(instr);
@@ -348,7 +387,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2I_NegativeValue() {
+    void testF2I_NegativeValue()
+    {
         stack.pushFloat(-99.9f);
         SimpleInstruction instr = new SimpleInstruction(0x8B, 0, 1);
         dispatchSimple(instr);
@@ -356,7 +396,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2I_NaN() {
+    void testF2I_NaN()
+    {
         stack.pushFloat(Float.NaN);
         SimpleInstruction instr = new SimpleInstruction(0x8B, 0, 1);
         dispatchSimple(instr);
@@ -364,7 +405,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2I_PositiveInfinity() {
+    void testF2I_PositiveInfinity()
+    {
         stack.pushFloat(Float.POSITIVE_INFINITY);
         SimpleInstruction instr = new SimpleInstruction(0x8B, 0, 1);
         dispatchSimple(instr);
@@ -372,7 +414,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2I_NegativeInfinity() {
+    void testF2I_NegativeInfinity()
+    {
         stack.pushFloat(Float.NEGATIVE_INFINITY);
         SimpleInstruction instr = new SimpleInstruction(0x8B, 0, 1);
         dispatchSimple(instr);
@@ -380,7 +423,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2L_PositiveValue() {
+    void testF2L_PositiveValue()
+    {
         stack.pushFloat(1234.5f);
         SimpleInstruction instr = new SimpleInstruction(0x8C, 0, 1);
         dispatchSimple(instr);
@@ -388,7 +432,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2L_Zero() {
+    void testF2L_Zero()
+    {
         stack.pushFloat(0.0f);
         SimpleInstruction instr = new SimpleInstruction(0x8C, 0, 1);
         dispatchSimple(instr);
@@ -396,7 +441,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2L_NegativeValue() {
+    void testF2L_NegativeValue()
+    {
         stack.pushFloat(-5678.9f);
         SimpleInstruction instr = new SimpleInstruction(0x8C, 0, 1);
         dispatchSimple(instr);
@@ -404,7 +450,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2L_NaN() {
+    void testF2L_NaN()
+    {
         stack.pushFloat(Float.NaN);
         SimpleInstruction instr = new SimpleInstruction(0x8C, 0, 1);
         dispatchSimple(instr);
@@ -412,7 +459,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2D_PositiveValue() {
+    void testF2D_PositiveValue()
+    {
         stack.pushFloat(3.14f);
         SimpleInstruction instr = new SimpleInstruction(0x8D, 0, 1);
         dispatchSimple(instr);
@@ -421,7 +469,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2D_Zero() {
+    void testF2D_Zero()
+    {
         stack.pushFloat(0.0f);
         SimpleInstruction instr = new SimpleInstruction(0x8D, 0, 1);
         dispatchSimple(instr);
@@ -429,7 +478,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testF2D_NegativeValue() {
+    void testF2D_NegativeValue()
+    {
         stack.pushFloat(-2.718f);
         SimpleInstruction instr = new SimpleInstruction(0x8D, 0, 1);
         dispatchSimple(instr);
@@ -438,7 +488,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2I_PositiveValue() {
+    void testD2I_PositiveValue()
+    {
         stack.pushDouble(999.999);
         SimpleInstruction instr = new SimpleInstruction(0x8E, 0, 1);
         dispatchSimple(instr);
@@ -446,7 +497,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2I_Zero() {
+    void testD2I_Zero()
+    {
         stack.pushDouble(0.0);
         SimpleInstruction instr = new SimpleInstruction(0x8E, 0, 1);
         dispatchSimple(instr);
@@ -454,7 +506,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2I_NegativeValue() {
+    void testD2I_NegativeValue()
+    {
         stack.pushDouble(-777.777);
         SimpleInstruction instr = new SimpleInstruction(0x8E, 0, 1);
         dispatchSimple(instr);
@@ -462,7 +515,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2I_NaN() {
+    void testD2I_NaN()
+    {
         stack.pushDouble(Double.NaN);
         SimpleInstruction instr = new SimpleInstruction(0x8E, 0, 1);
         dispatchSimple(instr);
@@ -470,7 +524,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2L_PositiveValue() {
+    void testD2L_PositiveValue()
+    {
         stack.pushDouble(123456.789);
         SimpleInstruction instr = new SimpleInstruction(0x8F, 0, 1);
         dispatchSimple(instr);
@@ -478,7 +533,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2L_Zero() {
+    void testD2L_Zero()
+    {
         stack.pushDouble(0.0);
         SimpleInstruction instr = new SimpleInstruction(0x8F, 0, 1);
         dispatchSimple(instr);
@@ -486,7 +542,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2L_NegativeValue() {
+    void testD2L_NegativeValue()
+    {
         stack.pushDouble(-987654.321);
         SimpleInstruction instr = new SimpleInstruction(0x8F, 0, 1);
         dispatchSimple(instr);
@@ -494,7 +551,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2L_NaN() {
+    void testD2L_NaN()
+    {
         stack.pushDouble(Double.NaN);
         SimpleInstruction instr = new SimpleInstruction(0x8F, 0, 1);
         dispatchSimple(instr);
@@ -502,7 +560,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2F_PositiveValue() {
+    void testD2F_PositiveValue()
+    {
         stack.pushDouble(1.23456789);
         SimpleInstruction instr = new SimpleInstruction(0x90, 0, 1);
         dispatchSimple(instr);
@@ -511,7 +570,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2F_Zero() {
+    void testD2F_Zero()
+    {
         stack.pushDouble(0.0);
         SimpleInstruction instr = new SimpleInstruction(0x90, 0, 1);
         dispatchSimple(instr);
@@ -519,7 +579,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2F_NegativeValue() {
+    void testD2F_NegativeValue()
+    {
         stack.pushDouble(-9.87654321);
         SimpleInstruction instr = new SimpleInstruction(0x90, 0, 1);
         dispatchSimple(instr);
@@ -528,7 +589,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testD2F_PrecisionLoss() {
+    void testD2F_PrecisionLoss()
+    {
         stack.pushDouble(1.23456789123456789);
         SimpleInstruction instr = new SimpleInstruction(0x90, 0, 1);
         dispatchSimple(instr);
@@ -537,7 +599,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2B_PositiveValue() {
+    void testI2B_PositiveValue()
+    {
         stack.pushInt(100);
         SimpleInstruction instr = new SimpleInstruction(0x91, 0, 1);
         dispatchSimple(instr);
@@ -545,7 +608,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2B_Zero() {
+    void testI2B_Zero()
+    {
         stack.pushInt(0);
         SimpleInstruction instr = new SimpleInstruction(0x91, 0, 1);
         dispatchSimple(instr);
@@ -553,7 +617,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2B_NegativeValue() {
+    void testI2B_NegativeValue()
+    {
         stack.pushInt(-50);
         SimpleInstruction instr = new SimpleInstruction(0x91, 0, 1);
         dispatchSimple(instr);
@@ -561,7 +626,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2B_Truncation() {
+    void testI2B_Truncation()
+    {
         stack.pushInt(300);
         SimpleInstruction instr = new SimpleInstruction(0x91, 0, 1);
         dispatchSimple(instr);
@@ -569,7 +635,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2C_PositiveValue() {
+    void testI2C_PositiveValue()
+    {
         stack.pushInt(65);
         SimpleInstruction instr = new SimpleInstruction(0x92, 0, 1);
         dispatchSimple(instr);
@@ -577,7 +644,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2C_Zero() {
+    void testI2C_Zero()
+    {
         stack.pushInt(0);
         SimpleInstruction instr = new SimpleInstruction(0x92, 0, 1);
         dispatchSimple(instr);
@@ -585,7 +653,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2C_NegativeToUnsigned() {
+    void testI2C_NegativeToUnsigned()
+    {
         stack.pushInt(-1);
         SimpleInstruction instr = new SimpleInstruction(0x92, 0, 1);
         dispatchSimple(instr);
@@ -593,7 +662,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2C_Truncation() {
+    void testI2C_Truncation()
+    {
         stack.pushInt(100000);
         SimpleInstruction instr = new SimpleInstruction(0x92, 0, 1);
         dispatchSimple(instr);
@@ -601,7 +671,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2S_PositiveValue() {
+    void testI2S_PositiveValue()
+    {
         stack.pushInt(1000);
         SimpleInstruction instr = new SimpleInstruction(0x93, 0, 1);
         dispatchSimple(instr);
@@ -609,7 +680,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2S_Zero() {
+    void testI2S_Zero()
+    {
         stack.pushInt(0);
         SimpleInstruction instr = new SimpleInstruction(0x93, 0, 1);
         dispatchSimple(instr);
@@ -617,7 +689,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2S_NegativeValue() {
+    void testI2S_NegativeValue()
+    {
         stack.pushInt(-5000);
         SimpleInstruction instr = new SimpleInstruction(0x93, 0, 1);
         dispatchSimple(instr);
@@ -625,7 +698,8 @@ class OpcodeDispatcherPart2Test {
     }
 
     @Test
-    void testI2S_Truncation() {
+    void testI2S_Truncation()
+    {
         stack.pushInt(50000);
         SimpleInstruction instr = new SimpleInstruction(0x93, 0, 1);
         dispatchSimple(instr);

@@ -16,24 +16,30 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CallStackTest {
+class CallStackTest
+{
 
     private ClassFile classFile;
     private MethodEntry testMethod;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         Path testClassPath = Paths.get("target/test-classes/com/tonic/demo/TestClass.class");
-        if (!Files.exists(testClassPath)) {
+        if (!Files.exists(testClassPath))
+        {
             testClassPath = Paths.get("build/classes/java/test/com/tonic/demo/TestClass.class");
         }
 
-        if (Files.exists(testClassPath)) {
+        if (Files.exists(testClassPath))
+        {
             byte[] classBytes = Files.readAllBytes(testClassPath);
             classFile = new ClassFile(new ByteArrayInputStream(classBytes));
 
-            for (MethodEntry method : classFile.getMethods()) {
-                if (method.getName().equals("simpleMethod") && method.getCodeAttribute() != null) {
+            for (MethodEntry method : classFile.getMethods())
+            {
+                if (method.getName().equals("simpleMethod") && method.getCodeAttribute() != null)
+                {
                     testMethod = method;
                     break;
                 }
@@ -42,7 +48,8 @@ class CallStackTest {
     }
 
     @Test
-    void testConstruction() {
+    void testConstruction()
+    {
         CallStack stack = new CallStack(100);
         assertNotNull(stack);
         assertEquals(0, stack.depth());
@@ -50,18 +57,22 @@ class CallStackTest {
     }
 
     @Test
-    void testConstructionWithZeroMaxDepthThrows() {
+    void testConstructionWithZeroMaxDepthThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new CallStack(0));
     }
 
     @Test
-    void testConstructionWithNegativeMaxDepthThrows() {
+    void testConstructionWithNegativeMaxDepthThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new CallStack(-5));
     }
 
     @Test
-    void testPushIncreasesDepth() {
-        if (testMethod != null) {
+    void testPushIncreasesDepth()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame = new StackFrame(testMethod, new ConcreteValue[0]);
 
@@ -72,27 +83,31 @@ class CallStackTest {
     }
 
     @Test
-    void testPushNullFrameThrows() {
+    void testPushNullFrameThrows()
+    {
         CallStack stack = new CallStack(10);
         assertThrows(IllegalArgumentException.class, () -> stack.push(null));
     }
 
     @Test
-    void testPushExceedingMaxDepthThrows() {
-        if (testMethod != null) {
+    void testPushExceedingMaxDepthThrows()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(2);
 
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
 
-            assertThrows(StackOverflowError.class,
-                () -> stack.push(new StackFrame(testMethod, new ConcreteValue[0])));
+            assertThrows(StackOverflowError.class, () -> stack.push(new StackFrame(testMethod, new ConcreteValue[0])));
         }
     }
 
     @Test
-    void testPopDecreasesDepth() {
-        if (testMethod != null) {
+    void testPopDecreasesDepth()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame = new StackFrame(testMethod, new ConcreteValue[0]);
 
@@ -106,14 +121,17 @@ class CallStackTest {
     }
 
     @Test
-    void testPopEmptyStackThrows() {
+    void testPopEmptyStackThrows()
+    {
         CallStack stack = new CallStack(10);
         assertThrows(IllegalStateException.class, stack::pop);
     }
 
     @Test
-    void testPeekReturnsTopFrame() {
-        if (testMethod != null) {
+    void testPeekReturnsTopFrame()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame1 = new StackFrame(testMethod, new ConcreteValue[0]);
             StackFrame frame2 = new StackFrame(testMethod, new ConcreteValue[0]);
@@ -127,14 +145,17 @@ class CallStackTest {
     }
 
     @Test
-    void testPeekEmptyStackThrows() {
+    void testPeekEmptyStackThrows()
+    {
         CallStack stack = new CallStack(10);
         assertThrows(IllegalStateException.class, stack::peek);
     }
 
     @Test
-    void testPeekAt() {
-        if (testMethod != null) {
+    void testPeekAt()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame1 = new StackFrame(testMethod, new ConcreteValue[0]);
             StackFrame frame2 = new StackFrame(testMethod, new ConcreteValue[0]);
@@ -151,14 +172,17 @@ class CallStackTest {
     }
 
     @Test
-    void testPeekAtNegativeDepthThrows() {
+    void testPeekAtNegativeDepthThrows()
+    {
         CallStack stack = new CallStack(10);
         assertThrows(IllegalArgumentException.class, () -> stack.peekAt(-1));
     }
 
     @Test
-    void testPeekAtExcessiveDepthThrows() {
-        if (testMethod != null) {
+    void testPeekAtExcessiveDepthThrows()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
 
@@ -167,8 +191,10 @@ class CallStackTest {
     }
 
     @Test
-    void testDepthTracking() {
-        if (testMethod != null) {
+    void testDepthTracking()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
 
             assertEquals(0, stack.depth());
@@ -188,8 +214,10 @@ class CallStackTest {
     }
 
     @Test
-    void testIsEmpty() {
-        if (testMethod != null) {
+    void testIsEmpty()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
 
             assertTrue(stack.isEmpty());
@@ -203,8 +231,10 @@ class CallStackTest {
     }
 
     @Test
-    void testClear() {
-        if (testMethod != null) {
+    void testClear()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
 
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
@@ -221,8 +251,10 @@ class CallStackTest {
     }
 
     @Test
-    void testSnapshot() {
-        if (testMethod != null) {
+    void testSnapshot()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame1 = new StackFrame(testMethod, new ConcreteValue[0]);
             StackFrame frame2 = new StackFrame(testMethod, new ConcreteValue[0]);
@@ -242,8 +274,10 @@ class CallStackTest {
     }
 
     @Test
-    void testSnapshotIsUnmodifiable() {
-        if (testMethod != null) {
+    void testSnapshotIsUnmodifiable()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
 
@@ -255,8 +289,10 @@ class CallStackTest {
     }
 
     @Test
-    void testSnapshotIsBottomToTop() {
-        if (testMethod != null) {
+    void testSnapshotIsBottomToTop()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame bottom = new StackFrame(testMethod, new ConcreteValue[0]);
             StackFrame middle = new StackFrame(testMethod, new ConcreteValue[0]);
@@ -275,8 +311,10 @@ class CallStackTest {
     }
 
     @Test
-    void testTopToBottomIteration() {
-        if (testMethod != null) {
+    void testTopToBottomIteration()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame1 = new StackFrame(testMethod, new ConcreteValue[0]);
             StackFrame frame2 = new StackFrame(testMethod, new ConcreteValue[0]);
@@ -289,7 +327,8 @@ class CallStackTest {
             int count = 0;
             StackFrame[] expected = {frame3, frame2, frame1};
 
-            for (StackFrame frame : stack.topToBottom()) {
+            for (StackFrame frame : stack.topToBottom())
+            {
                 assertEquals(expected[count], frame);
                 count++;
             }
@@ -299,7 +338,8 @@ class CallStackTest {
     }
 
     @Test
-    void testFormatStackTraceEmpty() {
+    void testFormatStackTraceEmpty()
+    {
         CallStack stack = new CallStack(10);
         String trace = stack.formatStackTrace();
 
@@ -308,8 +348,10 @@ class CallStackTest {
     }
 
     @Test
-    void testFormatStackTraceWithFrames() {
-        if (testMethod != null) {
+    void testFormatStackTraceWithFrames()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
@@ -325,8 +367,10 @@ class CallStackTest {
     }
 
     @Test
-    void testFormatStackTraceWithCompletedFrame() {
-        if (testMethod != null) {
+    void testFormatStackTraceWithCompletedFrame()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame = new StackFrame(testMethod, new ConcreteValue[0]);
             frame.complete(ConcreteValue.intValue(0));
@@ -340,8 +384,10 @@ class CallStackTest {
     }
 
     @Test
-    void testFormatStackTraceWithException() {
-        if (testMethod != null) {
+    void testFormatStackTraceWithException()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame = new StackFrame(testMethod, new ConcreteValue[0]);
             ObjectInstance exception = new ObjectInstance(1, "java/lang/RuntimeException");
@@ -356,7 +402,8 @@ class CallStackTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         CallStack stack = new CallStack(100);
         String str = stack.toString();
 
@@ -367,8 +414,10 @@ class CallStackTest {
     }
 
     @Test
-    void testPushPopSequence() {
-        if (testMethod != null) {
+    void testPushPopSequence()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             StackFrame frame1 = new StackFrame(testMethod, new ConcreteValue[0]);
             StackFrame frame2 = new StackFrame(testMethod, new ConcreteValue[0]);
@@ -383,8 +432,10 @@ class CallStackTest {
     }
 
     @Test
-    void testMaxDepthEnforcement() {
-        if (testMethod != null) {
+    void testMaxDepthEnforcement()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(3);
 
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
@@ -393,14 +444,15 @@ class CallStackTest {
 
             assertEquals(3, stack.depth());
 
-            assertThrows(StackOverflowError.class,
-                () -> stack.push(new StackFrame(testMethod, new ConcreteValue[0])));
+            assertThrows(StackOverflowError.class, () -> stack.push(new StackFrame(testMethod, new ConcreteValue[0])));
         }
     }
 
     @Test
-    void testSnapshotAfterModification() {
-        if (testMethod != null) {
+    void testSnapshotAfterModification()
+    {
+        if (testMethod != null)
+        {
             CallStack stack = new CallStack(10);
             stack.push(new StackFrame(testMethod, new ConcreteValue[0]));
 

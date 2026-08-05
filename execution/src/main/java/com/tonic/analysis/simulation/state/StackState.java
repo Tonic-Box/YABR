@@ -3,47 +3,60 @@ package com.tonic.analysis.simulation.state;
 import java.util.*;
 
 /**
- * Immutable representation of the operand stack during simulation.
- * All operations return new StackState instances.
+ * Immutable operand stack snapshot used during simulation.
  */
-public final class StackState {
+public final class StackState
+{
 
     private final List<SimValue> stack;
     private final int maxDepthSeen;
 
-    private StackState(List<SimValue> stack, int maxDepthSeen) {
+    private StackState(List<SimValue> stack, int maxDepthSeen)
+    {
         this.stack = Collections.unmodifiableList(new ArrayList<>(stack));
         this.maxDepthSeen = Math.max(maxDepthSeen, stack.size());
     }
 
     /**
-     * Creates an empty stack state.
+     * @return a stack with no slots and a maximum depth of zero
      */
-    public static StackState empty() {
+    public static StackState empty()
+    {
         return new StackState(Collections.emptyList(), 0);
     }
 
     /**
-     * Creates a stack state with initial values.
+     * Creates a stack preloaded with slots.
+     *
+     * @param values the slot contents, bottom to top
+     * @return a stack holding a copy of them, with its maximum depth set to their count
      */
-    public static StackState of(List<SimValue> values) {
+    public static StackState of(List<SimValue> values)
+    {
         return new StackState(values, values.size());
     }
 
     /**
-     * Push a value onto the stack.
+     * Adds a value on top of the stack.
+     *
+     * @param value the value to push
+     * @return the resulting stack, one slot deeper
      */
-    public StackState push(SimValue value) {
+    public StackState push(SimValue value)
+    {
         List<SimValue> newStack = new ArrayList<>(stack);
         newStack.add(value);
         return new StackState(newStack, maxDepthSeen);
     }
 
     /**
-     * Push a wide value (long/double) onto the stack.
-     * Automatically adds the second slot.
+     * Pushes a long or double, adding the filler second slot after it.
+     *
+     * @param value the wide value to push
+     * @return the resulting stack, two slots deeper
      */
-    public StackState pushWide(SimValue value) {
+    public StackState pushWide(SimValue value)
+    {
         List<SimValue> newStack = new ArrayList<>(stack);
         newStack.add(value);
         newStack.add(SimValue.wideSecondSlot());
@@ -51,10 +64,15 @@ public final class StackState {
     }
 
     /**
-     * Pop the top value from the stack.
+     * Removes the top slot.
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if the stack is empty
      */
-    public StackState pop() {
-        if (stack.isEmpty()) {
+    public StackState pop()
+    {
+        if (stack.isEmpty())
+        {
             throw new IllegalStateException("Cannot pop from empty stack");
         }
         List<SimValue> newStack = new ArrayList<>(stack);
@@ -63,10 +81,16 @@ public final class StackState {
     }
 
     /**
-     * Pop multiple values from the stack.
+     * Removes several slots at once.
+     *
+     * @param count how many slots to drop; zero leaves the stack unchanged
+     * @return the resulting stack
+     * @throws IllegalStateException if the stack holds fewer than count slots
      */
-    public StackState pop(int count) {
-        if (count > stack.size()) {
+    public StackState pop(int count)
+    {
+        if (count > stack.size())
+        {
             throw new IllegalStateException("Cannot pop " + count + " values from stack of size " + stack.size());
         }
         if (count == 0) return this;
@@ -75,104 +99,146 @@ public final class StackState {
     }
 
     /**
-     * Pop a wide value (2 slots) from the stack.
+     * Removes the two slots holding a long or double.
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than two slots are on the stack
      */
-    public StackState popWide() {
+    public StackState popWide()
+    {
         return pop(2);
     }
 
     /**
-     * Peek at the top value without removing it.
+     * Reads the top slot without removing it.
+     *
+     * @return the value in the top slot
+     * @throws IllegalStateException if the stack is empty
      */
-    public SimValue peek() {
-        if (stack.isEmpty()) {
+    public SimValue peek()
+    {
+        if (stack.isEmpty())
+        {
             throw new IllegalStateException("Cannot peek empty stack");
         }
         return stack.get(stack.size() - 1);
     }
 
     /**
-     * Peek at a value at the given depth (0 = top).
+     * Reads a slot without removing it.
+     *
+     * @param depth the slot offset from the top, 0 being the topmost slot
+     * @return the value in that slot
+     * @throws IllegalStateException if the depth is outside the stack
      */
-    public SimValue peek(int depth) {
+    public SimValue peek(int depth)
+    {
         int index = stack.size() - 1 - depth;
-        if (index < 0 || index >= stack.size()) {
+        if (index < 0 || index >= stack.size())
+        {
             throw new IllegalStateException("Invalid stack depth: " + depth + " (stack size: " + stack.size() + ")");
         }
         return stack.get(index);
     }
 
     /**
-     * Get the top value, accounting for wide types.
-     * If top is a wide second slot, returns the value below it.
+     * Reads the topmost value, stepping past a wide second slot to the value it belongs to.
+     *
+     * @return the value on top of the stack
+     * @throws IllegalStateException if the stack is empty, or holds only a wide second slot
      */
-    public SimValue peekValue() {
+    public SimValue peekValue()
+    {
         SimValue top = peek();
-        if (top.isWideSecondSlot()) {
+        if (top.isWideSecondSlot())
+        {
             return peek(1);
         }
         return top;
     }
 
     /**
-     * Get value at depth, accounting for wide types.
+     * Reads a value at the given depth, stepping past a wide second slot to the value it
+     * belongs to.
+     *
+     * @param depth the slot offset from the top, 0 being the topmost slot
+     * @return the value occupying that slot
+     * @throws IllegalStateException if the slot, or the one below a wide second slot, is out of range
      */
-    public SimValue peekValue(int depth) {
+    public SimValue peekValue(int depth)
+    {
         SimValue value = peek(depth);
-        if (value.isWideSecondSlot()) {
+        if (value.isWideSecondSlot())
+        {
             return peek(depth + 1);
         }
         return value;
     }
 
     /**
-     * Get the current stack depth.
+     * @return the number of occupied slots, counting both halves of a wide value
      */
-    public int depth() {
+    public int depth()
+    {
         return stack.size();
     }
 
     /**
-     * Get the maximum stack depth seen during simulation.
+     * @return the greatest slot count reached by any predecessor of this state
      */
-    public int maxDepth() {
+    public int maxDepth()
+    {
         return maxDepthSeen;
     }
 
     /**
-     * Returns true if the stack is empty.
+     * @return true if no slot is occupied
      */
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         return stack.isEmpty();
     }
 
     /**
-     * Get all values on the stack (bottom to top).
+     * @return an unmodifiable view of the slots, bottom to top
      */
-    public List<SimValue> getValues() {
+    public List<SimValue> getValues()
+    {
         return stack;
     }
 
     /**
-     * Duplicate the top value (dup).
+     * Pushes a copy of the top slot (dup).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if the stack is empty
      */
-    public StackState dup() {
+    public StackState dup()
+    {
         return push(peek());
     }
 
     /**
-     * Duplicate top value and insert below second (dup_x1).
+     * Duplicates the top slot and inserts the copy below the second (dup_x1).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than two slots are on the stack
      */
-    public StackState dupX1() {
+    public StackState dupX1()
+    {
         SimValue top = peek();
         SimValue second = peek(1);
         return pop(2).push(top).push(second).push(top);
     }
 
     /**
-     * Duplicate top value and insert below third (dup_x2).
+     * Duplicates the top slot and inserts the copy below the third (dup_x2).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than three slots are on the stack
      */
-    public StackState dupX2() {
+    public StackState dupX2()
+    {
         SimValue top = peek();
         SimValue second = peek(1);
         SimValue third = peek(2);
@@ -180,18 +246,26 @@ public final class StackState {
     }
 
     /**
-     * Duplicate top two values (dup2).
+     * Pushes a copy of the top two slots (dup2).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than two slots are on the stack
      */
-    public StackState dup2() {
+    public StackState dup2()
+    {
         SimValue top = peek();
         SimValue second = peek(1);
         return push(second).push(top);
     }
 
     /**
-     * Duplicate top two and insert below third (dup2_x1).
+     * Duplicates the top two slots and inserts the copies below the third (dup2_x1).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than three slots are on the stack
      */
-    public StackState dup2X1() {
+    public StackState dup2X1()
+    {
         SimValue top = peek();
         SimValue second = peek(1);
         SimValue third = peek(2);
@@ -199,9 +273,13 @@ public final class StackState {
     }
 
     /**
-     * Duplicate top two and insert below fourth (dup2_x2).
+     * Duplicates the top two slots and inserts the copies below the fourth (dup2_x2).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than four slots are on the stack
      */
-    public StackState dup2X2() {
+    public StackState dup2X2()
+    {
         SimValue top = peek();
         SimValue second = peek(1);
         SimValue third = peek(2);
@@ -210,21 +288,31 @@ public final class StackState {
     }
 
     /**
-     * Swap top two values.
+     * Exchanges the top two slots (swap).
+     *
+     * @return the resulting stack
+     * @throws IllegalStateException if fewer than two slots are on the stack
      */
-    public StackState swap() {
+    public StackState swap()
+    {
         SimValue top = peek();
         SimValue second = peek(1);
         return pop(2).push(top).push(second);
     }
 
     /**
-     * Merge this stack state with another for control flow convergence.
-     * Values at same positions are merged (type widening if needed).
+     * Joins two stacks at a control flow convergence, keeping this stack's values and the
+     * larger recorded maximum depth.
+     *
+     * @param other the incoming stack, or null to keep this one unchanged
+     * @return the merged stack
+     * @throws IllegalStateException if the two stacks hold a different number of slots
      */
-    public StackState merge(StackState other) {
+    public StackState merge(StackState other)
+    {
         if (other == null) return this;
-        if (this.stack.size() != other.stack.size()) {
+        if (this.stack.size() != other.stack.size())
+        {
             throw new IllegalStateException("Cannot merge stacks of different sizes: " +
                 this.stack.size() + " vs " + other.stack.size());
         }
@@ -234,14 +322,18 @@ public final class StackState {
     }
 
     /**
-     * Clear the stack (for exception handlers).
+     * Drops every value, as an exception handler entry does.
+     *
+     * @return an empty stack that keeps the recorded maximum depth
      */
-    public StackState clear() {
+    public StackState clear()
+    {
         return new StackState(Collections.emptyList(), maxDepthSeen);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof StackState)) return false;
         StackState that = (StackState) o;
@@ -249,12 +341,14 @@ public final class StackState {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(stack);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "StackState[depth=" + stack.size() + ", max=" + maxDepthSeen + ", values=" + stack + "]";
     }
 }

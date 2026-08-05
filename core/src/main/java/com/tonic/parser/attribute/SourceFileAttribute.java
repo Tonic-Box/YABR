@@ -9,61 +9,84 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the SourceFile attribute.
- * Indicates the source file name from which the class was compiled.
+ * The SourceFile attribute: the constant-pool index of the source file name Utf8.
  */
-public class SourceFileAttribute extends Attribute {
+public class SourceFileAttribute extends Attribute
+{
     private int sourceFileIndex;
     private final ClassFile classFile;
 
-    public SourceFileAttribute(ClassFile classFile, String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing.
+     * @param classFile the class the attribute belongs to
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to, or null for a class-level attribute
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public SourceFileAttribute(ClassFile classFile, String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
         this.classFile = classFile;
     }
 
-    public int getSourceFileIndex() {
+    /**
+     * @return the source file index
+     */
+    public int getSourceFileIndex()
+    {
         return sourceFileIndex;
     }
 
-    public ClassFile getClassFile() {
+    /**
+     * @return the class file
+     */
+    public ClassFile getClassFile()
+    {
         return classFile;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
-        if (length != 2) {
+    public void read(ClassFile classFile, int length)
+    {
+        if (length != 2)
+        {
             throw new IllegalArgumentException("SourceFile attribute length must be 2, found: " + length);
         }
         this.sourceFileIndex = classFile.readUnsignedShort();
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(sourceFileIndex);
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         this.length = 2;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         String sourceFileName = resolveSourceFileName(sourceFileIndex);
         return "SourceFileAttribute{sourceFileName='" + sourceFileName + "'}";
     }
 
     /**
      * Helper method to retrieve the source file name from the constant pool.
-     *
      * @param sourceFileIndex The index of the Utf8Item in the constant pool.
      * @return The source file name as a String.
      */
-    public String resolveSourceFileName(int sourceFileIndex) {
+    public String resolveSourceFileName(int sourceFileIndex)
+    {
         Item<?> utf8Item = classFile
                 .getConstPool()
                 .getItem(sourceFileIndex);
-        if (utf8Item instanceof Utf8Item) {
+        if (utf8Item instanceof Utf8Item)
+        {
             return ((Utf8Item) utf8Item).getValue();
         }
         return "Unknown";

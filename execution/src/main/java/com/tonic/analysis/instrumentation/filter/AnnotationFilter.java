@@ -11,42 +11,57 @@ import com.tonic.parser.constpool.Utf8Item;
  * Filter based on annotation presence.
  * Matches classes/methods that have (or don't have) specific annotations.
  */
-public class AnnotationFilter implements InstrumentationFilter {
+public class AnnotationFilter implements InstrumentationFilter
+{
 
     private final String annotationType;
     private final boolean matchPresent;
     private final boolean checkClass;
     private final boolean checkMethod;
 
-    private AnnotationFilter(Builder builder) {
+    private AnnotationFilter(Builder builder)
+    {
         this.annotationType = builder.annotationType;
         this.matchPresent = builder.matchPresent;
         this.checkClass = builder.checkClass;
         this.checkMethod = builder.checkMethod;
     }
 
-    /** Returns the annotation type descriptor to match (e.g. {@code "Ljavax/inject/Inject;"}). */
-    public String getAnnotationType() {
+    /**
+     * @return the annotation type descriptor to match (e.g. {@code "Ljavax/inject/Inject;"})
+     */
+    public String getAnnotationType()
+    {
         return annotationType;
     }
 
-    /** Returns whether the filter matches when the annotation is present (false matches when absent). */
-    public boolean isMatchPresent() {
+    /**
+     * @return whether the filter matches when the annotation is present (false matches when absent)
+     */
+    public boolean isMatchPresent()
+    {
         return matchPresent;
     }
 
-    /** Returns whether class annotations are checked. */
-    public boolean isCheckClass() {
+    /**
+     * @return whether class annotations are checked
+     */
+    public boolean isCheckClass()
+    {
         return checkClass;
     }
 
-    /** Returns whether method annotations are checked. */
-    public boolean isCheckMethod() {
+    /**
+     * @return whether method annotations are checked
+     */
+    public boolean isCheckMethod()
+    {
         return checkMethod;
     }
 
     @Override
-    public boolean matchesClass(ClassFile classFile) {
+    public boolean matchesClass(ClassFile classFile)
+    {
         if (!checkClass) return true;
 
         boolean hasAnnotation = hasAnnotation(classFile);
@@ -54,7 +69,8 @@ public class AnnotationFilter implements InstrumentationFilter {
     }
 
     @Override
-    public boolean matchesMethod(MethodEntry method) {
+    public boolean matchesMethod(MethodEntry method)
+    {
         if (!checkMethod) return true;
 
         boolean hasAnnotation = hasAnnotation(method);
@@ -62,58 +78,71 @@ public class AnnotationFilter implements InstrumentationFilter {
     }
 
     @Override
-    public boolean matchesField(String fieldOwner, String fieldName, String fieldDescriptor) {
+    public boolean matchesField(String fieldOwner, String fieldName, String fieldDescriptor)
+    {
         // Field annotation checking would require additional context
         return true;
     }
 
     @Override
-    public boolean matchesMethodCall(String owner, String name, String descriptor) {
+    public boolean matchesMethodCall(String owner, String name, String descriptor)
+    {
         // Method call annotation checking would require class resolution
         return true;
     }
 
-    private boolean hasAnnotation(ClassFile classFile) {
+    private boolean hasAnnotation(ClassFile classFile)
+    {
         RuntimeVisibleAnnotationsAttribute annots = findAnnotationsAttribute(classFile.getClassAttributes());
         if (annots == null) return false;
 
-        for (Annotation annotation : annots.getAnnotations()) {
+        for (Annotation annotation : annots.getAnnotations())
+        {
             String type = getAnnotationType(annotation, classFile);
-            if (annotationType.equals(type)) {
+            if (annotationType.equals(type))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean hasAnnotation(MethodEntry method) {
+    private boolean hasAnnotation(MethodEntry method)
+    {
         RuntimeVisibleAnnotationsAttribute annots = findAnnotationsAttribute(method.getAttributes());
         if (annots == null) return false;
 
         ClassFile classFile = method.getClassFile();
-        for (Annotation annotation : annots.getAnnotations()) {
+        for (Annotation annotation : annots.getAnnotations())
+        {
             String type = getAnnotationType(annotation, classFile);
-            if (annotationType.equals(type)) {
+            if (annotationType.equals(type))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private RuntimeVisibleAnnotationsAttribute findAnnotationsAttribute(java.util.List<Attribute> attributes) {
+    private RuntimeVisibleAnnotationsAttribute findAnnotationsAttribute(java.util.List<Attribute> attributes)
+    {
         if (attributes == null) return null;
-        for (Attribute attr : attributes) {
-            if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
+        for (Attribute attr : attributes)
+        {
+            if (attr instanceof RuntimeVisibleAnnotationsAttribute)
+            {
                 return (RuntimeVisibleAnnotationsAttribute) attr;
             }
         }
         return null;
     }
 
-    private String getAnnotationType(Annotation annotation, ClassFile classFile) {
+    private String getAnnotationType(Annotation annotation, ClassFile classFile)
+    {
         int typeIndex = annotation.getTypeIndex();
         var item = classFile.getConstPool().getItem(typeIndex);
-        if (item instanceof Utf8Item) {
+        if (item instanceof Utf8Item)
+        {
             return ((Utf8Item) item).getValue();
         }
         return "";
@@ -121,8 +150,11 @@ public class AnnotationFilter implements InstrumentationFilter {
 
     /**
      * Creates a filter that matches methods with the given annotation.
+     * @param annotationType the annotation type descriptor
+     * @return the filter
      */
-    public static AnnotationFilter forAnnotation(String annotationType) {
+    public static AnnotationFilter forAnnotation(String annotationType)
+    {
         return AnnotationFilter.builder()
                 .annotationType(annotationType)
                 .matchPresent(true)
@@ -131,45 +163,86 @@ public class AnnotationFilter implements InstrumentationFilter {
 
     /**
      * Creates a filter that matches methods without the given annotation.
+     * @param annotationType the annotation type descriptor
+     * @return the filter
      */
-    public static AnnotationFilter withoutAnnotation(String annotationType) {
+    public static AnnotationFilter withoutAnnotation(String annotationType)
+    {
         return AnnotationFilter.builder()
                 .annotationType(annotationType)
                 .matchPresent(false)
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * Creates a new builder.
+     * @return a new Builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Builder for AnnotationFilter instances.
+     */
+    public static class Builder
+    {
         private String annotationType;
         private boolean matchPresent = true;
         private boolean checkClass = true;
         private boolean checkMethod = true;
 
-        public Builder annotationType(String annotationType) {
+        /**
+         * Sets the annotation type descriptor to match.
+         * @param annotationType the annotation type descriptor
+         * @return this builder
+         */
+        public Builder annotationType(String annotationType)
+        {
             this.annotationType = annotationType;
             return this;
         }
 
-        public Builder matchPresent(boolean matchPresent) {
+        /**
+         * Sets whether the filter matches on annotation presence or absence.
+         * @param matchPresent true to match when the annotation is present, false when absent
+         * @return this builder
+         */
+        public Builder matchPresent(boolean matchPresent)
+        {
             this.matchPresent = matchPresent;
             return this;
         }
 
-        public Builder checkClass(boolean checkClass) {
+        /**
+         * Sets whether class annotations are checked.
+         * @param checkClass true to check class annotations
+         * @return this builder
+         */
+        public Builder checkClass(boolean checkClass)
+        {
             this.checkClass = checkClass;
             return this;
         }
 
-        public Builder checkMethod(boolean checkMethod) {
+        /**
+         * Sets whether method annotations are checked.
+         * @param checkMethod true to check method annotations
+         * @return this builder
+         */
+        public Builder checkMethod(boolean checkMethod)
+        {
             this.checkMethod = checkMethod;
             return this;
         }
 
-        public AnnotationFilter build() {
+        /**
+         * Builds the filter.
+         * @return the built AnnotationFilter
+         */
+        public AnnotationFilter build()
+        {
             return new AnnotationFilter(this);
         }
     }

@@ -8,18 +8,27 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a case clause in a switch statement.
- * Supports both integer labels (regular switch) and expression labels (enum switch).
+ * A case clause of a switch statement, keyed by integer labels or expression labels.
  */
-public final class SwitchCase {
+public final class SwitchCase
+{
     private final List<Integer> labels;
     private final List<Expression> expressionLabels;
     private final boolean isDefault;
     private final List<Statement> statements;
-    /** True when control flows off the end of this case into the next one (no break in source). */
+    /**
+     * True when control flows off the end of this case into the next one (no break in source).
+     */
     private boolean fallsThrough;
 
-    public SwitchCase(List<Integer> labels, boolean isDefault, List<Statement> statements) {
+    /**
+     * Creates a case with integer labels; the statement list stays mutable for AST transforms.
+     * @param labels integer case labels, or null for none
+     * @param isDefault whether this is the default case
+     * @param statements the case body, or null for empty
+     */
+    public SwitchCase(List<Integer> labels, boolean isDefault, List<Statement> statements)
+    {
         this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
         this.expressionLabels = Collections.emptyList();
         this.isDefault = isDefault;
@@ -30,7 +39,15 @@ public final class SwitchCase {
         this.statements = statements != null ? new ArrayList<>(statements) : new ArrayList<>();
     }
 
-    public SwitchCase(List<Integer> labels, List<Expression> expressionLabels, boolean isDefault, List<Statement> statements) {
+    /**
+     * Creates a case with integer and expression labels.
+     * @param labels integer case labels, or null for none
+     * @param expressionLabels expression case labels, or null for none
+     * @param isDefault whether this is the default case
+     * @param statements the case body, or null for empty
+     */
+    public SwitchCase(List<Integer> labels, List<Expression> expressionLabels, boolean isDefault, List<Statement> statements)
+    {
         this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
         this.expressionLabels = expressionLabels != null ? Collections.unmodifiableList(new ArrayList<>(expressionLabels)) : Collections.emptyList();
         this.isDefault = isDefault;
@@ -39,64 +56,109 @@ public final class SwitchCase {
 
     /**
      * Creates a default case.
+     * @param statements the case body
+     * @return the new case
      */
-    public static SwitchCase defaultCase(List<Statement> statements) {
+    public static SwitchCase defaultCase(List<Statement> statements)
+    {
         return new SwitchCase(Collections.emptyList(), true, statements);
     }
 
     /**
-     * Creates a case with a single label.
+     * Creates a case with a single integer label.
+     * @param label the case label
+     * @param statements the case body
+     * @return the new case
      */
-    public static SwitchCase of(int label, List<Statement> statements) {
+    public static SwitchCase of(int label, List<Statement> statements)
+    {
         return new SwitchCase(Collections.singletonList(label), false, statements);
     }
 
     /**
-     * Creates a case with multiple labels (fall-through).
+     * Creates a case with multiple integer labels sharing one body.
+     * @param labels the case labels
+     * @param statements the case body
+     * @return the new case
      */
-    public static SwitchCase of(List<Integer> labels, List<Statement> statements) {
+    public static SwitchCase of(List<Integer> labels, List<Statement> statements)
+    {
         return new SwitchCase(labels, false, statements);
     }
 
     /**
-     * Creates a case with expression labels (for enum switches).
+     * Creates a case keyed by expression labels, as used for enum switches.
+     * @param expressionLabels the case label expressions
+     * @param statements the case body
+     * @return the new case
      */
-    public static SwitchCase ofExpressions(List<Expression> expressionLabels, List<Statement> statements) {
+    public static SwitchCase ofExpressions(List<Expression> expressionLabels, List<Statement> statements)
+    {
         return new SwitchCase(Collections.emptyList(), expressionLabels, false, statements);
     }
 
-    public List<Integer> labels() {
+    /**
+     * @return the integer case labels, unmodifiable
+     */
+    public List<Integer> labels()
+    {
         return labels;
     }
 
-    public List<Expression> expressionLabels() {
+    /**
+     * @return the expression case labels, unmodifiable
+     */
+    public List<Expression> expressionLabels()
+    {
         return expressionLabels;
     }
 
-    public boolean hasExpressionLabels() {
+    /**
+     * @return true if this case is keyed by expression labels
+     */
+    public boolean hasExpressionLabels()
+    {
         return !expressionLabels.isEmpty();
     }
 
-    public boolean isDefault() {
+    /**
+     * @return whether default
+     */
+    public boolean isDefault()
+    {
         return isDefault;
     }
 
-    public List<Statement> statements() {
+    /**
+     * @return the case body statements, mutable
+     */
+    public List<Statement> statements()
+    {
         return statements;
     }
 
-    public boolean fallsThrough() {
+    /**
+     * @return true if control flows off the end of this case into the next
+     */
+    public boolean fallsThrough()
+    {
         return fallsThrough;
     }
 
-    /** Marks this case as falling through to the next; returns {@code this} for chaining. */
-    public SwitchCase withFallsThrough(boolean value) {
+    /**
+     * Marks whether this case falls through to the next.
+     * @param value the new fall-through flag
+     * @return this case
+     */
+    public SwitchCase withFallsThrough(boolean value)
+    {
         this.fallsThrough = value;
         return this;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof SwitchCase)) return false;
         SwitchCase that = (SwitchCase) o;
@@ -106,12 +168,14 @@ public final class SwitchCase {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(labels, isDefault, statements);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "SwitchCase[" +
                "labels=" + labels +
                ", isDefault=" + isDefault +

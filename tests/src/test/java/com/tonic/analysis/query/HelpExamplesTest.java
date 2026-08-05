@@ -10,7 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * examples (mirroring {@code QueryExplorerPanel.buildExampleBoxes}) and the advanced examples in
  * {@code docs/query-dsl.md}.
  */
-class HelpExamplesTest {
+class HelpExamplesTest
+{
 
     private static final String[] EXAMPLES = {
         "FIND methods WHERE HAS call WHERE (name == \"println\")",
@@ -42,17 +43,21 @@ class HelpExamplesTest {
     };
 
     @Test
-    void allHelpExamplesParse() throws Exception {
+    void allHelpExamplesParse() throws Exception
+    {
         QueryParser parser = new QueryParser();
-        for (String example : EXAMPLES) {
+        for (String example : EXAMPLES)
+        {
             assertNotNull(parser.parse(example), example);
         }
     }
 
     @Test
-    void allDocAdvancedExamplesParse() throws Exception {
+    void allDocAdvancedExamplesParse() throws Exception
+    {
         QueryParser parser = new QueryParser();
-        for (String example : DOC_ADVANCED_EXAMPLES) {
+        for (String example : DOC_ADVANCED_EXAMPLES)
+        {
             assertNotNull(parser.parse(example), example);
         }
     }

@@ -33,21 +33,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * decompiler's recovery and are keyed to the original bytecode offsets, the bytecode is unchanged (only the
  * attribute is added), and the result round-trips and is well-formed.
  */
-class SyntheticLocalVariableTableTest {
+class SyntheticLocalVariableTableTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    private static final class Row {
+    private static final class Row
+    {
         final String name;
         final String desc;
         final int slot;
         final int startPc;
         final int length;
 
-        Row(String name, String desc, int slot, int startPc, int length) {
+        Row(String name, String desc, int slot, int startPc, int length)
+        {
             this.name = name;
             this.desc = desc;
             this.slot = slot;
@@ -56,13 +60,17 @@ class SyntheticLocalVariableTableTest {
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return name + ":" + desc + "@" + slot + "[" + startPc + "," + (startPc + length) + ")";
         }
     }
 
-    /** Compiles {@code source} with no debug info, builds the synthetic LVT, attaches it, round-trips, reads it back. */
-    private List<Row> synthLvt(String binaryName, String source, String methodName) throws Exception {
+    /**
+     * Compiles {@code source} with no debug info, builds the synthetic LVT, attaches it, round-trips, reads it back.
+     */
+    private List<Row> synthLvt(String binaryName, String source, String methodName) throws Exception
+    {
         ClassFile cf = compileStripped(binaryName, source);
         MethodEntry method = method(cf, methodName);
         assertNull(findLvt(method.getCodeAttribute()), "fixture must be stripped (no original LVT): " + methodName);
@@ -78,23 +86,28 @@ class SyntheticLocalVariableTableTest {
         assertNotNull(table, "LVT must survive write+reparse (plain attribute add, not a structural edit)");
 
         List<Row> rows = new ArrayList<>();
-        for (LocalVariableTableEntry e : table.getLocalVariableTable()) {
+        for (LocalVariableTableEntry e : table.getLocalVariableTable())
+        {
             rows.add(new Row(utf8(rt, e.getNameIndex()), utf8(rt, e.getDescriptorIndex()),
                     e.getIndex(), e.getStartPc(), e.getLengthPc()));
         }
         int codeLength = code.getCode().length;
         int maxLocals = code.getMaxLocals();
-        for (Row r : rows) {
+        for (Row r : rows)
+        {
             assertNotNull(r.name, "name resolves: " + rows);
             assertNotNull(r.desc, "descriptor resolves: " + rows);
             assertTrue(r.slot >= 0 && r.slot < maxLocals, "slot in range: " + r + " maxLocals=" + maxLocals);
             assertTrue(r.startPc >= 0 && r.startPc + r.length <= codeLength,
                     "scope in bounds: " + r + " codeLength=" + codeLength);
         }
-        for (int i = 0; i < rows.size(); i++) {
-            for (int j = i + 1; j < rows.size(); j++) {
+        for (int i = 0; i < rows.size(); i++)
+        {
+            for (int j = i + 1; j < rows.size(); j++)
+            {
                 Row a = rows.get(i), b = rows.get(j);
-                if (a.slot == b.slot) {
+                if (a.slot == b.slot)
+                {
                     assertFalse(a.startPc < b.startPc + b.length && b.startPc < a.startPc + a.length,
                             "same-slot entries must not overlap: " + a + " vs " + b);
                 }
@@ -103,57 +116,71 @@ class SyntheticLocalVariableTableTest {
         return rows;
     }
 
-    private static ClassFile compileStripped(String binaryName, String source) throws Exception {
+    private static ClassFile compileStripped(String binaryName, String source) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
+        if (compiler == null)
+        {
             throw new org.opentest4j.TestAbortedException("no system Java compiler");
         }
         String simple = binaryName.substring(binaryName.lastIndexOf('/') + 1);
         Path dir = Files.createTempDirectory("yabr-synthlvt");
-        try {
+        try
+        {
             Path src = dir.resolve(simple + ".java");
             Files.writeString(src, source);
             int rc = compiler.run(null, null, null, "-g:none", "-d", dir.toString(), src.toString());
             assertEquals(0, rc, "javac (no debug) must succeed");
             byte[] bytes = Files.readAllBytes(dir.resolve(binaryName + ".class"));
             return new ClassFile(new ByteArrayInputStream(bytes));
-        } finally {
-            try (Stream<Path> w = Files.walk(dir)) {
+        }
+        finally
+        {
+            try (Stream<Path> w = Files.walk(dir))
+            {
                 w.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
             }
         }
     }
 
-    private static MethodEntry method(ClassFile cf, String name) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
         return cf.getMethods().stream().filter(m -> m.getName().equals(name)).findFirst()
                 .orElseThrow(() -> new AssertionError("method not found: " + name));
     }
 
-    private static LocalVariableTableAttribute findLvt(CodeAttribute code) {
-        if (code == null) {
+    private static LocalVariableTableAttribute findLvt(CodeAttribute code)
+    {
+        if (code == null)
+        {
             return null;
         }
-        for (Attribute a : code.getAttributes()) {
-            if (a instanceof LocalVariableTableAttribute) {
+        for (Attribute a : code.getAttributes())
+        {
+            if (a instanceof LocalVariableTableAttribute)
+            {
                 return (LocalVariableTableAttribute) a;
             }
         }
         return null;
     }
 
-    private static String utf8(ClassFile cf, int index) {
+    private static String utf8(ClassFile cf, int index)
+    {
         Object item = cf.getConstPool().getItem(index);
         return item instanceof Utf8Item ? ((Utf8Item) item).getValue() : null;
     }
 
-    private static Row bySlot(List<Row> rows, int slot) {
+    private static Row bySlot(List<Row> rows, int slot)
+    {
         return rows.stream().filter(r -> r.slot == slot).findFirst().orElse(null);
     }
 
-    // ---- cases -------------------------------------------------------------------------------------
+    // cases
 
     @Test
-    void staticParamsGetWholeMethodEntries() throws Exception {
+    void staticParamsGetWholeMethodEntries() throws Exception
+    {
         List<Row> rows = synthLvt("t/A", "package t; public class A {"
                 + " public static int f(int a, long n, String s){ return a; } }", "f");
         assertEquals("I", bySlot(rows, 0).desc, "first int param: " + rows);
@@ -164,9 +191,9 @@ class SyntheticLocalVariableTableTest {
     }
 
     @Test
-    void instanceMethodHasThisAtSlotZero() throws Exception {
-        List<Row> rows = synthLvt("t/B", "package t; public class B {"
-                + " public int g(int p){ return p; } }", "g");
+    void instanceMethodHasThisAtSlotZero() throws Exception
+    {
+        List<Row> rows = synthLvt("t/B", "package t; public class B {" + " public int g(int p){ return p; } }", "g");
         Row self = bySlot(rows, 0);
         assertNotNull(self, "slot 0 entry: " + rows);
         assertEquals("Lt/B;", self.desc, "this descriptor: " + rows);
@@ -175,7 +202,8 @@ class SyntheticLocalVariableTableTest {
     }
 
     @Test
-    void bodyLocalGetsAnEntryWithRecoveredName() throws Exception {
+    void bodyLocalGetsAnEntryWithRecoveredName() throws Exception
+    {
         // A loop forces a real body local in a slot; the recovered name is keyed to original offsets.
         List<Row> rows = synthLvt("t/C", "package t; public class C {"
                 + " public static int f(int n){ int s = 0; for (int i = 0; i < n; i++) { s += i; } return s; } }", "f");
@@ -188,7 +216,8 @@ class SyntheticLocalVariableTableTest {
     }
 
     @Test
-    void reusedSlotStaysWithinBoundsAndDisjoint() throws Exception {
+    void reusedSlotStaysWithinBoundsAndDisjoint() throws Exception
+    {
         // Two disjoint loops; whatever the recovery names them, the invariants (bounds, no same-slot overlap)
         // are enforced by synthLvt(); this asserts the builder produced a usable table.
         List<Row> rows = synthLvt("t/D", "package t; public class D {"

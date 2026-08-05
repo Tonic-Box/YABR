@@ -8,73 +8,88 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StringConcatHandlerTest {
+class StringConcatHandlerTest
+{
 
     private StringConcatHandler handler;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         handler = new StringConcatHandler();
     }
 
     @Nested
-    class TagConstantsTests {
+    class TagConstantsTests
+    {
         @Test
-        void shouldHaveCorrectTagArgValue() {
+        void shouldHaveCorrectTagArgValue()
+        {
             assertEquals('\u0001', StringConcatHandler.TAG_ARG);
         }
 
         @Test
-        void shouldHaveCorrectTagConstValue() {
+        void shouldHaveCorrectTagConstValue()
+        {
             assertEquals('\u0002', StringConcatHandler.TAG_CONST);
         }
     }
 
     @Nested
-    class IsStringConcatTests {
+    class IsStringConcatTests
+    {
         @Test
-        void shouldIdentifyMakeConcatWithConstants() {
+        void shouldIdentifyMakeConcatWithConstants()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             assertTrue(handler.isStringConcat(info));
         }
 
         @Test
-        void shouldIdentifyMakeConcat() {
+        void shouldIdentifyMakeConcat()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(II)Ljava/lang/String;", 1);
             assertTrue(handler.isStringConcat(info));
         }
 
         @Test
-        void shouldNotIdentifyMetafactory() {
+        void shouldNotIdentifyMetafactory()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "metafactory", "()Ljava/util/function/Function;", 1);
             assertFalse(handler.isStringConcat(info));
         }
 
         @Test
-        void shouldHandleNull() {
+        void shouldHandleNull()
+        {
             assertFalse(handler.isStringConcat(null));
         }
     }
 
     @Nested
-    class HasRecipeTests {
+    class HasRecipeTests
+    {
         @Test
-        void shouldReturnTrueForMakeConcatWithConstants() {
+        void shouldReturnTrueForMakeConcatWithConstants()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             assertTrue(handler.hasRecipe(info));
         }
 
         @Test
-        void shouldReturnFalseForMakeConcat() {
+        void shouldReturnFalseForMakeConcat()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(II)Ljava/lang/String;", 1);
             assertFalse(handler.hasRecipe(info));
         }
     }
 
     @Nested
-    class SimpleConcatTests {
+    class SimpleConcatTests
+    {
         @Test
-        void shouldConcatIntegers() {
+        void shouldConcatIntegers()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(II)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.intValue(1),
@@ -86,7 +101,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldConcatLongs() {
+        void shouldConcatLongs()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(JJ)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.longValue(100L),
@@ -98,7 +114,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldConcatFloats() {
+        void shouldConcatFloats()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(F)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.floatValue(3.14f)
@@ -109,7 +126,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldConcatDoubles() {
+        void shouldConcatDoubles()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(D)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.doubleValue(2.718)
@@ -120,7 +138,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldHandleNullValue() {
+        void shouldHandleNullValue()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(Ljava/lang/Object;)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.nullRef()
@@ -131,7 +150,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldHandleEmptyArgs() {
+        void shouldHandleEmptyArgs()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "()Ljava/lang/String;", 1);
             ConcreteValue[] args = {};
 
@@ -141,9 +161,11 @@ class StringConcatHandlerTest {
     }
 
     @Nested
-    class RecipeConcatTests {
+    class RecipeConcatTests
+    {
         @Test
-        void shouldConcatWithSimpleRecipe() {
+        void shouldConcatWithSimpleRecipe()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             ConcreteValue[] args = { ConcreteValue.intValue(42) };
             String recipe = "Value: \u0001";
@@ -154,7 +176,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldConcatWithMultipleArgs() {
+        void shouldConcatWithMultipleArgs()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(II)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.intValue(1),
@@ -168,7 +191,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldConcatWithConstants() {
+        void shouldConcatWithConstants()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             ConcreteValue[] args = { ConcreteValue.intValue(5) };
             String recipe = "\u0002\u0001\u0002";
@@ -179,7 +203,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldHandleNullRecipe() {
+        void shouldHandleNullRecipe()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(II)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.intValue(1),
@@ -191,7 +216,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldHandleEmptyRecipe() {
+        void shouldHandleEmptyRecipe()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             ConcreteValue[] args = { ConcreteValue.intValue(42) };
 
@@ -200,7 +226,8 @@ class StringConcatHandlerTest {
         }
 
         @Test
-        void shouldHandleLiteralOnlyRecipe() {
+        void shouldHandleLiteralOnlyRecipe()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "()Ljava/lang/String;", 1);
             ConcreteValue[] args = {};
             String recipe = "Hello World";
@@ -212,118 +239,142 @@ class StringConcatHandlerTest {
     }
 
     @Nested
-    class ExpectedArgCountTests {
+    class ExpectedArgCountTests
+    {
         @Test
-        void shouldReturnZeroForNoParams() {
+        void shouldReturnZeroForNoParams()
+        {
             assertEquals(0, handler.getExpectedArgCount("()Ljava/lang/String;"));
         }
 
         @Test
-        void shouldCountPrimitiveParams() {
+        void shouldCountPrimitiveParams()
+        {
             assertEquals(4, handler.getExpectedArgCount("(IJFD)Ljava/lang/String;"));
         }
 
         @Test
-        void shouldCountObjectParams() {
+        void shouldCountObjectParams()
+        {
             assertEquals(2, handler.getExpectedArgCount("(Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/String;"));
         }
 
         @Test
-        void shouldCountArrayParams() {
+        void shouldCountArrayParams()
+        {
             assertEquals(2, handler.getExpectedArgCount("([I[Ljava/lang/String;)Ljava/lang/String;"));
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             assertEquals(0, handler.getExpectedArgCount(null));
         }
 
         @Test
-        void shouldHandleMalformedDescriptor() {
+        void shouldHandleMalformedDescriptor()
+        {
             assertEquals(0, handler.getExpectedArgCount("invalid"));
         }
     }
 
     @Nested
-    class ParseRecipeTests {
+    class ParseRecipeTests
+    {
         @Test
-        void shouldParseTagArg() {
+        void shouldParseTagArg()
+        {
             String result = handler.parseRecipe("\u0001");
             assertEquals("{arg}", result);
         }
 
         @Test
-        void shouldParseTagConst() {
+        void shouldParseTagConst()
+        {
             String result = handler.parseRecipe("\u0002");
             assertEquals("{const}", result);
         }
 
         @Test
-        void shouldParseMixedRecipe() {
+        void shouldParseMixedRecipe()
+        {
             String result = handler.parseRecipe("Hello \u0001, \u0002!");
             assertEquals("Hello {arg}, {const}!", result);
         }
 
         @Test
-        void shouldParseNoTags() {
+        void shouldParseNoTags()
+        {
             String result = handler.parseRecipe("Hello World");
             assertEquals("Hello World", result);
         }
 
         @Test
-        void shouldHandleNullRecipe() {
+        void shouldHandleNullRecipe()
+        {
             String result = handler.parseRecipe(null);
             assertEquals("", result);
         }
     }
 
     @Nested
-    class CountDynamicArgsTests {
+    class CountDynamicArgsTests
+    {
         @Test
-        void shouldCountZeroArgs() {
+        void shouldCountZeroArgs()
+        {
             assertEquals(0, handler.countDynamicArgs("Hello World"));
         }
 
         @Test
-        void shouldCountOneArg() {
+        void shouldCountOneArg()
+        {
             assertEquals(1, handler.countDynamicArgs("Value: \u0001"));
         }
 
         @Test
-        void shouldCountMultipleArgs() {
+        void shouldCountMultipleArgs()
+        {
             assertEquals(3, handler.countDynamicArgs("\u0001 + \u0001 = \u0001"));
         }
 
         @Test
-        void shouldIgnoreConstants() {
+        void shouldIgnoreConstants()
+        {
             assertEquals(1, handler.countDynamicArgs("\u0002\u0001\u0002"));
         }
 
         @Test
-        void shouldHandleNull() {
+        void shouldHandleNull()
+        {
             assertEquals(0, handler.countDynamicArgs(null));
         }
     }
 
     @Nested
-    class CountConstantsTests {
+    class CountConstantsTests
+    {
         @Test
-        void shouldCountZeroConstants() {
+        void shouldCountZeroConstants()
+        {
             assertEquals(0, handler.countConstants("Hello \u0001"));
         }
 
         @Test
-        void shouldCountOneConstant() {
+        void shouldCountOneConstant()
+        {
             assertEquals(1, handler.countConstants("\u0002suffix"));
         }
 
         @Test
-        void shouldCountMultipleConstants() {
+        void shouldCountMultipleConstants()
+        {
             assertEquals(3, handler.countConstants("\u0002\u0001\u0002text\u0002"));
         }
 
         @Test
-        void shouldHandleNull() {
+        void shouldHandleNull()
+        {
             assertEquals(0, handler.countConstants(null));
         }
     }

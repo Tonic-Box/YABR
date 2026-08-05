@@ -23,18 +23,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for PathQuery - control flow path analysis on simulation results.
  * Covers reachability, path enumeration, simulation coverage, and CFG analysis.
  */
-class PathQueryTest {
+class PathQueryTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         IRInstruction.resetIdCounter();
     }
 
-    // ========== Factory Method Tests ==========
+    // Factory Method Tests
 
     @Test
-    void fromCreatesQueryWithBuiltGraphs() {
+    void fromCreatesQueryWithBuiltGraphs()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
 
@@ -45,7 +48,8 @@ class PathQueryTest {
     }
 
     @Test
-    void fromHandlesEmptyMethod() {
+    void fromHandlesEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
         SimulationResult result = SimulationResult.builder()
             .method(method)
@@ -58,7 +62,8 @@ class PathQueryTest {
     }
 
     @Test
-    void fromBuildsSuccessorAndPredecessorMaps() {
+    void fromBuildsSuccessorAndPredecessorMaps()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
 
@@ -69,10 +74,11 @@ class PathQueryTest {
         assertTrue(query.canReach(entry, exit));
     }
 
-    // ========== Block Reachability Tests ==========
+    // Block Reachability Tests
 
     @Test
-    void canReachReturnsTrueForSameBlock() {
+    void canReachReturnsTrueForSameBlock()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -83,7 +89,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachReturnsFalseForNullInputs() {
+    void canReachReturnsFalseForNullInputs()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -96,7 +103,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachReturnsTrueForDirectSuccessor() {
+    void canReachReturnsTrueForDirectSuccessor()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -108,7 +116,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachReturnsTrueForTransitiveSuccessor() {
+    void canReachReturnsTrueForTransitiveSuccessor()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -120,7 +129,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachReturnsFalseForUnreachableBlock() {
+    void canReachReturnsFalseForUnreachableBlock()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -133,7 +143,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachHandlesDiamondPattern() {
+    void canReachHandlesDiamondPattern()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -145,7 +156,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachHandlesLoops() {
+    void canReachHandlesLoops()
+    {
         IRMethod method = createMethodWithLoopCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -157,10 +169,11 @@ class PathQueryTest {
         assertTrue(query.canReach(loopBody, loopHeader)); // Back edge
     }
 
-    // ========== Instruction Reachability Tests ==========
+    // Instruction Reachability Tests
 
     @Test
-    void canReachInstructionsSameBlockCheckOrder() {
+    void canReachInstructionsSameBlockCheckOrder()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -174,7 +187,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachInstructionsSameBlockSameInstruction() {
+    void canReachInstructionsSameBlockSameInstruction()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -186,7 +200,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachInstructionsDifferentBlocksDelegatesToBlockReachability() {
+    void canReachInstructionsDifferentBlocksDelegatesToBlockReachability()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -200,7 +215,8 @@ class PathQueryTest {
     }
 
     @Test
-    void canReachInstructionsReturnsFalseForNullBlocks() {
+    void canReachInstructionsReturnsFalseForNullBlocks()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -214,10 +230,11 @@ class PathQueryTest {
         assertFalse(query.canReach(valid, orphan));
     }
 
-    // ========== Path Enumeration Tests ==========
+    // Path Enumeration Tests
 
     @Test
-    void getAllPathsLinearReturnsOnePath() {
+    void getAllPathsLinearReturnsOnePath()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -234,7 +251,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getAllPathsDiamondReturnsTwoPaths() {
+    void getAllPathsDiamondReturnsTwoPaths()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -246,7 +264,8 @@ class PathQueryTest {
 
         assertEquals(2, paths.size());
         // Both paths should start at entry and end at exit
-        for (List<IRBlock> path : paths) {
+        for (List<IRBlock> path : paths)
+        {
             assertEquals(entry, path.get(0));
             assertEquals(exit, path.get(path.size() - 1));
             assertEquals(3, path.size()); // entry -> branch -> exit
@@ -254,7 +273,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getAllPathsRespectsMaxLimit() {
+    void getAllPathsRespectsMaxLimit()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -268,7 +288,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getAllPathsDefaultMaxIsOneHundred() {
+    void getAllPathsDefaultMaxIsOneHundred()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -282,7 +303,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getAllPathsReturnsEmptyForNullInputs() {
+    void getAllPathsReturnsEmptyForNullInputs()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -294,7 +316,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getAllPathsReturnsEmptyForUnreachable() {
+    void getAllPathsReturnsEmptyForUnreachable()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -305,10 +328,11 @@ class PathQueryTest {
         assertTrue(query.getAllPaths(last, first).isEmpty());
     }
 
-    // ========== Shortest Path Tests ==========
+    // Shortest Path Tests
 
     @Test
-    void getShortestPathSameBlockReturnsListWithBlock() {
+    void getShortestPathSameBlockReturnsListWithBlock()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -322,7 +346,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getShortestPathReturnsEmptyForNullInputs() {
+    void getShortestPathReturnsEmptyForNullInputs()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -334,7 +359,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getShortestPathReturnsEmptyForUnreachable() {
+    void getShortestPathReturnsEmptyForUnreachable()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -346,7 +372,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getShortestPathLinearReturnsCorrectPath() {
+    void getShortestPathLinearReturnsCorrectPath()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -363,7 +390,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getShortestPathDiamondReturnsShortestOfTwo() {
+    void getShortestPathDiamondReturnsShortestOfTwo()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -378,10 +406,11 @@ class PathQueryTest {
         assertEquals(exit, path.get(2));
     }
 
-    // ========== Transitive Closure - Reachable Blocks Tests ==========
+    // Transitive Closure - Reachable Blocks Tests
 
     @Test
-    void getReachableBlocksIncludesDirectSuccessors() {
+    void getReachableBlocksIncludesDirectSuccessors()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -397,7 +426,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getReachableBlocksIncludesTransitiveSuccessors() {
+    void getReachableBlocksIncludesTransitiveSuccessors()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -410,7 +440,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getReachableBlocksReturnsEmptyForNull() {
+    void getReachableBlocksReturnsEmptyForNull()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -419,7 +450,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getReachableBlocksHandlesLoops() {
+    void getReachableBlocksHandlesLoops()
+    {
         IRMethod method = createMethodWithLoopCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -431,10 +463,11 @@ class PathQueryTest {
         assertEquals(4, reachable.size()); // All blocks including loop
     }
 
-    // ========== Transitive Closure - Blocks Reaching Tests ==========
+    // Transitive Closure - Blocks Reaching Tests
 
     @Test
-    void getBlocksReachingIncludesDirectPredecessors() {
+    void getBlocksReachingIncludesDirectPredecessors()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -450,7 +483,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getBlocksReachingIncludesTransitivePredecessors() {
+    void getBlocksReachingIncludesTransitivePredecessors()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -463,7 +497,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getBlocksReachingReturnsEmptyForNull() {
+    void getBlocksReachingReturnsEmptyForNull()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -472,7 +507,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getBlocksReachingHandlesLoops() {
+    void getBlocksReachingHandlesLoops()
+    {
         IRMethod method = createMethodWithLoopCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -484,10 +520,11 @@ class PathQueryTest {
         assertTrue(reaching.size() >= 2); // Entry and loop body
     }
 
-    // ========== Simulation Coverage - Visited Tests ==========
+    // Simulation Coverage - Visited Tests
 
     @Test
-    void wasVisitedReturnsTrueForVisitedBlocks() {
+    void wasVisitedReturnsTrueForVisitedBlocks()
+    {
         IRMethod method = createMethodWithLinearCFG();
         List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0), method.getBlocks().get(1));
         SimulationResult result = createSimulationResult(method, visited);
@@ -498,7 +535,8 @@ class PathQueryTest {
     }
 
     @Test
-    void wasVisitedReturnsFalseForUnvisitedBlocks() {
+    void wasVisitedReturnsFalseForUnvisitedBlocks()
+    {
         IRMethod method = createMethodWithLinearCFG();
         List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0));
         SimulationResult result = createSimulationResult(method, visited);
@@ -508,7 +546,8 @@ class PathQueryTest {
     }
 
     @Test
-    void wasVisitedReturnsFalseForNull() {
+    void wasVisitedReturnsFalseForNull()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -517,7 +556,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getVisitedBlocksReturnsAllVisitedBlocks() {
+    void getVisitedBlocksReturnsAllVisitedBlocks()
+    {
         IRMethod method = createMethodWithLinearCFG();
         List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0), method.getBlocks().get(1));
         SimulationResult result = createSimulationResult(method, visited);
@@ -531,7 +571,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getVisitedBlocksReturnsUnmodifiableSet() {
+    void getVisitedBlocksReturnsUnmodifiableSet()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -544,7 +585,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getUnvisitedBlocksReturnsBlocksNotVisited() {
+    void getUnvisitedBlocksReturnsBlocksNotVisited()
+    {
         IRMethod method = createMethodWithLinearCFG();
         List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0));
         SimulationResult result = createSimulationResult(method, visited);
@@ -558,7 +600,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getUnvisitedBlocksReturnsEmptyWhenAllVisited() {
+    void getUnvisitedBlocksReturnsEmptyWhenAllVisited()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -569,7 +612,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getUnvisitedBlocksReturnsAllWhenNoneVisited() {
+    void getUnvisitedBlocksReturnsAllWhenNoneVisited()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, Collections.emptyList());
         PathQuery query = PathQuery.from(result);
@@ -580,7 +624,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getVisitedPercentageReturnsCorrectValue() {
+    void getVisitedPercentageReturnsCorrectValue()
+    {
         IRMethod method = createMethodWithLinearCFG();
         List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0), method.getBlocks().get(1));
         SimulationResult result = createSimulationResult(method, visited);
@@ -592,7 +637,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getVisitedPercentageReturnsZeroForEmptyMethod() {
+    void getVisitedPercentageReturnsZeroForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
         SimulationResult result = SimulationResult.builder()
             .method(method)
@@ -603,7 +649,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getVisitedPercentageReturnsOneHundredWhenAllVisited() {
+    void getVisitedPercentageReturnsOneHundredWhenAllVisited()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -611,10 +658,11 @@ class PathQueryTest {
         assertEquals(100.0, query.getVisitedPercentage());
     }
 
-    // ========== CFG Analysis - Loop Headers Tests ==========
+    // CFG Analysis - Loop Headers Tests
 
     @Test
-    void getLoopHeadersDetectsBackEdges() {
+    void getLoopHeadersDetectsBackEdges()
+    {
         IRMethod method = createMethodWithLoopCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -626,7 +674,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getLoopHeadersReturnsEmptyForLinearCFG() {
+    void getLoopHeadersReturnsEmptyForLinearCFG()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -637,7 +686,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getLoopHeadersReturnsEmptyForDiamondCFG() {
+    void getLoopHeadersReturnsEmptyForDiamondCFG()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -647,10 +697,11 @@ class PathQueryTest {
         assertTrue(loopHeaders.isEmpty());
     }
 
-    // ========== CFG Analysis - Entry Block Tests ==========
+    // CFG Analysis - Entry Block Tests
 
     @Test
-    void getEntryBlockReturnsMethodEntryBlock() {
+    void getEntryBlockReturnsMethodEntryBlock()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -661,7 +712,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getEntryBlockReturnsNullForEmptyMethod() {
+    void getEntryBlockReturnsNullForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
         SimulationResult result = SimulationResult.builder()
             .method(method)
@@ -671,10 +723,11 @@ class PathQueryTest {
         assertNull(query.getEntryBlock());
     }
 
-    // ========== CFG Analysis - Exit Blocks Tests ==========
+    // CFG Analysis - Exit Blocks Tests
 
     @Test
-    void getExitBlocksReturnsBlocksWithNoSuccessors() {
+    void getExitBlocksReturnsBlocksWithNoSuccessors()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -686,7 +739,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getExitBlocksReturnsTwoForDiamond() {
+    void getExitBlocksReturnsTwoForDiamond()
+    {
         IRMethod method = createMethodWithDiamondCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -698,7 +752,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getExitBlocksReturnsEmptyForEmptyMethod() {
+    void getExitBlocksReturnsEmptyForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
         SimulationResult result = SimulationResult.builder()
             .method(method)
@@ -709,7 +764,8 @@ class PathQueryTest {
     }
 
     @Test
-    void getExitBlocksIgnoresEmptyBlocks() {
+    void getExitBlocksIgnoresEmptyBlocks()
+    {
         IRMethod method = createMethodWithLinearCFG();
         IRBlock emptyBlock = new IRBlock("empty");
         method.addBlock(emptyBlock);
@@ -721,10 +777,11 @@ class PathQueryTest {
         assertFalse(exits.contains(emptyBlock));
     }
 
-    // ========== toString Tests ==========
+    // toString Tests
 
     @Test
-    void toStringIncludesBlockCount() {
+    void toStringIncludesBlockCount()
+    {
         IRMethod method = createMethodWithLinearCFG();
         SimulationResult result = createSimulationResult(method, method.getBlocks());
         PathQuery query = PathQuery.from(result);
@@ -735,7 +792,8 @@ class PathQueryTest {
     }
 
     @Test
-    void toStringIncludesVisitedCount() {
+    void toStringIncludesVisitedCount()
+    {
         IRMethod method = createMethodWithLinearCFG();
         List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0));
         SimulationResult result = createSimulationResult(method, visited);
@@ -746,19 +804,19 @@ class PathQueryTest {
         assertTrue(str.contains("visited=1"));
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
     /**
-     * Creates a simple linear CFG: B0 -> B1 -> B2
+     * * Creates a simple linear CFG: B0 -> B1 -> B2
      */
-    private IRMethod createMethodWithLinearCFG() {
+    private IRMethod createMethodWithLinearCFG()
+    {
         IRMethod method = new IRMethod("com/test/Test", "linear", "()V", true);
 
         IRBlock b0 = new IRBlock("B0");
         IRBlock b1 = new IRBlock("B1");
         IRBlock b2 = new IRBlock("B2");
 
-        // Add instructions to make blocks non-empty
         b0.addInstruction(SimpleInstruction.createGoto(b1));
         b0.addInstruction(new ReturnInstruction());
 
@@ -786,7 +844,8 @@ class PathQueryTest {
      *      \  /
      *       B3
      */
-    private IRMethod createMethodWithDiamondCFG() {
+    private IRMethod createMethodWithDiamondCFG()
+    {
         IRMethod method = new IRMethod("com/test/Test", "diamond", "()V", true);
 
         IRBlock b0 = new IRBlock("B0");
@@ -794,7 +853,6 @@ class PathQueryTest {
         IRBlock b2 = new IRBlock("B2");
         IRBlock b3 = new IRBlock("B3");
 
-        // Add instructions
         b0.addInstruction(new ReturnInstruction());
         b1.addInstruction(SimpleInstruction.createGoto(b3));
         b2.addInstruction(SimpleInstruction.createGoto(b3));
@@ -821,7 +879,8 @@ class PathQueryTest {
      *            |              v
      *            <----- B3 -----
      */
-    private IRMethod createMethodWithLoopCFG() {
+    private IRMethod createMethodWithLoopCFG()
+    {
         IRMethod method = new IRMethod("com/test/Test", "loop", "()V", true);
 
         IRBlock b0 = new IRBlock("B0");
@@ -829,7 +888,6 @@ class PathQueryTest {
         IRBlock b2 = new IRBlock("B2_body");
         IRBlock b3 = new IRBlock("B3_exit");
 
-        // Add instructions
         b0.addInstruction(SimpleInstruction.createGoto(b1));
         b1.addInstruction(new ReturnInstruction());
         b2.addInstruction(SimpleInstruction.createGoto(b1)); // Back edge
@@ -850,9 +908,10 @@ class PathQueryTest {
     }
 
     /**
-     * Creates a SimulationResult with state snapshots for the given visited blocks.
+     * * Creates a SimulationResult with state snapshots for the given visited blocks.
      */
-    private SimulationResult createSimulationResult(IRMethod method, List<IRBlock> visitedBlocks) {
+    private SimulationResult createSimulationResult(IRMethod method, List<IRBlock> visitedBlocks)
+    {
         SimulationResult.Builder builder = SimulationResult.builder()
             .method(method)
             .totalInstructions(10)
@@ -860,11 +919,9 @@ class PathQueryTest {
             .simulationTime(1000000L);
 
         // Create state snapshots for each visited block
-        for (IRBlock block : visitedBlocks) {
-            SimulationState state = SimulationState.of(
-                StackState.empty(),
-                LocalState.empty()
-            ).atBlock(block);
+        for (IRBlock block : visitedBlocks)
+        {
+            SimulationState state = SimulationState.of(StackState.empty(), LocalState.empty()).atBlock(block);
 
             builder.addState(state.snapshot());
         }

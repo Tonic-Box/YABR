@@ -19,10 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * switch(j){...} case 1: switch(j){...} ... }} with no {@code break}). The method is decompiled and recompiled, then
  * the original and recovered method are executed over a fixed input set and must return identical results.
  *
- * <p>The mis-structuring this guards against nests the outer cases 1..n inside case 0's inner default, so a valid
+ *The mis-structuring this guards against nests the outer cases 1..n inside case 0's inner default, so a valid
  * {@code (i, j)} with {@code i >= 1} throws or returns the wrong value instead of the {@code i}-th row.
  */
-class NestedSwitchFidelityTest {
+class NestedSwitchFidelityTest
+{
 
     private static final int[][] INPUTS = {
             {0, 0}, {0, 1}, {0, 2}, {1, 0}, {1, 1}, {1, 2},
@@ -34,7 +35,8 @@ class NestedSwitchFidelityTest {
      * 100*(r+1)+c; } // falls through } default: return -1; }}.
      */
     @Test
-    void nestedSwitchFallthroughIsFaithful() throws Exception {
+    void nestedSwitchFallthroughIsFaithful() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedSwitch")
                 .publicStaticMethod("g", "(II)I");
         Label row0 = mb.newLabel();
@@ -42,8 +44,10 @@ class NestedSwitchFidelityTest {
         Label row2 = mb.newLabel();
         Label dflt = mb.newLabel();
         Label[][] cell = new Label[3][3];
-        for (int r = 0; r < 3; r++) {
-            for (int c = 0; c < 3; c++) {
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+            {
                 cell[r][c] = mb.newLabel();
             }
         }
@@ -55,8 +59,10 @@ class NestedSwitchFidelityTest {
                 .lookupswitch(Map.of(0, cell[1][0], 1, cell[1][1], 2, cell[1][2]), row2)
                 .label(row2).iload(1)
                 .lookupswitch(Map.of(0, cell[2][0], 1, cell[2][1], 2, cell[2][2]), dflt);
-        for (int r = 0; r < 3; r++) {
-            for (int c = 0; c < 3; c++) {
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+            {
                 mb.label(cell[r][c]).iconst(100 * (r + 1) + c).ireturn();
             }
         }
@@ -65,7 +71,8 @@ class NestedSwitchFidelityTest {
         assertBehaviourPreserved(mb.build(), "g");
     }
 
-    private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception {
+    private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception
+    {
         byte[] bytes = built.write();
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -76,7 +83,8 @@ class NestedSwitchFidelityTest {
         Method original = TestUtils.loadAndVerify(cf).getDeclaredMethod(name, int.class, int.class);
         Method recompiled = TestUtils.loadAndVerify(recovered).getDeclaredMethod(name, int.class, int.class);
 
-        for (int[] in : INPUTS) {
+        for (int[] in : INPUTS)
+        {
             Object expected = original.invoke(null, in[0], in[1]);
             Object actual = recompiled.invoke(null, in[0], in[1]);
             assertEquals(expected, actual, name + "(" + in[0] + "," + in[1] + ") diverged after decompile+recompile");

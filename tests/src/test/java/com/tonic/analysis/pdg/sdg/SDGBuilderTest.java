@@ -19,17 +19,20 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SDGBuilderTest {
+class SDGBuilderTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
     @Test
-    void buildEmptyPoolReturnsValidSDG() {
+    void buildEmptyPoolReturnsValidSDG()
+    {
         CallGraph callGraph = CallGraph.build(pool);
         Map<MethodReference, IRMethod> irMethods = new HashMap<>();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
@@ -38,7 +41,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void buildCreatesEntryNodes() throws IOException {
+    void buildCreatesEntryNodes() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Entry", classAccess);
 
@@ -54,7 +58,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void buildCreatesCallNodes() throws IOException {
+    void buildCreatesCallNodes() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Calls", classAccess);
 
@@ -70,7 +75,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void buildCreatesFormalParameters() throws IOException {
+    void buildCreatesFormalParameters() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Params", classAccess);
 
@@ -85,7 +91,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void buildCreatesParameterEdges() throws IOException {
+    void buildCreatesParameterEdges() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/ParamEdges", classAccess);
 
@@ -100,7 +107,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void getAllNodesReturnsAllNodes() throws IOException {
+    void getAllNodesReturnsAllNodes() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/AllNodes", classAccess);
 
@@ -116,7 +124,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void getEntryNodeByMethodNameWorks() throws IOException {
+    void getEntryNodeByMethodNameWorks() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/GetEntry", classAccess);
 
@@ -131,7 +140,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void getFormalInsReturnsFormals() throws IOException {
+    void getFormalInsReturnsFormals() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Formals", classAccess);
 
@@ -142,14 +152,16 @@ class SDGBuilderTest {
         Map<MethodReference, IRMethod> irMethods = new HashMap<>();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
 
-        for (SDGEntryNode entry : sdg.getEntryNodes()) {
+        for (SDGEntryNode entry : sdg.getEntryNodes())
+        {
             List<SDGFormalInNode> formals = sdg.getFormalIns(entry);
             assertNotNull(formals);
         }
     }
 
     @Test
-    void getFormalOutsReturnsFormals() throws IOException {
+    void getFormalOutsReturnsFormals() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/FormalsOut", classAccess);
 
@@ -160,14 +172,16 @@ class SDGBuilderTest {
         Map<MethodReference, IRMethod> irMethods = new HashMap<>();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
 
-        for (SDGEntryNode entry : sdg.getEntryNodes()) {
+        for (SDGEntryNode entry : sdg.getEntryNodes())
+        {
             List<SDGFormalOutNode> formals = sdg.getFormalOuts(entry);
             assertNotNull(formals);
         }
     }
 
     @Test
-    void getCallNodesReturnsCallSites() throws IOException {
+    void getCallNodesReturnsCallSites() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/CallNodes", classAccess);
 
@@ -178,14 +192,16 @@ class SDGBuilderTest {
         Map<MethodReference, IRMethod> irMethods = new HashMap<>();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
 
-        for (SDGEntryNode entry : sdg.getEntryNodes()) {
+        for (SDGEntryNode entry : sdg.getEntryNodes())
+        {
             List<SDGCallNode> calls = sdg.getCallNodes(entry);
             assertNotNull(calls);
         }
     }
 
     @Test
-    void getActualInsReturnsActuals() throws IOException {
+    void getActualInsReturnsActuals() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Actuals", classAccess);
 
@@ -196,8 +212,10 @@ class SDGBuilderTest {
         Map<MethodReference, IRMethod> irMethods = new HashMap<>();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
 
-        for (SDGEntryNode entry : sdg.getEntryNodes()) {
-            for (SDGCallNode call : sdg.getCallNodes(entry)) {
+        for (SDGEntryNode entry : sdg.getEntryNodes())
+        {
+            for (SDGCallNode call : sdg.getCallNodes(entry))
+            {
                 List<SDGActualInNode> actuals = sdg.getActualIns(call);
                 assertNotNull(actuals);
             }
@@ -205,7 +223,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void getSummaryEdgesReturnsSummaries() throws IOException {
+    void getSummaryEdgesReturnsSummaries() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Summary", classAccess);
 
@@ -220,7 +239,8 @@ class SDGBuilderTest {
     }
 
     @Test
-    void getCallNodesCountReturnsCount() throws IOException {
+    void getCallNodesCountReturnsCount() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Count", classAccess);
 

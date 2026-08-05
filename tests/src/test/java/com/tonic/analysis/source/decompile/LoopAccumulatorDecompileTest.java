@@ -12,11 +12,15 @@ import java.nio.file.Paths;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regression for bug B: a loop accumulator seeded from a parameter keeps its entry value and stays in scope. */
-public class LoopAccumulatorDecompileTest {
+/**
+ * Regression for bug B: a loop accumulator seeded from a parameter keeps its entry value and stays in scope.
+ */
+public class LoopAccumulatorDecompileTest
+{
 
     @Test
-    public void accumulatorSeededFromParameter() throws Exception {
+    public void accumulatorSeededFromParameter() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S05_StringsArrays.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

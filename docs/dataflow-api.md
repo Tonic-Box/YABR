@@ -114,14 +114,17 @@ param0.setTainted(true);
 param0.setTaintSource("user_input");
 
 // Propagate taint through the graph
-for (DataFlowNode reachable : dfg.getReachableNodes(param0)) {
+for (DataFlowNode reachable : dfg.getReachableNodes(param0))
+{
     reachable.setTainted(true);
     reachable.setTaintSource(param0.getTaintSource());
 }
 
 // Check if tainted data reaches any sinks
-for (DataFlowNode sink : dfg.getPotentialSinks()) {
-    if (sink.isTainted()) {
+for (DataFlowNode sink : dfg.getPotentialSinks())
+{
+    if (sink.isTainted())
+    {
         System.out.println("TAINT WARNING: " + sink.getTaintSource() +
             " flows to " + sink.getName());
     }
@@ -137,7 +140,8 @@ for (DataFlowNode sink : dfg.getPotentialSinks()) {
 DataFlowNode param = dfg.getNodesByType(DataFlowNodeType.PARAM).get(0);
 
 System.out.println("Parameter " + param.getName() + " flows to:");
-for (DataFlowNode target : dfg.getReachableNodes(param)) {
+for (DataFlowNode target : dfg.getReachableNodes(param))
+{
     System.out.println("  -> " + target.getType() + ": " + target.getName());
 }
 ```

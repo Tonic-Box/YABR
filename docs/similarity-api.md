@@ -47,7 +47,8 @@ List<SimilarityResult> similar = analyzer.findAllSimilar(
     0.80  // 80% minimum similarity
 );
 
-for (SimilarityResult result : similar) {
+for (SimilarityResult result : similar)
+{
     System.out.printf("%d%% similar: %s <-> %s%n",
         result.getScorePercent(),
         result.getMethod1().getDisplayName(),
@@ -65,7 +66,8 @@ List<SimilarityResult> duplicates = analyzer.findDuplicates();
 
 System.out.println("Found " + duplicates.size() + " duplicate method pairs");
 
-for (SimilarityResult dup : duplicates) {
+for (SimilarityResult dup : duplicates)
+{
     System.out.println(dup.getSummary());  // "Exact/Near duplicate (98%)"
 }
 ```
@@ -78,7 +80,8 @@ for (SimilarityResult dup : duplicates) {
 // Find methods with same opcodes but different names (potential obfuscation)
 List<SimilarityResult> renamed = analyzer.findRenamedCopies();
 
-for (SimilarityResult result : renamed) {
+for (SimilarityResult result : renamed)
+{
     System.out.printf("Potential rename: %s -> %s (%.0f%% opcode match)%n",
         result.getMethod1().getDisplayName(),
         result.getMethod2().getDisplayName(),
@@ -124,7 +127,8 @@ List<SimilarityResult> similar = analyzer.findSimilarTo(
     0.70  // 70% minimum
 );
 
-for (SimilarityResult result : similar) {
+for (SimilarityResult result : similar)
+{
     System.out.println(result.getMethod2().getDisplayName() +
         ": " + result.getScorePercent() + "%");
 }
@@ -143,9 +147,11 @@ List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(
 
 System.out.println("Found " + groups.size() + " similarity groups");
 
-for (List<MethodSignature> group : groups) {
+for (List<MethodSignature> group : groups)
+{
     System.out.println("Group of " + group.size() + " methods:");
-    for (MethodSignature sig : group) {
+    for (MethodSignature sig : group)
+    {
         System.out.println("  - " + sig.getDisplayName());
     }
 }

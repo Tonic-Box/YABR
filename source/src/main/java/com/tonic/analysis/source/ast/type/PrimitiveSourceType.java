@@ -7,33 +7,75 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 /**
  * Represents a primitive type in the source AST.
  */
-public final class PrimitiveSourceType implements SourceType {
+public final class PrimitiveSourceType implements SourceType
+{
 
     private final PrimitiveKind kind;
 
-    public enum PrimitiveKind {
+    /**
+     * The eight Java primitives, each paired with its source keyword and IR type.
+     */
+    public enum PrimitiveKind
+    {
+        /**
+         * The {@code boolean} keyword; one slot wide and carried as an int on
+         * the operand stack.
+         */
         BOOLEAN("boolean", PrimitiveType.BOOLEAN),
+        /**
+         * The {@code byte} keyword; an 8-bit signed integer widened to int on
+         * the operand stack.
+         */
         BYTE("byte", PrimitiveType.BYTE),
+        /**
+         * The {@code char} keyword; a 16-bit unsigned integer widened to int
+         * on the operand stack.
+         */
         CHAR("char", PrimitiveType.CHAR),
+        /**
+         * The {@code short} keyword; a 16-bit signed integer widened to int on
+         * the operand stack.
+         */
         SHORT("short", PrimitiveType.SHORT),
+        /**
+         * The {@code int} keyword; a 32-bit signed integer, one slot wide.
+         */
         INT("int", PrimitiveType.INT),
+        /**
+         * The {@code long} keyword; a 64-bit signed integer, two slots wide.
+         */
         LONG("long", PrimitiveType.LONG),
+        /**
+         * The {@code float} keyword; 32-bit IEEE 754, one slot wide.
+         */
         FLOAT("float", PrimitiveType.FLOAT),
+        /**
+         * The {@code double} keyword; 64-bit IEEE 754, two slots wide.
+         */
         DOUBLE("double", PrimitiveType.DOUBLE);
 
         private final String javaName;
         private final PrimitiveType irType;
 
-        PrimitiveKind(String javaName, PrimitiveType irType) {
+        PrimitiveKind(String javaName, PrimitiveType irType)
+        {
             this.javaName = javaName;
             this.irType = irType;
         }
 
-        public String getJavaName() {
+        /**
+         * @return the Java source keyword for this primitive
+         */
+        public String getJavaName()
+        {
             return javaName;
         }
 
-        public PrimitiveType getIRType() {
+        /**
+         * @return the matching IR primitive type
+         */
+        public PrimitiveType getIRType()
+        {
             return irType;
         }
     }
@@ -47,19 +89,30 @@ public final class PrimitiveSourceType implements SourceType {
     public static final PrimitiveSourceType FLOAT = new PrimitiveSourceType(PrimitiveKind.FLOAT);
     public static final PrimitiveSourceType DOUBLE = new PrimitiveSourceType(PrimitiveKind.DOUBLE);
 
-    private PrimitiveSourceType(PrimitiveKind kind) {
+    private PrimitiveSourceType(PrimitiveKind kind)
+    {
         this.kind = kind;
     }
 
-    public PrimitiveKind getKind() {
+    /**
+     * @return the kind
+     */
+    public PrimitiveKind getKind()
+    {
         return kind;
     }
 
     /**
-     * Gets the PrimitiveSourceType for the given IR primitive type.
+     * Maps an IR primitive type onto its source type constant.
+     *
+     * @param irType the IR primitive type
+     * @return the matching shared constant
+     * @throws IllegalArgumentException if the IR type is not one of the eight primitives
      */
-    public static PrimitiveSourceType fromPrimitive(PrimitiveType irType) {
-        switch (irType) {
+    public static PrimitiveSourceType fromPrimitive(PrimitiveType irType)
+    {
+        switch (irType)
+        {
             case BOOLEAN:
                 return BOOLEAN;
             case BYTE:
@@ -82,27 +135,32 @@ public final class PrimitiveSourceType implements SourceType {
     }
 
     @Override
-    public String toJavaSource() {
+    public String toJavaSource()
+    {
         return kind.getJavaName();
     }
 
     @Override
-    public IRType toIRType() {
+    public IRType toIRType()
+    {
         return kind.getIRType();
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitPrimitiveType(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return kind.getJavaName();
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(Object obj)
+    {
         if (this == obj) return true;
         if (!(obj instanceof PrimitiveSourceType)) return false;
         PrimitiveSourceType other = (PrimitiveSourceType) obj;
@@ -110,7 +168,8 @@ public final class PrimitiveSourceType implements SourceType {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return kind.hashCode();
     }
 }

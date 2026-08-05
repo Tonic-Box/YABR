@@ -15,11 +15,26 @@ import java.util.*;
 
 import static com.tonic.util.Opcode.*;
 
-public class FingerprintBuilder {
-    public FingerprintBuilder() {
+/**
+ * Extractor that computes a MethodFingerprint from a method's descriptor and raw bytecode.
+ */
+public class FingerprintBuilder
+{
+    /**
+     * Creates a stateless builder.
+     */
+    public FingerprintBuilder()
+    {
     }
 
-    public MethodFingerprint build(MethodEntry method, ClassFile classFile) {
+    /**
+     * Builds a three-level fingerprint for a method by scanning its descriptor and bytecode.
+     * @param method the method to fingerprint
+     * @param classFile the owning class, used for the method id and constant-pool resolution; may be null
+     * @return the computed fingerprint
+     */
+    public MethodFingerprint build(MethodEntry method, ClassFile classFile)
+    {
         String methodId = buildMethodId(method, classFile);
 
         Level0Features l0 = extractLevel0(method, classFile);
@@ -29,12 +44,14 @@ public class FingerprintBuilder {
         return new MethodFingerprint(methodId, l0, l1, l2);
     }
 
-    private String buildMethodId(MethodEntry method, ClassFile classFile) {
+    private String buildMethodId(MethodEntry method, ClassFile classFile)
+    {
         String className = classFile != null ? classFile.getClassName() : "unknown";
         return className + "." + method.getName() + method.getDesc();
     }
 
-    private Level0Features extractLevel0(MethodEntry method, ClassFile classFile) {
+    private Level0Features extractLevel0(MethodEntry method, ClassFile classFile)
+    {
         String desc = method.getDesc();
         String returnType = extractReturnType(desc);
         List<String> paramTypes = extractParamTypes(desc);
@@ -46,17 +63,19 @@ public class FingerprintBuilder {
         Set<String> fieldAccesses = new TreeSet<>();
         Set<String> instantiatedTypes = new TreeSet<>();
 
-        if (code != null) {
+        if (code != null)
+        {
             List<ExceptionTableEntry> exTable = code.getExceptionTable();
-            if (exTable != null) {
+            if (exTable != null)
+            {
                 exceptionHandlers = exTable.size();
             }
 
             byte[] bytecode = code.getCode();
-            if (bytecode != null && classFile != null) {
+            if (bytecode != null && classFile != null)
+            {
                 ConstPool cp = classFile.getConstPool();
-                extractLevel0FromBytecode(bytecode, cp, externalCalls, fieldAccesses,
-                        instantiatedTypes, new int[]{0});
+                extractLevel0FromBytecode(bytecode, cp, externalCalls, fieldAccesses, instantiatedTypes, new int[]{0});
                 monitorCount = countMonitorOps(bytecode);
             }
         }
@@ -66,56 +85,64 @@ public class FingerprintBuilder {
                 externalCalls, fieldAccesses, instantiatedTypes);
     }
 
-    private void extractLevel0FromBytecode(byte[] bytecode, ConstPool cp,
-                                           Set<String> externalCalls,
-                                           Set<String> fieldAccesses,
-                                           Set<String> instantiatedTypes,
-                                           int[] monitorCountHolder) {
+    private void extractLevel0FromBytecode(byte[] bytecode, ConstPool cp, Set<String> externalCalls, Set<String> fieldAccesses, Set<String> instantiatedTypes, int[] monitorCountHolder)
+    {
         int i = 0;
-        while (i < bytecode.length) {
+        while (i < bytecode.length)
+        {
             int op = Byte.toUnsignedInt(bytecode[i]);
             int len = getInstructionLength(op, i, bytecode);
-            if (len <= 0) {
+            if (len <= 0)
+            {
                 i++;
                 continue;
             }
 
-            switch (op) {
+            switch (op)
+            {
                 case 0xB2: case 0xB3: case 0xB4: case 0xB5:
-                    if (i + 2 < bytecode.length) {
+                    if (i + 2 < bytecode.length)
+                    {
                         int idx = readUnsignedShort(bytecode, i + 1);
                         String fieldRef = resolveFieldRef(cp, idx);
-                        if (fieldRef != null) {
+                        if (fieldRef != null)
+                        {
                             fieldAccesses.add(fieldRef);
                         }
                     }
                     break;
 
                 case 0xB6: case 0xB7: case 0xB8:
-                    if (i + 2 < bytecode.length) {
+                    if (i + 2 < bytecode.length)
+                    {
                         int idx = readUnsignedShort(bytecode, i + 1);
                         String methodRef = resolveMethodRef(cp, idx);
-                        if (methodRef != null) {
+                        if (methodRef != null)
+                        {
                             externalCalls.add(methodRef);
                         }
                     }
                     break;
 
                 case 0xB9:
-                    if (i + 2 < bytecode.length) {
+                    if (i + 2 < bytecode.length)
+                    {
                         int idx = readUnsignedShort(bytecode, i + 1);
                         String methodRef = resolveInterfaceMethodRef(cp, idx);
-                        if (methodRef != null) {
+                        if (methodRef != null)
+                        {
                             externalCalls.add(methodRef);
                         }
                     }
                     break;
 
                 case 0xBB:
-                    if (i + 2 < bytecode.length) {
+                    if (i + 2 < bytecode.length)
+                    {
                         int idx = readUnsignedShort(bytecode, i + 1);
                         String classRef = resolveClassRef(cp, idx);
-                        if (classRef != null) {
+                        if (classRef != null)
+                        {
                             instantiatedTypes.add(classRef);
                         }
                     }
@@ -126,20 +153,25 @@ public class FingerprintBuilder {
         }
     }
 
-    private int countMonitorOps(byte[] bytecode) {
+    private int countMonitorOps(byte[] bytecode)
+    {
         int count = 0;
-        for (byte b : bytecode) {
+        for (byte b : bytecode)
+        {
             int op = Byte.toUnsignedInt(b);
-            if (op == MONITORENTER.getCode() || op == MONITOREXIT.getCode()) {
+            if (op == MONITORENTER.getCode() || op == MONITOREXIT.getCode())
+            {
                 count++;
             }
         }
         return count;
     }
 
-    private Level1Features extractLevel1(MethodEntry method, ClassFile classFile) {
+    private Level1Features extractLevel1(MethodEntry method, ClassFile classFile)
+    {
         CodeAttribute code = method.getCodeAttribute();
-        if (code == null) {
+        if (code == null)
+        {
             return new Level1Features(0, 0, 0, new HashMap<>(), new HashMap<>(), new HashMap<>(), 0);
         }
 
@@ -152,12 +184,15 @@ public class FingerprintBuilder {
         int arrayFlags = 0;
 
         byte[] bytecode = code.getCode();
-        if (bytecode != null) {
+        if (bytecode != null)
+        {
             int i = 0;
-            while (i < bytecode.length) {
+            while (i < bytecode.length)
+            {
                 int op = Byte.toUnsignedInt(bytecode[i]);
                 int len = getInstructionLength(op, i, bytecode);
-                if (len <= 0) {
+                if (len <= 0)
+                {
                     i++;
                     continue;
                 }
@@ -167,7 +202,8 @@ public class FingerprintBuilder {
                 categorizeInvokeOp(op, invokeTypes);
                 arrayFlags |= getArrayFlag(op);
 
-                if (isBranchInstruction(op)) {
+                if (isBranchInstruction(op))
+                {
                     blockCount++;
                 }
 
@@ -181,9 +217,11 @@ public class FingerprintBuilder {
                 branchTypes, arithmeticOps, invokeTypes, arrayFlags);
     }
 
-    private Level2Features extractLevel2(MethodEntry method, ClassFile classFile) {
+    private Level2Features extractLevel2(MethodEntry method, ClassFile classFile)
+    {
         CodeAttribute code = method.getCodeAttribute();
-        if (code == null) {
+        if (code == null)
+        {
             return new Level2Features(new HashMap<>(), new HashMap<>(), 0, new HashMap<>(), new HashMap<>());
         }
 
@@ -194,13 +232,16 @@ public class FingerprintBuilder {
         Map<String, Integer> instructionTypes = new HashMap<>();
 
         byte[] bytecode = code.getCode();
-        if (bytecode != null) {
+        if (bytecode != null)
+        {
             String prevCategory = null;
             int i = 0;
-            while (i < bytecode.length) {
+            while (i < bytecode.length)
+            {
                 int op = Byte.toUnsignedInt(bytecode[i]);
                 int len = getInstructionLength(op, i, bytecode);
-                if (len <= 0) {
+                if (len <= 0)
+                {
                     i++;
                     continue;
                 }
@@ -208,13 +249,15 @@ public class FingerprintBuilder {
                 String category = Level2Features.getOpcodeCategory(op);
                 instructionTypes.merge(category, 1, Integer::sum);
 
-                if (prevCategory != null) {
+                if (prevCategory != null)
+                {
                     String ngram = prevCategory + "->" + category;
                     opcodeNgrams.merge(ngram, 1, Integer::sum);
                 }
                 prevCategory = category;
 
-                if (isTerminator(op)) {
+                if (isTerminator(op))
+                {
                     String termType = getTerminatorType(op);
                     terminatorTypes.merge(termType, 1, Integer::sum);
                 }
@@ -223,39 +266,49 @@ public class FingerprintBuilder {
             }
         }
 
-        return new Level2Features(opcodeNgrams, cfgEdges, dominanceDepth,
-                terminatorTypes, instructionTypes);
+        return new Level2Features(opcodeNgrams, cfgEdges, dominanceDepth, terminatorTypes, instructionTypes);
     }
 
-    private String extractReturnType(String desc) {
+    private String extractReturnType(String desc)
+    {
         int idx = desc.lastIndexOf(')');
         return idx >= 0 ? desc.substring(idx + 1) : "V";
     }
 
-    private List<String> extractParamTypes(String desc) {
+    private List<String> extractParamTypes(String desc)
+    {
         List<String> types = new ArrayList<>();
         int i = 1;
-        while (i < desc.length() && desc.charAt(i) != ')') {
+        while (i < desc.length() && desc.charAt(i) != ')')
+        {
             char c = desc.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 int end = desc.indexOf(';', i);
                 if (end < 0) break;
                 types.add(desc.substring(i, end + 1));
                 i = end + 1;
-            } else if (c == '[') {
+            }
+            else if (c == '[')
+            {
                 int start = i;
                 while (i < desc.length() && desc.charAt(i) == '[') i++;
                 if (i >= desc.length()) break;
-                if (desc.charAt(i) == 'L') {
+                if (desc.charAt(i) == 'L')
+                {
                     int end = desc.indexOf(';', i);
                     if (end < 0) break;
                     types.add(desc.substring(start, end + 1));
                     i = end + 1;
-                } else {
+                }
+                else
+                {
                     types.add(desc.substring(start, i + 1));
                     i++;
                 }
-            } else {
+            }
+            else
+            {
                 types.add(String.valueOf(c));
                 i++;
             }
@@ -263,24 +316,34 @@ public class FingerprintBuilder {
         return types;
     }
 
-    private void categorizeBranchOp(int op, Map<String, Integer> branches) {
-        if (op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) {
+    private void categorizeBranchOp(int op, Map<String, Integer> branches)
+    {
+        if (op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode())
+        {
             branches.merge("conditional", 1, Integer::sum);
-        } else if (op == GOTO.getCode() || op == GOTO_W.getCode()) {
+        }
+        else if (op == GOTO.getCode() || op == GOTO_W.getCode())
+        {
             branches.merge("goto", 1, Integer::sum);
-        } else if (op == TABLESWITCH.getCode() || op == LOOKUPSWITCH.getCode()) {
+        }
+        else if (op == TABLESWITCH.getCode() || op == LOOKUPSWITCH.getCode())
+        {
             branches.merge("switch", 1, Integer::sum);
         }
     }
 
-    private void categorizeArithmeticOp(int op, Map<String, Integer> arithmetic) {
-        if ((op >= IADD.getCode() && op <= LXOR.getCode()) || (op >= INEG.getCode() && op <= DNEG.getCode())) {
+    private void categorizeArithmeticOp(int op, Map<String, Integer> arithmetic)
+    {
+        if ((op >= IADD.getCode() && op <= LXOR.getCode()) || (op >= INEG.getCode() && op <= DNEG.getCode()))
+        {
             arithmetic.merge("math", 1, Integer::sum);
         }
     }
 
-    private void categorizeInvokeOp(int op, Map<String, Integer> invokes) {
-        switch (op) {
+    private void categorizeInvokeOp(int op, Map<String, Integer> invokes)
+    {
+        switch (op)
+        {
             case 0xB6: invokes.merge("virtual", 1, Integer::sum); break;
             case 0xB7: invokes.merge("special", 1, Integer::sum); break;
             case 0xB8: invokes.merge("static", 1, Integer::sum); break;
@@ -289,7 +352,8 @@ public class FingerprintBuilder {
         }
     }
 
-    private int getArrayFlag(int op) {
+    private int getArrayFlag(int op)
+    {
         if (op >= IALOAD.getCode() && op <= SALOAD.getCode()) return Level1Features.ARRAY_LOAD;
         if (op >= IASTORE.getCode() && op <= SASTORE.getCode()) return Level1Features.ARRAY_STORE;
         if (op == NEWARRAY.getCode() || op == ANEWARRAY.getCode() || op == MULTIANEWARRAY.getCode()) return Level1Features.ARRAY_NEW;
@@ -297,17 +361,20 @@ public class FingerprintBuilder {
         return 0;
     }
 
-    private boolean isBranchInstruction(int op) {
+    private boolean isBranchInstruction(int op)
+    {
         return (op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) || op == GOTO.getCode() || op == JSR.getCode() ||
                op == TABLESWITCH.getCode() || op == LOOKUPSWITCH.getCode() || op == GOTO_W.getCode() || op == JSR_W.getCode();
     }
 
-    private boolean isTerminator(int op) {
+    private boolean isTerminator(int op)
+    {
         return (op >= IRETURN.getCode() && op <= RETURN_.getCode()) || op == ATHROW.getCode() ||
                op == GOTO.getCode() || op == GOTO_W.getCode();
     }
 
-    private String getTerminatorType(int op) {
+    private String getTerminatorType(int op)
+    {
         if (op >= IRETURN.getCode() && op <= ARETURN.getCode()) return "return_value";
         if (op == RETURN_.getCode()) return "return_void";
         if (op == ATHROW.getCode()) return "athrow";
@@ -315,28 +382,38 @@ public class FingerprintBuilder {
         return "other";
     }
 
-    private int estimateLoopCount(byte[] bytecode) {
+    private int estimateLoopCount(byte[] bytecode)
+    {
         int backwardJumps = 0;
         int i = 0;
-        while (i < bytecode.length) {
+        while (i < bytecode.length)
+        {
             int op = Byte.toUnsignedInt(bytecode[i]);
             int len = getInstructionLength(op, i, bytecode);
-            if (len <= 0) {
+            if (len <= 0)
+            {
                 i++;
                 continue;
             }
 
-            if ((op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) || op == GOTO.getCode()) {
-                if (i + 2 < bytecode.length) {
+            if ((op >= IFEQ.getCode() && op <= IF_ACMPNE.getCode()) || op == GOTO.getCode())
+            {
+                if (i + 2 < bytecode.length)
+                {
                     short offset = (short) readUnsignedShort(bytecode, i + 1);
-                    if (offset < 0) {
+                    if (offset < 0)
+                    {
                         backwardJumps++;
                     }
                 }
-            } else if (op == GOTO_W.getCode()) {
-                if (i + 4 < bytecode.length) {
+            }
+            else if (op == GOTO_W.getCode())
+            {
+                if (i + 4 < bytecode.length)
+                {
                     int offset = readInt(bytecode, i + 1);
-                    if (offset < 0) {
+                    if (offset < 0)
+                    {
                         backwardJumps++;
                     }
                 }
@@ -347,58 +424,70 @@ public class FingerprintBuilder {
         return backwardJumps;
     }
 
-    private String resolveFieldRef(ConstPool cp, int idx) {
+    private String resolveFieldRef(ConstPool cp, int idx)
+    {
         if (cp == null) return null;
         Item<?> item = cp.getItem(idx);
-        if (item instanceof FieldRefItem) {
+        if (item instanceof FieldRefItem)
+        {
             FieldRefItem ref = (FieldRefItem) item;
             return ref.getClassName() + "." + ref.getName();
         }
         return null;
     }
 
-    private String resolveMethodRef(ConstPool cp, int idx) {
+    private String resolveMethodRef(ConstPool cp, int idx)
+    {
         if (cp == null) return null;
         Item<?> item = cp.getItem(idx);
-        if (item instanceof MethodRefItem) {
+        if (item instanceof MethodRefItem)
+        {
             MethodRefItem ref = (MethodRefItem) item;
             return ref.getClassName() + "." + ref.getName() + ref.getDescriptor();
         }
         return null;
     }
 
-    private String resolveInterfaceMethodRef(ConstPool cp, int idx) {
+    private String resolveInterfaceMethodRef(ConstPool cp, int idx)
+    {
         if (cp == null) return null;
         Item<?> item = cp.getItem(idx);
-        if (item instanceof InterfaceRefItem) {
+        if (item instanceof InterfaceRefItem)
+        {
             InterfaceRefItem ref = (InterfaceRefItem) item;
             return ref.getOwner() + "." + ref.getName() + ref.getDescriptor();
         }
         return null;
     }
 
-    private String resolveClassRef(ConstPool cp, int idx) {
+    private String resolveClassRef(ConstPool cp, int idx)
+    {
         if (cp == null) return null;
         Item<?> item = cp.getItem(idx);
-        if (item instanceof ClassRefItem) {
+        if (item instanceof ClassRefItem)
+        {
             return ((ClassRefItem) item).getClassName();
         }
         return null;
     }
 
-    private int readUnsignedShort(byte[] bytecode, int offset) {
+    private int readUnsignedShort(byte[] bytecode, int offset)
+    {
         return ((bytecode[offset] & 0xFF) << 8) | (bytecode[offset + 1] & 0xFF);
     }
 
-    private int readInt(byte[] bytecode, int offset) {
+    private int readInt(byte[] bytecode, int offset)
+    {
         return ((bytecode[offset] & 0xFF) << 24) |
                ((bytecode[offset + 1] & 0xFF) << 16) |
                ((bytecode[offset + 2] & 0xFF) << 8) |
                (bytecode[offset + 3] & 0xFF);
     }
 
-    private int getInstructionLength(int opcode, int offset, byte[] bytecode) {
-        switch (opcode) {
+    private int getInstructionLength(int opcode, int offset, byte[] bytecode)
+    {
+        switch (opcode)
+        {
             case 0x00: case 0x01: case 0x02: case 0x03: case 0x04:
             case 0x05: case 0x06: case 0x07: case 0x08: case 0x09:
             case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E:
@@ -448,7 +537,8 @@ public class FingerprintBuilder {
             case 0xA7: return 3;
             case 0xA8: return 3;
             case 0xA9: return 2;
-            case 0xAA: {
+            case 0xAA:
+            {
                 int padding = (4 - ((offset + 1) % 4)) % 4;
                 int baseOffset = offset + 1 + padding;
                 if (baseOffset + 12 > bytecode.length) return -1;
@@ -457,7 +547,8 @@ public class FingerprintBuilder {
                 if (low > high) return -1;
                 return 1 + padding + 12 + (high - low + 1) * 4;
             }
-            case 0xAB: {
+            case 0xAB:
+            {
                 int padding = (4 - ((offset + 1) % 4)) % 4;
                 int baseOffset = offset + 1 + padding;
                 if (baseOffset + 8 > bytecode.length) return -1;
@@ -477,7 +568,8 @@ public class FingerprintBuilder {
             case 0xBE: case 0xBF: return 1;
             case 0xC0: case 0xC1: return 3;
             case 0xC2: case 0xC3: return 1;
-            case 0xC4: {
+            case 0xC4:
+            {
                 if (offset + 1 >= bytecode.length) return -1;
                 int wideOpcode = Byte.toUnsignedInt(bytecode[offset + 1]);
                 if (wideOpcode == IINC.getCode()) return 6;

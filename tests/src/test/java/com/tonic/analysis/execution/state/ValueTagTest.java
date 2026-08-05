@@ -5,13 +5,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ValueTagTest {
+class ValueTagTest
+{
 
     @Nested
-    class EnumValuesTests {
+    class EnumValuesTests
+    {
 
         @Test
-        void allEnumValuesExist() {
+        void allEnumValuesExist()
+        {
             assertEquals(7, ValueTag.values().length);
             assertNotNull(ValueTag.INT);
             assertNotNull(ValueTag.LONG);
@@ -23,7 +26,8 @@ class ValueTagTest {
         }
 
         @Test
-        void valueOfReturnsCorrectEnum() {
+        void valueOfReturnsCorrectEnum()
+        {
             assertEquals(ValueTag.INT, ValueTag.valueOf("INT"));
             assertEquals(ValueTag.LONG, ValueTag.valueOf("LONG"));
             assertEquals(ValueTag.FLOAT, ValueTag.valueOf("FLOAT"));
@@ -34,115 +38,142 @@ class ValueTagTest {
         }
 
         @Test
-        void valueOfInvalidNameThrows() {
+        void valueOfInvalidNameThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> ValueTag.valueOf("INVALID"));
         }
     }
 
     @Nested
-    class CategoryTests {
+    class CategoryTests
+    {
 
         @Test
-        void intHasCategory1() {
+        void intHasCategory1()
+        {
             assertEquals(1, ValueTag.INT.getCategory());
         }
 
         @Test
-        void longHasCategory2() {
+        void longHasCategory2()
+        {
             assertEquals(2, ValueTag.LONG.getCategory());
         }
 
         @Test
-        void floatHasCategory1() {
+        void floatHasCategory1()
+        {
             assertEquals(1, ValueTag.FLOAT.getCategory());
         }
 
         @Test
-        void doubleHasCategory2() {
+        void doubleHasCategory2()
+        {
             assertEquals(2, ValueTag.DOUBLE.getCategory());
         }
 
         @Test
-        void referenceHasCategory1() {
+        void referenceHasCategory1()
+        {
             assertEquals(1, ValueTag.REFERENCE.getCategory());
         }
 
         @Test
-        void nullHasCategory1() {
+        void nullHasCategory1()
+        {
             assertEquals(1, ValueTag.NULL.getCategory());
         }
 
         @Test
-        void returnAddressHasCategory1() {
+        void returnAddressHasCategory1()
+        {
             assertEquals(1, ValueTag.RETURN_ADDRESS.getCategory());
         }
     }
 
     @Nested
-    class IsWideTests {
+    class IsWideTests
+    {
 
         @Test
-        void intIsNotWide() {
+        void intIsNotWide()
+        {
             assertFalse(ValueTag.INT.isWide());
         }
 
         @Test
-        void longIsWide() {
+        void longIsWide()
+        {
             assertTrue(ValueTag.LONG.isWide());
         }
 
         @Test
-        void floatIsNotWide() {
+        void floatIsNotWide()
+        {
             assertFalse(ValueTag.FLOAT.isWide());
         }
 
         @Test
-        void doubleIsWide() {
+        void doubleIsWide()
+        {
             assertTrue(ValueTag.DOUBLE.isWide());
         }
 
         @Test
-        void referenceIsNotWide() {
+        void referenceIsNotWide()
+        {
             assertFalse(ValueTag.REFERENCE.isWide());
         }
 
         @Test
-        void nullIsNotWide() {
+        void nullIsNotWide()
+        {
             assertFalse(ValueTag.NULL.isWide());
         }
 
         @Test
-        void returnAddressIsNotWide() {
+        void returnAddressIsNotWide()
+        {
             assertFalse(ValueTag.RETURN_ADDRESS.isWide());
         }
     }
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void wideTypesHaveCategory2() {
-            for (ValueTag tag : ValueTag.values()) {
-                if (tag.isWide()) {
+        void wideTypesHaveCategory2()
+        {
+            for (ValueTag tag : ValueTag.values())
+            {
+                if (tag.isWide())
+                {
                     assertEquals(2, tag.getCategory());
                 }
             }
         }
 
         @Test
-        void nonWideTypesHaveCategory1() {
-            for (ValueTag tag : ValueTag.values()) {
-                if (!tag.isWide()) {
+        void nonWideTypesHaveCategory1()
+        {
+            for (ValueTag tag : ValueTag.values())
+            {
+                if (!tag.isWide())
+                {
                     assertEquals(1, tag.getCategory());
                 }
             }
         }
 
         @Test
-        void onlyLongAndDoubleAreWide() {
+        void onlyLongAndDoubleAreWide()
+        {
             int wideCount = 0;
-            for (ValueTag tag : ValueTag.values()) {
-                if (tag.isWide()) {
+            for (ValueTag tag : ValueTag.values())
+            {
+                if (tag.isWide())
+                {
                     wideCount++;
                     assertTrue(tag == ValueTag.LONG || tag == ValueTag.DOUBLE);
                 }

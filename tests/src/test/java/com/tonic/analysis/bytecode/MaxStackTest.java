@@ -14,22 +14,29 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Exercises CFG-correct {@code max_stack} ({@link CodeWriter#computeMaxStack}). The worklist over the
- * control-flow graph sees the true peak — including exception-handler entry states a linear textual
- * scan misses — and category-2 types count as two slots.
+ * control-flow graph sees the true peak - including exception-handler entry states a linear textual
+ * scan misses - and category-2 types count as two slots.
  */
-class MaxStackTest {
+class MaxStackTest
+{
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException(name);
     }
 
-    /** risky(x): try { return 100/x; } catch (ArithmeticException) { return 1+2+3; } — handler peak 3 > body peak 2. */
-    private static ClassFile buildRisky() {
+    /**
+     * risky(x): try { return 100/x; } catch (ArithmeticException) { return 1+2+3; } - handler peak 3 > body peak 2.
+     */
+    private static ClassFile buildRisky()
+    {
         return ClassBuilder.create("MS")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "risky", "(I)I")
@@ -40,18 +47,21 @@ class MaxStackTest {
                 .end().end().build();
     }
 
-    private static int cfgMaxStack(ClassFile cf, String name) {
+    private static int cfgMaxStack(ClassFile cf, String name)
+    {
         return new FrameGenerator(cf.getConstPool()).computeMaxStack(method(cf, name));
     }
 
     @Test
-    void handlerDepthCountedOverCfg() {
-        // A linear textual scan peaks at 2 (the divide); the handler reaches 3 — only the CFG sees it.
+    void handlerDepthCountedOverCfg()
+    {
+        // A linear textual scan peaks at 2 (the divide); the handler reaches 3 - only the CFG sees it.
         assertEquals(3, cfgMaxStack(buildRisky(), "risky"));
     }
 
     @Test
-    void categoryTwoCountsAsTwoSlots() {
+    void categoryTwoCountsAsTwoSlots()
+    {
         ClassFile cf = ClassBuilder.create("L2")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "l", "()J")
@@ -60,7 +70,8 @@ class MaxStackTest {
     }
 
     @Test
-    void straightLineMatchesTruePeak() {
+    void straightLineMatchesTruePeak()
+    {
         ClassFile cf = ClassBuilder.create("SL")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "s", "()I")
@@ -69,7 +80,8 @@ class MaxStackTest {
     }
 
     @Test
-    void relinkAppliesCfgMaxStackEndToEnd() throws Exception {
+    void relinkAppliesCfgMaxStackEndToEnd() throws Exception
+    {
         ClassFile cf = buildRisky();
         MethodEntry m = method(cf, "risky");
         m.getCodeAttribute().setMaxStack(2);   // simulate a linear under-count

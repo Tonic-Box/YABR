@@ -10,34 +10,63 @@ import static com.tonic.util.Opcode.*;
 /**
  * Represents the JVM GOTO and GOTO_W instructions.
  */
-public class GotoInstruction extends Instruction {
+public class GotoInstruction extends Instruction
+{
     private final GotoType type;
     private final int branchOffsetInt;
     private final short branchOffsetShort;
 
-    public enum GotoType {
+    /**
+     * The goto widths (16-bit GOTO vs 32-bit GOTO_W), each pairing a JVM opcode with its mnemonic.
+     */
+    public enum GotoType
+    {
+        /**
+         * Plain {@code goto}, three bytes wide, carrying a signed 16-bit relative offset.
+         */
         GOTO_NORMAL(GOTO.getCode(), "goto"),
+        /**
+         * Wide {@code goto_w}, five bytes wide, carrying a signed 32-bit relative offset for
+         * targets a 16-bit branch cannot reach.
+         */
         GOTO_WIDE(GOTO_W.getCode(), "goto_w");
 
         private final int opcode;
         private final String mnemonic;
 
-        GotoType(int opcode, String mnemonic) {
+        GotoType(int opcode, String mnemonic)
+        {
             this.opcode = opcode;
             this.mnemonic = mnemonic;
         }
 
-        public int getOpcode() {
+        /**
+         * @return the opcode
+         */
+        public int getOpcode()
+        {
             return opcode;
         }
 
-        public String getMnemonic() {
+        /**
+         * @return the mnemonic
+         */
+        public String getMnemonic()
+        {
             return mnemonic;
         }
 
-        public static GotoType fromOpcode(int opcode) {
-            for (GotoType type : GotoType.values()) {
-                if (type.opcode == opcode) {
+        /**
+         * Looks up the goto width for a JVM opcode.
+         * @param opcode the JVM opcode
+         * @return the matching width, or null if the opcode is not GOTO or GOTO_W
+         */
+        public static GotoType fromOpcode(int opcode)
+        {
+            for (GotoType type : GotoType.values())
+            {
+                if (type.opcode == opcode)
+                {
                     return type;
                 }
             }
@@ -47,15 +76,17 @@ public class GotoInstruction extends Instruction {
 
     /**
      * Constructs a GotoInstruction.
-     *
      * @param opcode       The opcode of the instruction.
      * @param offset       The bytecode offset of the instruction.
      * @param branchOffset The branch target offset relative to current instruction.
+     * @throws IllegalArgumentException if the opcode is not GOTO or GOTO_W
      */
-    public GotoInstruction(int opcode, int offset, int branchOffset) {
+    public GotoInstruction(int opcode, int offset, int branchOffset)
+    {
         super(opcode, offset, (opcode == GOTO.getCode()) ? 3 : 5);
         this.type = GotoType.fromOpcode(opcode);
-        if (this.type == null) {
+        if (this.type == null)
+        {
             throw new IllegalArgumentException("Invalid GOTO opcode: " + opcode);
         }
         this.branchOffsetInt = branchOffset;
@@ -63,92 +94,101 @@ public class GotoInstruction extends Instruction {
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     /**
      * Constructs a GotoInstruction.
-     *
      * @param opcode       The opcode of the instruction.
      * @param offset       The bytecode offset of the instruction.
      * @param branchOffset The branch target offset relative to current instruction.
      */
-    public GotoInstruction(int opcode, int offset, short branchOffset) {
+    public GotoInstruction(int opcode, int offset, short branchOffset)
+    {
         super(opcode, offset, (opcode == GOTO.getCode()) ? 3 : 5);
         this.type = GotoType.fromOpcode(opcode);
-        if (this.type == null) {
+        if (this.type == null)
+        {
             throw new IllegalArgumentException("Invalid GOTO opcode: " + opcode);
         }
         this.branchOffsetShort = branchOffset;
         this.branchOffsetInt = -1;
     }
 
-    public GotoType getType() {
+    /**
+     * @return the type
+     */
+    public GotoType getType()
+    {
         return type;
     }
 
     /**
      * Writes the GOTO opcode and its operands to the DataOutputStream.
-     *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
-        if (type == GotoType.GOTO_NORMAL) {
+        if (type == GotoType.GOTO_NORMAL)
+        {
             dos.writeShort(getBranchOffset());
-        } else if (type == GotoType.GOTO_WIDE) {
+        }
+        else if (type == GotoType.GOTO_WIDE)
+        {
             dos.writeInt(getBranchOffsetWide());
         }
     }
 
     /**
      * Returns the change in stack size caused by this instruction.
-     *
      * @return The stack size change (none).
      */
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         return 0;
     }
 
     /**
      * Returns the change in local variables caused by this instruction.
-     *
      * @return The local variables size change (none).
      */
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     /**
      * Returns the branch offset.
-     *
      * @return The branch target offset.
      */
-    public short getBranchOffset() {
+    public short getBranchOffset()
+    {
         return branchOffsetShort;
     }
 
     /**
      * Returns the wide branch offset.
-     *
      * @return The wide branch target offset.
      */
-    public int getBranchOffsetWide() {
+    public int getBranchOffsetWide()
+    {
         return branchOffsetInt;
     }
 
     /**
      * Returns a string representation of the instruction.
-     *
      * @return The mnemonic and branch target of the instruction.
      */
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("%s %d", type.getMnemonic().toUpperCase(), getBranchOffset());
     }
 }

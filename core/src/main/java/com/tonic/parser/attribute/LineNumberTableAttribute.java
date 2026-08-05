@@ -10,35 +10,59 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the LineNumberTable attribute.
- * Maps bytecode instructions to source code line numbers.
+ * The LineNumberTable attribute: a mapping from bytecode offsets to source line numbers.
  */
-public class LineNumberTableAttribute extends Attribute {
+public class LineNumberTableAttribute extends Attribute
+{
     private List<LineNumberTableEntry> lineNumberTable;
 
-    public LineNumberTableAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public LineNumberTableAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public LineNumberTableAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public LineNumberTableAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public List<LineNumberTableEntry> getLineNumberTable() {
+    /**
+     * @return the line number table
+     */
+    public List<LineNumberTableEntry> getLineNumberTable()
+    {
         return lineNumberTable;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
-        if (length < 2) {
+    public void read(ClassFile classFile, int length)
+    {
+        if (length < 2)
+        {
             throw new IllegalArgumentException("LineNumberTable attribute length must be at least 2, found: " + length);
         }
         int lineNumberTableLength = classFile.readUnsignedShort();
-        if (length != 2 + 4 * lineNumberTableLength) {
+        if (length != 2 + 4 * lineNumberTableLength)
+        {
             throw new IllegalArgumentException("Invalid LineNumberTable attribute length. Expected: " + (2 + 4 * lineNumberTableLength) + ", Found: " + length);
         }
         this.lineNumberTable = new ArrayList<>(lineNumberTableLength);
-        for (int i = 0; i < lineNumberTableLength; i++) {
+        for (int i = 0; i < lineNumberTableLength; i++)
+        {
             int startPc = classFile.readUnsignedShort();
             int lineNumber = classFile.readUnsignedShort();
             lineNumberTable.add(new LineNumberTableEntry(startPc, lineNumber));
@@ -46,26 +70,32 @@ public class LineNumberTableAttribute extends Attribute {
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(lineNumberTable.size());
-        for (LineNumberTableEntry entry : lineNumberTable) {
+        for (LineNumberTableEntry entry : lineNumberTable)
+        {
             dos.writeShort(entry.getStartPc());
             dos.writeShort(entry.getLineNumber());
         }
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         this.length = 2 + (lineNumberTable.size() * 4);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("LineNumberTableAttribute{lineNumberTable=[");
-        for (LineNumberTableEntry entry : lineNumberTable) {
+        for (LineNumberTableEntry entry : lineNumberTable)
+        {
             sb.append(entry).append(", ");
         }
-        if (!lineNumberTable.isEmpty()) {
+        if (!lineNumberTable.isEmpty())
+        {
             sb.setLength(sb.length() - 2);
         }
         sb.append("]}");

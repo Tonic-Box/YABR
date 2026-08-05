@@ -11,10 +11,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class IrTypeMapperTest {
+class IrTypeMapperTest
+{
 
     @Test
-    void mapsPrimitivesWithIntegralCollapse() {
+    void mapsPrimitivesWithIntegralCollapse()
+    {
         assertEquals(LlvmType.I32, IrTypeMapper.map(PrimitiveType.INT));
         assertEquals(LlvmType.I32, IrTypeMapper.map(PrimitiveType.BOOLEAN));
         assertEquals(LlvmType.I32, IrTypeMapper.map(PrimitiveType.BYTE));
@@ -27,7 +29,8 @@ class IrTypeMapperTest {
     }
 
     @Test
-    void mapsDescriptorParamsAndReturn() {
+    void mapsDescriptorParamsAndReturn()
+    {
         assertEquals(Arrays.asList(LlvmType.I32, LlvmType.I64, LlvmType.DOUBLE, LlvmType.FLOAT),
             IrTypeMapper.mapParams("(IJDF)V"));
         assertEquals(LlvmType.VOID, IrTypeMapper.mapReturn("(IJDF)V"));
@@ -36,7 +39,8 @@ class IrTypeMapperTest {
     }
 
     @Test
-    void mapsReferencesAndArraysToPtr() {
+    void mapsReferencesAndArraysToPtr()
+    {
         assertEquals(LlvmType.PTR, IrTypeMapper.map(ReferenceType.OBJECT));
         assertEquals(LlvmType.PTR, IrTypeMapper.map(ArrayType.fromDescriptor("[I")));
         assertEquals(List.of(LlvmType.PTR), IrTypeMapper.mapParams("(Ljava/lang/String;)V"));

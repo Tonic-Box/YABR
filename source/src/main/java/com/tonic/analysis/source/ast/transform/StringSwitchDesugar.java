@@ -32,25 +32,31 @@ import java.util.Map;
  * fall-through included. The bytecode switch instruction only dispatches on ints, so a String switch that
  * reaches lowering undesugared loses every case (no label converts) and dispatches straight to default.
  */
-public class StringSwitchDesugar implements ASTTransform {
+public class StringSwitchDesugar implements ASTTransform
+{
 
     private int tempCounter = 0;
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "StringSwitchDesugar";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         return process(block.getStatements());
     }
 
-    private boolean process(List<Statement> stmts) {
+    private boolean process(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
-            if (s instanceof SwitchStmt && isStringSwitch((SwitchStmt) s)) {
+            if (s instanceof SwitchStmt && isStringSwitch((SwitchStmt) s))
+            {
                 List<Statement> desugared = desugar((SwitchStmt) s);
                 stmts.remove(i);
                 stmts.addAll(i, desugared);
@@ -58,35 +64,47 @@ public class StringSwitchDesugar implements ASTTransform {
                 changed = true;
             }
         }
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             changed |= recurse(s);
         }
         return changed;
     }
 
-    private boolean recurse(ASTNode node) {
+    private boolean recurse(ASTNode node)
+    {
         boolean changed = false;
-        for (ASTNode child : node.getChildren()) {
-            if (child instanceof BlockStmt) {
+        for (ASTNode child : node.getChildren())
+        {
+            if (child instanceof BlockStmt)
+            {
                 changed |= process(((BlockStmt) child).getStatements());
-            } else {
+            }
+            else
+            {
                 changed |= recurse(child);
             }
         }
         return changed;
     }
 
-    private static boolean isStringSwitch(SwitchStmt sw) {
+    private static boolean isStringSwitch(SwitchStmt sw)
+    {
         boolean sawString = false;
-        for (SwitchCase c : sw.getCases()) {
-            if (c.isDefault()) {
+        for (SwitchCase c : sw.getCases())
+        {
+            if (c.isDefault())
+            {
                 continue;
             }
-            if (!c.hasExpressionLabels()) {
+            if (!c.hasExpressionLabels())
+            {
                 return false;
             }
-            for (Expression label : c.expressionLabels()) {
-                if (!(label instanceof LiteralExpr) || !(((LiteralExpr) label).getValue() instanceof String)) {
+            for (Expression label : c.expressionLabels())
+            {
+                if (!(label instanceof LiteralExpr) || !(((LiteralExpr) label).getValue() instanceof String))
+                {
                     return false;
                 }
                 sawString = true;
@@ -95,7 +113,8 @@ public class StringSwitchDesugar implements ASTTransform {
         return sawString;
     }
 
-    private List<Statement> desugar(SwitchStmt sw) {
+    private List<Statement> desugar(SwitchStmt sw)
+    {
         String strName = "$str" + tempCounter;
         String idxName = "$idx" + tempCounter;
         tempCounter++;
@@ -107,13 +126,16 @@ public class StringSwitchDesugar implements ASTTransform {
         Map<Integer, List<int[]>> hashGroups = new LinkedHashMap<>();
         List<String> literals = new ArrayList<>();
         List<SwitchCase> indexCases = new ArrayList<>();
-        for (SwitchCase c : sw.getCases()) {
-            if (c.isDefault()) {
+        for (SwitchCase c : sw.getCases())
+        {
+            if (c.isDefault())
+            {
                 indexCases.add(SwitchCase.defaultCase(c.statements()));
                 continue;
             }
             List<Integer> indices = new ArrayList<>();
-            for (Expression label : c.expressionLabels()) {
+            for (Expression label : c.expressionLabels())
+            {
                 String lit = (String) ((LiteralExpr) label).getValue();
                 int idx = literals.size();
                 literals.add(lit);
@@ -124,9 +146,11 @@ public class StringSwitchDesugar implements ASTTransform {
         }
 
         List<SwitchCase> hashCases = new ArrayList<>();
-        for (Map.Entry<Integer, List<int[]>> group : hashGroups.entrySet()) {
+        for (Map.Entry<Integer, List<int[]>> group : hashGroups.entrySet())
+        {
             IfStmt chain = null;
-            for (int g = group.getValue().size() - 1; g >= 0; g--) {
+            for (int g = group.getValue().size() - 1; g >= 0; g--)
+            {
                 int idx = group.getValue().get(g)[0];
                 Expression eq = new MethodCallExpr(
                         new VarRefExpr(strName, ReferenceSourceType.STRING), "equals", "java/lang/String",

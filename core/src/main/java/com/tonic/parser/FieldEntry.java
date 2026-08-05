@@ -9,22 +9,24 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * Represents a field entry in the class file.
+ * A field entry of a class file, parsed from bytes or built for dynamic creation.
  */
-public class FieldEntry extends MemberEntry {
+public class FieldEntry extends MemberEntry
+{
 
     /**
      * Constructs an empty FieldEntry for dynamic creation.
      */
-    public FieldEntry() {
+    public FieldEntry()
+    {
     }
 
     /**
      * Constructs a FieldEntry by parsing from the class file.
-     *
      * @param classFile the ClassFile instance being parsed
      */
-    public FieldEntry(ClassFile classFile) {
+    public FieldEntry(ClassFile classFile)
+    {
         this.classFile = classFile;
 
         this.access = classFile.readUnsignedShort();
@@ -34,7 +36,8 @@ public class FieldEntry extends MemberEntry {
         final int attributeCount = classFile.readUnsignedShort();
         this.attributes = new ArrayList<>(attributeCount);
 
-        for (int i = 0; i < attributeCount; i++) {
+        for (int i = 0; i < attributeCount; i++)
+        {
             Attribute attribute = Attribute.get(classFile, classFile.getConstPool(), this);
             this.attributes.add(attribute);
         }
@@ -45,28 +48,39 @@ public class FieldEntry extends MemberEntry {
         this.key = computeKey();
     }
 
-    public void setName(String newName) {
+    /**
+     * Renames the field, adding the new name Utf8 to the constant pool and refreshing the key.
+     * @param newName the new field name
+     */
+    public void setName(String newName)
+    {
         Utf8Item newNameUtf8 = classFile.getConstPool().findOrAddUtf8(newName);
         this.nameIndex = classFile.getConstPool().getIndexOf(newNameUtf8);
         this.name = newName;
         this.key = computeKey();
     }
 
-    private String resolveUtf8(int index) {
+    private String resolveUtf8(int index)
+    {
         Utf8Item utf8Item = (Utf8Item) classFile.getConstPool().getItem(index);
-        if (utf8Item != null) {
+        if (utf8Item != null)
+        {
             return utf8Item.getValue();
-        } else {
+        }
+        else
+        {
             return "Unknown";
         }
     }
 
-    private String computeKey() {
+    private String computeKey()
+    {
         return name + desc;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "FieldEntry{" +
                 "ownerName='" + ownerName + '\'' +
                 ", name='" + name + '\'' +
@@ -78,16 +92,22 @@ public class FieldEntry extends MemberEntry {
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(access);
         dos.writeShort(nameIndex);
         dos.writeShort(descIndex);
         dos.writeShort(attributes.size());
-        for (Attribute attr : attributes) {
+        for (Attribute attr : attributes)
+        {
             attr.write(dos);
         }
     }
 
+    /**
+     * Dispatches the visitor to this field.
+     * @param visitor the visitor to apply
+     */
     public void accept(AbstractClassVisitor visitor)
     {
         visitor.visitField(this);

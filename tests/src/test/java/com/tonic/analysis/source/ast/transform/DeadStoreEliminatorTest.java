@@ -13,24 +13,28 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DeadStoreEliminatorTest {
+class DeadStoreEliminatorTest
+{
 
     private DeadStoreEliminator eliminator;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         eliminator = new DeadStoreEliminator();
     }
 
     @Test
-    void getNameReturnsCorrectName() {
+    void getNameReturnsCorrectName()
+    {
         assertEquals("DeadStoreEliminator", eliminator.getName());
     }
 
     @Test
-    void transformEmptyBlockReturnsFalse() {
+    void transformEmptyBlockReturnsFalse()
+    {
         BlockStmt block = new BlockStmt();
 
         boolean changed = eliminator.transform(block);
@@ -39,12 +43,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void basicDeadStoreElimination() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void basicDeadStoreElimination()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -71,12 +72,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void multipleReassignments() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(1)
-        );
+    void multipleReassignments()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1));
 
         BinaryExpr assign2 = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -106,7 +104,8 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void initializerWithSideEffects() {
+    void initializerWithSideEffects()
+    {
         MethodCallExpr sideEffect = new MethodCallExpr(
             null,
             "getY",
@@ -116,11 +115,7 @@ class DeadStoreEliminatorTest {
             PrimitiveSourceType.INT
         );
 
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            sideEffect
-        );
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", sideEffect);
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -142,12 +137,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void preserveReadBetweenDeclAndAssign() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(10)
-        );
+    void preserveReadBetweenDeclAndAssign()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(10));
 
         BinaryExpr useX = new BinaryExpr(
             BinaryOperator.ADD,
@@ -155,11 +147,7 @@ class DeadStoreEliminatorTest {
             LiteralExpr.ofInt(1),
             PrimitiveSourceType.INT
         );
-        VarDeclStmt yDecl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "y",
-            useX
-        );
+        VarDeclStmt yDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", useX);
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -182,12 +170,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void assignmentReadsVariable() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(5)
-        );
+    void assignmentReadsVariable()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
 
         BinaryExpr selfIncrement = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -214,17 +199,11 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void stopAtControlFlow() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void stopAtControlFlow()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
-        IfStmt ifStmt = new IfStmt(
-            LiteralExpr.ofBoolean(true),
-            new ReturnStmt()
-        );
+        IfStmt ifStmt = new IfStmt(LiteralExpr.ofBoolean(true), new ReturnStmt());
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -247,12 +226,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void handleNestedBlocks() {
-        VarDeclStmt innerDecl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "y",
-            LiteralExpr.ofInt(0)
-        );
+    void handleNestedBlocks()
+    {
+        VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
         BinaryExpr innerAssign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -277,12 +253,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void eliminateInIfBranch() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void eliminateInIfBranch()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -297,10 +270,7 @@ class DeadStoreEliminatorTest {
         thenStmts.add(new ReturnStmt(new VarRefExpr("x", PrimitiveSourceType.INT)));
         BlockStmt thenBlock = new BlockStmt(thenStmts);
 
-        IfStmt ifStmt = new IfStmt(
-            LiteralExpr.ofBoolean(true),
-            thenBlock
-        );
+        IfStmt ifStmt = new IfStmt(LiteralExpr.ofBoolean(true), thenBlock);
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(ifStmt);
@@ -312,18 +282,11 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void multipleVariables() {
-        VarDeclStmt declX = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void multipleVariables()
+    {
+        VarDeclStmt declX = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
-        VarDeclStmt declY = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "y",
-            LiteralExpr.ofInt(0)
-        );
+        VarDeclStmt declY = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
         BinaryExpr assignX = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -353,12 +316,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void idempotentTransformation() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void idempotentTransformation()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -381,12 +341,9 @@ class DeadStoreEliminatorTest {
     }
 
     @Test
-    void noChangeWhenNoDeadStores() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(5)
-        );
+    void noChangeWhenNoDeadStores()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);

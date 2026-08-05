@@ -215,23 +215,33 @@ import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 
 // Traditional traversal
-void mutateBlock(BlockStmt block) {
-    for (Statement stmt : block.getStatements()) {
-        if (stmt instanceof ReturnStmt ret && ret.getValue() != null) {
+void mutateBlock(BlockStmt block)
+{
+    for (Statement stmt : block.getStatements())
+    {
+        if (stmt instanceof ReturnStmt ret && ret.getValue() != null)
+        {
             mutateExpression(ret.getValue());
-        } else if (stmt instanceof VarDeclStmt decl && decl.getInitializer() != null) {
+        }
+        else if (stmt instanceof VarDeclStmt decl && decl.getInitializer() != null)
+        {
             mutateExpression(decl.getInitializer());
         }
     }
 }
 
-void mutateExpression(Expression expr) {
-    if (expr instanceof LiteralExpr lit) {
+void mutateExpression(Expression expr)
+{
+    if (expr instanceof LiteralExpr lit)
+    {
         Object value = lit.getValue();
-        if (value instanceof Integer i) {
+        if (value instanceof Integer i)
+        {
             lit.setValue(i * 2);  // Double all integer literals
         }
-    } else if (expr instanceof BinaryExpr bin) {
+    }
+    else if (expr instanceof BinaryExpr bin)
+    {
         mutateExpression(bin.getLeft());
         mutateExpression(bin.getRight());
     }
@@ -660,9 +670,11 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.*;
 import com.tonic.util.ClassFileUtil;
 
-public class ASTRoundtrip {
+public class ASTRoundtrip
+{
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws Exception
+    {
         // 1. Load the class
         ClassPool pool = ClassPool.getDefault();
         ClassFile cf = pool.loadClass(
@@ -698,32 +710,47 @@ public class ASTRoundtrip {
         System.out.println("\nExported: " + cf.getClassName() + ".class");
     }
 
-    static void mutateIntegers(BlockStmt block) {
-        for (Statement stmt : block.getStatements()) {
+    static void mutateIntegers(BlockStmt block)
+    {
+        for (Statement stmt : block.getStatements())
+        {
             mutateStatement(stmt);
         }
     }
 
-    static void mutateStatement(Statement stmt) {
-        if (stmt instanceof ReturnStmt ret && ret.getValue() != null) {
+    static void mutateStatement(Statement stmt)
+    {
+        if (stmt instanceof ReturnStmt ret && ret.getValue() != null)
+        {
             mutateExpr(ret.getValue());
-        } else if (stmt instanceof VarDeclStmt decl && decl.getInitializer() != null) {
+        }
+        else if (stmt instanceof VarDeclStmt decl && decl.getInitializer() != null)
+        {
             mutateExpr(decl.getInitializer());
-        } else if (stmt instanceof BlockStmt block) {
+        }
+        else if (stmt instanceof BlockStmt block)
+        {
             mutateIntegers(block);
-        } else if (stmt instanceof IfStmt ifStmt) {
+        }
+        else if (stmt instanceof IfStmt ifStmt)
+        {
             mutateExpr(ifStmt.getCondition());
             mutateStatement(ifStmt.getThenBranch());
-            if (ifStmt.getElseBranch() != null) {
+            if (ifStmt.getElseBranch() != null)
+            {
                 mutateStatement(ifStmt.getElseBranch());
             }
         }
     }
 
-    static void mutateExpr(Expression expr) {
-        if (expr instanceof LiteralExpr lit && lit.getValue() instanceof Integer i) {
+    static void mutateExpr(Expression expr)
+    {
+        if (expr instanceof LiteralExpr lit && lit.getValue() instanceof Integer i)
+        {
             lit.setValue(i * 2);
-        } else if (expr instanceof BinaryExpr bin) {
+        }
+        else if (expr instanceof BinaryExpr bin)
+        {
             mutateExpr(bin.getLeft());
             mutateExpr(bin.getRight());
         }
@@ -740,23 +767,27 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
 // Implement a visitor
-public class LiteralCounter extends AbstractSourceVisitor<Integer> {
+public class LiteralCounter extends AbstractSourceVisitor<Integer>
+{
     private int count = 0;
 
     @Override
-    public Integer visitLiteral(LiteralExpr expr) {
+    public Integer visitLiteral(LiteralExpr expr)
+    {
         count++;
         return count;
     }
 
     @Override
-    public Integer visitBinary(BinaryExpr expr) {
+    public Integer visitBinary(BinaryExpr expr)
+    {
         expr.getLeft().accept(this);
         expr.getRight().accept(this);
         return count;
     }
 
-    public int getCount() {
+    public int getCount()
+    {
         return count;
     }
 }
@@ -782,7 +813,8 @@ AST transforms operate on the recovered AST to improve output readability. Unlik
 ```java
 package com.tonic.analysis.source.ast.transform;
 
-public interface ASTTransform {
+public interface ASTTransform
+{
     String getName();
     boolean transform(BlockStmt block);
 }
@@ -859,18 +891,24 @@ a loop would re-run the initializer), the declaration is moved inside:
 ```java
 // Before
 int local2 = 0;
-try {
+try
+{
     local2 = getValue();
     use(local2);
-} catch (Exception e) {
+}
+catch (Exception e)
+{
     // local2 not used here
 }
 
 // After
-try {
+try
+{
     int local2 = getValue();
     use(local2);
-} catch (Exception e) {
+}
+catch (Exception e)
+{
 }
 ```
 
@@ -886,31 +924,38 @@ eliminators expose shapes (e.g. an emptied then-branch) the first pass cannot se
 ### Writing Custom AST Transforms
 
 ```java
-public class MyTransform implements ASTTransform {
+public class MyTransform implements ASTTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "MyTransform";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         boolean changed = false;
         List<Statement> stmts = block.getStatements();
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
 
             // Your transformation logic here
-            if (shouldTransform(stmt)) {
+            if (shouldTransform(stmt))
+            {
                 stmts.set(i, transformStatement(stmt));
                 changed = true;
             }
 
             // Recurse into nested blocks
-            if (stmt instanceof IfStmt) {
+            if (stmt instanceof IfStmt)
+            {
                 IfStmt ifStmt = (IfStmt) stmt;
-                if (ifStmt.getThenBranch() instanceof BlockStmt) {
+                if (ifStmt.getThenBranch() instanceof BlockStmt)
+                {
                     changed |= transform((BlockStmt) ifStmt.getThenBranch());
                 }
             }
@@ -982,16 +1027,20 @@ ASTValidator validator = new ASTValidator()
 // Validate an AST
 ASTValidator.ValidationResult result = validator.validate(rootNode);
 
-if (!result.isValid()) {
+if (!result.isValid())
+{
     System.out.println("Errors: " + result.getErrorCount());
-    for (ValidationError error : result.getErrors()) {
+    for (ValidationError error : result.getErrors())
+    {
         System.err.println(error);
         // [ERROR] STRUCTURAL: Parent mismatch... at line 42 (BinaryExpr)
     }
 }
 
-if (result.hasWarnings()) {
-    for (ValidationError warning : result.getWarnings()) {
+if (result.hasWarnings())
+{
+    for (ValidationError warning : result.getWarnings())
+    {
         System.out.println(warning);
     }
 }

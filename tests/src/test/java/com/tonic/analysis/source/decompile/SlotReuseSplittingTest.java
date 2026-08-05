@@ -18,10 +18,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * source variables; merging them under one over-broadened type (boolean, or Object)
  * produces output that does not recompile.
  */
-class SlotReuseSplittingTest {
+class SlotReuseSplittingTest
+{
 
     @Test
-    void slotReusedForStringThenIntSplitsAndRecompiles() throws Exception {
+    void slotReusedForStringThenIntSplitsAndRecompiles() throws Exception
+    {
         String src =
             "public class Reuse {\n" +
             "  static String m(int x) {\n" +
@@ -39,7 +41,8 @@ class SlotReuseSplittingTest {
     }
 
     @Test
-    void slotReusedForTwoReferenceTypesSplitsAndRecompiles() throws Exception {
+    void slotReusedForTwoReferenceTypesSplitsAndRecompiles() throws Exception
+    {
         String src =
             "public class RefReuse {\n" +
             "  static String m(int x) {\n" +
@@ -60,7 +63,8 @@ class SlotReuseSplittingTest {
     }
 
     @Test
-    void genuineMergeStaysOneVariableAndRecompiles() throws Exception {
+    void genuineMergeStaysOneVariableAndRecompiles() throws Exception
+    {
         String src =
             "public class Merge {\n" +
             "  static int m(boolean c, java.util.List<String> a, java.util.List<String> b) {\n" +
@@ -73,7 +77,8 @@ class SlotReuseSplittingTest {
     }
 
     @Test
-    void slotReusedAcrossManyDisjointTypesRecompiles() throws Exception {
+    void slotReusedAcrossManyDisjointTypesRecompiles() throws Exception
+    {
         String src =
             "public class ManyReuse {\n" +
             "  static Object dispatch(int op, int x) {\n" +
@@ -92,7 +97,8 @@ class SlotReuseSplittingTest {
     }
 
     @Test
-    void tryCatchFinallyWithSideEffectCoalescesAndRecompiles() throws Exception {
+    void tryCatchFinallyWithSideEffectCoalescesAndRecompiles() throws Exception
+    {
         // javac inlines the finally body (num += 2) onto every exit path (normal try completion,
         // catch completion, and a synthetic catch-all rethrow). The recovery must coalesce those
         // copies into one finally clause and keep `num` as a single variable. Previously the slot
@@ -119,7 +125,8 @@ class SlotReuseSplittingTest {
     }
 
     @Test
-    void readModifyWriteStaysOneVariableAndRecompiles() throws Exception {
+    void readModifyWriteStaysOneVariableAndRecompiles() throws Exception
+    {
         // A read-modify-write chain (n = n + 2; n += 3) is one source variable. The slot partition
         // must not fragment it into separate def-use webs (which would emit out-of-scope references
         // like `n_1 = n + 2`).
@@ -136,21 +143,25 @@ class SlotReuseSplittingTest {
         assertRecompiles("Rmw", out);
     }
 
-    private int countOccurrences(String text, String pattern) {
+    private int countOccurrences(String text, String pattern)
+    {
         int count = 0;
         int index = 0;
-        while ((index = text.indexOf(pattern, index)) != -1) {
+        while ((index = text.indexOf(pattern, index)) != -1)
+        {
             count++;
             index += pattern.length();
         }
         return count;
     }
 
-    private String roundTrip(String className, String src) throws Exception {
+    private String roundTrip(String className, String src) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeCompiler(compiler);
         Path dir = Files.createTempDirectory("yabr-reuse");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, src);
             int rc = compiler.run(null, null, null, "-g", "-d", dir.toString(), srcFile.toString());
@@ -158,33 +169,43 @@ class SlotReuseSplittingTest {
 
             byte[] bytes = Files.readAllBytes(dir.resolve(className + ".class"));
             return new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private void assertRecompiles(String className, String decompiled) throws Exception {
+    private void assertRecompiles(String className, String decompiled) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeCompiler(compiler);
         Path dir = Files.createTempDirectory("yabr-recompile");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, decompiled);
             int rc = compiler.run(null, null, null, "-d", dir.toString(), srcFile.toString());
             assertEquals(0, rc, "decompiled output did not recompile:\n" + decompiled);
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private void assumeCompiler(JavaCompiler compiler) {
-        if (compiler == null) {
+    private void assumeCompiler(JavaCompiler compiler)
+    {
+        if (compiler == null)
+        {
             throw new org.opentest4j.TestAbortedException("no system Java compiler available");
         }
     }
 
-    private void deleteTree(Path dir) throws Exception {
-        try (var paths = Files.walk(dir)) {
+    private void deleteTree(Path dir) throws Exception
+    {
+        try (var paths = Files.walk(dir))
+        {
             paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try { Files.deleteIfExists(p); } catch (Exception ignored) {}
             });

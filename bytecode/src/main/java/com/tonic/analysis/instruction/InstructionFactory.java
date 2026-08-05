@@ -11,19 +11,28 @@ import java.util.Map;
 import static com.tonic.util.Opcode.*;
 
 /**
- * Decodes raw bytecode into {@link Instruction} objects. The single byte->Instruction decoder,
+ * Decodes raw bytecode into {@link Instruction} objects. The single byte-&gt;Instruction decoder,
  * shared by {@code CodeWriter} (for editing) and {@code CodePrinter} (for disassembly).
  */
-public final class InstructionFactory {
+public final class InstructionFactory
+{
 
-    private InstructionFactory() {
+    private InstructionFactory()
+    {
     }
 
-    /** Parses a method body into its instructions, in offset order. */
-    public static List<Instruction> parse(byte[] code, ConstPool constPool) {
+    /**
+     * Parses a method body into its instructions, in offset order.
+     * @param code the method bytecode
+     * @param constPool the class's constant pool for operand resolution
+     * @return the decoded instructions in offset order
+     */
+    public static List<Instruction> parse(byte[] code, ConstPool constPool)
+    {
         List<Instruction> out = new ArrayList<>();
         int offset = 0;
-        while (offset < code.length) {
+        while (offset < code.length)
+        {
             Instruction instr = createInstruction(Byte.toUnsignedInt(code[offset]), offset, code, constPool);
             out.add(instr);
             offset += instr.getLength();
@@ -31,8 +40,19 @@ public final class InstructionFactory {
         return out;
     }
 
-    public static Instruction createInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool) {
-        switch (opcode) {
+    /**
+     * Decodes the single instruction starting at an offset, reading its operands from the bytecode;
+     * truncated or unrecognized encodings decode as {@code UnknownInstruction}.
+     * @param opcode the opcode byte at the offset
+     * @param offset the bytecode offset of the instruction
+     * @param bytecode the full method bytecode
+     * @param constPool the class's constant pool for operand resolution
+     * @return the decoded instruction
+     */
+    public static Instruction createInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool)
+    {
+        switch (opcode)
+        {
             case 0x00:
                 return new NopInstruction(opcode, offset);
 
@@ -66,35 +86,40 @@ public final class InstructionFactory {
                 return new DConstInstruction(opcode, offset, dconstValue);
 
             case 0x10:
-                if (offset + 1 >= bytecode.length) {
+                if (offset + 1 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 byte bipushValue = bytecode[offset + 1];
                 return new BipushInstruction(opcode, offset, bipushValue);
 
             case 0x11:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 short sipushValue = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
                 return new SipushInstruction(opcode, offset, sipushValue);
 
             case 0x12:
-                if (offset + 1 >= bytecode.length) {
+                if (offset + 1 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int ldcIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
                 return new LdcInstruction(constPool, opcode, offset, ldcIndex);
 
             case 0x13:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int ldcWIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new LdcWInstruction(constPool, opcode, offset, ldcWIndex);
 
             case 0x14:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int ldc2WIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -304,7 +329,8 @@ public final class InstructionFactory {
                 return new IXorInstruction(opcode, offset);
 
             case 0x84:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int iincVarIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
@@ -353,7 +379,8 @@ public final class InstructionFactory {
             case 0xA4:
             case 0xA5:
             case 0xA6:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 short branchOffsetCond = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
@@ -368,7 +395,8 @@ public final class InstructionFactory {
                 return parseJsrInstruction(opcode, offset, bytecode);
 
             case 0xA9:
-                if (offset + 1 >= bytecode.length) {
+                if (offset + 1 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int retVarIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
@@ -380,7 +408,8 @@ public final class InstructionFactory {
                 return parseInvokeInstruction(opcode, offset, bytecode, constPool);
 
             case 0xB9:
-                if (offset + 4 >= bytecode.length) {
+                if (offset + 4 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int invokeInterfaceIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -388,7 +417,8 @@ public final class InstructionFactory {
                 return new InvokeInterfaceInstruction(constPool, opcode, offset, invokeInterfaceIndex, count);
 
             case 0xBA:
-                if (offset + 4 >= bytecode.length) {
+                if (offset + 4 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int invokedynamicCpIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -396,7 +426,8 @@ public final class InstructionFactory {
 
             case 0xB2:
             case 0xB4:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int fieldRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -404,28 +435,32 @@ public final class InstructionFactory {
 
             case 0xB3:
             case 0xB5:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int putFieldRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new PutFieldInstruction(constPool, opcode, offset, putFieldRefIndex);
 
             case 0xBB:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int newClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new NewObjectInstruction(constPool, opcode, offset, newClassIndex);
 
             case 0xBC:
-                if (offset + 1 >= bytecode.length) {
+                if (offset + 1 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int newarrayTypeCode = Byte.toUnsignedInt(bytecode[offset + 1]);
                 return new NewPrimitiveArrayInstruction(opcode, offset, newarrayTypeCode, 1);
 
             case 0xBD:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int anewarrayClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -438,14 +473,16 @@ public final class InstructionFactory {
                 return new ATHROWInstruction(opcode, offset);
 
             case 0xC0:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int typeIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new CheckCastInstruction(constPool, opcode, offset, typeIndex);
 
             case 0xC5:
-                if (offset + 3 >= bytecode.length) {
+                if (offset + 3 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int multianewarrayClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -470,7 +507,8 @@ public final class InstructionFactory {
                 return new MethodReturnInstruction(opcode, offset);
 
             case 0xC1:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int instanceOfClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
@@ -484,7 +522,8 @@ public final class InstructionFactory {
 
             case 0xC6:
             case 0xC7:
-                if (offset + 2 >= bytecode.length) {
+                if (offset + 2 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 short branchOffsetNull = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
@@ -497,11 +536,11 @@ public final class InstructionFactory {
 
     /**
      * Helper method to get the instruction name based on opcode.
-     *
      * @param opcode The opcode.
      * @return The name of the load instruction.
      */
-    private static String getLoadInstructionName(int opcode) {
+    private static String getLoadInstructionName(int opcode)
+    {
         if (opcode == ILOAD.getCode()) return "ILOAD";
         if (opcode == LLOAD.getCode()) return "LLOAD";
         if (opcode == FLOAD.getCode()) return "FLOAD";
@@ -512,11 +551,11 @@ public final class InstructionFactory {
 
     /**
      * Helper method to get the instruction name based on opcode.
-     *
      * @param opcode The opcode.
      * @return The name of the store instruction.
      */
-    private static String getStoreInstructionName(int opcode) {
+    private static String getStoreInstructionName(int opcode)
+    {
         if (opcode == ISTORE.getCode()) return "ISTORE";
         if (opcode == LSTORE.getCode()) return "LSTORE";
         if (opcode == FSTORE.getCode()) return "FSTORE";
@@ -527,20 +566,22 @@ public final class InstructionFactory {
 
     /**
      * Helper method to create Load Instructions.
-     *
      * @param opcode           The opcode of the load instruction.
      * @param offset           The bytecode offset.
      * @param bytecode         The entire bytecode array.
      * @param instructionName  The name of the instruction (e.g., "ILOAD").
      * @return A LoadInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction createLoadInstruction(int opcode, int offset, byte[] bytecode, String instructionName) {
+    private static Instruction createLoadInstruction(int opcode, int offset, byte[] bytecode, String instructionName)
+    {
         int operandBytes = 1;
-        if (offset + operandBytes >= bytecode.length) {
+        if (offset + operandBytes >= bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
         int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-        switch (instructionName) {
+        switch (instructionName)
+        {
             case "ILOAD":
                 return new ILoadInstruction(opcode, offset, varIndex);
             case "LLOAD":
@@ -558,20 +599,22 @@ public final class InstructionFactory {
 
     /**
      * Helper method to create Store Instructions.
-     *
      * @param opcode           The opcode of the store instruction.
      * @param offset           The bytecode offset.
      * @param bytecode         The entire bytecode array.
      * @param instructionName  The name of the instruction (e.g., "ISTORE").
      * @return A StoreInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction createStoreInstruction(int opcode, int offset, byte[] bytecode, String instructionName) {
+    private static Instruction createStoreInstruction(int opcode, int offset, byte[] bytecode, String instructionName)
+    {
         int operandBytes = 1;
-        if (offset + operandBytes >= bytecode.length) {
+        if (offset + operandBytes >= bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
         int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-        switch (instructionName) {
+        switch (instructionName)
+        {
             case "ISTORE":
                 return new IStoreInstruction(opcode, offset, varIndex);
             case "LSTORE":
@@ -589,77 +632,97 @@ public final class InstructionFactory {
 
     /**
      * Parses a GOTO instruction (0xA7) or GOTO_W (0xC8).
-     *
      * @param opcode   The opcode of the GOTO instruction.
      * @param offset   The bytecode offset.
      * @param bytecode The entire bytecode array.
      * @return A GotoInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction parseGotoInstruction(int opcode, int offset, byte[] bytecode) {
-        if (opcode == GOTO.getCode()) {
-            if (offset + 2 >= bytecode.length) {
+    private static Instruction parseGotoInstruction(int opcode, int offset, byte[] bytecode)
+    {
+        if (opcode == GOTO.getCode())
+        {
+            if (offset + 2 >= bytecode.length)
+            {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
             }
             short branchOffset = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
             return new GotoInstruction(opcode, offset, branchOffset);
-        } else if (opcode == GOTO_W.getCode()) {
-            if (offset + 4 >= bytecode.length) {
+        }
+        else if (opcode == GOTO_W.getCode())
+        {
+            if (offset + 4 >= bytecode.length)
+            {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
             }
             int branchOffset = (bytecode[offset + 1] << 24) | ((bytecode[offset + 2] & 0xFF) << 16) |
                     ((bytecode[offset + 3] & 0xFF) << 8) | (bytecode[offset + 4] & 0xFF);
             return new GotoInstruction(opcode, offset, branchOffset);
-        } else {
+        }
+        else
+        {
             return new UnknownInstruction(opcode, offset, 1);
         }
     }
 
     /**
      * Parses a JSR instruction (0xA8) or JSR_W (0xC9).
-     *
      * @param opcode   The opcode of the JSR instruction.
      * @param offset   The bytecode offset.
      * @param bytecode The entire bytecode array.
      * @return A JsrInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction parseJsrInstruction(int opcode, int offset, byte[] bytecode) {
-        if (opcode == JSR.getCode()) {
-            if (offset + 2 >= bytecode.length) {
+    private static Instruction parseJsrInstruction(int opcode, int offset, byte[] bytecode)
+    {
+        if (opcode == JSR.getCode())
+        {
+            if (offset + 2 >= bytecode.length)
+            {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
             }
             short jsrOffset = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
             return new JsrInstruction(opcode, offset, jsrOffset);
-        } else if (opcode == JSR_W.getCode()) {
-            if (offset + 4 >= bytecode.length) {
+        }
+        else if (opcode == JSR_W.getCode())
+        {
+            if (offset + 4 >= bytecode.length)
+            {
                 return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
             }
             int jsrOffset = (bytecode[offset + 1] << 24) | ((bytecode[offset + 2] & 0xFF) << 16) |
                     ((bytecode[offset + 3] & 0xFF) << 8) | (bytecode[offset + 4] & 0xFF);
             return new JsrInstruction(opcode, offset, jsrOffset);
-        } else {
+        }
+        else
+        {
             return new UnknownInstruction(opcode, offset, 1);
         }
     }
 
     /**
      * Parses INVOKEVIRTUAL, INVOKESPECIAL, and INVOKESTATIC instructions (0xB6 - 0xB8).
-     *
      * @param opcode     The opcode of the invoke instruction.
      * @param offset     The bytecode offset.
      * @param bytecode   The entire bytecode array.
      * @param constPool  The constant pool associated with the class.
      * @return The corresponding InvokeInstruction instance.
      */
-    private static Instruction parseInvokeInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool) {
-        if (offset + 2 >= bytecode.length) {
+    private static Instruction parseInvokeInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool)
+    {
+        if (offset + 2 >= bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
         int methodRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
-        if (opcode == INVOKEVIRTUAL.getCode()) {
+        if (opcode == INVOKEVIRTUAL.getCode())
+        {
             return new InvokeVirtualInstruction(constPool, opcode, offset, methodRefIndex);
-        } else if (opcode == INVOKESPECIAL.getCode()) {
+        }
+        else if (opcode == INVOKESPECIAL.getCode())
+        {
             return new InvokeSpecialInstruction(constPool, opcode, offset, methodRefIndex);
-        } else if (opcode == INVOKESTATIC.getCode()) {
+        }
+        else if (opcode == INVOKESTATIC.getCode())
+        {
             return new InvokeStaticInstruction(constPool, opcode, offset, methodRefIndex);
         }
         return new UnknownInstruction(opcode, offset, 3);
@@ -667,18 +730,19 @@ public final class InstructionFactory {
 
     /**
      * Parses a LOOKUPSWITCH instruction starting at the given offset.
-     *
      * @param opcode    The opcode of the instruction (0xAB).
      * @param offset    The bytecode offset of the instruction.
      * @param bytecode  The entire bytecode array.
      * @return A LookupSwitchInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction parseLookupSwitchInstruction(int opcode, int offset, byte[] bytecode) {
+    private static Instruction parseLookupSwitchInstruction(int opcode, int offset, byte[] bytecode)
+    {
         int padding = (4 - ((offset + 1) % 4)) % 4;
         int defaultOffsetPos = offset + 1 + padding;
         int npairsPos = defaultOffsetPos + 4;
 
-        if (npairsPos + 4 > bytecode.length) {
+        if (npairsPos + 4 > bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
 
@@ -695,12 +759,14 @@ public final class InstructionFactory {
         int pairsStart = npairsPos + 4;
         int pairsLength = npairs * 8;
 
-        if (pairsStart + pairsLength > bytecode.length) {
+        if (pairsStart + pairsLength > bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
 
         Map<Integer, Integer> matchOffsets = new LinkedHashMap<>();
-        for (int i = 0; i < npairs; i++) {
+        for (int i = 0; i < npairs; i++)
+        {
             int keyPos = pairsStart + i * 8;
             int jumpOffsetPos = keyPos + 4;
 
@@ -722,19 +788,20 @@ public final class InstructionFactory {
 
     /**
      * Parses a TABLESWITCH instruction starting at the given offset.
-     *
      * @param opcode    The opcode of the instruction (0xAA).
      * @param offset    The bytecode offset of the instruction.
      * @param bytecode  The entire bytecode array.
      * @return A TableSwitchInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction parseTableSwitchInstruction(int opcode, int offset, byte[] bytecode) {
+    private static Instruction parseTableSwitchInstruction(int opcode, int offset, byte[] bytecode)
+    {
         int padding = (4 - ((offset + 1) % 4)) % 4;
         int defaultOffsetPos = offset + 1 + padding;
         int lowPos = defaultOffsetPos + 4;
         int highPos = lowPos + 4;
 
-        if (highPos + 4 > bytecode.length) {
+        if (highPos + 4 > bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
 
@@ -756,12 +823,14 @@ public final class InstructionFactory {
         int jumpOffsetsStart = highPos + 4;
         int jumpOffsetsLength = (high - low + 1) * 4;
 
-        if (jumpOffsetsStart + jumpOffsetsLength > bytecode.length) {
+        if (jumpOffsetsStart + jumpOffsetsLength > bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
 
         Map<Integer, Integer> jumpOffsets = new LinkedHashMap<>();
-        for (int i = 0; i <= high - low; i++) {
+        for (int i = 0; i <= high - low; i++)
+        {
             int jumpOffsetPos = jumpOffsetsStart + i * 4;
             int jumpOffset = ((bytecode[jumpOffsetPos] & 0xFF) << 24) |
                     ((bytecode[jumpOffsetPos + 1] & 0xFF) << 16) |
@@ -776,26 +845,29 @@ public final class InstructionFactory {
 
     /**
      * Parses a WIDE instruction starting at the given offset.
-     *
      * @param opcode    The opcode of the instruction (0xC4).
      * @param offset    The bytecode offset of the instruction.
      * @param bytecode  The entire bytecode array.
      * @return A WideInstruction instance or UnknownInstruction if malformed.
      */
-    private static Instruction parseWideInstruction(int opcode, int offset, byte[] bytecode) {
-        if (offset + 1 >= bytecode.length) {
+    private static Instruction parseWideInstruction(int opcode, int offset, byte[] bytecode)
+    {
+        if (offset + 1 >= bytecode.length)
+        {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
 
         int modifiedOpcodeCode = Byte.toUnsignedInt(bytecode[offset + 1]);
 
-        switch (modifiedOpcodeCode) {
+        switch (modifiedOpcodeCode)
+        {
             case 0x15:
             case 0x16:
             case 0x17:
             case 0x18:
             case 0x19:
-                if (offset + 3 >= bytecode.length) {
+                if (offset + 3 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int varIndexLoad = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
@@ -806,14 +878,16 @@ public final class InstructionFactory {
             case 0x38:
             case 0x39:
             case 0x3A:
-                if (offset + 3 >= bytecode.length) {
+                if (offset + 3 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int varIndexStore = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
                 return new WideInstruction(opcode, offset, Opcode.fromCode(modifiedOpcodeCode), varIndexStore);
 
             case 0x84:
-                if (offset + 5 >= bytecode.length) {
+                if (offset + 5 >= bytecode.length)
+                {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int wideVarIndex = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);

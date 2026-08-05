@@ -35,25 +35,29 @@ import java.util.concurrent.ConcurrentHashMap;
  * intercepted and answered identically for both runs, and compares the resulting observable-effect
  * trace (external calls with normalized args, plus the terminal return / throw).
  *
- * <p>Sound by construction: a {@link Kind#NOT_EQUIVALENT} verdict is a real witnessed divergence, not
+ *Sound by construction: a {@link Kind#NOT_EQUIVALENT} verdict is a real witnessed divergence, not
  * a false positive. Coverage is bounded (best-effort bug-finder); anything the engine cannot run
  * yields {@link Kind#INCONCLUSIVE}. v1 observable set is calls + return + throw (field/array-write
  * coverage is a documented future extension), and object values are normalized coarsely by class name.
  */
-public final class RecoveryEquivalenceOracle {
+public final class RecoveryEquivalenceOracle
+{
 
     public enum Kind { EQUIVALENT, NOT_EQUIVALENT, INCONCLUSIVE }
 
-    public static final class Verdict {
+    public static final class Verdict
+    {
         public final Kind kind;
         public final String detail;
 
-        private Verdict(Kind kind, String detail) {
+        private Verdict(Kind kind, String detail)
+        {
             this.kind = kind;
             this.detail = detail;
         }
 
-        public String toString() {
+        public String toString()
+        {
             return kind + (detail.isEmpty() ? "" : ": " + detail);
         }
     }
@@ -69,26 +73,32 @@ public final class RecoveryEquivalenceOracle {
      */
     private final Map<ClassPool, ClassResolver> resolvers = new ConcurrentHashMap<>();
 
-    /** Optional self-invalidating verdict cache; when set, unchanged methods skip execution. */
+    /**
+     * Optional self-invalidating verdict cache; when set, unchanged methods skip execution.
+     */
     private OracleCache cache;
 
-    public RecoveryEquivalenceOracle() {
+    public RecoveryEquivalenceOracle()
+    {
         this(16, 0x9E3779B9L, 500_000);
     }
 
-    public RecoveryEquivalenceOracle(int inputVectors, long seed, int maxInstructions) {
+    public RecoveryEquivalenceOracle(int inputVectors, long seed, int maxInstructions)
+    {
         this.inputVectors = inputVectors;
         this.seed = seed;
         this.maxInstructions = maxInstructions;
     }
 
-    private ClassResolver resolverFor(ClassPool pool) {
+    private ClassResolver resolverFor(ClassPool pool)
+    {
         return resolvers.computeIfAbsent(pool, ClassResolver::new);
     }
 
     /** Enables the given cache; unchanged (original+recompiled) methods reuse their verdict.
      * Package-private (like {@link OracleCache}) - only same-package tests configure it. */
-    RecoveryEquivalenceOracle cache(OracleCache cache) {
+    RecoveryEquivalenceOracle cache(OracleCache cache)
+    {
         this.cache = cache;
         return this;
     }
@@ -97,15 +107,18 @@ public final class RecoveryEquivalenceOracle {
      * Runs {@link #differential} unless a cache is set and holds a verdict for this method whose
      * original and recompiled bytecode hashes both still match - in which case execution is skipped.
      */
-    private Verdict cachedDifferential(String owner, String sig, MethodEntry original, MethodEntry recovered, ClassPool pool) {
-        if (cache == null) {
+    private Verdict cachedDifferential(String owner, String sig, MethodEntry original, MethodEntry recovered, ClassPool pool)
+    {
+        if (cache == null)
+        {
             return differential(original, recovered, pool);
         }
         String key = owner + "#" + sig;
         String origHash = OracleCache.hash(codeBytes(original));
         String recHash = OracleCache.hash(codeBytes(recovered));
         String[] hit = cache.lookup(key);
-        if (hit != null && hit[0].equals(origHash) && hit[1].equals(recHash)) {
+        if (hit != null && hit[0].equals(origHash) && hit[1].equals(recHash))
+        {
             cache.recordHit();
             return new Verdict(Kind.valueOf(hit[2]), hit[3]);
         }
@@ -114,15 +127,18 @@ public final class RecoveryEquivalenceOracle {
         return v;
     }
 
-    private static byte[] codeBytes(MethodEntry m) {
+    private static byte[] codeBytes(MethodEntry m)
+    {
         return m.getCodeAttribute() == null ? null : m.getCodeAttribute().getCode();
     }
 
-    public static final class MethodVerdict {
+    public static final class MethodVerdict
+    {
         public final String method;
         public final Verdict verdict;
 
-        MethodVerdict(String method, Verdict verdict) {
+        MethodVerdict(String method, Verdict verdict)
+        {
             this.method = method;
             this.verdict = verdict;
         }
@@ -132,29 +148,40 @@ public final class RecoveryEquivalenceOracle {
      * Checks every concrete method of a class, recompiling the class once and reusing that clone.
      * Much cheaper than calling {@link #check} per method for a corpus run.
      */
-    public List<MethodVerdict> checkClass(ClassFile cf, ClassPool pool) {
+    public List<MethodVerdict> checkClass(ClassFile cf, ClassPool pool)
+    {
         List<MethodVerdict> out = new ArrayList<>();
         ClassFile clone;
-        try {
+        try
+        {
             clone = Recompile.recompiledClone(cf, pool);
-        } catch (Throwable t) {
+        }
+        catch (Throwable t)
+        {
             clone = null;
         }
         // Run the original from a fresh reload too, so both sides share identical class-init state
         // (a pool-resident original vs. a fresh clone would leak <clinit> effects into only one trace).
         ClassFile origFresh = null;
-        if (clone != null) {
-            try {
+        if (clone != null)
+        {
+            try
+            {
                 origFresh = reload(cf);
-            } catch (Throwable ignored) {
+            }
+            catch (Throwable ignored)
+            {
             }
         }
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getCodeAttribute() == null || m.getName().equals("<clinit>")) {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getCodeAttribute() == null || m.getName().equals("<clinit>"))
+            {
                 continue;
             }
             String sig = m.getName() + m.getDesc();
-            if (clone == null || origFresh == null) {
+            if (clone == null || origFresh == null)
+            {
                 out.add(new MethodVerdict(sig, new Verdict(Kind.INCONCLUSIVE, "class not recompilable")));
                 continue;
             }
@@ -168,36 +195,48 @@ public final class RecoveryEquivalenceOracle {
         return out;
     }
 
-    /** Checks one method of {@code cf}; {@code pool} must contain {@code cf} and its dependencies. */
-    public Verdict check(ClassFile cf, ClassPool pool, MethodEntry method) {
-        if (method.getCodeAttribute() == null) {
+    /**
+     * Checks one method of {@code cf}; {@code pool} must contain {@code cf} and its dependencies.
+     */
+    public Verdict check(ClassFile cf, ClassPool pool, MethodEntry method)
+    {
+        if (method.getCodeAttribute() == null)
+        {
             return new Verdict(Kind.INCONCLUSIVE, "no code (abstract/native)");
         }
         ClassFile clone;
-        try {
+        try
+        {
             clone = Recompile.recompiledClone(cf, pool);
-        } catch (Throwable t) {
+        }
+        catch (Throwable t)
+        {
             return new Verdict(Kind.INCONCLUSIVE, "recompile failed: " + t);
         }
-        if (clone == null) {
+        if (clone == null)
+        {
             return new Verdict(Kind.INCONCLUSIVE, "not recompilable");
         }
         ClassFile origFresh;
-        try {
+        try
+        {
             origFresh = reload(cf);
-        } catch (Throwable t) {
+        }
+        catch (Throwable t)
+        {
             return new Verdict(Kind.INCONCLUSIVE, "reload failed: " + t);
         }
         MethodEntry original = find(origFresh, method.getName(), method.getDesc());
         MethodEntry recovered = find(clone, method.getName(), method.getDesc());
-        if (original == null || recovered == null) {
+        if (original == null || recovered == null)
+        {
             return new Verdict(Kind.INCONCLUSIVE, "method absent from a reloaded copy");
         }
-        return cachedDifferential(cf.getClassName(), method.getName() + method.getDesc(),
-                original, recovered, pool);
+        return cachedDifferential(cf.getClassName(), method.getName() + method.getDesc(), original, recovered, pool);
     }
 
-    private static ClassFile reload(ClassFile cf) throws Exception {
+    private static ClassFile reload(ClassFile cf) throws Exception
+    {
         return new ClassFile(new ByteArrayInputStream(cf.write()));
     }
 
@@ -206,7 +245,8 @@ public final class RecoveryEquivalenceOracle {
      * compares their observable-effect traces. Package-private so tests can pit two arbitrary methods
      * against each other (positive/negative controls) without the recompile step.
      */
-    Verdict differential(MethodEntry a, MethodEntry b, ClassPool pool) {
+    Verdict differential(MethodEntry a, MethodEntry b, ClassPool pool)
+    {
         int corpusCap = inputVectors + 6;
         int probeBudget = Math.max(inputVectors * 4, 36);
         long[] dictionary = CoverageGuidedInputs.extractDictionary(a);
@@ -215,18 +255,21 @@ public final class RecoveryEquivalenceOracle {
                 spec -> coverageEdges(pool, a, spec));
 
         boolean anyRan = false;
-        for (int i = 0; i < corpus.size(); i++) {
+        for (int i = 0; i < corpus.size(); i++)
+        {
             InputSpec spec = corpus.get(i);
             Outcome oa = run(pool, a, spec);
             Outcome ob = run(pool, b, spec);
-            if (oa.reason != null || ob.reason != null) {
+            if (oa.reason != null || ob.reason != null)
+            {
                 // One side hit an engine limit on this input; it witnessed nothing, so skip it rather
                 // than abort the whole comparison - another input may still expose a real divergence.
                 continue;
             }
             anyRan = true;
             int div = firstDivergence(oa.trace, ob.trace);
-            if (div >= 0) {
+            if (div >= 0)
+            {
                 return new Verdict(Kind.NOT_EQUIVALENT, "input#" + i + " diverges at effect " + div
                         + "\n    a: " + at(oa.trace, div)
                         + "\n    b: " + at(ob.trace, div));
@@ -242,10 +285,12 @@ public final class RecoveryEquivalenceOracle {
      * branches (a guarded call reached by falling through a branch shows up only as the call), and
      * because a call is exactly the kind of observable effect a divergence is made of.
      */
-    private Set<String> coverageEdges(ClassPool pool, MethodEntry method, InputSpec spec) {
+    private Set<String> coverageEdges(ClassPool pool, MethodEntry method, InputSpec spec)
+    {
         BranchCoverageListener cov = new BranchCoverageListener();
         List<String> trace = new ArrayList<>();
-        try {
+        try
+        {
             SimpleHeapManager heap = new SimpleHeapManager();
             BytecodeContext ctx = new BytecodeContext.Builder()
                     .mode(ExecutionMode.RECURSIVE)
@@ -258,15 +303,20 @@ public final class RecoveryEquivalenceOracle {
             BytecodeEngine engine = new BytecodeEngine(ctx);
             engine.addListener(cov);
             engine.execute(method, args);
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable ignored)
+        {
             // partial coverage collected before a failure is still informative
         }
         Set<String> features = new java.util.HashSet<>();
-        for (Long e : cov.edges()) {
+        for (Long e : cov.edges())
+        {
             features.add("B" + e);
         }
-        for (String line : trace) {
-            if (line.startsWith("CALL ")) {
+        for (String line : trace)
+        {
+            if (line.startsWith("CALL "))
+            {
                 int r = line.indexOf(" recv=");
                 features.add("C:" + (r >= 0 ? line.substring(0, r) : line));
             }
@@ -274,8 +324,10 @@ public final class RecoveryEquivalenceOracle {
         return features;
     }
 
-    private Outcome run(ClassPool pool, MethodEntry method, InputSpec spec) {
-        try {
+    private Outcome run(ClassPool pool, MethodEntry method, InputSpec spec)
+    {
+        try
+        {
             List<String> trace = new ArrayList<>();
             SimpleHeapManager heap = new SimpleHeapManager();
             ClassResolver resolver = resolverFor(pool);
@@ -304,48 +356,61 @@ public final class RecoveryEquivalenceOracle {
             effects.resetEscaping();
             seedEscaping(effects, args);
             BytecodeResult result = engine.execute(method, args);
-            if (result.isSuccess()) {
+            if (result.isSuccess())
+            {
                 trace.add("RETURN " + normalize(result.getReturnValue()));
-            } else if (result.hasException()) {
+            }
+            else if (result.hasException())
+            {
                 ObjectInstance ex = result.getException();
                 trace.add("THROW " + (ex == null ? "?" : ex.getClassName()));
-            } else {
+            }
+            else
+            {
                 // An abort (instruction bound, unsupported opcode, ...) is an engine limitation, not a
                 // witnessed behavioral divergence: the run never finished, so comparing it as a terminal
                 // effect would fabricate a false positive. Report it as inconclusive instead.
                 return Outcome.inconclusive("aborted: " + result.getStatus());
             }
             return Outcome.ok(trace);
-        } catch (Throwable t) {
+        }
+        catch (Throwable t)
+        {
             return Outcome.inconclusive(t.toString());
         }
     }
 
-    // --- effect stub + normalization -------------------------------------------------------------
+    // effect stub + normalization
 
-    private static final class Interceptor implements DelegatingHandler.InvocationCallback {
+    private static final class Interceptor implements DelegatingHandler.InvocationCallback
+    {
         private final List<String> trace;
         private final HeapManager heap;
 
-        Interceptor(List<String> trace, HeapManager heap) {
+        Interceptor(List<String> trace, HeapManager heap)
+        {
             this.trace = trace;
             this.heap = heap;
         }
 
-        public ConcreteValue invoke(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args) {
+        public ConcreteValue invoke(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args)
+        {
             // Class initialization is environmental, not the method's own behavior: exclude <clinit>
             // and JVM bootstrap (registerNatives) effects, which can fire in one run and not the other
             // purely on first-touch ordering, so they must not count as a divergence.
             String name = method.getName();
-            if (name.equals("<clinit>") || name.equals("registerNatives")) {
+            if (name.equals("<clinit>") || name.equals("registerNatives"))
+            {
                 return canned(method.getDesc(), name, heap);
             }
             StringBuilder key = new StringBuilder(method.getClassFile().getClassName())
                     .append('.').append(method.getName()).append(method.getDesc())
                     .append(" recv=").append(receiver == null ? "static" : receiver.getClassName())
                     .append(" args=[");
-            for (int i = 0; i < args.length; i++) {
-                if (i > 0) {
+            for (int i = 0; i < args.length; i++)
+            {
+                if (i > 0)
+                {
                     key.append(',');
                 }
                 key.append(normalize(args[i]));
@@ -356,9 +421,12 @@ public final class RecoveryEquivalenceOracle {
         }
     }
 
-    private static void seedEscaping(EffectListener effects, ConcreteValue[] args) {
-        for (ConcreteValue a : args) {
-            if (a != null && a.getTag() == ValueTag.REFERENCE && a.asReference() != null) {
+    private static void seedEscaping(EffectListener effects, ConcreteValue[] args)
+    {
+        for (ConcreteValue a : args)
+        {
+            if (a != null && a.getTag() == ValueTag.REFERENCE && a.asReference() != null)
+            {
                 effects.markEscaping(a.asReference());
             }
         }
@@ -370,70 +438,89 @@ public final class RecoveryEquivalenceOracle {
      * an already-escaping object. Writes to purely-local objects are ignored, so trace divergence
      * reflects only mutation of state visible outside the method.
      */
-    private static final class EffectListener implements CapableListener {
+    private static final class EffectListener implements CapableListener
+    {
         private final List<String> trace;
         private final Set<ObjectInstance> escaping = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        EffectListener(List<String> trace) {
+        EffectListener(List<String> trace)
+        {
             this.trace = trace;
         }
 
-        void markEscaping(ObjectInstance o) {
-            if (o != null) {
+        void markEscaping(ObjectInstance o)
+        {
+            if (o != null)
+            {
                 escaping.add(o);
             }
         }
 
-        void resetEscaping() {
+        void resetEscaping()
+        {
             escaping.clear();
         }
 
-        public Set<ListenerCapability> getCapabilities() {
+        public Set<ListenerCapability> getCapabilities()
+        {
             return EnumSet.of(ListenerCapability.ARRAY_OPERATIONS, ListenerCapability.FIELD_OPERATIONS);
         }
 
-        public void onFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue) {
-            if (instance == null || !escaping.contains(instance)) {
+        public void onFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue)
+        {
+            if (instance == null || !escaping.contains(instance))
+            {
                 return;
             }
             trace.add("PUT " + instance.getClassName() + "." + fieldName + "=" + normalize(newValue));
             propagate(newValue);
         }
 
-        public void onArrayWrite(ArrayInstance array, int index, ConcreteValue oldValue, ConcreteValue newValue) {
-            if (array == null || !escaping.contains(array)) {
+        public void onArrayWrite(ArrayInstance array, int index, ConcreteValue oldValue, ConcreteValue newValue)
+        {
+            if (array == null || !escaping.contains(array))
+            {
                 return;
             }
             trace.add("ASTORE " + array.getClassName() + "[" + index + "]=" + normalize(newValue));
             propagate(newValue);
         }
 
-        public void onFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value) {
-            if (instance != null && escaping.contains(instance)) {
+        public void onFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value)
+        {
+            if (instance != null && escaping.contains(instance))
+            {
                 propagate(value);
             }
         }
 
-        public void onArrayRead(ArrayInstance array, int index, ConcreteValue value) {
-            if (array != null && escaping.contains(array)) {
+        public void onArrayRead(ArrayInstance array, int index, ConcreteValue value)
+        {
+            if (array != null && escaping.contains(array))
+            {
                 propagate(value);
             }
         }
 
-        private void propagate(ConcreteValue v) {
-            if (v != null && v.getTag() == ValueTag.REFERENCE && v.asReference() != null) {
+        private void propagate(ConcreteValue v)
+        {
+            if (v != null && v.getTag() == ValueTag.REFERENCE && v.asReference() != null)
+            {
                 escaping.add(v.asReference());
             }
         }
     }
 
-    private static ConcreteValue canned(String desc, String key, HeapManager heap) {
+    private static ConcreteValue canned(String desc, String key, HeapManager heap)
+    {
         String ret = DescriptorUtil.parseReturnDescriptor(desc);
         long h = key.hashCode() & 0xFFFFFFFFL;
-        if (ret == null || ret.equals("V")) {
+        if (ret == null || ret.equals("V"))
+        {
             return null;
         }
-        switch (ret.charAt(0)) {
+        switch (ret.charAt(0))
+        {
             case 'Z': return ConcreteValue.intValue((int) (h & 1));
             case 'B': case 'C': case 'S': case 'I': return ConcreteValue.intValue((int) h);
             case 'J': return ConcreteValue.longValue(h);
@@ -444,11 +531,14 @@ public final class RecoveryEquivalenceOracle {
         }
     }
 
-    private static String normalize(ConcreteValue v) {
-        if (v == null) {
+    private static String normalize(ConcreteValue v)
+    {
+        if (v == null)
+        {
             return "none";
         }
-        switch (v.getTag()) {
+        switch (v.getTag())
+        {
             case NULL: return "null";
             case INT: return "i" + v.asInt();
             case LONG: return "l" + v.asLong();
@@ -461,45 +551,56 @@ public final class RecoveryEquivalenceOracle {
         }
     }
 
-    // --- helpers ---------------------------------------------------------------------------------
+    // helpers
 
-    private static int firstDivergence(List<String> a, List<String> b) {
+    private static int firstDivergence(List<String> a, List<String> b)
+    {
         int n = Math.max(a.size(), b.size());
-        for (int i = 0; i < n; i++) {
-            if (!at(a, i).equals(at(b, i))) {
+        for (int i = 0; i < n; i++)
+        {
+            if (!at(a, i).equals(at(b, i)))
+            {
                 return i;
             }
         }
         return -1;
     }
 
-    private static String at(List<String> t, int i) {
+    private static String at(List<String> t, int i)
+    {
         return i < t.size() ? t.get(i) : "<end>";
     }
 
-    private static MethodEntry find(ClassFile cf, String name, String desc) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name) && m.getDesc().contentEquals(desc)) {
+    private static MethodEntry find(ClassFile cf, String name, String desc)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name) && m.getDesc().contentEquals(desc))
+            {
                 return m;
             }
         }
         return null;
     }
 
-    private static final class Outcome {
+    private static final class Outcome
+    {
         final List<String> trace;
         final String reason;
 
-        private Outcome(List<String> trace, String reason) {
+        private Outcome(List<String> trace, String reason)
+        {
             this.trace = trace;
             this.reason = reason;
         }
 
-        static Outcome ok(List<String> trace) {
+        static Outcome ok(List<String> trace)
+        {
             return new Outcome(trace, null);
         }
 
-        static Outcome inconclusive(String reason) {
+        static Outcome inconclusive(String reason)
+        {
             return new Outcome(null, reason);
         }
     }

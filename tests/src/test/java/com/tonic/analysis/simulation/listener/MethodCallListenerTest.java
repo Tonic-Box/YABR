@@ -15,19 +15,22 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodCallListenerTest {
+class MethodCallListenerTest
+{
 
     private MethodCallListener listener;
     private SimulationState mockState;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new MethodCallListener();
         mockState = SimulationState.empty();
     }
 
     @Test
-    void trackInvokeVirtual() {
+    void trackInvokeVirtual()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
 
         listener.onMethodCall(instr, mockState);
@@ -42,7 +45,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void trackInvokeStatic() {
+    void trackInvokeStatic()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.STATIC, "java/lang/Math", "abs", "(I)I");
 
         listener.onMethodCall(instr, mockState);
@@ -57,7 +61,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void trackInvokeInterface() {
+    void trackInvokeInterface()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.INTERFACE, "java/util/List", "size", "()I");
 
         listener.onMethodCall(instr, mockState);
@@ -72,7 +77,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void trackInvokeSpecial() {
+    void trackInvokeSpecial()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.SPECIAL, "java/lang/Object", "<init>", "()V");
 
         listener.onMethodCall(instr, mockState);
@@ -87,7 +93,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void trackInvokeDynamic() {
+    void trackInvokeDynamic()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.DYNAMIC, "LambdaMetafactory", "lambda$0", "()Ljava/lang/Runnable;");
 
         listener.onMethodCall(instr, mockState);
@@ -102,7 +109,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void trackMultipleCallsOfSameMethod() {
+    void trackMultipleCallsOfSameMethod()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;");
 
         listener.onMethodCall(instr, mockState);
@@ -116,7 +124,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void trackMultipleDifferentMethods() {
+    void trackMultipleDifferentMethods()
+    {
         InvokeInstruction instr1 = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         InvokeInstruction instr2 = createInvoke(InvokeType.STATIC, "java/lang/Math", "abs", "(I)I");
         InvokeInstruction instr3 = createInvoke(InvokeType.INTERFACE, "java/util/List", "size", "()I");
@@ -133,7 +142,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getMostCalledMethods() {
+    void getMostCalledMethods()
+    {
         InvokeInstruction instr1 = createInvoke(InvokeType.VIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;");
         InvokeInstruction instr2 = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         InvokeInstruction instr3 = createInvoke(InvokeType.STATIC, "java/lang/Math", "abs", "(I)I");
@@ -167,7 +177,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getMostCalledMethodsWithLimitGreaterThanDistinct() {
+    void getMostCalledMethodsWithLimitGreaterThanDistinct()
+    {
         InvokeInstruction instr1 = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         InvokeInstruction instr2 = createInvoke(InvokeType.STATIC, "java/lang/Math", "abs", "(I)I");
 
@@ -180,14 +191,16 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getMostCalledMethodsEmpty() {
+    void getMostCalledMethodsEmpty()
+    {
         List<Map.Entry<MethodCallListener.MethodReference, Integer>> topMethods = listener.getMostCalledMethods(5);
 
         assertEquals(0, topMethods.size());
     }
 
     @Test
-    void getCallSequence() {
+    void getCallSequence()
+    {
         MethodCallListener sequenceListener = new MethodCallListener(true);
 
         InvokeInstruction instr1 = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
@@ -215,7 +228,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getCallSequenceDisabledByDefault() {
+    void getCallSequenceDisabledByDefault()
+    {
         MethodCallListener noSequenceListener = new MethodCallListener(false);
 
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
@@ -227,7 +241,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void detectConstructorCalls() {
+    void detectConstructorCalls()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.SPECIAL, "java/lang/Object", "<init>", "()V");
 
         listener.onMethodCall(instr, mockState);
@@ -242,7 +257,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void detectClassInitializerCalls() {
+    void detectClassInitializerCalls()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.STATIC, "java/lang/System", "<clinit>", "()V");
 
         listener.onMethodCall(instr, mockState);
@@ -256,7 +272,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void onSimulationStartResetsCounts() {
+    void onSimulationStartResetsCounts()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         listener.onMethodCall(instr, mockState);
         listener.onMethodCall(instr, mockState);
@@ -272,13 +289,15 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getCallCountForNonExistentMethod() {
+    void getCallCountForNonExistentMethod()
+    {
         int count = listener.getCallCount("NonExistent", "method", "()V");
         assertEquals(0, count);
     }
 
     @Test
-    void getDistinctMethodCount() {
+    void getDistinctMethodCount()
+    {
         InvokeInstruction instr1 = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         InvokeInstruction instr2 = createInvoke(InvokeType.STATIC, "java/lang/Math", "abs", "(I)I");
         InvokeInstruction instr3 = createInvoke(InvokeType.INTERFACE, "java/util/List", "size", "()I");
@@ -295,7 +314,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void callSiteTracksStackDepth() {
+    void callSiteTracksStackDepth()
+    {
         MethodCallListener sequenceListener = new MethodCallListener(true);
         SimulationState stateWithStack = SimulationState.empty()
             .push(null)
@@ -310,7 +330,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void methodReferenceEquality() {
+    void methodReferenceEquality()
+    {
         MethodCallListener.MethodReference ref1 = new MethodCallListener.MethodReference("java/lang/Object", "toString", "()Ljava/lang/String;");
         MethodCallListener.MethodReference ref2 = new MethodCallListener.MethodReference("java/lang/Object", "toString", "()Ljava/lang/String;");
         MethodCallListener.MethodReference ref3 = new MethodCallListener.MethodReference("java/lang/Object", "hashCode", "()I");
@@ -321,13 +342,15 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void methodReferenceToString() {
+    void methodReferenceToString()
+    {
         MethodCallListener.MethodReference ref = new MethodCallListener.MethodReference("java/lang/Object", "toString", "()Ljava/lang/String;");
         assertEquals("java/lang/Object.toString()Ljava/lang/String;", ref.toString());
     }
 
     @Test
-    void callSiteToString() {
+    void callSiteToString()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         MethodCallListener.MethodReference ref = new MethodCallListener.MethodReference("java/lang/Object", "toString", "()Ljava/lang/String;");
         MethodCallListener.CallSite callSite = new MethodCallListener.CallSite(instr, ref, InvokeType.VIRTUAL, 0);
@@ -338,7 +361,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void listenerToString() {
+    void listenerToString()
+    {
         InvokeInstruction instr1 = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         InvokeInstruction instr2 = createInvoke(InvokeType.STATIC, "java/lang/Math", "abs", "(I)I");
 
@@ -353,7 +377,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getCallCountsReturnsUnmodifiableMap() {
+    void getCallCountsReturnsUnmodifiableMap()
+    {
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         listener.onMethodCall(instr, mockState);
 
@@ -366,7 +391,8 @@ class MethodCallListenerTest {
     }
 
     @Test
-    void getCallSequenceReturnsUnmodifiableList() {
+    void getCallSequenceReturnsUnmodifiableList()
+    {
         MethodCallListener sequenceListener = new MethodCallListener(true);
         InvokeInstruction instr = createInvoke(InvokeType.VIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;");
         sequenceListener.onMethodCall(instr, mockState);
@@ -378,7 +404,8 @@ class MethodCallListenerTest {
         });
     }
 
-    private InvokeInstruction createInvoke(InvokeType type, String owner, String name, String descriptor) {
+    private InvokeInstruction createInvoke(InvokeType type, String owner, String name, String descriptor)
+    {
         List<Value> args = new ArrayList<>();
         return new InvokeInstruction(type, owner, name, descriptor, args);
     }

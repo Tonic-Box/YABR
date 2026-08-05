@@ -41,233 +41,280 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests construction, getters, visitor pattern, parent/child relationships,
  * toString methods, and edge cases.
  */
-class StatementASTTest {
+class StatementASTTest
+{
 
-    // ==================== Test Helpers ====================
+    // Test Helpers
 
-    private static Expression createTestExpression() {
+    private static Expression createTestExpression()
+    {
         return LiteralExpr.ofBoolean(true);
     }
 
-    private static Statement createTestStatement() {
+    private static Statement createTestStatement()
+    {
         return new ReturnStmt();
     }
 
-    private static SourceLocation createTestLocation() {
+    private static SourceLocation createTestLocation()
+    {
         return new SourceLocation(10, 5);
     }
 
-    private static class TestVisitor implements SourceVisitor<String> {
+    private static class TestVisitor implements SourceVisitor<String>
+    {
         @Override
-        public String visitBlock(BlockStmt stmt) {
+        public String visitBlock(BlockStmt stmt)
+        {
             return "visitBlock";
         }
 
         @Override
-        public String visitIf(IfStmt stmt) {
+        public String visitIf(IfStmt stmt)
+        {
             return "visitIf";
         }
 
         @Override
-        public String visitWhile(WhileStmt stmt) {
+        public String visitWhile(WhileStmt stmt)
+        {
             return "visitWhile";
         }
 
         @Override
-        public String visitDoWhile(DoWhileStmt stmt) {
+        public String visitDoWhile(DoWhileStmt stmt)
+        {
             return "visitDoWhile";
         }
 
         @Override
-        public String visitFor(ForStmt stmt) {
+        public String visitFor(ForStmt stmt)
+        {
             return "visitFor";
         }
 
         @Override
-        public String visitForEach(ForEachStmt stmt) {
+        public String visitForEach(ForEachStmt stmt)
+        {
             return "visitForEach";
         }
 
         @Override
-        public String visitSwitch(SwitchStmt stmt) {
+        public String visitSwitch(SwitchStmt stmt)
+        {
             return "visitSwitch";
         }
 
         @Override
-        public String visitTryCatch(TryCatchStmt stmt) {
+        public String visitTryCatch(TryCatchStmt stmt)
+        {
             return "visitTryCatch";
         }
 
         @Override
-        public String visitReturn(ReturnStmt stmt) {
+        public String visitReturn(ReturnStmt stmt)
+        {
             return "visitReturn";
         }
 
         @Override
-        public String visitThrow(ThrowStmt stmt) {
+        public String visitThrow(ThrowStmt stmt)
+        {
             return "visitThrow";
         }
 
         @Override
-        public String visitVarDecl(VarDeclStmt stmt) {
+        public String visitVarDecl(VarDeclStmt stmt)
+        {
             return "visitVarDecl";
         }
 
         @Override
-        public String visitExprStmt(ExprStmt stmt) {
+        public String visitExprStmt(ExprStmt stmt)
+        {
             return "visitExprStmt";
         }
 
         @Override
-        public String visitSynchronized(SynchronizedStmt stmt) {
+        public String visitSynchronized(SynchronizedStmt stmt)
+        {
             return "visitSynchronized";
         }
 
         @Override
-        public String visitLabeled(LabeledStmt stmt) {
+        public String visitLabeled(LabeledStmt stmt)
+        {
             return "visitLabeled";
         }
 
         @Override
-        public String visitBreak(BreakStmt stmt) {
+        public String visitBreak(BreakStmt stmt)
+        {
             return "visitBreak";
         }
 
         @Override
-        public String visitContinue(ContinueStmt stmt) {
+        public String visitContinue(ContinueStmt stmt)
+        {
             return "visitContinue";
         }
 
         @Override
-        public String visitIRRegion(IRRegionStmt stmt) {
+        public String visitIRRegion(IRRegionStmt stmt)
+        {
             return "visitIRRegion";
         }
 
         @Override
-        public String visitLiteral(LiteralExpr expr) {
+        public String visitLiteral(LiteralExpr expr)
+        {
             return "visitLiteral";
         }
 
         @Override
-        public String visitVarRef(VarRefExpr expr) {
+        public String visitVarRef(VarRefExpr expr)
+        {
             return "visitVarRef";
         }
 
         @Override
-        public String visitFieldAccess(FieldAccessExpr expr) {
+        public String visitFieldAccess(FieldAccessExpr expr)
+        {
             return "visitFieldAccess";
         }
 
         @Override
-        public String visitArrayAccess(ArrayAccessExpr expr) {
+        public String visitArrayAccess(ArrayAccessExpr expr)
+        {
             return "visitArrayAccess";
         }
 
         @Override
-        public String visitMethodCall(MethodCallExpr expr) {
+        public String visitMethodCall(MethodCallExpr expr)
+        {
             return "visitMethodCall";
         }
 
         @Override
-        public String visitNew(NewExpr expr) {
+        public String visitNew(NewExpr expr)
+        {
             return "visitNew";
         }
 
         @Override
-        public String visitNewArray(NewArrayExpr expr) {
+        public String visitNewArray(NewArrayExpr expr)
+        {
             return "visitNewArray";
         }
 
         @Override
-        public String visitArrayInit(ArrayInitExpr expr) {
+        public String visitArrayInit(ArrayInitExpr expr)
+        {
             return "visitArrayInit";
         }
 
         @Override
-        public String visitBinary(BinaryExpr expr) {
+        public String visitBinary(BinaryExpr expr)
+        {
             return "visitBinary";
         }
 
         @Override
-        public String visitUnary(UnaryExpr expr) {
+        public String visitUnary(UnaryExpr expr)
+        {
             return "visitUnary";
         }
 
         @Override
-        public String visitCast(CastExpr expr) {
+        public String visitCast(CastExpr expr)
+        {
             return "visitCast";
         }
 
         @Override
-        public String visitInstanceOf(InstanceOfExpr expr) {
+        public String visitInstanceOf(InstanceOfExpr expr)
+        {
             return "visitInstanceOf";
         }
 
         @Override
-        public String visitTernary(TernaryExpr expr) {
+        public String visitTernary(TernaryExpr expr)
+        {
             return "visitTernary";
         }
 
         @Override
-        public String visitLambda(LambdaExpr expr) {
+        public String visitLambda(LambdaExpr expr)
+        {
             return "visitLambda";
         }
 
         @Override
-        public String visitMethodRef(MethodRefExpr expr) {
+        public String visitMethodRef(MethodRefExpr expr)
+        {
             return "visitMethodRef";
         }
 
         @Override
-        public String visitThis(ThisExpr expr) {
+        public String visitThis(ThisExpr expr)
+        {
             return "visitThis";
         }
 
         @Override
-        public String visitSuper(SuperExpr expr) {
+        public String visitSuper(SuperExpr expr)
+        {
             return "visitSuper";
         }
 
         @Override
-        public String visitClass(ClassExpr expr) {
+        public String visitClass(ClassExpr expr)
+        {
             return "visitClass";
         }
 
         @Override
-        public String visitDynamicConstant(DynamicConstantExpr expr) {
+        public String visitDynamicConstant(DynamicConstantExpr expr)
+        {
             return "visitDynamicConstant";
         }
 
         @Override
-        public String visitInvokeDynamic(InvokeDynamicExpr expr) {
+        public String visitInvokeDynamic(InvokeDynamicExpr expr)
+        {
             return "visitInvokeDynamic";
         }
 
         @Override
-        public String visitPrimitiveType(PrimitiveSourceType type) {
+        public String visitPrimitiveType(PrimitiveSourceType type)
+        {
             return "visitPrimitiveType";
         }
 
         @Override
-        public String visitReferenceType(ReferenceSourceType type) {
+        public String visitReferenceType(ReferenceSourceType type)
+        {
             return "visitReferenceType";
         }
 
         @Override
-        public String visitArrayType(ArraySourceType type) {
+        public String visitArrayType(ArraySourceType type)
+        {
             return "visitArrayType";
         }
 
         @Override
-        public String visitVoidType(VoidSourceType type) {
+        public String visitVoidType(VoidSourceType type)
+        {
             return "visitVoidType";
         }
     }
 
-    // ==================== IfStmt Tests ====================
+    // IfStmt Tests
 
     @Test
-    void ifStmt_basicConstructor() {
+    void ifStmt_basicConstructor()
+    {
         Expression condition = createTestExpression();
         Statement thenBranch = createTestStatement();
         Statement elseBranch = createTestStatement();
@@ -282,7 +329,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_withLocation() {
+    void ifStmt_withLocation()
+    {
         Expression condition = createTestExpression();
         Statement thenBranch = createTestStatement();
         SourceLocation location = createTestLocation();
@@ -293,7 +341,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_withoutElse() {
+    void ifStmt_withoutElse()
+    {
         Expression condition = createTestExpression();
         Statement thenBranch = createTestStatement();
 
@@ -305,7 +354,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_withElse() {
+    void ifStmt_withElse()
+    {
         Expression condition = createTestExpression();
         Statement thenBranch = createTestStatement();
         Statement elseBranch = createTestStatement();
@@ -317,7 +367,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_elseIfChain() {
+    void ifStmt_elseIfChain()
+    {
         Expression condition1 = createTestExpression();
         Expression condition2 = createTestExpression();
         Statement thenBranch1 = createTestStatement();
@@ -330,7 +381,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_parentChildRelationships() {
+    void ifStmt_parentChildRelationships()
+    {
         Expression condition = createTestExpression();
         Statement thenBranch = createTestStatement();
         Statement elseBranch = createTestStatement();
@@ -343,7 +395,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_setters() {
+    void ifStmt_setters()
+    {
         IfStmt ifStmt = new IfStmt(createTestExpression(), createTestStatement());
 
         Expression newCondition = LiteralExpr.ofBoolean(false);
@@ -360,21 +413,20 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_nullConditionThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new IfStmt(null, createTestStatement())
-        );
+    void ifStmt_nullConditionThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new IfStmt(null, createTestStatement()));
     }
 
     @Test
-    void ifStmt_nullThenBranchThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new IfStmt(createTestExpression(), null)
-        );
+    void ifStmt_nullThenBranchThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new IfStmt(createTestExpression(), null));
     }
 
     @Test
-    void ifStmt_visitorPattern() {
+    void ifStmt_visitorPattern()
+    {
         IfStmt ifStmt = new IfStmt(createTestExpression(), createTestStatement());
         TestVisitor visitor = new TestVisitor();
 
@@ -384,7 +436,8 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_toStringWithoutElse() {
+    void ifStmt_toStringWithoutElse()
+    {
         IfStmt ifStmt = new IfStmt(LiteralExpr.ofBoolean(true), createTestStatement());
 
         String str = ifStmt.toString();
@@ -396,12 +449,9 @@ class StatementASTTest {
     }
 
     @Test
-    void ifStmt_toStringWithElse() {
-        IfStmt ifStmt = new IfStmt(
-                LiteralExpr.ofBoolean(true),
-                createTestStatement(),
-                createTestStatement()
-        );
+    void ifStmt_toStringWithElse()
+    {
+        IfStmt ifStmt = new IfStmt(LiteralExpr.ofBoolean(true), createTestStatement(), createTestStatement());
 
         String str = ifStmt.toString();
 
@@ -409,10 +459,11 @@ class StatementASTTest {
         assertTrue(str.contains("else"));
     }
 
-    // ==================== WhileStmt Tests ====================
+    // WhileStmt Tests
 
     @Test
-    void whileStmt_basicConstructor() {
+    void whileStmt_basicConstructor()
+    {
         Expression condition = createTestExpression();
         Statement body = createTestStatement();
 
@@ -425,7 +476,8 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_withLabel() {
+    void whileStmt_withLabel()
+    {
         Expression condition = createTestExpression();
         Statement body = createTestStatement();
         String label = "loop";
@@ -436,7 +488,8 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_withLocation() {
+    void whileStmt_withLocation()
+    {
         Expression condition = createTestExpression();
         Statement body = createTestStatement();
         SourceLocation location = createTestLocation();
@@ -447,7 +500,8 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_parentChildRelationships() {
+    void whileStmt_parentChildRelationships()
+    {
         Expression condition = createTestExpression();
         Statement body = createTestStatement();
 
@@ -458,7 +512,8 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_setters() {
+    void whileStmt_setters()
+    {
         WhileStmt whileStmt = new WhileStmt(createTestExpression(), createTestStatement());
 
         Expression newCondition = LiteralExpr.ofBoolean(false);
@@ -475,21 +530,20 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_nullConditionThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new WhileStmt(null, createTestStatement())
-        );
+    void whileStmt_nullConditionThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new WhileStmt(null, createTestStatement()));
     }
 
     @Test
-    void whileStmt_nullBodyThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new WhileStmt(createTestExpression(), null)
-        );
+    void whileStmt_nullBodyThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new WhileStmt(createTestExpression(), null));
     }
 
     @Test
-    void whileStmt_visitorPattern() {
+    void whileStmt_visitorPattern()
+    {
         WhileStmt whileStmt = new WhileStmt(createTestExpression(), createTestStatement());
         TestVisitor visitor = new TestVisitor();
 
@@ -499,7 +553,8 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_toStringWithoutLabel() {
+    void whileStmt_toStringWithoutLabel()
+    {
         WhileStmt whileStmt = new WhileStmt(LiteralExpr.ofBoolean(true), createTestStatement());
 
         String str = whileStmt.toString();
@@ -510,12 +565,9 @@ class StatementASTTest {
     }
 
     @Test
-    void whileStmt_toStringWithLabel() {
-        WhileStmt whileStmt = new WhileStmt(
-                LiteralExpr.ofBoolean(true),
-                createTestStatement(),
-                "myLoop"
-        );
+    void whileStmt_toStringWithLabel()
+    {
+        WhileStmt whileStmt = new WhileStmt(LiteralExpr.ofBoolean(true), createTestStatement(), "myLoop");
 
         String str = whileStmt.toString();
 
@@ -523,10 +575,11 @@ class StatementASTTest {
         assertTrue(str.contains("while"));
     }
 
-    // ==================== DoWhileStmt Tests ====================
+    // DoWhileStmt Tests
 
     @Test
-    void doWhileStmt_basicConstructor() {
+    void doWhileStmt_basicConstructor()
+    {
         Statement body = createTestStatement();
         Expression condition = createTestExpression();
 
@@ -539,7 +592,8 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_withLabel() {
+    void doWhileStmt_withLabel()
+    {
         Statement body = createTestStatement();
         Expression condition = createTestExpression();
         String label = "loop";
@@ -550,7 +604,8 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_withLocation() {
+    void doWhileStmt_withLocation()
+    {
         Statement body = createTestStatement();
         Expression condition = createTestExpression();
         SourceLocation location = createTestLocation();
@@ -561,7 +616,8 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_parentChildRelationships() {
+    void doWhileStmt_parentChildRelationships()
+    {
         Statement body = createTestStatement();
         Expression condition = createTestExpression();
 
@@ -572,7 +628,8 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_setters() {
+    void doWhileStmt_setters()
+    {
         DoWhileStmt doWhileStmt = new DoWhileStmt(createTestStatement(), createTestExpression());
 
         Statement newBody = new ReturnStmt();
@@ -589,21 +646,20 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_nullBodyThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new DoWhileStmt(null, createTestExpression())
-        );
+    void doWhileStmt_nullBodyThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new DoWhileStmt(null, createTestExpression()));
     }
 
     @Test
-    void doWhileStmt_nullConditionThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new DoWhileStmt(createTestStatement(), null)
-        );
+    void doWhileStmt_nullConditionThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new DoWhileStmt(createTestStatement(), null));
     }
 
     @Test
-    void doWhileStmt_visitorPattern() {
+    void doWhileStmt_visitorPattern()
+    {
         DoWhileStmt doWhileStmt = new DoWhileStmt(createTestStatement(), createTestExpression());
         TestVisitor visitor = new TestVisitor();
 
@@ -613,7 +669,8 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_toStringWithoutLabel() {
+    void doWhileStmt_toStringWithoutLabel()
+    {
         DoWhileStmt doWhileStmt = new DoWhileStmt(createTestStatement(), LiteralExpr.ofBoolean(true));
 
         String str = doWhileStmt.toString();
@@ -625,12 +682,9 @@ class StatementASTTest {
     }
 
     @Test
-    void doWhileStmt_toStringWithLabel() {
-        DoWhileStmt doWhileStmt = new DoWhileStmt(
-                createTestStatement(),
-                LiteralExpr.ofBoolean(true),
-                "myLoop"
-        );
+    void doWhileStmt_toStringWithLabel()
+    {
+        DoWhileStmt doWhileStmt = new DoWhileStmt(createTestStatement(), LiteralExpr.ofBoolean(true), "myLoop");
 
         String str = doWhileStmt.toString();
 
@@ -639,10 +693,11 @@ class StatementASTTest {
         assertTrue(str.contains("while"));
     }
 
-    // ==================== ForStmt Tests ====================
+    // ForStmt Tests
 
     @Test
-    void forStmt_basicConstructor() {
+    void forStmt_basicConstructor()
+    {
         List<Statement> init = List.of(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0)));
         Expression condition = createTestExpression();
         List<Expression> update = List.of(LiteralExpr.ofInt(1));
@@ -659,7 +714,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_emptyInitAndUpdate() {
+    void forStmt_emptyInitAndUpdate()
+    {
         Expression condition = createTestExpression();
         Statement body = createTestStatement();
 
@@ -670,7 +726,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_nullInitAndUpdate() {
+    void forStmt_nullInitAndUpdate()
+    {
         Expression condition = createTestExpression();
         Statement body = createTestStatement();
 
@@ -683,7 +740,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_infiniteLoop() {
+    void forStmt_infiniteLoop()
+    {
         Statement body = createTestStatement();
 
         ForStmt forStmt = ForStmt.infinite(body);
@@ -693,7 +751,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_notInfiniteWithCondition() {
+    void forStmt_notInfiniteWithCondition()
+    {
         ForStmt forStmt = new ForStmt(
                 Collections.emptyList(),
                 createTestExpression(),
@@ -705,7 +764,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_withLabel() {
+    void forStmt_withLabel()
+    {
         ForStmt forStmt = new ForStmt(
                 Collections.emptyList(),
                 createTestExpression(),
@@ -719,7 +779,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_addInit() {
+    void forStmt_addInit()
+    {
         ForStmt forStmt = new ForStmt(
                 Collections.emptyList(),
                 createTestExpression(),
@@ -735,7 +796,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_addUpdate() {
+    void forStmt_addUpdate()
+    {
         ForStmt forStmt = new ForStmt(
                 Collections.emptyList(),
                 createTestExpression(),
@@ -751,7 +813,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_addNullInitIgnored() {
+    void forStmt_addNullInitIgnored()
+    {
         ForStmt forStmt = ForStmt.infinite(createTestStatement());
 
         forStmt.addInit(null);
@@ -760,7 +823,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_addNullUpdateIgnored() {
+    void forStmt_addNullUpdateIgnored()
+    {
         ForStmt forStmt = ForStmt.infinite(createTestStatement());
 
         forStmt.addUpdate(null);
@@ -769,17 +833,14 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_filtersNullsInConstructor() {
+    void forStmt_filtersNullsInConstructor()
+    {
         List<Statement> init = Arrays.asList(
                 new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0)),
                 null,
                 new VarDeclStmt(PrimitiveSourceType.INT, "j", LiteralExpr.ofInt(1))
         );
-        List<Expression> update = Arrays.asList(
-                LiteralExpr.ofInt(1),
-                null,
-                LiteralExpr.ofInt(2)
-        );
+        List<Expression> update = Arrays.asList(LiteralExpr.ofInt(1), null, LiteralExpr.ofInt(2));
 
         ForStmt forStmt = new ForStmt(init, createTestExpression(), update, createTestStatement());
 
@@ -788,18 +849,14 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_parentChildRelationships() {
+    void forStmt_parentChildRelationships()
+    {
         Statement initStmt = new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0));
         Expression condition = createTestExpression();
         Expression updateExpr = LiteralExpr.ofInt(1);
         Statement body = createTestStatement();
 
-        ForStmt forStmt = new ForStmt(
-                List.of(initStmt),
-                condition,
-                List.of(updateExpr),
-                body
-        );
+        ForStmt forStmt = new ForStmt(List.of(initStmt), condition, List.of(updateExpr), body);
 
         assertEquals(forStmt, initStmt.getParent());
         assertEquals(forStmt, condition.getParent());
@@ -808,26 +865,24 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_nullConditionAllowed() {
-        ForStmt forStmt = new ForStmt(
-                Collections.emptyList(),
-                null,
-                Collections.emptyList(),
-                createTestStatement()
-        );
+    void forStmt_nullConditionAllowed()
+    {
+        ForStmt forStmt = new ForStmt(Collections.emptyList(), null, Collections.emptyList(), createTestStatement());
 
         assertNull(forStmt.getCondition());
     }
 
     @Test
-    void forStmt_nullBodyThrows() {
+    void forStmt_nullBodyThrows()
+    {
         assertThrows(NullPointerException.class, () ->
                 new ForStmt(Collections.emptyList(), createTestExpression(), Collections.emptyList(), null)
         );
     }
 
     @Test
-    void forStmt_setters() {
+    void forStmt_setters()
+    {
         ForStmt forStmt = ForStmt.infinite(createTestStatement());
 
         Expression newCondition = LiteralExpr.ofBoolean(false);
@@ -844,7 +899,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_visitorPattern() {
+    void forStmt_visitorPattern()
+    {
         ForStmt forStmt = ForStmt.infinite(createTestStatement());
         TestVisitor visitor = new TestVisitor();
 
@@ -854,7 +910,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_toString() {
+    void forStmt_toString()
+    {
         ForStmt forStmt = new ForStmt(
                 List.of(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0))),
                 LiteralExpr.ofBoolean(true),
@@ -870,7 +927,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forStmt_toStringWithLabel() {
+    void forStmt_toStringWithLabel()
+    {
         ForStmt forStmt = new ForStmt(
                 Collections.emptyList(),
                 createTestExpression(),
@@ -885,10 +943,11 @@ class StatementASTTest {
         assertTrue(str.contains("myLoop:"));
     }
 
-    // ==================== ForEachStmt Tests ====================
+    // ForEachStmt Tests
 
     @Test
-    void forEachStmt_basicConstructor() {
+    void forEachStmt_basicConstructor()
+    {
         VarDeclStmt variable = new VarDeclStmt(PrimitiveSourceType.INT, "item");
         Expression iterable = createTestExpression();
         Statement body = createTestStatement();
@@ -903,7 +962,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_withLabel() {
+    void forEachStmt_withLabel()
+    {
         VarDeclStmt variable = new VarDeclStmt(PrimitiveSourceType.INT, "item");
         Expression iterable = createTestExpression();
         Statement body = createTestStatement();
@@ -915,7 +975,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_withLocation() {
+    void forEachStmt_withLocation()
+    {
         VarDeclStmt variable = new VarDeclStmt(PrimitiveSourceType.INT, "item");
         Expression iterable = createTestExpression();
         Statement body = createTestStatement();
@@ -927,7 +988,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_parentChildRelationships() {
+    void forEachStmt_parentChildRelationships()
+    {
         VarDeclStmt variable = new VarDeclStmt(PrimitiveSourceType.INT, "item");
         Expression iterable = createTestExpression();
         Statement body = createTestStatement();
@@ -940,7 +1002,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_setters() {
+    void forEachStmt_setters()
+    {
         ForEachStmt forEachStmt = new ForEachStmt(
                 new VarDeclStmt(PrimitiveSourceType.INT, "item"),
                 createTestExpression(),
@@ -964,28 +1027,32 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_nullVariableThrows() {
+    void forEachStmt_nullVariableThrows()
+    {
         assertThrows(NullPointerException.class, () ->
                 new ForEachStmt(null, createTestExpression(), createTestStatement())
         );
     }
 
     @Test
-    void forEachStmt_nullIterableThrows() {
+    void forEachStmt_nullIterableThrows()
+    {
         assertThrows(NullPointerException.class, () ->
                 new ForEachStmt(new VarDeclStmt(PrimitiveSourceType.INT, "item"), null, createTestStatement())
         );
     }
 
     @Test
-    void forEachStmt_nullBodyThrows() {
+    void forEachStmt_nullBodyThrows()
+    {
         assertThrows(NullPointerException.class, () ->
                 new ForEachStmt(new VarDeclStmt(PrimitiveSourceType.INT, "item"), createTestExpression(), null)
         );
     }
 
     @Test
-    void forEachStmt_visitorPattern() {
+    void forEachStmt_visitorPattern()
+    {
         ForEachStmt forEachStmt = new ForEachStmt(
                 new VarDeclStmt(PrimitiveSourceType.INT, "item"),
                 createTestExpression(),
@@ -999,7 +1066,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_toStringWithoutLabel() {
+    void forEachStmt_toStringWithoutLabel()
+    {
         ForEachStmt forEachStmt = new ForEachStmt(
                 new VarDeclStmt(PrimitiveSourceType.INT, "item"),
                 LiteralExpr.ofString("list"),
@@ -1016,7 +1084,8 @@ class StatementASTTest {
     }
 
     @Test
-    void forEachStmt_toStringWithLabel() {
+    void forEachStmt_toStringWithLabel()
+    {
         ForEachStmt forEachStmt = new ForEachStmt(
                 new VarDeclStmt(PrimitiveSourceType.INT, "item"),
                 LiteralExpr.ofString("list"),
@@ -1031,10 +1100,11 @@ class StatementASTTest {
         assertTrue(str.contains("for"));
     }
 
-    // ==================== SwitchStmt Tests ====================
+    // SwitchStmt Tests
 
     @Test
-    void switchStmt_basicConstructor() {
+    void switchStmt_basicConstructor()
+    {
         Expression selector = createTestExpression();
 
         SwitchStmt switchStmt = new SwitchStmt(selector);
@@ -1046,7 +1116,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_withCases() {
+    void switchStmt_withCases()
+    {
         Expression selector = createTestExpression();
         SwitchCase case1 = SwitchCase.of(1, List.of(createTestStatement()));
         SwitchCase case2 = SwitchCase.of(2, List.of(createTestStatement()));
@@ -1058,7 +1129,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_addCase() {
+    void switchStmt_addCase()
+    {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
         SwitchCase newCase = SwitchCase.of(1, Collections.singletonList(createTestStatement()));
 
@@ -1068,7 +1140,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_defaultCase() {
+    void switchStmt_defaultCase()
+    {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
         SwitchCase defaultCase = SwitchCase.defaultCase(Collections.singletonList(createTestStatement()));
 
@@ -1079,7 +1152,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_noDefaultCase() {
+    void switchStmt_noDefaultCase()
+    {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
         SwitchCase normalCase = SwitchCase.of(1, Collections.singletonList(createTestStatement()));
 
@@ -1090,14 +1164,14 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_nullSelectorThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new SwitchStmt(null)
-        );
+    void switchStmt_nullSelectorThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new SwitchStmt(null));
     }
 
     @Test
-    void switchStmt_nullCasesAllowed() {
+    void switchStmt_nullCasesAllowed()
+    {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression(), null);
 
         assertNotNull(switchStmt.getCases());
@@ -1105,7 +1179,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_parentChildRelationships() {
+    void switchStmt_parentChildRelationships()
+    {
         Expression selector = createTestExpression();
 
         SwitchStmt switchStmt = new SwitchStmt(selector);
@@ -1114,7 +1189,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_setters() {
+    void switchStmt_setters()
+    {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
 
         Expression newSelector = LiteralExpr.ofInt(42);
@@ -1124,7 +1200,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_withLocation() {
+    void switchStmt_withLocation()
+    {
         Expression selector = createTestExpression();
         SourceLocation location = createTestLocation();
 
@@ -1134,7 +1211,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_visitorPattern() {
+    void switchStmt_visitorPattern()
+    {
         SwitchStmt switchStmt = new SwitchStmt(createTestExpression());
         TestVisitor visitor = new TestVisitor();
 
@@ -1144,7 +1222,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchStmt_toString() {
+    void switchStmt_toString()
+    {
         SwitchStmt switchStmt = new SwitchStmt(
                 LiteralExpr.ofInt(42),
                 Arrays.asList(
@@ -1160,10 +1239,11 @@ class StatementASTTest {
         assertTrue(str.contains("2 cases"));
     }
 
-    // ==================== SwitchCase Tests ====================
+    // SwitchCase Tests
 
     @Test
-    void switchCase_basicConstructor() {
+    void switchCase_basicConstructor()
+    {
         List<Integer> labels = Arrays.asList(1, 2, 3);
         List<Statement> statements = Collections.singletonList(createTestStatement());
 
@@ -1176,7 +1256,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_singleLabel() {
+    void switchCase_singleLabel()
+    {
         SwitchCase switchCase = SwitchCase.of(42, Collections.singletonList(createTestStatement()));
 
         assertEquals(1, switchCase.labels().size());
@@ -1185,7 +1266,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_multipleLabels() {
+    void switchCase_multipleLabels()
+    {
         List<Integer> labels = Arrays.asList(1, 2, 3);
         SwitchCase switchCase = SwitchCase.of(labels, Collections.singletonList(createTestStatement()));
 
@@ -1193,7 +1275,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_defaultCase() {
+    void switchCase_defaultCase()
+    {
         SwitchCase switchCase = SwitchCase.defaultCase(Collections.singletonList(createTestStatement()));
 
         assertTrue(switchCase.isDefault());
@@ -1201,7 +1284,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_nullLabels() {
+    void switchCase_nullLabels()
+    {
         SwitchCase switchCase = new SwitchCase(null, false, Collections.singletonList(createTestStatement()));
 
         assertNotNull(switchCase.labels());
@@ -1209,7 +1293,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_nullStatements() {
+    void switchCase_nullStatements()
+    {
         SwitchCase switchCase = new SwitchCase(Collections.singletonList(1), false, null);
 
         assertNotNull(switchCase.statements());
@@ -1217,16 +1302,15 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_labelsImmutable_statementsMutable() {
+    void switchCase_labelsImmutable_statementsMutable()
+    {
         List<Integer> labels = Arrays.asList(1, 2);
         List<Statement> statements = Collections.singletonList(createTestStatement());
 
         SwitchCase switchCase = new SwitchCase(labels, false, statements);
 
         // Labels are fixed once the case is built and stay immutable.
-        assertThrows(UnsupportedOperationException.class, () ->
-                switchCase.labels().add(3)
-        );
+        assertThrows(UnsupportedOperationException.class, () -> switchCase.labels().add(3));
         // The statement list is mutable: the AST transforms rewrite case bodies in place, the same as a
         // block's statements. It is also defensively copied from the constructor argument.
         int before = switchCase.statements().size();
@@ -1235,7 +1319,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_equalsAndHashCode() {
+    void switchCase_equalsAndHashCode()
+    {
         List<Integer> labels = Collections.singletonList(1);
         List<Statement> statements = Collections.singletonList(createTestStatement());
 
@@ -1247,7 +1332,8 @@ class StatementASTTest {
     }
 
     @Test
-    void switchCase_toString() {
+    void switchCase_toString()
+    {
         SwitchCase switchCase = SwitchCase.of(42, Collections.singletonList(createTestStatement()));
 
         String str = switchCase.toString();
@@ -1256,16 +1342,13 @@ class StatementASTTest {
         assertTrue(str.contains("42"));
     }
 
-    // ==================== TryCatchStmt Tests ====================
+    // TryCatchStmt Tests
 
     @Test
-    void tryCatchStmt_basicConstructor() {
+    void tryCatchStmt_basicConstructor()
+    {
         Statement tryBlock = createTestStatement();
-        CatchClause catchClause = CatchClause.of(
-                ReferenceSourceType.OBJECT,
-                "e",
-                createTestStatement()
-        );
+        CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "e", createTestStatement());
 
         TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, Collections.singletonList(catchClause));
 
@@ -1278,15 +1361,12 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_withFinally() {
+    void tryCatchStmt_withFinally()
+    {
         Statement tryBlock = createTestStatement();
         Statement finallyBlock = createTestStatement();
 
-        TryCatchStmt tryCatch = new TryCatchStmt(
-                tryBlock,
-                Collections.emptyList(),
-                finallyBlock
-        );
+        TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, Collections.emptyList(), finallyBlock);
 
         assertTrue(tryCatch.hasFinally());
         assertEquals(finallyBlock, tryCatch.getFinallyBlock());
@@ -1294,7 +1374,8 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_withResources() {
+    void tryCatchStmt_withResources()
+    {
         Statement tryBlock = createTestStatement();
         Expression resource = createTestExpression();
 
@@ -1311,17 +1392,11 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_addCatch() {
-        TryCatchStmt tryCatch = new TryCatchStmt(
-                createTestStatement(),
-                Collections.emptyList()
-        );
+    void tryCatchStmt_addCatch()
+    {
+        TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), Collections.emptyList());
 
-        CatchClause catchClause = CatchClause.of(
-                ReferenceSourceType.OBJECT,
-                "e",
-                createTestStatement()
-        );
+        CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "e", createTestStatement());
         tryCatch.addCatch(catchClause);
 
         assertEquals(1, tryCatch.getCatches().size());
@@ -1329,11 +1404,9 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_addResource() {
-        TryCatchStmt tryCatch = new TryCatchStmt(
-                createTestStatement(),
-                Collections.emptyList()
-        );
+    void tryCatchStmt_addResource()
+    {
+        TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), Collections.emptyList());
 
         Expression resource = createTestExpression();
         tryCatch.addResource(resource);
@@ -1344,14 +1417,14 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_nullTryBlockThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new TryCatchStmt(null, Collections.emptyList())
-        );
+    void tryCatchStmt_nullTryBlockThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new TryCatchStmt(null, Collections.emptyList()));
     }
 
     @Test
-    void tryCatchStmt_nullCatchesAllowed() {
+    void tryCatchStmt_nullCatchesAllowed()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), null);
 
         assertNotNull(tryCatch.getCatches());
@@ -1359,7 +1432,8 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_nullResourcesAllowed() {
+    void tryCatchStmt_nullResourcesAllowed()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(
                 createTestStatement(),
                 Collections.emptyList(),
@@ -1373,7 +1447,8 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_parentChildRelationships() {
+    void tryCatchStmt_parentChildRelationships()
+    {
         Statement tryBlock = createTestStatement();
         Statement catchBody = createTestStatement();
         CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "e", catchBody);
@@ -1395,7 +1470,8 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_setters() {
+    void tryCatchStmt_setters()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), Collections.emptyList());
 
         Statement newTryBlock = new ReturnStmt();
@@ -1409,7 +1485,8 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_visitorPattern() {
+    void tryCatchStmt_visitorPattern()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), Collections.emptyList());
         TestVisitor visitor = new TestVisitor();
 
@@ -1419,12 +1496,10 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_toStringWithCatch() {
+    void tryCatchStmt_toStringWithCatch()
+    {
         CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "e", createTestStatement());
-        TryCatchStmt tryCatch = new TryCatchStmt(
-                createTestStatement(),
-                Collections.singletonList(catchClause)
-        );
+        TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), Collections.singletonList(catchClause));
 
         String str = tryCatch.toString();
 
@@ -1434,12 +1509,9 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_toStringWithFinally() {
-        TryCatchStmt tryCatch = new TryCatchStmt(
-                createTestStatement(),
-                Collections.emptyList(),
-                createTestStatement()
-        );
+    void tryCatchStmt_toStringWithFinally()
+    {
+        TryCatchStmt tryCatch = new TryCatchStmt(createTestStatement(), Collections.emptyList(), createTestStatement());
 
         String str = tryCatch.toString();
 
@@ -1448,7 +1520,8 @@ class StatementASTTest {
     }
 
     @Test
-    void tryCatchStmt_toStringWithResources() {
+    void tryCatchStmt_toStringWithResources()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(
                 createTestStatement(),
                 Collections.emptyList(),
@@ -1463,10 +1536,11 @@ class StatementASTTest {
         assertTrue(str.contains("2 resources"));
     }
 
-    // ==================== CatchClause Tests ====================
+    // CatchClause Tests
 
     @Test
-    void catchClause_basicConstructor() {
+    void catchClause_basicConstructor()
+    {
         SourceType exceptionType = ReferenceSourceType.OBJECT;
         String variableName = "ex";
         Statement body = createTestStatement();
@@ -1482,11 +1556,9 @@ class StatementASTTest {
     }
 
     @Test
-    void catchClause_multiCatch() {
-        List<SourceType> types = Arrays.asList(
-                ReferenceSourceType.OBJECT,
-                ReferenceSourceType.STRING
-        );
+    void catchClause_multiCatch()
+    {
+        List<SourceType> types = Arrays.asList(ReferenceSourceType.OBJECT, ReferenceSourceType.STRING);
         CatchClause catchClause = CatchClause.multiCatch(types, "ex", createTestStatement());
 
         assertTrue(catchClause.isMultiCatch());
@@ -1494,7 +1566,8 @@ class StatementASTTest {
     }
 
     @Test
-    void catchClause_getPrimaryType() {
+    void catchClause_getPrimaryType()
+    {
         SourceType primaryType = ReferenceSourceType.OBJECT;
         List<SourceType> types = Arrays.asList(primaryType, ReferenceSourceType.STRING);
 
@@ -1504,35 +1577,36 @@ class StatementASTTest {
     }
 
     @Test
-    void catchClause_nullExceptionTypesThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new CatchClause(null, "ex", createTestStatement())
-        );
+    void catchClause_nullExceptionTypesThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new CatchClause(null, "ex", createTestStatement()));
     }
 
     @Test
-    void catchClause_emptyExceptionTypesThrows() {
+    void catchClause_emptyExceptionTypesThrows()
+    {
         assertThrows(IllegalArgumentException.class, () ->
                 new CatchClause(Collections.emptyList(), "ex", createTestStatement())
         );
     }
 
     @Test
-    void catchClause_nullVariableNameThrows() {
+    void catchClause_nullVariableNameThrows()
+    {
         assertThrows(NullPointerException.class, () ->
                 CatchClause.of(ReferenceSourceType.OBJECT, null, createTestStatement())
         );
     }
 
     @Test
-    void catchClause_nullBodyThrows() {
-        assertThrows(NullPointerException.class, () ->
-                CatchClause.of(ReferenceSourceType.OBJECT, "ex", null)
-        );
+    void catchClause_nullBodyThrows()
+    {
+        assertThrows(NullPointerException.class, () -> CatchClause.of(ReferenceSourceType.OBJECT, "ex", null));
     }
 
     @Test
-    void catchClause_immutableExceptionTypes() {
+    void catchClause_immutableExceptionTypes()
+    {
         CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "ex", createTestStatement());
 
         assertThrows(UnsupportedOperationException.class, () ->
@@ -1541,7 +1615,8 @@ class StatementASTTest {
     }
 
     @Test
-    void catchClause_equalsAndHashCode() {
+    void catchClause_equalsAndHashCode()
+    {
         Statement sharedBody = createTestStatement();
         CatchClause clause1 = CatchClause.of(ReferenceSourceType.OBJECT, "ex", sharedBody);
         CatchClause clause2 = CatchClause.of(ReferenceSourceType.OBJECT, "ex", sharedBody);
@@ -1551,7 +1626,8 @@ class StatementASTTest {
     }
 
     @Test
-    void catchClause_toString() {
+    void catchClause_toString()
+    {
         CatchClause catchClause = CatchClause.of(ReferenceSourceType.OBJECT, "ex", createTestStatement());
 
         String str = catchClause.toString();
@@ -1560,10 +1636,11 @@ class StatementASTTest {
         assertTrue(str.contains("ex"));
     }
 
-    // ==================== ReturnStmt Tests ====================
+    // ReturnStmt Tests
 
     @Test
-    void returnStmt_voidReturn() {
+    void returnStmt_voidReturn()
+    {
         ReturnStmt returnStmt = new ReturnStmt();
 
         assertNotNull(returnStmt);
@@ -1572,7 +1649,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_withValue() {
+    void returnStmt_withValue()
+    {
         Expression value = LiteralExpr.ofInt(42);
 
         ReturnStmt returnStmt = new ReturnStmt(value);
@@ -1582,7 +1660,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_withLocation() {
+    void returnStmt_withLocation()
+    {
         Expression value = LiteralExpr.ofInt(42);
         SourceLocation location = createTestLocation();
 
@@ -1592,7 +1671,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_parentChildRelationship() {
+    void returnStmt_parentChildRelationship()
+    {
         Expression value = createTestExpression();
 
         ReturnStmt returnStmt = new ReturnStmt(value);
@@ -1601,7 +1681,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_setter() {
+    void returnStmt_setter()
+    {
         ReturnStmt returnStmt = new ReturnStmt();
 
         Expression newValue = LiteralExpr.ofInt(100);
@@ -1612,7 +1693,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_visitorPattern() {
+    void returnStmt_visitorPattern()
+    {
         ReturnStmt returnStmt = new ReturnStmt(LiteralExpr.ofInt(42));
         TestVisitor visitor = new TestVisitor();
 
@@ -1622,7 +1704,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_toStringVoid() {
+    void returnStmt_toStringVoid()
+    {
         ReturnStmt returnStmt = new ReturnStmt();
 
         String str = returnStmt.toString();
@@ -1631,7 +1714,8 @@ class StatementASTTest {
     }
 
     @Test
-    void returnStmt_toStringWithValue() {
+    void returnStmt_toStringWithValue()
+    {
         ReturnStmt returnStmt = new ReturnStmt(LiteralExpr.ofInt(42));
 
         String str = returnStmt.toString();
@@ -1640,10 +1724,11 @@ class StatementASTTest {
         assertTrue(str.contains("42"));
     }
 
-    // ==================== ThrowStmt Tests ====================
+    // ThrowStmt Tests
 
     @Test
-    void throwStmt_basicConstructor() {
+    void throwStmt_basicConstructor()
+    {
         Expression exception = createTestExpression();
 
         ThrowStmt throwStmt = new ThrowStmt(exception);
@@ -1653,7 +1738,8 @@ class StatementASTTest {
     }
 
     @Test
-    void throwStmt_withLocation() {
+    void throwStmt_withLocation()
+    {
         Expression exception = createTestExpression();
         SourceLocation location = createTestLocation();
 
@@ -1663,14 +1749,14 @@ class StatementASTTest {
     }
 
     @Test
-    void throwStmt_nullExceptionThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new ThrowStmt(null)
-        );
+    void throwStmt_nullExceptionThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new ThrowStmt(null));
     }
 
     @Test
-    void throwStmt_parentChildRelationship() {
+    void throwStmt_parentChildRelationship()
+    {
         Expression exception = createTestExpression();
 
         ThrowStmt throwStmt = new ThrowStmt(exception);
@@ -1679,7 +1765,8 @@ class StatementASTTest {
     }
 
     @Test
-    void throwStmt_setter() {
+    void throwStmt_setter()
+    {
         ThrowStmt throwStmt = new ThrowStmt(createTestExpression());
 
         Expression newException = LiteralExpr.ofString("error");
@@ -1689,7 +1776,8 @@ class StatementASTTest {
     }
 
     @Test
-    void throwStmt_visitorPattern() {
+    void throwStmt_visitorPattern()
+    {
         ThrowStmt throwStmt = new ThrowStmt(createTestExpression());
         TestVisitor visitor = new TestVisitor();
 
@@ -1699,7 +1787,8 @@ class StatementASTTest {
     }
 
     @Test
-    void throwStmt_toString() {
+    void throwStmt_toString()
+    {
         ThrowStmt throwStmt = new ThrowStmt(LiteralExpr.ofString("error"));
 
         String str = throwStmt.toString();
@@ -1708,10 +1797,11 @@ class StatementASTTest {
         assertTrue(str.contains("error"));
     }
 
-    // ==================== BreakStmt Tests ====================
+    // BreakStmt Tests
 
     @Test
-    void breakStmt_unlabeled() {
+    void breakStmt_unlabeled()
+    {
         BreakStmt breakStmt = new BreakStmt();
 
         assertNotNull(breakStmt);
@@ -1720,7 +1810,8 @@ class StatementASTTest {
     }
 
     @Test
-    void breakStmt_labeled() {
+    void breakStmt_labeled()
+    {
         String label = "loopLabel";
 
         BreakStmt breakStmt = new BreakStmt(label);
@@ -1730,7 +1821,8 @@ class StatementASTTest {
     }
 
     @Test
-    void breakStmt_withLocation() {
+    void breakStmt_withLocation()
+    {
         String label = "loopLabel";
         SourceLocation location = createTestLocation();
 
@@ -1740,7 +1832,8 @@ class StatementASTTest {
     }
 
     @Test
-    void breakStmt_setter() {
+    void breakStmt_setter()
+    {
         BreakStmt breakStmt = new BreakStmt();
 
         String newLabel = "newLabel";
@@ -1751,7 +1844,8 @@ class StatementASTTest {
     }
 
     @Test
-    void breakStmt_visitorPattern() {
+    void breakStmt_visitorPattern()
+    {
         BreakStmt breakStmt = new BreakStmt("label");
         TestVisitor visitor = new TestVisitor();
 
@@ -1761,7 +1855,8 @@ class StatementASTTest {
     }
 
     @Test
-    void breakStmt_toStringUnlabeled() {
+    void breakStmt_toStringUnlabeled()
+    {
         BreakStmt breakStmt = new BreakStmt();
 
         String str = breakStmt.toString();
@@ -1770,7 +1865,8 @@ class StatementASTTest {
     }
 
     @Test
-    void breakStmt_toStringLabeled() {
+    void breakStmt_toStringLabeled()
+    {
         BreakStmt breakStmt = new BreakStmt("loopLabel");
 
         String str = breakStmt.toString();
@@ -1778,10 +1874,11 @@ class StatementASTTest {
         assertEquals("break loopLabel", str);
     }
 
-    // ==================== ContinueStmt Tests ====================
+    // ContinueStmt Tests
 
     @Test
-    void continueStmt_unlabeled() {
+    void continueStmt_unlabeled()
+    {
         ContinueStmt continueStmt = new ContinueStmt();
 
         assertNotNull(continueStmt);
@@ -1790,7 +1887,8 @@ class StatementASTTest {
     }
 
     @Test
-    void continueStmt_labeled() {
+    void continueStmt_labeled()
+    {
         String label = "loopLabel";
 
         ContinueStmt continueStmt = new ContinueStmt(label);
@@ -1800,7 +1898,8 @@ class StatementASTTest {
     }
 
     @Test
-    void continueStmt_withLocation() {
+    void continueStmt_withLocation()
+    {
         String label = "loopLabel";
         SourceLocation location = createTestLocation();
 
@@ -1810,7 +1909,8 @@ class StatementASTTest {
     }
 
     @Test
-    void continueStmt_setter() {
+    void continueStmt_setter()
+    {
         ContinueStmt continueStmt = new ContinueStmt();
 
         String newLabel = "newLabel";
@@ -1821,7 +1921,8 @@ class StatementASTTest {
     }
 
     @Test
-    void continueStmt_visitorPattern() {
+    void continueStmt_visitorPattern()
+    {
         ContinueStmt continueStmt = new ContinueStmt("label");
         TestVisitor visitor = new TestVisitor();
 
@@ -1831,7 +1932,8 @@ class StatementASTTest {
     }
 
     @Test
-    void continueStmt_toStringUnlabeled() {
+    void continueStmt_toStringUnlabeled()
+    {
         ContinueStmt continueStmt = new ContinueStmt();
 
         String str = continueStmt.toString();
@@ -1840,7 +1942,8 @@ class StatementASTTest {
     }
 
     @Test
-    void continueStmt_toStringLabeled() {
+    void continueStmt_toStringLabeled()
+    {
         ContinueStmt continueStmt = new ContinueStmt("loopLabel");
 
         String str = continueStmt.toString();
@@ -1848,10 +1951,11 @@ class StatementASTTest {
         assertEquals("continue loopLabel", str);
     }
 
-    // ==================== BlockStmt Tests ====================
+    // BlockStmt Tests
 
     @Test
-    void blockStmt_emptyConstructor() {
+    void blockStmt_emptyConstructor()
+    {
         BlockStmt blockStmt = new BlockStmt();
 
         assertNotNull(blockStmt);
@@ -1860,11 +1964,9 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_withStatements() {
-        List<Statement> statements = Arrays.asList(
-                createTestStatement(),
-                createTestStatement()
-        );
+    void blockStmt_withStatements()
+    {
+        List<Statement> statements = Arrays.asList(createTestStatement(), createTestStatement());
 
         BlockStmt blockStmt = new BlockStmt(statements);
 
@@ -1873,12 +1975,9 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_filtersNullStatements() {
-        List<Statement> statements = Arrays.asList(
-                createTestStatement(),
-                null,
-                createTestStatement()
-        );
+    void blockStmt_filtersNullStatements()
+    {
+        List<Statement> statements = Arrays.asList(createTestStatement(), null, createTestStatement());
 
         BlockStmt blockStmt = new BlockStmt(statements);
 
@@ -1886,7 +1985,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_addStatement() {
+    void blockStmt_addStatement()
+    {
         BlockStmt blockStmt = new BlockStmt();
         Statement stmt = createTestStatement();
 
@@ -1897,7 +1997,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_addNullStatementIgnored() {
+    void blockStmt_addNullStatementIgnored()
+    {
         BlockStmt blockStmt = new BlockStmt();
 
         blockStmt.addStatement(null);
@@ -1906,7 +2007,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_insertStatement() {
+    void blockStmt_insertStatement()
+    {
         BlockStmt blockStmt = new BlockStmt();
         Statement stmt1 = new ReturnStmt(LiteralExpr.ofInt(1));
         Statement stmt2 = new ReturnStmt(LiteralExpr.ofInt(2));
@@ -1922,7 +2024,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_insertNullStatementIgnored() {
+    void blockStmt_insertNullStatementIgnored()
+    {
         BlockStmt blockStmt = new BlockStmt();
         blockStmt.addStatement(createTestStatement());
 
@@ -1932,7 +2035,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_removeStatement() {
+    void blockStmt_removeStatement()
+    {
         Statement stmt = createTestStatement();
         BlockStmt blockStmt = new BlockStmt(Collections.singletonList(stmt));
 
@@ -1943,7 +2047,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_removeNonExistentStatement() {
+    void blockStmt_removeNonExistentStatement()
+    {
         BlockStmt blockStmt = new BlockStmt(Collections.singletonList(createTestStatement()));
         Statement otherStmt = createTestStatement();
 
@@ -1954,7 +2059,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_parentChildRelationships() {
+    void blockStmt_parentChildRelationships()
+    {
         Statement stmt1 = createTestStatement();
         Statement stmt2 = createTestStatement();
 
@@ -1965,7 +2071,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_withLocation() {
+    void blockStmt_withLocation()
+    {
         SourceLocation location = createTestLocation();
 
         BlockStmt blockStmt = new BlockStmt(Collections.emptyList(), location);
@@ -1974,7 +2081,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_visitorPattern() {
+    void blockStmt_visitorPattern()
+    {
         BlockStmt blockStmt = new BlockStmt();
         TestVisitor visitor = new TestVisitor();
 
@@ -1984,7 +2092,8 @@ class StatementASTTest {
     }
 
     @Test
-    void blockStmt_toString() {
+    void blockStmt_toString()
+    {
         BlockStmt blockStmt = new BlockStmt(Arrays.asList(
                 createTestStatement(),
                 createTestStatement(),
@@ -1998,10 +2107,11 @@ class StatementASTTest {
         assertTrue(str.contains("}"));
     }
 
-    // ==================== ExprStmt Tests ====================
+    // ExprStmt Tests
 
     @Test
-    void exprStmt_basicConstructor() {
+    void exprStmt_basicConstructor()
+    {
         Expression expression = createTestExpression();
 
         ExprStmt exprStmt = new ExprStmt(expression);
@@ -2011,7 +2121,8 @@ class StatementASTTest {
     }
 
     @Test
-    void exprStmt_withLocation() {
+    void exprStmt_withLocation()
+    {
         Expression expression = createTestExpression();
         SourceLocation location = createTestLocation();
 
@@ -2021,14 +2132,14 @@ class StatementASTTest {
     }
 
     @Test
-    void exprStmt_nullExpressionThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new ExprStmt(null)
-        );
+    void exprStmt_nullExpressionThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new ExprStmt(null));
     }
 
     @Test
-    void exprStmt_parentChildRelationship() {
+    void exprStmt_parentChildRelationship()
+    {
         Expression expression = createTestExpression();
 
         ExprStmt exprStmt = new ExprStmt(expression);
@@ -2037,7 +2148,8 @@ class StatementASTTest {
     }
 
     @Test
-    void exprStmt_setter() {
+    void exprStmt_setter()
+    {
         ExprStmt exprStmt = new ExprStmt(createTestExpression());
 
         Expression newExpression = LiteralExpr.ofInt(999);
@@ -2047,7 +2159,8 @@ class StatementASTTest {
     }
 
     @Test
-    void exprStmt_visitorPattern() {
+    void exprStmt_visitorPattern()
+    {
         ExprStmt exprStmt = new ExprStmt(createTestExpression());
         TestVisitor visitor = new TestVisitor();
 
@@ -2057,7 +2170,8 @@ class StatementASTTest {
     }
 
     @Test
-    void exprStmt_toString() {
+    void exprStmt_toString()
+    {
         ExprStmt exprStmt = new ExprStmt(LiteralExpr.ofInt(42));
 
         String str = exprStmt.toString();
@@ -2066,10 +2180,11 @@ class StatementASTTest {
         assertTrue(str.endsWith(";"));
     }
 
-    // ==================== VarDeclStmt Tests ====================
+    // VarDeclStmt Tests
 
     @Test
-    void varDeclStmt_basicConstructor() {
+    void varDeclStmt_basicConstructor()
+    {
         SourceType type = PrimitiveSourceType.INT;
         String name = "x";
 
@@ -2085,7 +2200,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_withInitializer() {
+    void varDeclStmt_withInitializer()
+    {
         SourceType type = PrimitiveSourceType.INT;
         String name = "x";
         Expression initializer = LiteralExpr.ofInt(42);
@@ -2097,7 +2213,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_withVarKeyword() {
+    void varDeclStmt_withVarKeyword()
+    {
         SourceType type = PrimitiveSourceType.INT;
         String name = "x";
         Expression initializer = LiteralExpr.ofInt(42);
@@ -2110,7 +2227,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_finalModifier() {
+    void varDeclStmt_finalModifier()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(
                 PrimitiveSourceType.INT,
                 "x",
@@ -2124,21 +2242,20 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_nullTypeThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new VarDeclStmt(null, "x")
-        );
+    void varDeclStmt_nullTypeThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new VarDeclStmt(null, "x"));
     }
 
     @Test
-    void varDeclStmt_nullNameThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new VarDeclStmt(PrimitiveSourceType.INT, null)
-        );
+    void varDeclStmt_nullNameThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new VarDeclStmt(PrimitiveSourceType.INT, null));
     }
 
     @Test
-    void varDeclStmt_parentChildRelationship() {
+    void varDeclStmt_parentChildRelationship()
+    {
         Expression initializer = createTestExpression();
 
         VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x", initializer);
@@ -2147,7 +2264,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_setters() {
+    void varDeclStmt_setters()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x");
 
         SourceType newType = PrimitiveSourceType.LONG;
@@ -2168,7 +2286,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_visitorPattern() {
+    void varDeclStmt_visitorPattern()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x");
         TestVisitor visitor = new TestVisitor();
 
@@ -2178,7 +2297,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_toStringWithoutInitializer() {
+    void varDeclStmt_toStringWithoutInitializer()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x");
 
         String str = varDecl.toString();
@@ -2189,12 +2309,9 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_toStringWithInitializer() {
-        VarDeclStmt varDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "x",
-                LiteralExpr.ofInt(42)
-        );
+    void varDeclStmt_toStringWithInitializer()
+    {
+        VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(42));
 
         String str = varDecl.toString();
 
@@ -2205,7 +2322,8 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_toStringWithFinal() {
+    void varDeclStmt_toStringWithFinal()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(
                 PrimitiveSourceType.INT,
                 "x",
@@ -2221,12 +2339,9 @@ class StatementASTTest {
     }
 
     @Test
-    void varDeclStmt_toStringWithVar() {
-        VarDeclStmt varDecl = VarDeclStmt.withVar(
-                PrimitiveSourceType.INT,
-                "x",
-                LiteralExpr.ofInt(42)
-        );
+    void varDeclStmt_toStringWithVar()
+    {
+        VarDeclStmt varDecl = VarDeclStmt.withVar(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(42));
 
         String str = varDecl.toString();
 
@@ -2234,10 +2349,11 @@ class StatementASTTest {
         assertFalse(str.contains("int"));
     }
 
-    // ==================== SynchronizedStmt Tests ====================
+    // SynchronizedStmt Tests
 
     @Test
-    void synchronizedStmt_basicConstructor() {
+    void synchronizedStmt_basicConstructor()
+    {
         Expression lock = createTestExpression();
         Statement body = createTestStatement();
 
@@ -2249,7 +2365,8 @@ class StatementASTTest {
     }
 
     @Test
-    void synchronizedStmt_withLocation() {
+    void synchronizedStmt_withLocation()
+    {
         Expression lock = createTestExpression();
         Statement body = createTestStatement();
         SourceLocation location = createTestLocation();
@@ -2260,21 +2377,20 @@ class StatementASTTest {
     }
 
     @Test
-    void synchronizedStmt_nullLockThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new SynchronizedStmt(null, createTestStatement())
-        );
+    void synchronizedStmt_nullLockThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new SynchronizedStmt(null, createTestStatement()));
     }
 
     @Test
-    void synchronizedStmt_nullBodyThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new SynchronizedStmt(createTestExpression(), null)
-        );
+    void synchronizedStmt_nullBodyThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new SynchronizedStmt(createTestExpression(), null));
     }
 
     @Test
-    void synchronizedStmt_parentChildRelationships() {
+    void synchronizedStmt_parentChildRelationships()
+    {
         Expression lock = createTestExpression();
         Statement body = createTestStatement();
 
@@ -2285,7 +2401,8 @@ class StatementASTTest {
     }
 
     @Test
-    void synchronizedStmt_setters() {
+    void synchronizedStmt_setters()
+    {
         SynchronizedStmt syncStmt = new SynchronizedStmt(createTestExpression(), createTestStatement());
 
         Expression newLock = LiteralExpr.ofString("lock");
@@ -2299,7 +2416,8 @@ class StatementASTTest {
     }
 
     @Test
-    void synchronizedStmt_visitorPattern() {
+    void synchronizedStmt_visitorPattern()
+    {
         SynchronizedStmt syncStmt = new SynchronizedStmt(createTestExpression(), createTestStatement());
         TestVisitor visitor = new TestVisitor();
 
@@ -2309,11 +2427,9 @@ class StatementASTTest {
     }
 
     @Test
-    void synchronizedStmt_toString() {
-        SynchronizedStmt syncStmt = new SynchronizedStmt(
-                LiteralExpr.ofString("lock"),
-                createTestStatement()
-        );
+    void synchronizedStmt_toString()
+    {
+        SynchronizedStmt syncStmt = new SynchronizedStmt(LiteralExpr.ofString("lock"), createTestStatement());
 
         String str = syncStmt.toString();
 
@@ -2323,10 +2439,11 @@ class StatementASTTest {
         assertTrue(str.contains("}"));
     }
 
-    // ==================== LabeledStmt Tests ====================
+    // LabeledStmt Tests
 
     @Test
-    void labeledStmt_basicConstructor() {
+    void labeledStmt_basicConstructor()
+    {
         String label = "myLabel";
         Statement statement = createTestStatement();
 
@@ -2338,7 +2455,8 @@ class StatementASTTest {
     }
 
     @Test
-    void labeledStmt_withLocation() {
+    void labeledStmt_withLocation()
+    {
         String label = "myLabel";
         Statement statement = createTestStatement();
         SourceLocation location = createTestLocation();
@@ -2349,21 +2467,20 @@ class StatementASTTest {
     }
 
     @Test
-    void labeledStmt_nullLabelThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new LabeledStmt(null, createTestStatement())
-        );
+    void labeledStmt_nullLabelThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new LabeledStmt(null, createTestStatement()));
     }
 
     @Test
-    void labeledStmt_nullStatementThrows() {
-        assertThrows(NullPointerException.class, () ->
-                new LabeledStmt("label", null)
-        );
+    void labeledStmt_nullStatementThrows()
+    {
+        assertThrows(NullPointerException.class, () -> new LabeledStmt("label", null));
     }
 
     @Test
-    void labeledStmt_parentChildRelationship() {
+    void labeledStmt_parentChildRelationship()
+    {
         String label = "myLabel";
         Statement statement = createTestStatement();
 
@@ -2373,7 +2490,8 @@ class StatementASTTest {
     }
 
     @Test
-    void labeledStmt_setter() {
+    void labeledStmt_setter()
+    {
         LabeledStmt labeledStmt = new LabeledStmt("label", createTestStatement());
 
         Statement newStatement = new ReturnStmt(LiteralExpr.ofInt(42));
@@ -2383,7 +2501,8 @@ class StatementASTTest {
     }
 
     @Test
-    void labeledStmt_visitorPattern() {
+    void labeledStmt_visitorPattern()
+    {
         LabeledStmt labeledStmt = new LabeledStmt("label", createTestStatement());
         TestVisitor visitor = new TestVisitor();
 
@@ -2393,7 +2512,8 @@ class StatementASTTest {
     }
 
     @Test
-    void labeledStmt_toString() {
+    void labeledStmt_toString()
+    {
         LabeledStmt labeledStmt = new LabeledStmt("myLabel", new ReturnStmt());
 
         String str = labeledStmt.toString();
@@ -2402,24 +2522,27 @@ class StatementASTTest {
         assertTrue(str.contains("return"));
     }
 
-    // ==================== Statement Interface Tests ====================
+    // Statement Interface Tests
 
     @Test
-    void statement_defaultLabelIsNull() {
+    void statement_defaultLabelIsNull()
+    {
         Statement stmt = new ReturnStmt();
 
         assertNull(stmt.getLabel());
     }
 
     @Test
-    void statement_labelForWhileLoop() {
+    void statement_labelForWhileLoop()
+    {
         WhileStmt whileStmt = new WhileStmt(createTestExpression(), createTestStatement(), "loop");
 
         assertEquals("loop", whileStmt.getLabel());
     }
 
     @Test
-    void statement_labelForForLoop() {
+    void statement_labelForForLoop()
+    {
         ForStmt forStmt = new ForStmt(
                 Collections.emptyList(),
                 createTestExpression(),
@@ -2433,18 +2556,16 @@ class StatementASTTest {
     }
 
     @Test
-    void statement_labelForDoWhileLoop() {
-        DoWhileStmt doWhileStmt = new DoWhileStmt(
-                createTestStatement(),
-                createTestExpression(),
-                "loop"
-        );
+    void statement_labelForDoWhileLoop()
+    {
+        DoWhileStmt doWhileStmt = new DoWhileStmt(createTestStatement(), createTestExpression(), "loop");
 
         assertEquals("loop", doWhileStmt.getLabel());
     }
 
     @Test
-    void statement_labelForForEachLoop() {
+    void statement_labelForForEachLoop()
+    {
         ForEachStmt forEachStmt = new ForEachStmt(
                 new VarDeclStmt(PrimitiveSourceType.INT, "item"),
                 createTestExpression(),
@@ -2457,17 +2578,20 @@ class StatementASTTest {
     }
 
     @Test
-    void statement_labelForLabeledStmt() {
+    void statement_labelForLabeledStmt()
+    {
         LabeledStmt labeledStmt = new LabeledStmt("myLabel", createTestStatement());
 
         assertEquals("myLabel", labeledStmt.getLabel());
     }
 
     @Nested
-    class FluentSetterTests {
+    class FluentSetterTests
+    {
 
         @Test
-        void ifStmt_fluentChaining() {
+        void ifStmt_fluentChaining()
+        {
             LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
             BlockStmt thenB = new BlockStmt();
             BlockStmt elseB = new BlockStmt();
@@ -2496,7 +2620,8 @@ class StatementASTTest {
         }
 
         @Test
-        void whileStmt_fluentChaining() {
+        void whileStmt_fluentChaining()
+        {
             LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
             BlockStmt body = new BlockStmt();
 
@@ -2519,7 +2644,8 @@ class StatementASTTest {
         }
 
         @Test
-        void doWhileStmt_fluentChaining() {
+        void doWhileStmt_fluentChaining()
+        {
             BlockStmt body = new BlockStmt();
             LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
 
@@ -2540,7 +2666,8 @@ class StatementASTTest {
         }
 
         @Test
-        void forStmt_fluentChaining() {
+        void forStmt_fluentChaining()
+        {
             LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
             BlockStmt body = new BlockStmt();
 
@@ -2568,7 +2695,8 @@ class StatementASTTest {
         }
 
         @Test
-        void forEachStmt_fluentChaining() {
+        void forEachStmt_fluentChaining()
+        {
             VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "item");
             VarRefExpr iterable = new VarRefExpr("list", ReferenceSourceType.OBJECT);
             BlockStmt body = new BlockStmt();
@@ -2593,7 +2721,8 @@ class StatementASTTest {
         }
 
         @Test
-        void returnStmt_fluentChaining() {
+        void returnStmt_fluentChaining()
+        {
             LiteralExpr value = new LiteralExpr(1, PrimitiveSourceType.INT);
             LiteralExpr newValue = new LiteralExpr(42, PrimitiveSourceType.INT);
 
@@ -2608,7 +2737,8 @@ class StatementASTTest {
         }
 
         @Test
-        void returnStmt_withNullValue() {
+        void returnStmt_withNullValue()
+        {
             LiteralExpr value = new LiteralExpr(1, PrimitiveSourceType.INT);
             ReturnStmt stmt = new ReturnStmt(value);
 
@@ -2619,7 +2749,8 @@ class StatementASTTest {
         }
 
         @Test
-        void throwStmt_fluentChaining() {
+        void throwStmt_fluentChaining()
+        {
             VarRefExpr exception = new VarRefExpr("ex", ReferenceSourceType.OBJECT);
             VarRefExpr newException = new VarRefExpr("newEx", ReferenceSourceType.OBJECT);
 
@@ -2634,7 +2765,8 @@ class StatementASTTest {
         }
 
         @Test
-        void varDeclStmt_fluentChaining() {
+        void varDeclStmt_fluentChaining()
+        {
             LiteralExpr init = new LiteralExpr(10, PrimitiveSourceType.INT);
             LiteralExpr newInit = new LiteralExpr(20, PrimitiveSourceType.INT);
 
@@ -2649,7 +2781,8 @@ class StatementASTTest {
         }
 
         @Test
-        void exprStmt_fluentChaining() {
+        void exprStmt_fluentChaining()
+        {
             VarRefExpr expr = new VarRefExpr("x", PrimitiveSourceType.INT);
             VarRefExpr newExpr = new VarRefExpr("y", PrimitiveSourceType.INT);
 
@@ -2664,7 +2797,8 @@ class StatementASTTest {
         }
 
         @Test
-        void synchronizedStmt_fluentChaining() {
+        void synchronizedStmt_fluentChaining()
+        {
             VarRefExpr lock = new VarRefExpr("mutex", ReferenceSourceType.OBJECT);
             BlockStmt body = new BlockStmt();
             VarRefExpr newLock = new VarRefExpr("lock", ReferenceSourceType.OBJECT);
@@ -2684,7 +2818,8 @@ class StatementASTTest {
         }
 
         @Test
-        void labeledStmt_fluentChaining() {
+        void labeledStmt_fluentChaining()
+        {
             ExprStmt inner = new ExprStmt(new VarRefExpr("x", PrimitiveSourceType.INT));
             ExprStmt newInner = new ExprStmt(new VarRefExpr("y", PrimitiveSourceType.INT));
 
@@ -2699,7 +2834,8 @@ class StatementASTTest {
         }
 
         @Test
-        void tryCatchStmt_fluentChaining() {
+        void tryCatchStmt_fluentChaining()
+        {
             BlockStmt tryBlock = new BlockStmt();
             BlockStmt finallyBlock = new BlockStmt();
             BlockStmt newTry = new BlockStmt();
@@ -2719,7 +2855,8 @@ class StatementASTTest {
         }
 
         @Test
-        void switchStmt_fluentChaining() {
+        void switchStmt_fluentChaining()
+        {
             VarRefExpr selector = new VarRefExpr("x", PrimitiveSourceType.INT);
             VarRefExpr newSelector = new VarRefExpr("y", PrimitiveSourceType.INT);
 
@@ -2734,12 +2871,9 @@ class StatementASTTest {
         }
 
         @Test
-        void fluentSetters_preserveParentChildRelationship() {
-            IfStmt parent = new IfStmt(
-                    new LiteralExpr(true, PrimitiveSourceType.BOOLEAN),
-                    new BlockStmt(),
-                    null
-            );
+        void fluentSetters_preserveParentChildRelationship()
+        {
+            IfStmt parent = new IfStmt(new LiteralExpr(true, PrimitiveSourceType.BOOLEAN), new BlockStmt(), null);
 
             BlockStmt newChild = new BlockStmt();
             parent.withThenBranch(newChild);
@@ -2748,33 +2882,23 @@ class StatementASTTest {
         }
 
         @Test
-        void fluentSetters_clearOldParent() {
+        void fluentSetters_clearOldParent()
+        {
             BlockStmt child = new BlockStmt();
-            IfStmt parent1 = new IfStmt(
-                    new LiteralExpr(true, PrimitiveSourceType.BOOLEAN),
-                    child,
-                    null
-            );
+            IfStmt parent1 = new IfStmt(new LiteralExpr(true, PrimitiveSourceType.BOOLEAN), child, null);
 
             assertSame(parent1, child.getParent());
 
-            IfStmt parent2 = new IfStmt(
-                    new LiteralExpr(false, PrimitiveSourceType.BOOLEAN),
-                    new BlockStmt(),
-                    null
-            );
+            IfStmt parent2 = new IfStmt(new LiteralExpr(false, PrimitiveSourceType.BOOLEAN), new BlockStmt(), null);
             parent2.withThenBranch(child);
 
             assertSame(parent2, child.getParent());
         }
 
         @Test
-        void fluentSetters_chainMultipleOperations() {
-            IfStmt stmt = new IfStmt(
-                    new LiteralExpr(true, PrimitiveSourceType.BOOLEAN),
-                    new BlockStmt(),
-                    null
-            );
+        void fluentSetters_chainMultipleOperations()
+        {
+            IfStmt stmt = new IfStmt(new LiteralExpr(true, PrimitiveSourceType.BOOLEAN), new BlockStmt(), null);
 
             LiteralExpr newCond = new LiteralExpr(false, PrimitiveSourceType.BOOLEAN);
             BlockStmt newThen = new BlockStmt();

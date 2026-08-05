@@ -12,24 +12,33 @@ import java.util.Map;
  * is assigned at first sight (deterministic given the deterministic lowering order), so it can be
  * referenced inline before the full set is known.
  */
-final class CStringPool {
+final class CStringPool
+{
 
     private final Map<String, String> symbols = new LinkedHashMap<>();
     private int counter = 0;
 
-    /** Returns the {@code @.str.N} symbol for {@code content}, allocating one on first use. */
-    String intern(String content) {
+    /**
+     * Returns the {@code @.str.N} symbol for {@code content}, allocating one on first use.
+     */
+    String intern(String content)
+    {
         return symbols.computeIfAbsent(content, k -> "@.str." + (counter++));
     }
 
-    /** UTF-8 byte length of a string (the {@code len} argument for {@code jvm_intern_string}). */
-    static int utf8Length(String content) {
+    /**
+     * UTF-8 byte length of a string (the {@code len} argument for {@code jvm_intern_string}).
+     */
+    static int utf8Length(String content)
+    {
         return content.getBytes(StandardCharsets.UTF_8).length;
     }
 
-    List<String> renderConstants() {
+    List<String> renderConstants()
+    {
         List<String> out = new ArrayList<>();
-        for (Map.Entry<String, String> e : symbols.entrySet()) {
+        for (Map.Entry<String, String> e : symbols.entrySet())
+        {
             byte[] bytes = e.getKey().getBytes(StandardCharsets.UTF_8);
             out.add(e.getValue() + " = private constant [" + (bytes.length + 1) + " x i8] c\""
                 + escape(bytes) + "\\00\"");
@@ -37,13 +46,18 @@ final class CStringPool {
         return out;
     }
 
-    private static String escape(byte[] bytes) {
+    private static String escape(byte[] bytes)
+    {
         StringBuilder sb = new StringBuilder(bytes.length);
-        for (byte b : bytes) {
+        for (byte b : bytes)
+        {
             int c = b & 0xFF;
-            if (c >= 0x20 && c <= 0x7E && c != '"' && c != '\\') {
+            if (c >= 0x20 && c <= 0x7E && c != '"' && c != '\\')
+            {
                 sb.append((char) c);
-            } else {
+            }
+            else
+            {
                 sb.append('\\').append(String.format("%02X", c));
             }
         }

@@ -14,13 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for JumpThreading transform.
  * Verifies jump threading through empty blocks.
  */
-class JumpThreadingTest {
+class JumpThreadingTest
+{
 
     private IRMethod method;
     private JumpThreading transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -29,12 +31,14 @@ class JumpThreadingTest {
     }
 
     @Test
-    void getNameReturnsCorrectName() {
+    void getNameReturnsCorrectName()
+    {
         assertEquals("JumpThreading", transform.getName());
     }
 
     @Test
-    void threadsJumpsThroughEmptyBlock() {
+    void threadsJumpsThroughEmptyBlock()
+    {
         // Create: A -> B -> C where B is empty
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -62,7 +66,8 @@ class JumpThreadingTest {
     }
 
     @Test
-    void doesNotThreadThroughNonEmptyBlock() {
+    void doesNotThreadThroughNonEmptyBlock()
+    {
         // Create: A -> B -> C where B has instructions
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -90,7 +95,8 @@ class JumpThreadingTest {
     }
 
     @Test
-    void returnsFalseWhenNoThreadingPossible() {
+    void returnsFalseWhenNoThreadingPossible()
+    {
         // Single block with no jumps
         IRBlock blockA = new IRBlock("A");
         method.addBlock(blockA);
@@ -102,14 +108,16 @@ class JumpThreadingTest {
     }
 
     @Test
-    void returnsFalseOnEmptyMethod() {
+    void returnsFalseOnEmptyMethod()
+    {
         boolean changed = transform.run(method);
 
         assertFalse(changed, "Transform should return false on empty method");
     }
 
     @Test
-    void threadsChainOfEmptyBlocks() {
+    void threadsChainOfEmptyBlocks()
+    {
         // Create: A -> B -> C -> D where B and C are empty
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -138,7 +146,8 @@ class JumpThreadingTest {
     }
 
     @Test
-    void doesNotThreadWhenTargetHasMultiplePredecessors() {
+    void doesNotThreadWhenTargetHasMultiplePredecessors()
+    {
         // Create: A -> B, C -> B where B is empty -> D
         // B has multiple predecessors, so threading might be unsafe
         IRBlock blockA = new IRBlock("A");
@@ -168,7 +177,8 @@ class JumpThreadingTest {
     }
 
     @Test
-    void threadsMultipleIndependentJumps() {
+    void threadsMultipleIndependentJumps()
+    {
         // Create: A -> B -> C and D -> E -> F (two independent chains)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -203,7 +213,8 @@ class JumpThreadingTest {
     }
 
     @Test
-    void doesNotCreateInfiniteLoop() {
+    void doesNotCreateInfiniteLoop()
+    {
         // Create: A -> B -> A (circular) where B is empty
         // Transform should detect and not create infinite threading
         IRBlock blockA = new IRBlock("A");
@@ -219,12 +230,12 @@ class JumpThreadingTest {
         blockB.addInstruction(SimpleInstruction.createGoto(blockA));
         blockB.addSuccessor(blockA);
 
-        // Should complete without infinite loop
         transform.run(method);
     }
 
     @Test
-    void handlesBlockWithOnlyGotoInstruction() {
+    void handlesBlockWithOnlyGotoInstruction()
+    {
         // Create: A -> B -> C where B has only goto (truly empty)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");

@@ -1,35 +1,58 @@
 package com.tonic.parser.constpool.structure;
 
 /**
- * Represents a Method Reference in the constant pool.
+ * The mutable class-index and name-and-type-index pair behind a constant pool method reference.
  */
-public class MethodRef {
+public class MethodRef
+{
     private int classIndex;
     private int nameAndTypeIndex;
 
-    public MethodRef(int classIndex, int nameAndTypeIndex) {
+    /**
+     * @param classIndex CONSTANT_Class index of the owner
+     * @param nameAndTypeIndex CONSTANT_NameAndType index for the method name and descriptor
+     */
+    public MethodRef(int classIndex, int nameAndTypeIndex)
+    {
         this.classIndex = classIndex;
         this.nameAndTypeIndex = nameAndTypeIndex;
     }
 
-    public int getClassIndex() {
+    /**
+     * @return the class index
+     */
+    public int getClassIndex()
+    {
         return classIndex;
     }
 
-    public int getNameAndTypeIndex() {
+    /**
+     * @return the name and type index
+     */
+    public int getNameAndTypeIndex()
+    {
         return nameAndTypeIndex;
     }
 
-    public void setClassIndex(int classIndex) {
+    /**
+     * @param classIndex new CONSTANT_Class index for the owner
+     */
+    public void setClassIndex(int classIndex)
+    {
         this.classIndex = classIndex;
     }
 
-    public void setNameAndTypeIndex(int nameAndTypeIndex) {
+    /**
+     * @param nameAndTypeIndex new CONSTANT_NameAndType index
+     */
+    public void setNameAndTypeIndex(int nameAndTypeIndex)
+    {
         this.nameAndTypeIndex = nameAndTypeIndex;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodRef{" +
                 "classIndex=" + classIndex +
                 ", nameAndTypeIndex=" + nameAndTypeIndex +

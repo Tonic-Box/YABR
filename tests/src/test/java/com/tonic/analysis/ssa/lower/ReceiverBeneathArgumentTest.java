@@ -22,11 +22,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * instruction evaluates all of it. For {@code target.absorb(parent.get().flip())} the argument is produced by
  * the last of two chained calls, so the receiver landed between them and {@code flip()} ran against the
  * receiver instead: the two objects swapped roles, silently.
- * <p>
+ *
  * Asserted on behaviour, not on text - the fixture records which object each call ran against, so a swap
  * changes the trace rather than merely the formatting.
  */
-class ReceiverBeneathArgumentTest {
+class ReceiverBeneathArgumentTest
+{
 
     private static final String[] LINES = {
             "public class ReceiverOrder {",
@@ -61,14 +62,14 @@ class ReceiverBeneathArgumentTest {
     };
 
     @Test
-    void aReceiverIsPushedBeneathTheWholeArgument() throws Exception {
+    void aReceiverIsPushedBeneathTheWholeArgument() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("receiver-order");
         Path src = dir.resolve("ReceiverOrder.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("ReceiverOrder.class")));

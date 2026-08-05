@@ -10,17 +10,22 @@ import com.tonic.analysis.ssa.value.*;
 import java.util.*;
 
 /**
- * Eliminates phi functions by inserting copies at predecessor blocks.
- * May split critical edges if necessary.
- * <p>
- * For phi nodes that have fewer incoming values than predecessors (incomplete phis),
- * this class inserts default-value initialization copies on the missing paths. This
- * ensures all local variable slots are properly initialized on all control flow paths,
- * which is required by the JVM verifier.
+ * Eliminates phi functions by inserting copies in predecessor blocks, splitting critical edges
+ * where needed. An incomplete phi (fewer incoming values than predecessors) also gets
+ * default-value copies on the missing paths, since the verifier requires every local slot to be
+ * initialized on all control-flow paths.
  */
-public class PhiEliminator {
+public class PhiEliminator
+{
 
-    public void eliminate(IRMethod method) {
+    /**
+     * Splits critical edges, keeps the phis that can stay stack-resident, materializes the rest as
+     * predecessor copies and then removes every phi from the method.
+     *
+     * @param method method to rewrite in place
+     */
+    public void eliminate(IRMethod method)
+    {
         splitCriticalEdges(method);
         Set<PhiInstruction> stackPhis = findStackResidentPhis(method);
         insertCopies(method, stackPhis);
@@ -36,27 +41,34 @@ public class PhiEliminator {
      * its first instruction (so it is never buried under an unrelated push). Records the result and incoming
      * values so the register allocator skips slots for them and the emitter keeps them stack-resident.
      */
-    private Set<PhiInstruction> findStackResidentPhis(IRMethod method) {
+    private Set<PhiInstruction> findStackResidentPhis(IRMethod method)
+    {
         Set<PhiInstruction> result = new HashSet<>();
         // A named variable's merge stays in its slot. The store is what carries the variable: javac emits it
         // for every declared local, the LocalVariableTable range opens at it, and a value carried on the
         // stack instead erases the variable - the declaration reads back with a synthesized name.
         Set<SSAValue> named = new HashSet<>();
-        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
-            if (!local.isParameter()) {
+        for (IRMethod.SourceLocal local : method.getSourceLocals())
+        {
+            if (!local.isParameter())
+            {
                 named.addAll(local.getValues());
             }
         }
-        for (IRBlock merge : method.getBlocks()) {
+        for (IRBlock merge : method.getBlocks())
+        {
             List<PhiInstruction> phis = merge.getPhiInstructions();
-            if (phis.size() != 1) {
+            if (phis.size() != 1)
+            {
                 continue;
             }
             PhiInstruction phi = phis.get(0);
-            if (named.contains(phi.getResult())) {
+            if (named.contains(phi.getResult()))
+            {
                 continue;
             }
-            if (!isStackResidentEligible(merge, phi)) {
+            if (!isStackResidentEligible(merge, phi))
+            {
                 continue;
             }
             // Either every arm computes its value in place (a conditional over expressions - each arm's code
@@ -65,36 +77,46 @@ public class PhiEliminator {
             // slot, so a stack merge there would recover as a conditional the source never wrote.
             int producing = 0;
             Map<IRBlock, Value> incomings = phi.getIncomingValues();
-            for (Map.Entry<IRBlock, Value> entry : incomings.entrySet()) {
-                if (producedAtTail(entry.getKey(), (SSAValue) entry.getValue())) {
+            for (Map.Entry<IRBlock, Value> entry : incomings.entrySet())
+            {
+                if (producedAtTail(entry.getKey(), (SSAValue) entry.getValue()))
+                {
                     producing++;
                 }
             }
-            if (producing != 0 && producing != incomings.size()) {
+            if (producing != 0 && producing != incomings.size())
+            {
                 continue;
             }
             // A select's operands feed nothing but the merge. An incoming with another consumer is an
             // ASSIGNED value - `if (c) { x = v; } use x` reaches here with v also feeding x's store - and
             // javac keeps that in the slot, so a stack merge would recover as a conditional never written.
-            if (producing == 0) {
+            if (producing == 0)
+            {
                 boolean pureSelect = true;
-                for (Value incoming : incomings.values()) {
-                    if (((SSAValue) incoming).getUseCount() != 1) {
+                for (Value incoming : incomings.values())
+                {
+                    if (((SSAValue) incoming).getUseCount() != 1)
+                    {
                         pureSelect = false;
                         break;
                     }
                 }
-                if (!pureSelect) {
+                if (!pureSelect)
+                {
                     continue;
                 }
             }
             result.add(phi);
             method.getStackResidentPhiResults().add(phi.getResult());
-            if (producing == 0) {
+            if (producing == 0)
+            {
                 materializeForeignIncomings(phi);
             }
-            for (Value incoming : phi.getIncomingValues().values()) {
-                if (incoming instanceof SSAValue) {
+            for (Value incoming : phi.getIncomingValues().values())
+            {
+                if (incoming instanceof SSAValue)
+                {
                     method.getStackResidentPhiIncomings().add((SSAValue) incoming);
                 }
             }
@@ -102,35 +124,43 @@ public class PhiEliminator {
         return result;
     }
 
-    private boolean isStackResidentEligible(IRBlock merge, PhiInstruction phi) {
+    private boolean isStackResidentEligible(IRBlock merge, PhiInstruction phi)
+    {
         SSAValue phiResult = phi.getResult();
-        if (phiResult == null) {
+        if (phiResult == null)
+        {
             return false;
         }
         // References merge on the stack exactly like ints - only the two-slot widths are excluded, since
         // every structural check below assumes the value is one stack entry deep.
         IRType type = phiResult.getType();
-        if (type == PrimitiveType.LONG || type == PrimitiveType.DOUBLE) {
+        if (type == PrimitiveType.LONG || type == PrimitiveType.DOUBLE)
+        {
             return false;
         }
 
         Map<IRBlock, Value> incomings = phi.getIncomingValues();
-        if (incomings.size() < 2) {
+        if (incomings.size() < 2)
+        {
             return false;
         }
         Set<IRBlock> preds = merge.getPredecessors();
-        if (incomings.size() != preds.size() || !incomings.keySet().containsAll(preds)) {
+        if (incomings.size() != preds.size() || !incomings.keySet().containsAll(preds))
+        {
             return false;
         }
 
         // The phi result must be consumed inside the merge, as the first (deepest) stack operand of the merge's
         // first instruction - so it sits exactly where its consumer expects and never escapes the block.
         List<IRInstruction> mergeInstrs = merge.getInstructions();
-        if (mergeInstrs.isEmpty()) {
+        if (mergeInstrs.isEmpty())
+        {
             return false;
         }
-        for (IRInstruction use : phiResult.getUses()) {
-            if (use.getBlock() != merge) {
+        for (IRInstruction use : phiResult.getUses())
+        {
+            if (use.getBlock() != merge)
+            {
                 return false;
             }
         }
@@ -138,30 +168,37 @@ public class PhiEliminator {
         // its deepest operand, so the stack reads phi-then-constants exactly as the operand order demands.
         // An argument list is the common case - `call(c ? 1 : 0, "label")` opens its merge with the label.
         int firstReal = 0;
-        while (firstReal < mergeInstrs.size() && mergeInstrs.get(firstReal) instanceof ConstantInstruction) {
+        while (firstReal < mergeInstrs.size() && mergeInstrs.get(firstReal) instanceof ConstantInstruction)
+        {
             firstReal++;
         }
-        if (firstReal >= mergeInstrs.size()) {
+        if (firstReal >= mergeInstrs.size())
+        {
             return false;
         }
         List<Value> firstOps = mergeInstrs.get(firstReal).getOperands();
-        if (firstOps.isEmpty() || firstOps.get(0) != phiResult) {
+        if (firstOps.isEmpty() || firstOps.get(0) != phiResult)
+        {
             return false;
         }
 
-        for (Map.Entry<IRBlock, Value> entry : incomings.entrySet()) {
+        for (Map.Entry<IRBlock, Value> entry : incomings.entrySet())
+        {
             IRBlock pred = entry.getKey();
             Value incoming = entry.getValue();
-            if (!(incoming instanceof SSAValue)) {
+            if (!(incoming instanceof SSAValue))
+            {
                 return false;
             }
-            if (pred.getSuccessors().size() != 1 || !pred.getSuccessors().contains(merge)) {
+            if (pred.getSuccessors().size() != 1 || !pred.getSuccessors().contains(merge))
+            {
                 return false;
             }
             IRInstruction terminator = pred.getTerminator();
             if (!(terminator instanceof SimpleInstruction)
                     || ((SimpleInstruction) terminator).getOp() != SimpleOp.GOTO
-                    || ((SimpleInstruction) terminator).getTarget() != merge) {
+                    || ((SimpleInstruction) terminator).getTarget() != merge)
+            {
                 return false;
             }
         }
@@ -174,12 +211,15 @@ public class PhiEliminator {
      * other uses, one computed earlier) is re-materialized onto the stack at the predecessor's tail by
      * {@link #materializeForeignIncomings} instead.
      */
-    private boolean producedAtTail(IRBlock pred, SSAValue value) {
+    private boolean producedAtTail(IRBlock pred, SSAValue value)
+    {
         IRInstruction terminator = pred.getTerminator();
         List<IRInstruction> predInstrs = pred.getInstructions();
         IRInstruction lastNonTerminator = null;
-        for (int i = predInstrs.size() - 1; i >= 0; i--) {
-            if (predInstrs.get(i) != terminator) {
+        for (int i = predInstrs.size() - 1; i >= 0; i--)
+        {
+            if (predInstrs.get(i) != terminator)
+            {
                 lastNonTerminator = predInstrs.get(i);
                 break;
             }
@@ -193,11 +233,14 @@ public class PhiEliminator {
      * predecessor's tail. The copy's result is stack-resident, so the emitter pushes the source and leaves it
      * on top - exactly what the merge expects - while the source itself keeps its slot and its other uses.
      */
-    private void materializeForeignIncomings(PhiInstruction phi) {
-        for (Map.Entry<IRBlock, Value> entry : new HashMap<>(phi.getIncomingValues()).entrySet()) {
+    private void materializeForeignIncomings(PhiInstruction phi)
+    {
+        for (Map.Entry<IRBlock, Value> entry : new HashMap<>(phi.getIncomingValues()).entrySet())
+        {
             IRBlock pred = entry.getKey();
             SSAValue incoming = (SSAValue) entry.getValue();
-            if (producedAtTail(pred, incoming)) {
+            if (producedAtTail(pred, incoming))
+            {
                 continue;
             }
             SSAValue fresh = new SSAValue(incoming.getType());
@@ -210,20 +253,25 @@ public class PhiEliminator {
         }
     }
 
-    private void splitCriticalEdges(IRMethod method) {
+    private void splitCriticalEdges(IRMethod method)
+    {
         List<EdgeToSplit> edgesToSplit = new ArrayList<>();
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             if (block.getPhiInstructions().isEmpty()) continue;
 
-            for (IRBlock pred : block.getPredecessors()) {
-                if (pred.getSuccessors().size() > 1) {
+            for (IRBlock pred : block.getPredecessors())
+            {
+                if (pred.getSuccessors().size() > 1)
+                {
                     edgesToSplit.add(new EdgeToSplit(pred, block));
                 }
             }
         }
 
-        for (EdgeToSplit edge : edgesToSplit) {
+        for (EdgeToSplit edge : edgesToSplit)
+        {
             IRBlock splitBlock = new IRBlock("split_" + edge.from().getName() + "_" + edge.to().getName());
             method.addBlock(splitBlock);
 
@@ -239,72 +287,90 @@ public class PhiEliminator {
         }
     }
 
-    private void updatePhiPredecessor(IRBlock block, IRBlock oldPred, IRBlock newPred) {
-        for (PhiInstruction phi : block.getPhiInstructions()) {
+    private void updatePhiPredecessor(IRBlock block, IRBlock oldPred, IRBlock newPred)
+    {
+        for (PhiInstruction phi : block.getPhiInstructions())
+        {
             Value incoming = phi.getIncoming(oldPred);
-            if (incoming != null) {
+            if (incoming != null)
+            {
                 phi.removeIncoming(oldPred);
                 phi.addIncoming(incoming, newPred);
             }
         }
     }
 
-    private void updateTerminator(IRBlock block, IRBlock oldTarget, IRBlock newTarget) {
+    private void updateTerminator(IRBlock block, IRBlock oldTarget, IRBlock newTarget)
+    {
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return;
 
-        if (terminator instanceof SimpleInstruction) {
+        if (terminator instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) terminator;
-            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() == oldTarget) {
+            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() == oldTarget)
+            {
                 simple.setTarget(newTarget);
             }
-        } else if (terminator instanceof BranchInstruction) {
+        }
+        else if (terminator instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) terminator;
-            if (branch.getTrueTarget() == oldTarget) {
+            if (branch.getTrueTarget() == oldTarget)
+            {
                 branch.setTrueTarget(newTarget);
             }
-            if (branch.getFalseTarget() == oldTarget) {
+            if (branch.getFalseTarget() == oldTarget)
+            {
                 branch.setFalseTarget(newTarget);
             }
-        } else if (terminator instanceof SwitchInstruction) {
+        }
+        else if (terminator instanceof SwitchInstruction)
+        {
             SwitchInstruction switchInstr = (SwitchInstruction) terminator;
-            if (switchInstr.getDefaultTarget() == oldTarget) {
+            if (switchInstr.getDefaultTarget() == oldTarget)
+            {
                 switchInstr.setDefaultTarget(newTarget);
             }
-            for (Map.Entry<Integer, IRBlock> entry : switchInstr.getCases().entrySet()) {
-                if (entry.getValue() == oldTarget) {
+            for (Map.Entry<Integer, IRBlock> entry : switchInstr.getCases().entrySet())
+            {
+                if (entry.getValue() == oldTarget)
+                {
                     switchInstr.getCases().put(entry.getKey(), newTarget);
                 }
             }
         }
     }
 
-    private void insertCopies(IRMethod method, Set<PhiInstruction> stackPhis) {
+    private void insertCopies(IRMethod method, Set<PhiInstruction> stackPhis)
+    {
         int copyId = 0;
         Map<SSAValue, List<CopyInfo>> phiCopies = new HashMap<>();
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             Set<SSAValue> mergePhiResults = new HashSet<>();
-            for (PhiInstruction p : block.getPhiInstructions()) {
-                if (p.getResult() != null) {
+            for (PhiInstruction p : block.getPhiInstructions())
+            {
+                if (p.getResult() != null)
+                {
                     mergePhiResults.add(p.getResult());
                 }
             }
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 SSAValue phiResult = phi.getResult();
                 if (phiResult == null) continue;
                 if (stackPhis.contains(phi)) continue;
 
                 Set<IRBlock> predecessorsWithIncoming = new HashSet<>(phi.getIncomingValues().keySet());
 
-                for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+                for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+                {
                     IRBlock pred = entry.getKey();
                     Value incoming = entry.getValue();
 
-                    SSAValue copyResult = new SSAValue(
-                        phiResult.getType(),
-                        phiResult.getName() + "_copy" + copyId++
-                    );
+                    SSAValue copyResult = new SSAValue(phiResult.getType(), phiResult.getName() + "_copy" + copyId++);
 
                     CopyInstruction copy = new CopyInstruction(copyResult, incoming);
 
@@ -320,18 +386,22 @@ public class PhiEliminator {
                     // no-later-use guard preserves parallel-copy semantics (a swap keeps its self phi live past
                     // the source, so it stays batched, where storing after both reads is correct).
                     int insertIndex = -1;
-                    if (incoming instanceof SSAValue) {
+                    if (incoming instanceof SSAValue)
+                    {
                         IRInstruction def = ((SSAValue) incoming).getDefinition();
-                        if (def != null && def.getBlock() == pred) {
+                        if (def != null && def.getBlock() == pred)
+                        {
                             int defIndex = pred.getInstructions().indexOf(def);
                             if (defIndex >= 0 && !isUsedAfter(phiResult, pred, defIndex)
-                                    && readsOtherMergePhi(incoming, phiResult, mergePhiResults, pred)) {
+                                    && readsOtherMergePhi(incoming, phiResult, mergePhiResults, pred))
+                            {
                                 insertIndex = defIndex + 1;
                             }
                         }
                     }
                     IRInstruction terminator = pred.getTerminator();
-                    if (insertIndex < 0) {
+                    if (insertIndex < 0)
+                    {
                         insertIndex = terminator != null
                                 ? pred.getInstructions().indexOf(terminator)
                                 : pred.getInstructions().size();
@@ -342,8 +412,10 @@ public class PhiEliminator {
                         .add(new CopyInfo(copyResult, pred));
                 }
 
-                for (IRBlock pred : block.getPredecessors()) {
-                    if (!predecessorsWithIncoming.contains(pred)) {
+                for (IRBlock pred : block.getPredecessors())
+                {
+                    if (!predecessorsWithIncoming.contains(pred))
+                    {
                         SSAValue copyResult = new SSAValue(
                             phiResult.getType(),
                             phiResult.getName() + "_init" + copyId++
@@ -353,10 +425,13 @@ public class PhiEliminator {
                         CopyInstruction copy = new CopyInstruction(copyResult, defaultValue);
 
                         IRInstruction terminator = pred.getTerminator();
-                        if (terminator != null) {
+                        if (terminator != null)
+                        {
                             int index = pred.getInstructions().indexOf(terminator);
                             pred.insertInstruction(index, copy);
-                        } else {
+                        }
+                        else
+                        {
                             pred.addInstruction(copy);
                         }
 
@@ -370,11 +445,16 @@ public class PhiEliminator {
         method.setPhiCopyMapping(phiCopies);
     }
 
-    /** Whether {@code value} is read by any instruction in {@code block} positioned after {@code afterIndex}. */
-    private boolean isUsedAfter(SSAValue value, IRBlock block, int afterIndex) {
+    /**
+     * Whether {@code value} is read by any instruction in {@code block} positioned after {@code afterIndex}.
+     */
+    private boolean isUsedAfter(SSAValue value, IRBlock block, int afterIndex)
+    {
         List<IRInstruction> instrs = block.getInstructions();
-        for (IRInstruction use : value.getUses()) {
-            if (use.getBlock() == block && instrs.indexOf(use) > afterIndex) {
+        for (IRInstruction use : value.getUses())
+        {
+            if (use.getBlock() == block && instrs.indexOf(use) > afterIndex)
+            {
                 return true;
             }
         }
@@ -386,28 +466,36 @@ public class PhiEliminator {
      * {@code selfPhi} - i.e. this copy's value depends on a different loop-carried variable that another copy on
      * the same edge overwrites. Phi results are read boundaries: the walk stops at any of them.
      */
-    private boolean readsOtherMergePhi(Value src, SSAValue selfPhi, Set<SSAValue> mergePhiResults, IRBlock pred) {
+    private boolean readsOtherMergePhi(Value src, SSAValue selfPhi, Set<SSAValue> mergePhiResults, IRBlock pred)
+    {
         Set<SSAValue> visited = new HashSet<>();
         Deque<Value> work = new ArrayDeque<>();
         work.push(src);
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             Value v = work.pop();
-            if (!(v instanceof SSAValue)) {
+            if (!(v instanceof SSAValue))
+            {
                 continue;
             }
             SSAValue sv = (SSAValue) v;
-            if (!visited.add(sv)) {
+            if (!visited.add(sv))
+            {
                 continue;
             }
-            if (mergePhiResults.contains(sv)) {
-                if (sv != selfPhi) {
+            if (mergePhiResults.contains(sv))
+            {
+                if (sv != selfPhi)
+                {
                     return true;
                 }
                 continue;
             }
             IRInstruction def = sv.getDefinition();
-            if (def != null && def.getBlock() == pred) {
-                for (Value op : def.getOperands()) {
+            if (def != null && def.getBlock() == pred)
+            {
+                for (Value op : def.getOperands())
+                {
                     work.push(op);
                 }
             }
@@ -415,10 +503,13 @@ public class PhiEliminator {
         return false;
     }
 
-    private Value getDefaultValue(IRType type) {
-        if (type instanceof PrimitiveType) {
+    private Value getDefaultValue(IRType type)
+    {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -436,19 +527,23 @@ public class PhiEliminator {
         return NullConstant.INSTANCE;
     }
 
-    private void removePhis(IRMethod method, Set<PhiInstruction> stackPhis) {
-        for (IRBlock block : method.getBlocks()) {
+    private void removePhis(IRMethod method, Set<PhiInstruction> stackPhis)
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             // Keep stack-resident phis: they carry no local slot but mark where the operand-stack value flows
             // from each predecessor into the merge, which the emitter needs to leave the value resident.
             block.getPhiInstructions().removeIf(phi -> !stackPhis.contains(phi));
         }
     }
 
-    private static final class EdgeToSplit {
+    private static final class EdgeToSplit
+    {
         private final IRBlock from;
         private final IRBlock to;
 
-        EdgeToSplit(IRBlock from, IRBlock to) {
+        EdgeToSplit(IRBlock from, IRBlock to)
+        {
             this.from = from;
             this.to = to;
         }

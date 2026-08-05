@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * long slot. That returned a truncated value and corrupted long locals (a {@code VerifyError} when the store
  * fed a wide slot the verifier tracked). An explicit {@code long} literal must stay {@code long} on negation.
  */
-class NegativeLongLiteralRecompileFidelityTest {
+class NegativeLongLiteralRecompileFidelityTest
+{
 
     private static final String SOURCE =
             "public class NegLong {\n"
@@ -39,14 +40,14 @@ class NegativeLongLiteralRecompileFidelityTest {
     private static Class<?> rc;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("neg-long");
         Path src = dir.resolve("NegLong.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("NegLong.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -56,7 +57,8 @@ class NegativeLongLiteralRecompileFidelityTest {
     }
 
     @Test
-    void negativeLongLiteralsKeepTheirValueAndType() throws Exception {
+    void negativeLongLiteralsKeepTheirValueAndType() throws Exception
+    {
         Object o = rc.getDeclaredConstructor().newInstance();
         assertEquals(-1L, rc.getMethod("minusOne").invoke(o));
         assertEquals(-5L, rc.getMethod("small").invoke(o));

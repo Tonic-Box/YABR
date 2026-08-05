@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * by the {@code if} rather than the switch header. The method is decompiled and recompiled, then the original and
  * recovered method are executed over a fixed input set and must return identical results.
  */
-class SwitchInIfFidelityTest {
+class SwitchInIfFidelityTest
+{
 
     private static final int[][] INPUTS = {
             {0, 0}, {0, 1}, {0, 2}, {0, 5}, {1, 0}, {1, 1}, {1, 2}, {1, 5}
@@ -30,7 +31,8 @@ class SwitchInIfFidelityTest {
      * r = 19; } } return r + 100;} - the switch's break target and the {@code if}'s skip edge meet at the same block.
      */
     @Test
-    void switchInsideIfSharesMerge() throws Exception {
+    void switchInsideIfSharesMerge() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchInIf")
                 .publicStaticMethod("h", "(II)I");
         Label merge = mb.newLabel();
@@ -58,7 +60,8 @@ class SwitchInIfFidelityTest {
      * survives), and it is a shared tail - the break target is found by where the surviving case converges.
      */
     @Test
-    void switchWithSingleSurvivingCaseSharesMerge() throws Exception {
+    void switchWithSingleSurvivingCaseSharesMerge() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchSharedTail")
                 .publicStaticMethod("k", "(II)I");
         Label elseArm = mb.newLabel();
@@ -77,7 +80,8 @@ class SwitchInIfFidelityTest {
         assertBehaviourPreserved(mb.build(), "k");
     }
 
-    private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception {
+    private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception
+    {
         byte[] bytes = built.write();
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -88,7 +92,8 @@ class SwitchInIfFidelityTest {
         Method original = TestUtils.loadAndVerify(cf).getDeclaredMethod(name, int.class, int.class);
         Method recompiled = TestUtils.loadAndVerify(recovered).getDeclaredMethod(name, int.class, int.class);
 
-        for (int[] in : INPUTS) {
+        for (int[] in : INPUTS)
+        {
             Object expected = original.invoke(null, in[0], in[1]);
             Object actual = recompiled.invoke(null, in[0], in[1]);
             assertEquals(expected, actual, name + "(" + in[0] + "," + in[1] + ") diverged after decompile+recompile");

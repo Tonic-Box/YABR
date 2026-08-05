@@ -10,17 +10,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class BreakpointManagerTest {
+class BreakpointManagerTest
+{
 
     private BreakpointManager manager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         manager = new BreakpointManager();
     }
 
     @Test
-    void testAddSingleBreakpoint() {
+    void testAddSingleBreakpoint()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -29,7 +32,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testAddMultipleBreakpoints() {
+    void testAddMultipleBreakpoints()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method1", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method2", "()V", 20);
         Breakpoint bp3 = new Breakpoint("com/test/Bar", "method", "(II)V", 15);
@@ -42,12 +46,14 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testAddNullBreakpoint() {
+    void testAddNullBreakpoint()
+    {
         assertThrows(IllegalArgumentException.class, () -> manager.addBreakpoint(null));
     }
 
     @Test
-    void testAddDuplicateBreakpoint() {
+    void testAddDuplicateBreakpoint()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
 
@@ -58,7 +64,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testRemoveBreakpointByObject() {
+    void testRemoveBreakpointByObject()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -68,7 +75,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testRemoveBreakpointByKey() {
+    void testRemoveBreakpointByKey()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -77,19 +85,22 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testRemoveNonExistentBreakpoint() {
+    void testRemoveNonExistentBreakpoint()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         assertFalse(manager.removeBreakpoint(bp));
     }
 
     @Test
-    void testRemoveNullBreakpoint() {
+    void testRemoveNullBreakpoint()
+    {
         assertFalse(manager.removeBreakpoint((Breakpoint) null));
         assertFalse(manager.removeBreakpoint((String) null));
     }
 
     @Test
-    void testRemoveAllBreakpoints() {
+    void testRemoveAllBreakpoints()
+    {
         manager.addBreakpoint(new Breakpoint("com/test/Foo", "method1", "(II)V", 10));
         manager.addBreakpoint(new Breakpoint("com/test/Foo", "method2", "()V", 20));
         manager.addBreakpoint(new Breakpoint("com/test/Bar", "method", "(II)V", 15));
@@ -103,7 +114,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testEnableIndividualBreakpoint() {
+    void testEnableIndividualBreakpoint()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -115,7 +127,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testDisableIndividualBreakpoint() {
+    void testDisableIndividualBreakpoint()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -126,19 +139,22 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testEnableDisableWithNullKey() {
+    void testEnableDisableWithNullKey()
+    {
         manager.enableBreakpoint(null);
         manager.disableBreakpoint(null);
     }
 
     @Test
-    void testEnableDisableNonExistent() {
+    void testEnableDisableNonExistent()
+    {
         manager.enableBreakpoint("nonexistent");
         manager.disableBreakpoint("nonexistent");
     }
 
     @Test
-    void testEnableAll() {
+    void testEnableAll()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method1", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method2", "()V", 20);
 
@@ -155,7 +171,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testDisableAll() {
+    void testDisableAll()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method1", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method2", "()V", 20);
 
@@ -169,7 +186,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testGetBreakpointByKey() {
+    void testGetBreakpointByKey()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -178,17 +196,20 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testGetBreakpointByNullKey() {
+    void testGetBreakpointByNullKey()
+    {
         assertNull(manager.getBreakpoint(null));
     }
 
     @Test
-    void testGetBreakpointNonExistent() {
+    void testGetBreakpointNonExistent()
+    {
         assertNull(manager.getBreakpoint("nonexistent"));
     }
 
     @Test
-    void testGetAllBreakpoints() {
+    void testGetAllBreakpoints()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method1", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method2", "()V", 20);
 
@@ -203,13 +224,15 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testGetAllBreakpointsEmpty() {
+    void testGetAllBreakpointsEmpty()
+    {
         List<Breakpoint> all = manager.getAllBreakpoints();
         assertTrue(all.isEmpty());
     }
 
     @Test
-    void testGetBreakpointsForMethod() {
+    void testGetBreakpointsForMethod()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 20);
         Breakpoint bp3 = new Breakpoint("com/test/Foo", "other", "()V", 15);
@@ -227,13 +250,15 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testGetBreakpointsForMethodNonExistent() {
+    void testGetBreakpointsForMethodNonExistent()
+    {
         List<Breakpoint> methodBps = manager.getBreakpointsForMethod("com/test/Foo", "method", "(II)V");
         assertTrue(methodBps.isEmpty());
     }
 
     @Test
-    void testHasBreakpoints() {
+    void testHasBreakpoints()
+    {
         assertFalse(manager.hasBreakpoints());
 
         manager.addBreakpoint(new Breakpoint("com/test/Foo", "method", "(II)V", 10));
@@ -244,7 +269,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testGetBreakpointCount() {
+    void testGetBreakpointCount()
+    {
         assertEquals(0, manager.getBreakpointCount());
 
         manager.addBreakpoint(new Breakpoint("com/test/Foo", "method1", "(II)V", 10));
@@ -255,7 +281,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testCheckBreakpointWithStackFrame() {
+    void testCheckBreakpointWithStackFrame()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("method");
@@ -273,12 +300,14 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testCheckBreakpointWithNullFrame() {
+    void testCheckBreakpointWithNullFrame()
+    {
         assertNull(manager.checkBreakpoint((StackFrame) null));
     }
 
     @Test
-    void testCheckBreakpointNoMatch() {
+    void testCheckBreakpointNoMatch()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("method");
@@ -295,7 +324,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testCheckBreakpointDisabled() {
+    void testCheckBreakpointDisabled()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("method");
@@ -313,7 +343,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testCheckBreakpointRawParams() {
+    void testCheckBreakpointRawParams()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -322,7 +353,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testCheckBreakpointRawParamsNoMatch() {
+    void testCheckBreakpointRawParamsNoMatch()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         manager.addBreakpoint(bp);
 
@@ -330,31 +362,33 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testMethodKey() {
+    void testMethodKey()
+    {
         String key = BreakpointManager.methodKey("com/test/Foo", "method", "(II)V");
         assertEquals("com/test/Foo.method(II)V", key);
     }
 
     @Test
-    void testMethodKeyNullClassName() {
-        assertThrows(IllegalArgumentException.class, () ->
-            BreakpointManager.methodKey(null, "method", "(II)V"));
+    void testMethodKeyNullClassName()
+    {
+        assertThrows(IllegalArgumentException.class, () -> BreakpointManager.methodKey(null, "method", "(II)V"));
     }
 
     @Test
-    void testMethodKeyNullMethodName() {
-        assertThrows(IllegalArgumentException.class, () ->
-            BreakpointManager.methodKey("com/test/Foo", null, "(II)V"));
+    void testMethodKeyNullMethodName()
+    {
+        assertThrows(IllegalArgumentException.class, () -> BreakpointManager.methodKey("com/test/Foo", null, "(II)V"));
     }
 
     @Test
-    void testMethodKeyNullMethodDesc() {
-        assertThrows(IllegalArgumentException.class, () ->
-            BreakpointManager.methodKey("com/test/Foo", "method", null));
+    void testMethodKeyNullMethodDesc()
+    {
+        assertThrows(IllegalArgumentException.class, () -> BreakpointManager.methodKey("com/test/Foo", "method", null));
     }
 
     @Test
-    void testEmptyManagerBehavior() {
+    void testEmptyManagerBehavior()
+    {
         assertFalse(manager.hasBreakpoints());
         assertEquals(0, manager.getBreakpointCount());
         assertTrue(manager.getAllBreakpoints().isEmpty());
@@ -364,7 +398,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testMultipleBreakpointsInSameMethod() {
+    void testMultipleBreakpointsInSameMethod()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 20);
         Breakpoint bp3 = new Breakpoint("com/test/Foo", "method", "(II)V", 30);
@@ -382,7 +417,8 @@ class BreakpointManagerTest {
     }
 
     @Test
-    void testRemoveBreakpointUpdatesMethodIndex() {
+    void testRemoveBreakpointUpdatesMethodIndex()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 20);
 

@@ -173,7 +173,8 @@ SimulationResult result = engine.simulate(irMethod);
 
 // Incremental simulation
 SimulationState state = SimulationState.empty();
-for (IRInstruction instr : block.getInstructions()) {
+for (IRInstruction instr : block.getInstructions())
+{
     state = engine.step(state, instr);
 }
 ```
@@ -194,7 +195,8 @@ for (IRInstruction instr : block.getInstructions()) {
 Event hooks for custom instrumentation:
 
 ```java
-public interface SimulationListener {
+public interface SimulationListener
+{
     // Lifecycle
     default void onSimulationStart(IRMethod method) {}
     default void onSimulationEnd(IRMethod method, SimulationResult result) {}
@@ -654,7 +656,8 @@ EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
 
 // Analyze single site
 EscapeAnalyzer.EscapeState state = analyzer.analyze(site);
-switch (state) {
+switch (state)
+{
     case NO_ESCAPE -> // Method-local, safe for stack allocation
     case ARG_ESCAPE -> // Escapes via argument (may-escape)
     case GLOBAL_ESCAPE -> // Stored in static/heap, definitely escapes
@@ -697,44 +700,53 @@ boolean hasThisEscape = analyzer.hasThisEscape(constructor);
 New events for object tracking:
 
 ```java
-public class HeapTrackingListener implements SimulationListener {
+public class HeapTrackingListener implements SimulationListener
+{
     @Override
-    public void onObjectAllocated(AllocationSite site, SimValue ref) {
+    public void onObjectAllocated(AllocationSite site, SimValue ref)
+    {
         System.out.println("Allocated: " + site.getClassName());
     }
 
     @Override
-    public void onArrayAllocated(AllocationSite site, SimValue ref, SimValue length) {
+    public void onArrayAllocated(AllocationSite site, SimValue ref, SimValue length)
+    {
         System.out.println("Array allocated: " + site);
     }
 
     @Override
-    public void onHeapFieldWrite(SimValue objectRef, FieldKey field, SimValue value) {
+    public void onHeapFieldWrite(SimValue objectRef, FieldKey field, SimValue value)
+    {
         System.out.println("Field write: " + field.getName());
     }
 
     @Override
-    public void onHeapFieldRead(SimValue objectRef, FieldKey field, Set<SimValue> values) {
+    public void onHeapFieldRead(SimValue objectRef, FieldKey field, Set<SimValue> values)
+    {
         System.out.println("Field read: " + field.getName() + " -> " + values.size() + " values");
     }
 
     @Override
-    public void onHeapArrayStore(SimValue arrayRef, SimValue index, SimValue value) {
+    public void onHeapArrayStore(SimValue arrayRef, SimValue index, SimValue value)
+    {
         System.out.println("Array store");
     }
 
     @Override
-    public void onHeapArrayLoad(SimValue arrayRef, SimValue index, Set<SimValue> values) {
+    public void onHeapArrayLoad(SimValue arrayRef, SimValue index, Set<SimValue> values)
+    {
         System.out.println("Array load -> " + values.size() + " values");
     }
 
     @Override
-    public void onObjectEscaped(AllocationSite site, EscapeAnalyzer.EscapeState state) {
+    public void onObjectEscaped(AllocationSite site, EscapeAnalyzer.EscapeState state)
+    {
         System.out.println("Escaped: " + site + " -> " + state);
     }
 
     @Override
-    public void onAlias(SimValue ref1, SimValue ref2, boolean mustAlias) {
+    public void onAlias(SimValue ref1, SimValue ref2, boolean mustAlias)
+    {
         System.out.println("Alias: " + (mustAlias ? "must" : "may"));
     }
 }
@@ -746,8 +758,10 @@ public class HeapTrackingListener implements SimulationListener {
 import com.tonic.analysis.simulation.heap.*;
 import com.tonic.analysis.simulation.state.SimValue;
 
-public class ObjectTrackingExample {
-    public static void analyzeObjectFlow(IRMethod method) {
+public class ObjectTrackingExample
+{
+    public static void analyzeObjectFlow(IRMethod method)
+    {
         SimHeap heap = new SimHeap(HeapMode.MUTABLE);
 
         // Build simulated argument
@@ -784,8 +798,10 @@ import com.tonic.analysis.simulation.core.*;
 import com.tonic.analysis.simulation.listener.*;
 import com.tonic.analysis.simulation.metrics.*;
 
-public class SimulationExample {
-    public static void analyzeMethod(IRMethod method) {
+public class SimulationExample
+{
+    public static void analyzeMethod(IRMethod method)
+    {
         // Configure simulation
         SimulationContext ctx = SimulationContext.defaults()
             .withMode(SimulationMode.INSTRUCTION)

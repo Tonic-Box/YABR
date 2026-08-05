@@ -8,7 +8,8 @@ import java.util.Objects;
 /**
  * Tokenizer for the query DSL.
  */
-public class QueryLexer {
+public class QueryLexer
+{
 
     private static final Map<String, Token.TokenType> KEYWORDS = Map.<String, Token.TokenType>ofEntries(
             Map.entry("find", Token.TokenType.FIND),
@@ -72,67 +73,120 @@ public class QueryLexer {
     private int position;
     private final List<Token> tokens;
 
-    public QueryLexer(String input) {
+    /**
+     * Creates a lexer over a query string.
+     * @param input the query source
+     */
+    public QueryLexer(String input)
+    {
         this.input = input;
         this.position = 0;
         this.tokens = new ArrayList<>();
     }
 
-    public List<Token> tokenize() throws ParseException {
+    /**
+     * Scans the input from the start, discarding any tokens from a previous call.
+     * @return the tokens, ending with an EOF token
+     * @throws ParseException if the input contains an unterminated literal or an unknown character
+     */
+    public List<Token> tokenize() throws ParseException
+    {
         tokens.clear();
         position = 0;
 
-        while (position < input.length()) {
+        while (position < input.length())
+        {
             skipWhitespace();
-            if (position >= input.length()) {
+            if (position >= input.length())
+            {
                 break;
             }
 
             char c = peek();
 
-            if (c == '"' || c == '\'') {
+            if (c == '"' || c == '\'')
+            {
                 tokens.add(readString());
-            } else if (c == '/') {
+            }
+            else if (c == '/')
+            {
                 tokens.add(readRegex());
-            } else if (c == '(') {
+            }
+            else if (c == '(')
+            {
                 tokens.add(new Token(Token.TokenType.LPAREN, "(", position++));
-            } else if (c == ')') {
+            }
+            else if (c == ')')
+            {
                 tokens.add(new Token(Token.TokenType.RPAREN, ")", position++));
-            } else if (c == '[') {
+            }
+            else if (c == '[')
+            {
                 tokens.add(new Token(Token.TokenType.LBRACKET, "[", position++));
-            } else if (c == ']') {
+            }
+            else if (c == ']')
+            {
                 tokens.add(new Token(Token.TokenType.RBRACKET, "]", position++));
-            } else if (c == '{') {
+            }
+            else if (c == '{')
+            {
                 tokens.add(new Token(Token.TokenType.LBRACE, "{", position++));
-            } else if (c == '}') {
+            }
+            else if (c == '}')
+            {
                 tokens.add(new Token(Token.TokenType.RBRACE, "}", position++));
-            } else if (c == '*') {
+            }
+            else if (c == '*')
+            {
                 tokens.add(new Token(Token.TokenType.STAR, "*", position++));
-            } else if (c == '+') {
+            }
+            else if (c == '+')
+            {
                 tokens.add(new Token(Token.TokenType.PLUS, "+", position++));
-            } else if (c == ',') {
+            }
+            else if (c == ',')
+            {
                 tokens.add(new Token(Token.TokenType.COMMA, ",", position++));
-            } else if (c == '.') {
+            }
+            else if (c == '.')
+            {
                 tokens.add(new Token(Token.TokenType.DOT, ".", position++));
-            } else if (c == ':') {
+            }
+            else if (c == ':')
+            {
                 tokens.add(new Token(Token.TokenType.COLON, ":", position++));
-            } else if (c == '>') {
+            }
+            else if (c == '>')
+            {
                 tokens.add(readComparison());
-            } else if (c == '<') {
+            }
+            else if (c == '<')
+            {
                 if (position + 8 <= input.length() &&
-                    input.substring(position, position + 8).equalsIgnoreCase("<clinit>")) {
+                    input.substring(position, position + 8).equalsIgnoreCase("<clinit>"))
+                    {
                     tokens.add(new Token(Token.TokenType.CLINIT, "<clinit>", position));
                     position += 8;
-                } else {
+                }
+                else
+                {
                     tokens.add(readComparison());
                 }
-            } else if (c == '=' || c == '!') {
+            }
+            else if (c == '=' || c == '!')
+            {
                 tokens.add(readComparison());
-            } else if (Character.isDigit(c) || (c == '-' && position + 1 < input.length() && Character.isDigit(input.charAt(position + 1)))) {
+            }
+            else if (Character.isDigit(c) || (c == '-' && position + 1 < input.length() && Character.isDigit(input.charAt(position + 1))))
+            {
                 tokens.add(readNumber());
-            } else if (Character.isLetter(c) || c == '_') {
+            }
+            else if (Character.isLetter(c) || c == '_')
+            {
                 tokens.add(readIdentifier());
-            } else {
+            }
+            else
+            {
                 throw new ParseException("Unexpected character: " + c, position);
             }
         }
@@ -141,31 +195,39 @@ public class QueryLexer {
         return tokens;
     }
 
-    private char peek() {
+    private char peek()
+    {
         return input.charAt(position);
     }
 
-    private char advance() {
+    private char advance()
+    {
         return input.charAt(position++);
     }
 
-    private void skipWhitespace() {
-        while (position < input.length() && Character.isWhitespace(input.charAt(position))) {
+    private void skipWhitespace()
+    {
+        while (position < input.length() && Character.isWhitespace(input.charAt(position)))
+        {
             position++;
         }
     }
 
-    private Token readString() throws ParseException {
+    private Token readString() throws ParseException
+    {
         int start = position;
         char quote = advance();
         StringBuilder sb = new StringBuilder();
 
-        while (position < input.length() && peek() != quote) {
-            if (peek() == '\\' && position + 1 < input.length()) {
+        while (position < input.length() && peek() != quote)
+        {
+            if (peek() == '\\' && position + 1 < input.length())
+            {
                 advance();
                 char escaped = advance();
                 char replacement;
-                switch (escaped) {
+                switch (escaped)
+                {
                     case 'n': replacement = '\n'; break;
                     case 't': replacement = '\t'; break;
                     case 'r': replacement = '\r'; break;
@@ -175,67 +237,84 @@ public class QueryLexer {
                     default: replacement = escaped; break;
                 }
                 sb.append(replacement);
-            } else {
+            }
+            else
+            {
                 sb.append(advance());
             }
         }
 
-        if (position >= input.length()) {
+        if (position >= input.length())
+        {
             throw new ParseException("Unterminated string", start);
         }
         advance();
         return new Token(Token.TokenType.STRING, sb.toString(), start);
     }
 
-    private Token readRegex() throws ParseException {
+    private Token readRegex() throws ParseException
+    {
         int start = position;
         advance();
         StringBuilder sb = new StringBuilder();
 
-        while (position < input.length() && peek() != '/') {
-            if (peek() == '\\' && position + 1 < input.length()) {
+        while (position < input.length() && peek() != '/')
+        {
+            if (peek() == '\\' && position + 1 < input.length())
+            {
                 sb.append(advance());
                 sb.append(advance());
-            } else {
+            }
+            else
+            {
                 sb.append(advance());
             }
         }
 
-        if (position >= input.length()) {
+        if (position >= input.length())
+        {
             throw new ParseException("Unterminated regex", start);
         }
         advance();
 
         StringBuilder flags = new StringBuilder();
-        while (position < input.length() && Character.isLetter(peek())) {
+        while (position < input.length() && Character.isLetter(peek()))
+        {
             flags.append(advance());
         }
 
         String pattern = sb.toString();
-        if (flags.length() > 0) {
+        if (flags.length() > 0)
+        {
             pattern = "(?" + flags + ")" + pattern;
         }
         return new Token(Token.TokenType.REGEX, pattern, start);
     }
 
-    private Token readNumber() {
+    private Token readNumber()
+    {
         int start = position;
         StringBuilder sb = new StringBuilder();
 
-        if (peek() == '-') {
+        if (peek() == '-')
+        {
             sb.append(advance());
         }
 
-        while (position < input.length() && (Character.isDigit(peek()) || peek() == '_')) {
+        while (position < input.length() && (Character.isDigit(peek()) || peek() == '_'))
+        {
             char c = advance();
-            if (c != '_') {
+            if (c != '_')
+            {
                 sb.append(c);
             }
         }
 
-        if (position < input.length() && peek() == '.') {
+        if (position < input.length() && peek() == '.')
+        {
             sb.append(advance());
-            while (position < input.length() && Character.isDigit(peek())) {
+            while (position < input.length() && Character.isDigit(peek()))
+            {
                 sb.append(advance());
             }
         }
@@ -243,13 +322,15 @@ public class QueryLexer {
         return new Token(Token.TokenType.NUMBER, sb.toString(), start);
     }
 
-    private Token readIdentifier() {
+    private Token readIdentifier()
+    {
         int start = position;
         StringBuilder sb = new StringBuilder();
 
         while (position < input.length() &&
                (Character.isLetterOrDigit(peek()) || peek() == '_' || peek() == '-' ||
-                (peek() == '<' || peek() == '>'))) {
+                (peek() == '<' || peek() == '>')))
+                {
             sb.append(advance());
         }
 
@@ -261,30 +342,38 @@ public class QueryLexer {
 
     }
 
-    private Token readComparison() throws ParseException {
+    private Token readComparison() throws ParseException
+    {
         int start = position;
         char c = advance();
 
-        if (c == '>' && position < input.length() && peek() == '=') {
+        if (c == '>' && position < input.length() && peek() == '=')
+        {
             advance();
             return new Token(Token.TokenType.GTE, ">=", start);
         }
-        if (c == '>') {
+        if (c == '>')
+        {
             return new Token(Token.TokenType.GT, ">", start);
         }
-        if (c == '<' && position < input.length() && peek() == '=') {
+        if (c == '<' && position < input.length() && peek() == '=')
+        {
             advance();
             return new Token(Token.TokenType.LTE, "<=", start);
         }
-        if (c == '<') {
+        if (c == '<')
+        {
             return new Token(Token.TokenType.LT, "<", start);
         }
-        if (c == '=' && position < input.length() && peek() == '=') {
+        if (c == '=' && position < input.length() && peek() == '=')
+        {
             advance();
             return new Token(Token.TokenType.EQ, "==", start);
         }
-        if (c == '!') {
-            if (position < input.length() && peek() == '=') {
+        if (c == '!')
+        {
+            if (position < input.length() && peek() == '=')
+            {
                 advance();
                 return new Token(Token.TokenType.NEQ, "!=", start);
             }

@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the continuation through bare goto shells and re-emits a processed trailing return, which is
  * idempotent.
  */
-class SharedReturnAfterGuardedTryFidelityTest {
+class SharedReturnAfterGuardedTryFidelityTest
+{
 
     private static final String SOURCE =
             "public class GuardedTry {\n"
@@ -52,14 +53,14 @@ class SharedReturnAfterGuardedTryFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("guarded-try");
         Path src = dir.resolve("GuardedTry.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("GuardedTry.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -69,7 +70,8 @@ class SharedReturnAfterGuardedTryFidelityTest {
     }
 
     @Test
-    void fallThroughReturnSurvives() {
+    void fallThroughReturnSurvives()
+    {
         int lastBrace = d1.lastIndexOf("return success");
         assumeTrue(true);
         org.junit.jupiter.api.Assertions.assertTrue(lastBrace >= 0,
@@ -77,7 +79,8 @@ class SharedReturnAfterGuardedTryFidelityTest {
     }
 
     @Test
-    void bothPathsReturnTheRightValue() throws Exception {
+    void bothPathsReturnTheRightValue() throws Exception
+    {
         assertEquals(Boolean.TRUE, recompiledClass.getMethod("run", boolean.class, boolean.class)
                         .invoke(null, true, false),
                 "the successful path must return true through the shared return");

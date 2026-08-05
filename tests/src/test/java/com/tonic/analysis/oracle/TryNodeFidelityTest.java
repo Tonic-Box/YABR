@@ -26,10 +26,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * surrounding loop or branch natively. Each fixture asserts its spans survive both decompiles, that the
  * second decompile is a fixed point of the third, and that the recompiled bytecode executes every path.
  */
-class TryNodeFidelityTest {
+class TryNodeFidelityTest
+{
 
     private static final Map<String, String> FIXTURES = new LinkedHashMap<>();
-    static {
+    static
+    {
         FIXTURES.put("TryInLoop",
                 "public class TryInLoop {\n"
                 + "    public static String check() {\n"
@@ -89,11 +91,13 @@ class TryNodeFidelityTest {
     private static final Map<String, Class<?>> RECOMPILED = new LinkedHashMap<>();
 
     @BeforeAll
-    static void compileAndRoundTrip() throws Exception {
+    static void compileAndRoundTrip() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("try-node-fidelity");
-        for (Map.Entry<String, String> e : FIXTURES.entrySet()) {
+        for (Map.Entry<String, String> e : FIXTURES.entrySet())
+        {
             Files.writeString(dir.resolve(e.getKey() + ".java"), e.getValue());
             assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(),
                     dir.resolve(e.getKey() + ".java").toString()) == 0, e.getKey() + " compiled");
@@ -113,9 +117,11 @@ class TryNodeFidelityTest {
     }
 
     @Test
-    void tryInLoopKeepsBothPathsAndIsStable() throws Exception {
+    void tryInLoopKeepsBothPathsAndIsStable() throws Exception
+    {
         String[] d = DECOMPILES.get("TryInLoop");
-        for (String s : new String[] {d[0], d[1]}) {
+        for (String s : new String[] {d[0], d[1]})
+        {
             assertTrue(s.contains("catch (NumberFormatException"), "the catch must survive:\n" + s);
             assertTrue(s.contains("sum"), "the try body sum must survive:\n" + s);
             assertTrue(s.contains("bad"), "the catch counter must survive:\n" + s);
@@ -125,9 +131,11 @@ class TryNodeFidelityTest {
     }
 
     @Test
-    void tryPerArmKeepsBothTriesAndIsStable() throws Exception {
+    void tryPerArmKeepsBothTriesAndIsStable() throws Exception
+    {
         String[] d = DECOMPILES.get("TryInArm");
-        for (String s : new String[] {d[0], d[1]}) {
+        for (String s : new String[] {d[0], d[1]})
+        {
             assertTrue(s.contains("\"e1\""), "the then-arm catch must survive:\n" + s);
             assertTrue(s.contains("\"e2\""), "the else-arm catch must survive:\n" + s);
         }
@@ -136,9 +144,11 @@ class TryNodeFidelityTest {
     }
 
     @Test
-    void tryReturnInLoopKeepsBothExitsAndIsStable() throws Exception {
+    void tryReturnInLoopKeepsBothExitsAndIsStable() throws Exception
+    {
         String[] d = DECOMPILES.get("TryReturnInLoop");
-        for (String s : new String[] {d[0], d[1]}) {
+        for (String s : new String[] {d[0], d[1]})
+        {
             assertTrue(s.contains("\"first=\""), "the try's return must survive:\n" + s);
             assertTrue(s.contains("\"none\""), "the fall-out return must survive:\n" + s);
         }

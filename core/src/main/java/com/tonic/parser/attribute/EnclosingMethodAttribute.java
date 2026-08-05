@@ -8,32 +8,58 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the EnclosingMethod attribute.
- * Indicates the method that encloses a local or anonymous class.
+ * The EnclosingMethod attribute: the class and method enclosing a local or anonymous class.
  */
-public class EnclosingMethodAttribute extends Attribute {
+public class EnclosingMethodAttribute extends Attribute
+{
     private int classIndex;
     private int methodIndex;
 
-    public EnclosingMethodAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public EnclosingMethodAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public EnclosingMethodAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public EnclosingMethodAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public int getClassIndex() {
+    /**
+     * @return the class index
+     */
+    public int getClassIndex()
+    {
         return classIndex;
     }
 
-    public int getMethodIndex() {
+    /**
+     * @return the method index
+     */
+    public int getMethodIndex()
+    {
         return methodIndex;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
-        if (length != 4) {
+    public void read(ClassFile classFile, int length)
+    {
+        if (length != 4)
+        {
             throw new IllegalArgumentException("EnclosingMethod attribute length must be 4, found: " + length);
         }
         this.classIndex = classFile.readUnsignedShort();
@@ -41,18 +67,21 @@ public class EnclosingMethodAttribute extends Attribute {
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(classIndex);
         dos.writeShort(methodIndex);
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         this.length = 4;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         String className = resolveClassName(classIndex);
         String methodName = methodIndex == 0 ? "None" : resolveMethodName(methodIndex);
         return "EnclosingMethodAttribute{" +
@@ -61,27 +90,34 @@ public class EnclosingMethodAttribute extends Attribute {
                 '}';
     }
 
-    private String resolveClassName(int classInfoIndex) {
+    private String resolveClassName(int classInfoIndex)
+    {
         Item<?> classRefItem = getClassFile().getConstPool().getItem(classInfoIndex);
-        if (classRefItem instanceof ClassRefItem) {
+        if (classRefItem instanceof ClassRefItem)
+        {
             int nameIndex = ((ClassRefItem) classRefItem).getValue();
             Item<?> utf8Item = getClassFile().getConstPool().getItem(nameIndex);
-            if (utf8Item instanceof Utf8Item) {
+            if (utf8Item instanceof Utf8Item)
+            {
                 return ((Utf8Item) utf8Item).getValue().replace('/', '.');
             }
         }
         return "Unknown";
     }
 
-    private String resolveMethodName(int methodIndex) {
+    private String resolveMethodName(int methodIndex)
+    {
         Item<?> methodRefItem = getClassFile().getConstPool().getItem(methodIndex);
-        if (methodRefItem instanceof MethodRefItem) {
+        if (methodRefItem instanceof MethodRefItem)
+        {
             MethodRefItem methodRef = (MethodRefItem) methodRefItem;
             Item<?> nameAndTypeItem = getClassFile().getConstPool().getItem(methodRef.getValue().getNameAndTypeIndex());
-            if (nameAndTypeItem instanceof NameAndTypeRefItem) {
+            if (nameAndTypeItem instanceof NameAndTypeRefItem)
+            {
                 NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) nameAndTypeItem;
                 Item<?> nameItem = getClassFile().getConstPool().getItem(nameAndType.getValue().getNameIndex());
-                if (nameItem instanceof Utf8Item) {
+                if (nameItem instanceof Utf8Item)
+                {
                     return ((Utf8Item) nameItem).getValue();
                 }
             }

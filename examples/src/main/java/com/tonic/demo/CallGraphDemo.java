@@ -10,22 +10,33 @@ import java.io.FileInputStream;
 import java.util.Set;
 
 /**
- * Demo for the Call Graph API.
+ * Demo showing call graph construction and queries over loaded classes.
  */
-public class CallGraphDemo {
+public class CallGraphDemo
+{
 
-    public static void main(String[] args) throws Exception {
+    /**
+     * Builds and prints a call graph for the given class files, or a synthetic demo when none are given.
+     * @param args paths of class files to load
+     * @throws Exception if a class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
         ClassPool pool = ClassPool.getDefault();
 
         // Load some classes - use YABR's own classes for testing
-        if (args.length > 0) {
-            // Load user-specified class file
-            for (String path : args) {
-                try (FileInputStream fis = new FileInputStream(path)) {
+        if (args.length > 0)
+        {
+            for (String path : args)
+            {
+                try (FileInputStream fis = new FileInputStream(path))
+                {
                     pool.loadClass(fis);
                 }
             }
-        } else {
+        }
+        else
+        {
             // Demo: Analyze YABR's own classes
             System.out.println("Usage: CallGraphDemo <classfile1> [classfile2] ...");
             System.out.println("\nRunning demo with synthetic test classes...\n");
@@ -33,7 +44,6 @@ public class CallGraphDemo {
             return;
         }
 
-        // Build call graph
         System.out.println("Building call graph...");
         CallGraph cg = CallGraph.build(pool);
         System.out.println(cg);
@@ -41,14 +51,17 @@ public class CallGraphDemo {
 
         // Show all methods
         System.out.println("=== Methods in ClassPool ===");
-        for (CallGraphNode node : cg.getPoolNodes()) {
+        for (CallGraphNode node : cg.getPoolNodes())
+        {
             System.out.println("  " + node.getReference());
             Set<MethodReference> callers = node.getCallers();
-            if (!callers.isEmpty()) {
+            if (!callers.isEmpty())
+            {
                 System.out.println("    Called by: " + callers.size() + " method(s)");
             }
             Set<MethodReference> callees = node.getCallees();
-            if (!callees.isEmpty()) {
+            if (!callees.isEmpty())
+            {
                 System.out.println("    Calls: " + callees.size() + " method(s)");
             }
         }
@@ -57,19 +70,19 @@ public class CallGraphDemo {
         // Find methods with no callers
         System.out.println("=== Methods with no callers (potential dead code) ===");
         Set<MethodReference> noCaller = cg.findMethodsWithNoCallers();
-        for (MethodReference ref : noCaller) {
+        for (MethodReference ref : noCaller)
+        {
             System.out.println("  " + ref);
         }
     }
 
-    private static void runSyntheticDemo(ClassPool pool) throws Exception {
+    private static void runSyntheticDemo(ClassPool pool) throws Exception
+    {
         // Create a simple test class with methods that call each other
         ClassFile cf = ClassFactory.createClass(pool, "com/test/Demo", 0x21);
 
-        // Add main method
         cf.createNewMethod(0x09, "main", "([Ljava/lang/String;)V");
 
-        // Add helper methods
         cf.createNewMethod(0x01, "helperA", "()V");
         cf.createNewMethod(0x01, "helperB", "()V");
         cf.createNewMethod(0x02, "unusedPrivate", "()V"); // private, should be dead
@@ -78,14 +91,14 @@ public class CallGraphDemo {
         System.out.println("Methods: main, helperA, helperB, unusedPrivate");
         System.out.println();
 
-        // Build call graph
         CallGraph cg = CallGraph.build(pool);
         System.out.println(cg);
         System.out.println();
 
         // Show nodes
         System.out.println("=== Call Graph Nodes ===");
-        for (CallGraphNode node : cg.getPoolNodes()) {
+        for (CallGraphNode node : cg.getPoolNodes())
+        {
             System.out.println("  " + node);
         }
         System.out.println();
@@ -93,7 +106,8 @@ public class CallGraphDemo {
         // Since methods have no code, they won't have callees
         System.out.println("=== Methods with no callers ===");
         Set<MethodReference> noCaller = cg.findMethodsWithNoCallers();
-        for (MethodReference ref : noCaller) {
+        for (MethodReference ref : noCaller)
+        {
             System.out.println("  " + ref);
         }
 

@@ -42,10 +42,14 @@ Set<String> transitive = deps.getTransitiveDependencies("com/example/MyClass");
 ```java
 List<List<String>> cycles = deps.findCircularDependencies();
 
-if (cycles.isEmpty()) {
+if (cycles.isEmpty())
+{
     System.out.println("No circular dependencies found");
-} else {
-    for (List<String> cycle : cycles) {
+}
+else
+{
+    for (List<String> cycle : cycles)
+    {
         System.out.println("Cycle: " + String.join(" -> ", cycle));
     }
 }

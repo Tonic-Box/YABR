@@ -15,12 +15,22 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.InputStream;
 
-public class DemoTest {
+/**
+ * Demo showing AST recovery of DemoClass.test and a walk over its recovered statements.
+ */
+public class DemoTest
+{
+    /**
+     * Recovers the AST of DemoClass.test and prints every statement with its node type.
+     * @param args unused
+     * @throws Exception if the class resource cannot be read or recovery fails
+     */
     public static void main(String[] args) throws Exception
     {
         ClassPool classPool = ClassPool.getDefault();
 
-        try (InputStream is = DemoTest.class.getResourceAsStream("DemoClass.class")) {
+        try (InputStream is = DemoTest.class.getResourceAsStream("DemoClass.class"))
+        {
             if(is == null)
             {
                 return;

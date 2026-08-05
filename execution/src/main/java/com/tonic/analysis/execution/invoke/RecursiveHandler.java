@@ -10,20 +10,39 @@ import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.MethodEntry;
 import com.tonic.util.Modifiers;
 
-public final class RecursiveHandler implements InvocationHandler {
+/**
+ * Invocation handler that pushes interpreter frames for bytecode-backed methods, dispatches registered natives, and stubs absent bodies with default values.
+ */
+public final class RecursiveHandler implements InvocationHandler
+{
 
     private final ClassResolver resolver;
     private final NativeRegistry nativeRegistry;
 
-    public RecursiveHandler(ClassResolver resolver) {
+    /**
+     * Creates a handler with an empty native registry.
+     * @param resolver resolves virtual dispatch targets
+     * @throws IllegalArgumentException if resolver is null
+     */
+    public RecursiveHandler(ClassResolver resolver)
+    {
         this(resolver, new NativeRegistry());
     }
 
-    public RecursiveHandler(ClassResolver resolver, NativeRegistry nativeRegistry) {
-        if (resolver == null) {
+    /**
+     * Creates a handler backed by the given native registry.
+     * @param resolver resolves virtual dispatch targets
+     * @param nativeRegistry supplies handlers for native methods
+     * @throws IllegalArgumentException if resolver or nativeRegistry is null
+     */
+    public RecursiveHandler(ClassResolver resolver, NativeRegistry nativeRegistry)
+    {
+        if (resolver == null)
+        {
             throw new IllegalArgumentException("ClassResolver cannot be null");
         }
-        if (nativeRegistry == null) {
+        if (nativeRegistry == null)
+        {
             throw new IllegalArgumentException("NativeRegistry cannot be null");
         }
         this.resolver = resolver;
@@ -31,26 +50,30 @@ public final class RecursiveHandler implements InvocationHandler {
     }
 
     @Override
-    public InvocationResult invoke(MethodEntry method, ObjectInstance receiver,
-                                    ConcreteValue[] args, InvocationContext context) {
-        if (nativeRegistry.hasHandler(method)) {
+    public InvocationResult invoke(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args, InvocationContext context)
+    {
+        if (nativeRegistry.hasHandler(method))
+        {
             return handleNative(method, receiver, args, context);
         }
 
         MethodEntry targetMethod = resolveTarget(method, receiver);
 
-        if (nativeRegistry.hasHandler(targetMethod)) {
+        if (nativeRegistry.hasHandler(targetMethod))
+        {
             return handleNative(targetMethod, receiver, args, context);
         }
 
-        if (isNative(targetMethod)) {
+        if (isNative(targetMethod))
+        {
             String msg = "No native handler for: " + targetMethod.getOwnerName() + "." +
                 targetMethod.getName() + targetMethod.getDesc();
             System.out.println("[DEBUG] " + msg);
             throw new UnsupportedOperationException(msg);
         }
 
-        if (targetMethod.getCodeAttribute() == null) {
+        if (targetMethod.getCodeAttribute() == null)
+        {
             return stubResult(targetMethod.getDesc(), context.getHeapManager());
         }
 
@@ -60,47 +83,54 @@ public final class RecursiveHandler implements InvocationHandler {
         return InvocationResult.pushFrame(frame);
     }
 
-    private MethodEntry resolveTarget(MethodEntry method, ObjectInstance receiver) {
-        if (receiver == null || isStaticOrSpecial(method)) {
+    private MethodEntry resolveTarget(MethodEntry method, ObjectInstance receiver)
+    {
+        if (receiver == null || isStaticOrSpecial(method))
+        {
             return method;
         }
 
-        try {
+        try
+        {
             String receiverType = receiver.getClassName();
-            ResolvedMethod resolved = resolver.resolveVirtualMethod(
-                receiverType,
-                method.getName(),
-                method.getDesc()
-            );
+            ResolvedMethod resolved = resolver.resolveVirtualMethod(receiverType, method.getName(), method.getDesc());
             return resolved.getMethod();
-        } catch (ResolutionException e) {
+        }
+        catch (ResolutionException e)
+        {
             return method;
         }
     }
 
-    private boolean isStaticOrSpecial(MethodEntry method) {
+    private boolean isStaticOrSpecial(MethodEntry method)
+    {
         int access = method.getAccess();
         boolean isStatic = (access & Modifiers.STATIC) != 0;
         boolean isPrivate = (access & Modifiers.PRIVATE) != 0;
         return isStatic || isPrivate || method.getName().equals("<init>");
     }
 
-    private boolean isNative(MethodEntry method) {
+    private boolean isNative(MethodEntry method)
+    {
         return (method.getAccess() & Modifiers.NATIVE) != 0;
     }
 
-    private InvocationResult handleNative(MethodEntry method, ObjectInstance receiver,
-                                         ConcreteValue[] args, InvocationContext context) {
-        try {
+    private InvocationResult handleNative(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args, InvocationContext context)
+    {
+        try
+        {
             NativeContext nativeContext = new DefaultNativeContext(
                 context.getHeapManager(),
                 context.getClassResolver()
             );
             ConcreteValue result = nativeRegistry.execute(method, receiver, args, nativeContext);
             return InvocationResult.nativeHandled(result);
-        } catch (NativeException e) {
+        }
+        catch (NativeException e)
+        {
             ObjectInstance exception = context.getHeapManager().newObject(e.getExceptionClass());
-            if (e.getMessage() != null) {
+            if (e.getMessage() != null)
+            {
                 ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
                 exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
             }
@@ -108,11 +138,12 @@ public final class RecursiveHandler implements InvocationHandler {
         }
     }
 
-    private ConcreteValue[] buildFrameArgs(MethodEntry method, ObjectInstance receiver,
-                                          ConcreteValue[] args) {
+    private ConcreteValue[] buildFrameArgs(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args)
+    {
         boolean isStatic = (method.getAccess() & Modifiers.STATIC) != 0;
 
-        if (isStatic) {
+        if (isStatic)
+        {
             return args != null ? args : new ConcreteValue[0];
         }
 
@@ -121,73 +152,98 @@ public final class RecursiveHandler implements InvocationHandler {
 
         ConcreteValue[] frameArgs = new ConcreteValue[1 + (args != null ? args.length : 0)];
         frameArgs[0] = receiverValue;
-        if (args != null) {
+        if (args != null)
+        {
             System.arraycopy(args, 0, frameArgs, 1, args.length);
         }
 
         return frameArgs;
     }
 
-    private InvocationResult stubResult(String descriptor, HeapManager heapManager) {
+    private InvocationResult stubResult(String descriptor, HeapManager heapManager)
+    {
         String returnType = getReturnType(descriptor);
         ConcreteValue result;
-        if ("V".equals(returnType)) {
+        if ("V".equals(returnType))
+        {
             result = null;
-        } else if (returnType.startsWith("L") || returnType.startsWith("[")) {
+        }
+        else if (returnType.startsWith("L") || returnType.startsWith("["))
+        {
             result = ConcreteValue.reference(heapManager.newObject("java/lang/Object"));
-        } else if ("J".equals(returnType)) {
+        }
+        else if ("J".equals(returnType))
+        {
             result = ConcreteValue.longValue(0L);
-        } else if ("D".equals(returnType)) {
+        }
+        else if ("D".equals(returnType))
+        {
             result = ConcreteValue.doubleValue(0.0);
-        } else if ("F".equals(returnType)) {
+        }
+        else if ("F".equals(returnType))
+        {
             result = ConcreteValue.floatValue(0.0f);
-        } else if ("Z".equals(returnType)) {
+        }
+        else if ("Z".equals(returnType))
+        {
             result = ConcreteValue.intValue(0);
-        } else {
+        }
+        else
+        {
             result = ConcreteValue.intValue(0);
         }
         return InvocationResult.nativeHandled(result);
     }
 
-    private String getReturnType(String descriptor) {
-        if (descriptor == null) {
+    private String getReturnType(String descriptor)
+    {
+        if (descriptor == null)
+        {
             return "V";
         }
         int parenIndex = descriptor.indexOf(')');
-        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1) {
+        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1)
+        {
             return descriptor.substring(parenIndex + 1);
         }
         return "V";
     }
 
-    private static class DefaultNativeContext implements NativeContext {
+    private static class DefaultNativeContext implements NativeContext
+    {
         private final HeapManager heapManager;
         private final ClassResolver classResolver;
 
-        DefaultNativeContext(HeapManager heapManager, ClassResolver classResolver) {
+        DefaultNativeContext(HeapManager heapManager, ClassResolver classResolver)
+        {
             this.heapManager = heapManager;
             this.classResolver = classResolver;
         }
 
         @Override
-        public HeapManager getHeapManager() {
+        public HeapManager getHeapManager()
+        {
             return heapManager;
         }
 
         @Override
-        public ClassResolver getClassResolver() {
+        public ClassResolver getClassResolver()
+        {
             return classResolver;
         }
 
         @Override
-        public ObjectInstance createString(String value) {
+        public ObjectInstance createString(String value)
+        {
             return heapManager.internString(value);
         }
 
         @Override
-        public ObjectInstance createException(String className, String message) {
+        public ObjectInstance createException(String className, String message)
+        {
             ObjectInstance exception = heapManager.newObject(className);
-            if (message != null) {
+            if (message != null)
+            {
                 ObjectInstance messageStr = heapManager.internString(message);
                 exception.setField(className, "detailMessage", "Ljava/lang/String;", messageStr);
             }

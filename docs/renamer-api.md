@@ -34,7 +34,8 @@ renamer.mapClass("com/old/MyClass", "com/new/RenamedClass")
        .apply();
 
 // Export modified classes
-for (ClassFile cf : pool.getClasses()) {
+for (ClassFile cf : pool.getClasses())
+{
     cf.rebuild();
     byte[] bytes = cf.write();
     // Save bytes...
@@ -91,16 +92,19 @@ renamer.mapMethodInHierarchy("com/example/Base", "process", "(I)V", "handle");
 
 Example hierarchy:
 ```java
-interface Service {
+interface Service
+{
     void process(int x);  // Original
 }
 
-class BaseService implements Service {
+class BaseService implements Service
+{
     @Override
     public void process(int x) { ... }
 }
 
-class ChildService extends BaseService {
+class ChildService extends BaseService
+{
     @Override
     public void process(int x) { ... }
 }
@@ -132,24 +136,31 @@ import com.tonic.renamer.validation.ValidationResult;
 // Validate without applying
 ValidationResult result = renamer.validate();
 
-if (!result.isValid()) {
+if (!result.isValid())
+{
     System.out.println("Errors:");
-    for (String error : result.getErrors()) {
+    for (String error : result.getErrors())
+    {
         System.out.println("  - " + error);
     }
 }
 
-if (result.hasWarnings()) {
+if (result.hasWarnings())
+{
     System.out.println("Warnings:");
-    for (String warning : result.getWarnings()) {
+    for (String warning : result.getWarnings())
+    {
         System.out.println("  - " + warning);
     }
 }
 
 // apply() validates automatically and throws RenameException on failure
-try {
+try
+{
     renamer.apply();
-} catch (RenameException e) {
+}
+catch (RenameException e)
+{
     System.err.println("Rename failed: " + e.getMessage());
 }
 
@@ -205,7 +216,8 @@ import com.tonic.parser.MethodEntry;
 Set<MethodEntry> overrides = renamer.findOverrides(
     "com/example/Service", "process", "(I)V");
 
-for (MethodEntry method : overrides) {
+for (MethodEntry method : overrides)
+{
     System.out.println(method.getOwner().getClassName() + "." + method.getName());
 }
 ```
@@ -277,9 +289,11 @@ Generic signatures are also remapped:
 A common use case is reversing obfuscation using a mapping file:
 
 ```java
-public class DeobfuscationExample {
+public class DeobfuscationExample
+{
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws Exception
+    {
         // Load obfuscated classes
         ClassPool pool = ClassPool.getDefault();
         loadClassesFromJar(pool, "obfuscated.jar");
@@ -290,7 +304,8 @@ public class DeobfuscationExample {
         // Load mappings (e.g., from ProGuard mapping file)
         Map<String, String> classMappings = loadMappings("mapping.txt");
 
-        for (Map.Entry<String, String> entry : classMappings.entrySet()) {
+        for (Map.Entry<String, String> entry : classMappings.entrySet())
+        {
             String obfuscated = entry.getKey();
             String original = entry.getValue();
             renamer.mapClass(obfuscated, original);
@@ -300,7 +315,8 @@ public class DeobfuscationExample {
         renamer.apply();
 
         // Export deobfuscated classes
-        for (ClassFile cf : pool.getClasses()) {
+        for (ClassFile cf : pool.getClasses())
+        {
             cf.rebuild();
             saveClass(cf, "deobfuscated/");
         }
@@ -313,9 +329,11 @@ public class DeobfuscationExample {
 Rename deprecated APIs across a codebase:
 
 ```java
-public class ApiMigrationExample {
+public class ApiMigrationExample
+{
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws Exception
+    {
         ClassPool pool = ClassPool.getDefault();
         loadProject(pool, "src/");
 
@@ -336,7 +354,8 @@ public class ApiMigrationExample {
 
         // Validate before applying
         ValidationResult result = renamer.validate();
-        if (!result.isValid()) {
+        if (!result.isValid())
+        {
             System.err.println(result.getReport());
             return;
         }
@@ -357,9 +376,12 @@ public class ApiMigrationExample {
 Thrown when renaming fails:
 
 ```java
-try {
+try
+{
     renamer.apply();
-} catch (RenameException e) {
+}
+catch (RenameException e)
+{
     // Contains validation report or error details
     System.err.println(e.getMessage());
 }

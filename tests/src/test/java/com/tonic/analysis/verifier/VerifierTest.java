@@ -14,20 +14,24 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Verifier Tests")
-public class VerifierTest {
+public class VerifierTest
+{
     private ClassPool classPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classPool = new ClassPool();
     }
 
     @Nested
     @DisplayName("Builder Tests")
-    class BuilderTests {
+    class BuilderTests
+    {
         @Test
         @DisplayName("should create verifier with default config")
-        void testDefaultConfig() {
+        void testDefaultConfig()
+        {
             Verifier verifier = Verifier.builder().build();
             assertNotNull(verifier);
             assertNotNull(verifier.getConfig());
@@ -35,7 +39,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should create verifier with custom config")
-        void testCustomConfig() {
+        void testCustomConfig()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .errorMode(VerifierConfig.ErrorMode.COLLECT_ALL)
                     .maxErrors(50)
@@ -51,7 +56,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should create verifier with fail-fast mode")
-        void testFailFastMode() {
+        void testFailFastMode()
+        {
             Verifier verifier = Verifier.builder()
                     .failFast()
                     .build();
@@ -61,7 +67,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should create verifier with collect-all mode")
-        void testCollectAllMode() {
+        void testCollectAllMode()
+        {
             Verifier verifier = Verifier.builder()
                     .collectAll()
                     .build();
@@ -71,7 +78,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should create verifier with class pool")
-        void testWithClassPool() {
+        void testWithClassPool()
+        {
             Verifier verifier = Verifier.builder()
                     .classPool(classPool)
                     .build();
@@ -82,10 +90,12 @@ public class VerifierTest {
 
     @Nested
     @DisplayName("VerifierConfig Tests")
-    class ConfigTests {
+    class ConfigTests
+    {
         @Test
         @DisplayName("should create default config with all verifications enabled")
-        void testDefaultConfig() {
+        void testDefaultConfig()
+        {
             VerifierConfig config = VerifierConfig.defaults();
 
             assertTrue(config.isVerifyStructure());
@@ -94,7 +104,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should allow disabling specific verifications")
-        void testDisableVerifications() {
+        void testDisableVerifications()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .verifyStackMapTable(false)
                     .strictTypeChecking(false)
@@ -106,7 +117,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should set max errors limit")
-        void testMaxErrors() {
+        void testMaxErrors()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .maxErrors(10)
                     .build();
@@ -116,7 +128,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should treat warnings as errors when configured")
-        void testTreatWarningsAsErrors() {
+        void testTreatWarningsAsErrors()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .treatWarningsAsErrors(true)
                     .build();
@@ -127,10 +140,12 @@ public class VerifierTest {
 
     @Nested
     @DisplayName("VerificationError Tests")
-    class ErrorTests {
+    class ErrorTests
+    {
         @Test
         @DisplayName("should create error with all fields")
-        void testCreateError() {
+        void testCreateError()
+        {
             VerificationError error = new VerificationError(
                     VerificationErrorType.INVALID_OPCODE,
                     42,
@@ -145,7 +160,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should create warning")
-        void testCreateWarning() {
+        void testCreateWarning()
+        {
             VerificationError warning = new VerificationError(
                     VerificationErrorType.UNREACHABLE_CODE,
                     100,
@@ -158,12 +174,9 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should add location to error")
-        void testWithLocation() {
-            VerificationError error = new VerificationError(
-                    VerificationErrorType.STACK_OVERFLOW,
-                    10,
-                    "Stack overflow"
-            );
+        void testWithLocation()
+        {
+            VerificationError error = new VerificationError(VerificationErrorType.STACK_OVERFLOW, 10, "Stack overflow");
 
             VerificationError located = error.withLocation("MyClass", "myMethod()V");
 
@@ -174,10 +187,12 @@ public class VerifierTest {
 
     @Nested
     @DisplayName("VerificationResult Tests")
-    class ResultTests {
+    class ResultTests
+    {
         @Test
         @DisplayName("should create success result")
-        void testSuccessResult() {
+        void testSuccessResult()
+        {
             VerificationResult result = VerificationResult.success("TestClass");
 
             assertTrue(result.isValid());
@@ -187,17 +202,11 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should create failure result")
-        void testFailureResult() {
-            VerificationError error = new VerificationError(
-                    VerificationErrorType.INVALID_OPCODE,
-                    0,
-                    "Bad opcode"
-            );
+        void testFailureResult()
+        {
+            VerificationError error = new VerificationError(VerificationErrorType.INVALID_OPCODE, 0, "Bad opcode");
 
-            VerificationResult result = VerificationResult.failure(
-                    java.util.List.of(error),
-                    "TestClass"
-            );
+            VerificationResult result = VerificationResult.failure(java.util.List.of(error), "TestClass");
 
             assertFalse(result.isValid());
             assertEquals(1, result.getErrors().size());
@@ -205,17 +214,15 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should format report")
-        void testFormatReport() {
+        void testFormatReport()
+        {
             VerificationError error = new VerificationError(
                     VerificationErrorType.STACK_UNDERFLOW,
                     25,
                     "Stack underflow"
             );
 
-            VerificationResult result = VerificationResult.failure(
-                    java.util.List.of(error),
-                    "TestClass"
-            );
+            VerificationResult result = VerificationResult.failure(java.util.List.of(error), "TestClass");
 
             String report = result.formatReport();
             assertNotNull(report);
@@ -225,10 +232,12 @@ public class VerifierTest {
 
     @Nested
     @DisplayName("ErrorCollector Tests")
-    class CollectorTests {
+    class CollectorTests
+    {
         @Test
         @DisplayName("should collect all errors in collect mode")
-        void testCollectAllMode() {
+        void testCollectAllMode()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .errorMode(VerifierConfig.ErrorMode.COLLECT_ALL)
                     .build();
@@ -244,7 +253,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should stop on first error in fail-fast mode")
-        void testFailFastMode() {
+        void testFailFastMode()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .errorMode(VerifierConfig.ErrorMode.FAIL_FAST)
                     .build();
@@ -258,7 +268,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should respect max errors limit")
-        void testMaxErrorsLimit() {
+        void testMaxErrorsLimit()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .errorMode(VerifierConfig.ErrorMode.COLLECT_ALL)
                     .maxErrors(2)
@@ -274,7 +285,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should collect warnings separately")
-        void testWarningCollection() {
+        void testWarningCollection()
+        {
             VerifierConfig config = VerifierConfig.defaults();
             ErrorCollector collector = ErrorCollector.forConfig(config);
 
@@ -291,7 +303,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should track treatWarningsAsErrors configuration")
-        void testWarningsAsErrorsConfig() {
+        void testWarningsAsErrorsConfig()
+        {
             VerifierConfig config = VerifierConfig.builder()
                     .treatWarningsAsErrors(true)
                     .build();
@@ -302,10 +315,12 @@ public class VerifierTest {
 
     @Nested
     @DisplayName("VerificationErrorType Tests")
-    class ErrorTypeTests {
+    class ErrorTypeTests
+    {
         @Test
         @DisplayName("should have structural error types")
-        void testStructuralErrorTypes() {
+        void testStructuralErrorTypes()
+        {
             assertNotNull(VerificationErrorType.INVALID_OPCODE);
             assertNotNull(VerificationErrorType.INVALID_OPERAND);
             assertNotNull(VerificationErrorType.INVALID_CONSTANT_POOL_INDEX);
@@ -314,7 +329,8 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should have type safety error types")
-        void testTypeSafetyErrorTypes() {
+        void testTypeSafetyErrorTypes()
+        {
             assertNotNull(VerificationErrorType.STACK_UNDERFLOW);
             assertNotNull(VerificationErrorType.STACK_OVERFLOW);
             assertNotNull(VerificationErrorType.TYPE_MISMATCH);
@@ -322,14 +338,16 @@ public class VerifierTest {
 
         @Test
         @DisplayName("should have control flow error types")
-        void testControlFlowErrorTypes() {
+        void testControlFlowErrorTypes()
+        {
             assertNotNull(VerificationErrorType.UNREACHABLE_CODE);
             assertNotNull(VerificationErrorType.INVALID_EXCEPTION_HANDLER);
         }
 
         @Test
         @DisplayName("should have stackmap error types")
-        void testStackMapErrorTypes() {
+        void testStackMapErrorTypes()
+        {
             assertNotNull(VerificationErrorType.MISSING_STACKMAP_FRAME);
             assertNotNull(VerificationErrorType.FRAME_TYPE_MISMATCH);
         }

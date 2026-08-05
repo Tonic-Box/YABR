@@ -11,15 +11,19 @@ import com.tonic.analysis.ssa.ir.UnaryOp;
 /**
  * Maps AST operators to IR operators (reverse of OperatorMapper in recovery).
  */
-public final class ReverseOperatorMapper {
+public final class ReverseOperatorMapper
+{
 
     private ReverseOperatorMapper() {}
 
     /**
-     * Maps AST binary operator to IR binary op.
-     * Returns null for comparison and logical operators (handled separately).
+     * Maps AST binary operator to IR binary op, treating a compound assignment as its base operator.
+     *
+     * @param op the AST operator
+     * @return the IR op, or null for comparison and logical operators (handled separately)
      */
-    public static BinaryOp toIRBinaryOp(BinaryOperator op) {
+    public static BinaryOp toIRBinaryOp(BinaryOperator op)
+    {
         if (op == BinaryOperator.ADD || op == BinaryOperator.ADD_ASSIGN) return BinaryOp.ADD;
         if (op == BinaryOperator.SUB || op == BinaryOperator.SUB_ASSIGN) return BinaryOp.SUB;
         if (op == BinaryOperator.MUL || op == BinaryOperator.MUL_ASSIGN) return BinaryOp.MUL;
@@ -36,8 +40,12 @@ public final class ReverseOperatorMapper {
 
     /**
      * Maps AST comparison operator to IR compare op for integer comparisons.
+     *
+     * @param op the AST operator
+     * @return the two-operand compare op, or null if the operator is not relational
      */
-    public static CompareOp toCompareOp(BinaryOperator op) {
+    public static CompareOp toCompareOp(BinaryOperator op)
+    {
         if (op == BinaryOperator.EQ) return CompareOp.EQ;
         if (op == BinaryOperator.NE) return CompareOp.NE;
         if (op == BinaryOperator.LT) return CompareOp.LT;
@@ -49,8 +57,12 @@ public final class ReverseOperatorMapper {
 
     /**
      * Gets the single-operand compare op for checking against zero.
+     *
+     * @param op the AST operator
+     * @return the IFxx compare op, or null if the operator is not relational
      */
-    public static CompareOp toSingleOperandCompareOp(BinaryOperator op) {
+    public static CompareOp toSingleOperandCompareOp(BinaryOperator op)
+    {
         if (op == BinaryOperator.EQ) return CompareOp.IFEQ;
         if (op == BinaryOperator.NE) return CompareOp.IFNE;
         if (op == BinaryOperator.LT) return CompareOp.IFLT;
@@ -62,17 +74,27 @@ public final class ReverseOperatorMapper {
 
     /**
      * Maps AST unary operator to IR unary op.
+     *
+     * @param op the AST operator
+     * @return the IR op, or null for any operator other than negation
      */
-    public static UnaryOp toIRUnaryOp(UnaryOperator op) {
+    public static UnaryOp toIRUnaryOp(UnaryOperator op)
+    {
         if (op == UnaryOperator.NEG) return UnaryOp.NEG;
         return null;
     }
 
     /**
      * Gets the IR unary op for type casting between primitives.
+     *
+     * @param from the source type
+     * @param to   the target type
+     * @return the conversion op, or null if either side is not primitive or no conversion is needed
      */
-    public static UnaryOp getCastOp(SourceType from, SourceType to) {
-        if (!(from instanceof PrimitiveSourceType) || !(to instanceof PrimitiveSourceType)) {
+    public static UnaryOp getCastOp(SourceType from, SourceType to)
+    {
+        if (!(from instanceof PrimitiveSourceType) || !(to instanceof PrimitiveSourceType))
+        {
             return null;
         }
 
@@ -82,14 +104,17 @@ public final class ReverseOperatorMapper {
         // byte/short/char live as int on the JVM stack; their conversions are the int ones
         // ((long) aByte is i2l). Identity falls through to null - no conversion needed.
         if (fromPrim == PrimitiveSourceType.BYTE || fromPrim == PrimitiveSourceType.SHORT
-                || fromPrim == PrimitiveSourceType.CHAR) {
-            if (fromPrim == toPrim) {
+                || fromPrim == PrimitiveSourceType.CHAR)
+        {
+            if (fromPrim == toPrim)
+            {
                 return null;
             }
             fromPrim = PrimitiveSourceType.INT;
         }
 
-        if (fromPrim == PrimitiveSourceType.INT) {
+        if (fromPrim == PrimitiveSourceType.INT)
+        {
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.I2L;
             if (toPrim == PrimitiveSourceType.FLOAT) return UnaryOp.I2F;
             if (toPrim == PrimitiveSourceType.DOUBLE) return UnaryOp.I2D;
@@ -98,19 +123,22 @@ public final class ReverseOperatorMapper {
             if (toPrim == PrimitiveSourceType.SHORT) return UnaryOp.I2S;
         }
 
-        if (fromPrim == PrimitiveSourceType.LONG) {
+        if (fromPrim == PrimitiveSourceType.LONG)
+        {
             if (toPrim == PrimitiveSourceType.INT) return UnaryOp.L2I;
             if (toPrim == PrimitiveSourceType.FLOAT) return UnaryOp.L2F;
             if (toPrim == PrimitiveSourceType.DOUBLE) return UnaryOp.L2D;
         }
 
-        if (fromPrim == PrimitiveSourceType.FLOAT) {
+        if (fromPrim == PrimitiveSourceType.FLOAT)
+        {
             if (toPrim == PrimitiveSourceType.INT) return UnaryOp.F2I;
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.F2L;
             if (toPrim == PrimitiveSourceType.DOUBLE) return UnaryOp.F2D;
         }
 
-        if (fromPrim == PrimitiveSourceType.DOUBLE) {
+        if (fromPrim == PrimitiveSourceType.DOUBLE)
+        {
             if (toPrim == PrimitiveSourceType.INT) return UnaryOp.D2I;
             if (toPrim == PrimitiveSourceType.LONG) return UnaryOp.D2L;
             if (toPrim == PrimitiveSourceType.FLOAT) return UnaryOp.D2F;
@@ -120,9 +148,13 @@ public final class ReverseOperatorMapper {
     }
 
     /**
-     * Gets the base operator for compound assignment (e.g., ADD_ASSIGN -> ADD).
+     * Gets the base operator for compound assignment (e.g., ADD_ASSIGN -&gt; ADD).
+     *
+     * @param compoundOp the compound assignment operator
+     * @return the underlying arithmetic or bitwise operator, or null if it is not a compound assignment
      */
-    public static BinaryOperator getBaseOperator(BinaryOperator compoundOp) {
+    public static BinaryOperator getBaseOperator(BinaryOperator compoundOp)
+    {
         if (compoundOp == BinaryOperator.ADD_ASSIGN) return BinaryOperator.ADD;
         if (compoundOp == BinaryOperator.SUB_ASSIGN) return BinaryOperator.SUB;
         if (compoundOp == BinaryOperator.MUL_ASSIGN) return BinaryOperator.MUL;
@@ -139,45 +171,64 @@ public final class ReverseOperatorMapper {
 
     /**
      * Checks if operator is a comparison.
+     *
+     * @param op the operator to test
+     * @return true for the relational and equality operators
      */
-    public static boolean isComparison(BinaryOperator op) {
+    public static boolean isComparison(BinaryOperator op)
+    {
         return op.isComparison();
     }
 
     /**
      * Checks if operator is logical (short-circuit AND/OR).
+     *
+     * @param op the operator to test
+     * @return true for the short-circuit operators
      */
-    public static boolean isLogical(BinaryOperator op) {
+    public static boolean isLogical(BinaryOperator op)
+    {
         return op.isLogical();
     }
 
     /**
      * Checks if operator is an assignment.
+     *
+     * @param op the operator to test
+     * @return true for plain and compound assignment
      */
-    public static boolean isAssignment(BinaryOperator op) {
+    public static boolean isAssignment(BinaryOperator op)
+    {
         return op.isAssignment();
     }
 
     /**
      * Gets the comparison op for long values (LCMP instruction).
+     *
+     * @return LCMP
      */
-    public static BinaryOp getLongCompareOp() {
+    public static BinaryOp getLongCompareOp()
+    {
         return BinaryOp.LCMP;
     }
 
     /**
      * Gets the comparison op for float values.
      * @param nanBias true for FCMPG (1 on NaN), false for FCMPL (-1 on NaN)
+     * @return FCMPG or FCMPL
      */
-    public static BinaryOp getFloatCompareOp(boolean nanBias) {
+    public static BinaryOp getFloatCompareOp(boolean nanBias)
+    {
         return nanBias ? BinaryOp.FCMPG : BinaryOp.FCMPL;
     }
 
     /**
      * Gets the comparison op for double values.
      * @param nanBias true for DCMPG (1 on NaN), false for DCMPL (-1 on NaN)
+     * @return DCMPG or DCMPL
      */
-    public static BinaryOp getDoubleCompareOp(boolean nanBias) {
+    public static BinaryOp getDoubleCompareOp(boolean nanBias)
+    {
         return nanBias ? BinaryOp.DCMPG : BinaryOp.DCMPL;
     }
 }

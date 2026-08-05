@@ -22,7 +22,8 @@ import java.util.*;
  * Transform that applies instrumentation hooks to IR methods.
  * Handles method entry/exit, field access, and array operations.
  */
-public class InstrumentationTransform {
+public class InstrumentationTransform
+{
 
     private final List<Hook> hooks;
     private final InstrumentationConfig config;
@@ -30,26 +31,37 @@ public class InstrumentationTransform {
 
     private int lastInstrumentationCount;
 
-    public InstrumentationTransform(List<Hook> hooks, InstrumentationConfig config) {
+    /**
+     * Creates a transform that applies the given hooks under the given configuration.
+     * @param hooks the hooks to apply
+     * @param config the instrumentation configuration
+     */
+    public InstrumentationTransform(List<Hook> hooks, InstrumentationConfig config)
+    {
         this.hooks = hooks;
         this.config = config;
         this.factory = new InstrumentationFactory();
     }
 
-    public int getLastInstrumentationCount() {
+    /**
+     * @return the last instrumentation count
+     */
+    public int getLastInstrumentationCount()
+    {
         return lastInstrumentationCount;
     }
 
     /**
      * Instruments a single method.
-     *
      * @param irMethod the IR method to instrument
      * @param sourceMethod the source method entry
      * @param classFile the class file
      * @return number of instrumentation points applied
      */
-    public int instrumentMethod(IRMethod irMethod, MethodEntry sourceMethod, ClassFile classFile) {
-        if (!shouldInstrumentMethod(sourceMethod)) {
+    public int instrumentMethod(IRMethod irMethod, MethodEntry sourceMethod, ClassFile classFile)
+    {
+        if (!shouldInstrumentMethod(sourceMethod))
+        {
             return 0;
         }
 
@@ -60,12 +72,15 @@ public class InstrumentationTransform {
         List<Hook> sortedHooks = new ArrayList<>(hooks);
         sortedHooks.sort(Comparator.comparingInt(Hook::getPriority));
 
-        for (Hook hook : sortedHooks) {
+        for (Hook hook : sortedHooks)
+        {
             if (!hook.isEnabled()) continue;
             if (!matchesFilters(hook.getFilters(), classFile, sourceMethod)) continue;
 
-            try {
-                switch (hook.getTarget()) {
+            try
+            {
+                switch (hook.getTarget())
+                {
                     case METHOD_ENTRY:
                         lastInstrumentationCount += instrumentMethodEntry(irMethod, (MethodEntryHook) hook, sourceMethod, className);
                         break;
@@ -92,12 +107,16 @@ public class InstrumentationTransform {
                         lastInstrumentationCount += instrumentExceptionHandlers(irMethod, (ExceptionHook) hook, className);
                         break;
                 }
-            } catch (Exception e) {
-                if (config.isFailOnError()) {
+            }
+            catch (Exception e)
+            {
+                if (config.isFailOnError())
+                {
                     throw new RuntimeException("Failed to apply hook " + hook.getTarget() +
                             " to method " + sourceMethod.getName(), e);
                 }
-                if (config.isVerbose()) {
+                if (config.isVerbose())
+                {
                     System.err.println("Warning: Failed to apply hook to " + sourceMethod.getName() + ": " + e.getMessage());
                 }
             }
@@ -106,7 +125,8 @@ public class InstrumentationTransform {
         return lastInstrumentationCount;
     }
 
-    private boolean shouldInstrumentMethod(MethodEntry method) {
+    private boolean shouldInstrumentMethod(MethodEntry method)
+    {
         int access = method.getAccess();
 
         if (config.isSkipAbstract() && Modifier.isAbstract(access)) return false;
@@ -119,45 +139,52 @@ public class InstrumentationTransform {
         return method.getCodeAttribute() != null;
     }
 
-    private boolean matchesFilters(List<InstrumentationFilter> filters, ClassFile classFile, MethodEntry method) {
-        for (InstrumentationFilter filter : filters) {
+    private boolean matchesFilters(List<InstrumentationFilter> filters, ClassFile classFile, MethodEntry method)
+    {
+        for (InstrumentationFilter filter : filters)
+        {
             if (!filter.matchesClass(classFile)) return false;
             if (!filter.matchesMethod(method)) return false;
         }
         return true;
     }
 
-    private int instrumentMethodEntry(IRMethod irMethod, MethodEntryHook hook, MethodEntry sourceMethod, String className) {
+    private int instrumentMethodEntry(IRMethod irMethod, MethodEntryHook hook, MethodEntry sourceMethod, String className)
+    {
         IRBlock entryBlock = irMethod.getEntryBlock();
         if (entryBlock == null) return 0;
 
         List<IRInstruction> hookInstructions = factory.createMethodEntryHook(hook, irMethod, sourceMethod, className);
 
         // Insert at the beginning of entry block (after phi instructions would go)
-        for (int i = 0; i < hookInstructions.size(); i++) {
+        for (int i = 0; i < hookInstructions.size(); i++)
+        {
             entryBlock.insertInstruction(i, hookInstructions.get(i));
         }
 
         return 1;
     }
 
-    private int instrumentMethodExit(IRMethod irMethod, MethodExitHook hook, MethodEntry sourceMethod, String className) {
+    private int instrumentMethodExit(IRMethod irMethod, MethodExitHook hook, MethodEntry sourceMethod, String className)
+    {
         int count = 0;
 
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> instructions = block.getInstructions();
             if (instructions.isEmpty()) continue;
 
             IRInstruction last = instructions.get(instructions.size() - 1);
-            if (last instanceof ReturnInstruction) {
+            if (last instanceof ReturnInstruction)
+            {
                 ReturnInstruction ret = (ReturnInstruction) last;
 
                 List<IRInstruction> hookInstructions = factory.createMethodExitHook(
                         hook, irMethod, ret, sourceMethod, className);
 
-                // Insert before the return
                 int insertIdx = instructions.size() - 1;
-                for (int i = 0; i < hookInstructions.size(); i++) {
+                for (int i = 0; i < hookInstructions.size(); i++)
+                {
                     block.insertInstruction(insertIdx + i, hookInstructions.get(i));
                 }
 
@@ -168,17 +195,21 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private int instrumentFieldWrites(IRMethod irMethod, FieldWriteHook hook) {
+    private int instrumentFieldWrites(IRMethod irMethod, FieldWriteHook hook)
+    {
         int count = 0;
 
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             int offset = 0;
 
-            for (int i = 0; i < instructions.size(); i++) {
+            for (int i = 0; i < instructions.size(); i++)
+            {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof FieldAccessInstruction) {
+                if (instr instanceof FieldAccessInstruction)
+                {
                     FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
                     if (!fieldAccess.isStore()) continue;
 
@@ -186,20 +217,23 @@ public class InstrumentationTransform {
                     if (fieldAccess.isStatic() && !hook.isInstrumentStatic()) continue;
                     if (!fieldAccess.isStatic() && !hook.isInstrumentInstance()) continue;
 
-                    List<IRInstruction> hookInstructions = factory.createFieldWriteHook(
-                            hook, fieldAccess);
+                    List<IRInstruction> hookInstructions = factory.createFieldWriteHook(hook, fieldAccess);
 
                     int insertIdx = i + offset;
-                    for (int j = 0; j < hookInstructions.size(); j++) {
+                    for (int j = 0; j < hookInstructions.size(); j++)
+                    {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                     }
                     offset += hookInstructions.size();
 
-                    if (hook.isCanModifyValue() && !hookInstructions.isEmpty()) {
+                    if (hook.isCanModifyValue() && !hookInstructions.isEmpty())
+                    {
                         IRInstruction lastHook = hookInstructions.get(hookInstructions.size() - 1);
-                        if (lastHook instanceof InvokeInstruction) {
+                        if (lastHook instanceof InvokeInstruction)
+                        {
                             InvokeInstruction hookInvoke = (InvokeInstruction) lastHook;
-                            if (hookInvoke.getResult() != null) {
+                            if (hookInvoke.getResult() != null)
+                            {
                                 fieldAccess.replaceOperand(fieldAccess.getValue(), hookInvoke.getResult());
                             }
                         }
@@ -213,17 +247,21 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private int instrumentFieldReads(IRMethod irMethod, FieldReadHook hook) {
+    private int instrumentFieldReads(IRMethod irMethod, FieldReadHook hook)
+    {
         int count = 0;
 
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             int offset = 0;
 
-            for (int i = 0; i < instructions.size(); i++) {
+            for (int i = 0; i < instructions.size(); i++)
+            {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof FieldAccessInstruction) {
+                if (instr instanceof FieldAccessInstruction)
+                {
                     FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
                     if (!fieldAccess.isLoad()) continue;
 
@@ -231,11 +269,11 @@ public class InstrumentationTransform {
                     if (fieldAccess.isStatic() && !hook.isInstrumentStatic()) continue;
                     if (!fieldAccess.isStatic() && !hook.isInstrumentInstance()) continue;
 
-                    List<IRInstruction> hookInstructions = factory.createFieldReadHook(
-                            hook, fieldAccess);
+                    List<IRInstruction> hookInstructions = factory.createFieldReadHook(hook, fieldAccess);
 
                     int insertIdx = i + offset + 1;
-                    for (int j = 0; j < hookInstructions.size(); j++) {
+                    for (int j = 0; j < hookInstructions.size(); j++)
+                    {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                     }
                     offset += hookInstructions.size();
@@ -248,44 +286,53 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private int instrumentArrayStores(IRMethod irMethod, ArrayStoreHook hook) {
+    private int instrumentArrayStores(IRMethod irMethod, ArrayStoreHook hook)
+    {
         int count = 0;
 
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             int offset = 0;
 
-            for (int i = 0; i < instructions.size(); i++) {
+            for (int i = 0; i < instructions.size(); i++)
+            {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof ArrayAccessInstruction) {
+                if (instr instanceof ArrayAccessInstruction)
+                {
                     ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
                     if (!arrayAccess.isStore()) continue;
 
                     String typeFilter = hook.getArrayTypeFilter();
-                    if (typeFilter != null && arrayAccess.getArray() != null) {
+                    if (typeFilter != null && arrayAccess.getArray() != null)
+                    {
                         var arrayType = arrayAccess.getArray().getType();
                         // Skip only when the array's element type is known and does not match the
                         // filter; an imprecise type is instrumented rather than silently dropped.
-                        if (arrayType instanceof ArrayType && !typeFilter.equals(arrayType.getDescriptor())) {
+                        if (arrayType instanceof ArrayType && !typeFilter.equals(arrayType.getDescriptor()))
+                        {
                             continue;
                         }
                     }
 
-                    List<IRInstruction> hookInstructions = factory.createArrayStoreHook(
-                            hook, arrayAccess);
+                    List<IRInstruction> hookInstructions = factory.createArrayStoreHook(hook, arrayAccess);
 
                     int insertIdx = i + offset;
-                    for (int j = 0; j < hookInstructions.size(); j++) {
+                    for (int j = 0; j < hookInstructions.size(); j++)
+                    {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                     }
                     offset += hookInstructions.size();
 
-                    if (hook.isCanModifyValue() && !hookInstructions.isEmpty()) {
+                    if (hook.isCanModifyValue() && !hookInstructions.isEmpty())
+                    {
                         IRInstruction lastHook = hookInstructions.get(hookInstructions.size() - 1);
-                        if (lastHook instanceof InvokeInstruction) {
+                        if (lastHook instanceof InvokeInstruction)
+                        {
                             InvokeInstruction hookInvoke = (InvokeInstruction) lastHook;
-                            if (hookInvoke.getResult() != null) {
+                            if (hookInvoke.getResult() != null)
+                            {
                                 arrayAccess.replaceOperand(arrayAccess.getValue(), hookInvoke.getResult());
                             }
                         }
@@ -299,25 +346,29 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private int instrumentArrayLoads(IRMethod irMethod, ArrayLoadHook hook) {
+    private int instrumentArrayLoads(IRMethod irMethod, ArrayLoadHook hook)
+    {
         int count = 0;
 
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             int offset = 0;
 
-            for (int i = 0; i < instructions.size(); i++) {
+            for (int i = 0; i < instructions.size(); i++)
+            {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof ArrayAccessInstruction) {
+                if (instr instanceof ArrayAccessInstruction)
+                {
                     ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
                     if (!arrayAccess.isLoad()) continue;
 
-                    List<IRInstruction> hookInstructions = factory.createArrayLoadHook(
-                            hook, arrayAccess);
+                    List<IRInstruction> hookInstructions = factory.createArrayLoadHook(hook, arrayAccess);
 
                     int insertIdx = i + offset + 1;
-                    for (int j = 0; j < hookInstructions.size(); j++) {
+                    for (int j = 0; j < hookInstructions.size(); j++)
+                    {
                         block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                     }
                     offset += hookInstructions.size();
@@ -330,35 +381,41 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private int instrumentMethodCalls(IRMethod irMethod, MethodCallHook hook) {
+    private int instrumentMethodCalls(IRMethod irMethod, MethodCallHook hook)
+    {
         int count = 0;
 
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             int offset = 0;
 
-            for (int i = 0; i < instructions.size(); i++) {
+            for (int i = 0; i < instructions.size(); i++)
+            {
                 IRInstruction instr = instructions.get(i);
 
-                if (instr instanceof InvokeInstruction) {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction invoke = (InvokeInstruction) instr;
 
                     if (!matchesCallTarget(hook, invoke)) continue;
 
                     boolean isBefore = hook.getTarget() == InstrumentationTarget.METHOD_CALL_BEFORE;
-                    List<IRInstruction> hookInstructions = factory.createMethodCallHook(
-                            hook, invoke, isBefore);
+                    List<IRInstruction> hookInstructions = factory.createMethodCallHook(hook, invoke, isBefore);
 
-                    if (isBefore) {
-                        // Insert before the call
+                    if (isBefore)
+                    {
                         int insertIdx = i + offset;
-                        for (int j = 0; j < hookInstructions.size(); j++) {
+                        for (int j = 0; j < hookInstructions.size(); j++)
+                        {
                             block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                         }
-                    } else {
-                        // Insert after the call
+                    }
+                    else
+                    {
                         int insertIdx = i + offset + 1;
-                        for (int j = 0; j < hookInstructions.size(); j++) {
+                        for (int j = 0; j < hookInstructions.size(); j++)
+                        {
                             block.insertInstruction(insertIdx + j, hookInstructions.get(j));
                         }
                     }
@@ -372,10 +429,12 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private int instrumentExceptionHandlers(IRMethod irMethod, ExceptionHook hook, String className) {
+    private int instrumentExceptionHandlers(IRMethod irMethod, ExceptionHook hook, String className)
+    {
         int count = 0;
 
-        for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
+        for (ExceptionHandler handler : irMethod.getExceptionHandlers())
+        {
             IRBlock handlerBlock = handler.getHandlerBlock();
             if (handlerBlock == null) continue;
 
@@ -387,7 +446,8 @@ public class InstrumentationTransform {
 
             // Insert at the handler entry, after any phi instructions, where the caught exception is live.
             int insertIdx = handlerBlock.getPhiInstructions().size();
-            for (int i = 0; i < hookInstructions.size(); i++) {
+            for (int i = 0; i < hookInstructions.size(); i++)
+            {
                 handlerBlock.insertInstruction(insertIdx + i, hookInstructions.get(i));
             }
 
@@ -397,20 +457,26 @@ public class InstrumentationTransform {
         return count;
     }
 
-    private boolean matchesFieldFilters(List<InstrumentationFilter> filters, FieldAccessInstruction fieldAccess) {
-        for (InstrumentationFilter filter : filters) {
-            if (!filter.matchesField(fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor())) {
+    private boolean matchesFieldFilters(List<InstrumentationFilter> filters, FieldAccessInstruction fieldAccess)
+    {
+        for (InstrumentationFilter filter : filters)
+        {
+            if (!filter.matchesField(fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor()))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private boolean matchesCallTarget(MethodCallHook hook, InvokeInstruction invoke) {
-        if (hook.getTargetClass() != null && !hook.getTargetClass().equals(invoke.getOwner())) {
+    private boolean matchesCallTarget(MethodCallHook hook, InvokeInstruction invoke)
+    {
+        if (hook.getTargetClass() != null && !hook.getTargetClass().equals(invoke.getOwner()))
+        {
             return false;
         }
-        if (hook.getTargetMethod() != null && !hook.getTargetMethod().equals(invoke.getName())) {
+        if (hook.getTargetMethod() != null && !hook.getTargetMethod().equals(invoke.getName()))
+        {
             return false;
         }
         return hook.getTargetDescriptor() == null || hook.getTargetDescriptor().equals(invoke.getDescriptor());

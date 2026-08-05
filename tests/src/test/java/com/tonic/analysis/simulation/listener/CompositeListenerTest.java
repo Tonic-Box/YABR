@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for CompositeListener event delegation.
  * Verifies that all events are correctly delegated to child listeners.
  */
-class CompositeListenerTest {
+class CompositeListenerTest
+{
 
     private CompositeListener composite;
     private MockListener listener1;
@@ -27,7 +28,8 @@ class CompositeListenerTest {
     private MockListener listener3;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener1 = new MockListener("listener1");
         listener2 = new MockListener("listener2");
         listener3 = new MockListener("listener3");
@@ -35,31 +37,35 @@ class CompositeListenerTest {
         OrderTrackingListener.globalCallOrder.clear();
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void emptyConstructor() {
+    void emptyConstructor()
+    {
         CompositeListener listener = new CompositeListener();
         assertNotNull(listener);
         assertTrue(listener.getListeners().isEmpty());
     }
 
     @Test
-    void varargsConstructorWithNoListeners() {
+    void varargsConstructorWithNoListeners()
+    {
         CompositeListener listener = new CompositeListener();
         assertNotNull(listener);
         assertTrue(listener.getListeners().isEmpty());
     }
 
     @Test
-    void varargsConstructorWithOneListener() {
+    void varargsConstructorWithOneListener()
+    {
         CompositeListener listener = new CompositeListener(listener1);
         assertEquals(1, listener.getListeners().size());
         assertSame(listener1, listener.getListeners().get(0));
     }
 
     @Test
-    void varargsConstructorWithMultipleListeners() {
+    void varargsConstructorWithMultipleListeners()
+    {
         CompositeListener listener = new CompositeListener(listener1, listener2, listener3);
         assertEquals(3, listener.getListeners().size());
         assertSame(listener1, listener.getListeners().get(0));
@@ -68,14 +74,16 @@ class CompositeListenerTest {
     }
 
     @Test
-    void listConstructorWithEmptyList() {
+    void listConstructorWithEmptyList()
+    {
         List<SimulationListener> list = new ArrayList<>();
         CompositeListener listener = new CompositeListener(list);
         assertTrue(listener.getListeners().isEmpty());
     }
 
     @Test
-    void listConstructorWithListeners() {
+    void listConstructorWithListeners()
+    {
         List<SimulationListener> list = Arrays.asList(listener1, listener2);
         CompositeListener listener = new CompositeListener(list);
         assertEquals(2, listener.getListeners().size());
@@ -84,7 +92,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void listConstructorCreatesDefensiveCopy() {
+    void listConstructorCreatesDefensiveCopy()
+    {
         List<SimulationListener> list = new ArrayList<>();
         list.add(listener1);
         CompositeListener listener = new CompositeListener(list);
@@ -96,23 +105,26 @@ class CompositeListenerTest {
         assertEquals(1, listener.getListeners().size());
     }
 
-    // ========== Listener Management Tests ==========
+    // Listener Management Tests
 
     @Test
-    void addListenerReturnsThis() {
+    void addListenerReturnsThis()
+    {
         CompositeListener result = composite.add(listener1);
         assertSame(composite, result);
     }
 
     @Test
-    void addListenerAddsToList() {
+    void addListenerAddsToList()
+    {
         composite.add(listener1);
         assertEquals(1, composite.getListeners().size());
         assertSame(listener1, composite.getListeners().get(0));
     }
 
     @Test
-    void addMultipleListeners() {
+    void addMultipleListeners()
+    {
         composite.add(listener1).add(listener2).add(listener3);
         assertEquals(3, composite.getListeners().size());
         assertSame(listener1, composite.getListeners().get(0));
@@ -121,14 +133,16 @@ class CompositeListenerTest {
     }
 
     @Test
-    void removeListenerReturnsThis() {
+    void removeListenerReturnsThis()
+    {
         composite.add(listener1);
         CompositeListener result = composite.remove(listener1);
         assertSame(composite, result);
     }
 
     @Test
-    void removeListenerRemovesFromList() {
+    void removeListenerRemovesFromList()
+    {
         composite.add(listener1).add(listener2);
         composite.remove(listener1);
         assertEquals(1, composite.getListeners().size());
@@ -136,7 +150,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void removeNonExistentListenerNoEffect() {
+    void removeNonExistentListenerNoEffect()
+    {
         composite.add(listener1);
         composite.remove(listener2);
         assertEquals(1, composite.getListeners().size());
@@ -144,7 +159,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void getListenersReturnsUnmodifiableList() {
+    void getListenersReturnsUnmodifiableList()
+    {
         composite.add(listener1);
         List<SimulationListener> listeners = composite.getListeners();
 
@@ -154,7 +170,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void getListenerByType() {
+    void getListenerByType()
+    {
         SpecializedListener specialized = new SpecializedListener();
         composite.add(listener1).add(specialized).add(listener2);
 
@@ -163,7 +180,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void getListenerByTypeReturnsFirst() {
+    void getListenerByTypeReturnsFirst()
+    {
         SpecializedListener specialized1 = new SpecializedListener();
         SpecializedListener specialized2 = new SpecializedListener();
         composite.add(listener1).add(specialized1).add(specialized2);
@@ -173,23 +191,26 @@ class CompositeListenerTest {
     }
 
     @Test
-    void getListenerByTypeNotFound() {
+    void getListenerByTypeNotFound()
+    {
         composite.add(listener1).add(listener2);
         SpecializedListener found = composite.getListener(SpecializedListener.class);
         assertNull(found);
     }
 
     @Test
-    void getListenerByBaseType() {
+    void getListenerByBaseType()
+    {
         composite.add(listener1);
         SimulationListener found = composite.getListener(SimulationListener.class);
         assertSame(listener1, found);
     }
 
-    // ========== Event Delegation Tests ==========
+    // Event Delegation Tests
 
     @Test
-    void onSimulationStartDelegatesToAllListeners() {
+    void onSimulationStartDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2).add(listener3);
         IRMethod method = null;
 
@@ -202,7 +223,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onSimulationEndDelegatesToAllListeners() {
+    void onSimulationEndDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2).add(listener3);
         IRMethod method = null;
         SimulationResult result = null;
@@ -217,7 +239,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onBlockEntryDelegatesToAllListeners() {
+    void onBlockEntryDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         IRBlock block = null;
         SimulationState state = null;
@@ -231,7 +254,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onBlockExitDelegatesToAllListeners() {
+    void onBlockExitDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         IRBlock block = null;
         SimulationState state = null;
@@ -245,7 +269,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onBeforeInstructionDelegatesToAllListeners() {
+    void onBeforeInstructionDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         IRInstruction instr = null;
         SimulationState state = null;
@@ -259,7 +284,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onAfterInstructionDelegatesToAllListeners() {
+    void onAfterInstructionDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         IRInstruction instr = null;
         SimulationState before = null;
@@ -275,7 +301,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onStackPushDelegatesToAllListeners() {
+    void onStackPushDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         SimValue value = null;
         IRInstruction source = null;
@@ -289,7 +316,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onStackPopDelegatesToAllListeners() {
+    void onStackPopDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         SimValue value = null;
         IRInstruction consumer = null;
@@ -303,7 +331,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onAllocationDelegatesToAllListeners() {
+    void onAllocationDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         NewInstruction instr = null;
         SimulationState state = null;
@@ -317,7 +346,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onArrayAllocationDelegatesToAllListeners() {
+    void onArrayAllocationDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         NewArrayInstruction instr = null;
         SimulationState state = null;
@@ -331,7 +361,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onFieldReadDelegatesToAllListeners() {
+    void onFieldReadDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         FieldAccessInstruction instr = null;
         SimulationState state = null;
@@ -345,7 +376,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onFieldWriteDelegatesToAllListeners() {
+    void onFieldWriteDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         FieldAccessInstruction instr = null;
         SimulationState state = null;
@@ -359,7 +391,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onArrayReadDelegatesToAllListeners() {
+    void onArrayReadDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         ArrayAccessInstruction instr = null;
         SimulationState state = null;
@@ -373,7 +406,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onArrayWriteDelegatesToAllListeners() {
+    void onArrayWriteDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         ArrayAccessInstruction instr = null;
         SimulationState state = null;
@@ -387,7 +421,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onBranchDelegatesToAllListeners() {
+    void onBranchDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         BranchInstruction instr = null;
         boolean taken = true;
@@ -403,7 +438,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onSwitchDelegatesToAllListeners() {
+    void onSwitchDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         SwitchInstruction instr = null;
         int targetIndex = 5;
@@ -419,7 +455,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onMethodCallDelegatesToAllListeners() {
+    void onMethodCallDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         InvokeInstruction instr = null;
         SimulationState state = null;
@@ -433,7 +470,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onMethodReturnDelegatesToAllListeners() {
+    void onMethodReturnDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         ReturnInstruction instr = null;
         SimulationState state = null;
@@ -447,7 +485,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onExceptionDelegatesToAllListeners() {
+    void onExceptionDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         SimpleInstruction instr = null;
         SimulationState state = null;
@@ -461,7 +500,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onMonitorEnterDelegatesToAllListeners() {
+    void onMonitorEnterDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         SimpleInstruction instr = null;
         SimulationState state = null;
@@ -475,7 +515,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void onMonitorExitDelegatesToAllListeners() {
+    void onMonitorExitDelegatesToAllListeners()
+    {
         composite.add(listener1).add(listener2);
         SimpleInstruction instr = null;
         SimulationState state = null;
@@ -488,10 +529,11 @@ class CompositeListenerTest {
         assertSame(state, listener1.lastState);
     }
 
-    // ========== Multi-Listener Behavior Tests ==========
+    // Multi-Listener Behavior Tests
 
     @Test
-    void eventsPropagateToBothListeners() {
+    void eventsPropagateToBothListeners()
+    {
         composite.add(listener1).add(listener2);
 
         composite.onSimulationStart(null);
@@ -508,7 +550,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void eventsPropagateToBothListenersMultipleTimes() {
+    void eventsPropagateToBothListenersMultipleTimes()
+    {
         composite.add(listener1).add(listener2);
 
         composite.onStackPush(null, null);
@@ -523,7 +566,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void eventsPropagateToBothListenersInOrder() {
+    void eventsPropagateToBothListenersInOrder()
+    {
         OrderTrackingListener ordered1 = new OrderTrackingListener("ordered1");
         OrderTrackingListener ordered2 = new OrderTrackingListener("ordered2");
         composite.add(ordered1).add(ordered2);
@@ -536,7 +580,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void multipleEventsPropagateToBothListenersInCorrectOrder() {
+    void multipleEventsPropagateToBothListenersInCorrectOrder()
+    {
         OrderTrackingListener ordered1 = new OrderTrackingListener("ordered1");
         OrderTrackingListener ordered2 = new OrderTrackingListener("ordered2");
         OrderTrackingListener ordered3 = new OrderTrackingListener("ordered3");
@@ -551,7 +596,8 @@ class CompositeListenerTest {
     }
 
     @Test
-    void noListenersDoesNotThrowException() {
+    void noListenersDoesNotThrowException()
+    {
         assertDoesNotThrow(() -> {
             composite.onSimulationStart(null);
             composite.onStackPush(null, null);
@@ -559,12 +605,12 @@ class CompositeListenerTest {
         });
     }
 
-    // ========== Mock Listener Implementation ==========
+    // Mock Listener Implementation
 
-    private static class MockListener implements SimulationListener {
+    private static class MockListener implements SimulationListener
+    {
         String name;
 
-        // Call counters
         int simulationStartCalls = 0;
         int simulationEndCalls = 0;
         int blockEntryCalls = 0;
@@ -608,46 +654,53 @@ class CompositeListenerTest {
         ReturnInstruction lastReturnInstruction;
         SimpleInstruction lastSimpleInstruction;
 
-        MockListener(String name) {
+        MockListener(String name)
+        {
             this.name = name;
         }
 
         @Override
-        public void onSimulationStart(IRMethod method) {
+        public void onSimulationStart(IRMethod method)
+        {
             simulationStartCalls++;
             lastMethod = method;
         }
 
         @Override
-        public void onSimulationEnd(IRMethod method, SimulationResult result) {
+        public void onSimulationEnd(IRMethod method, SimulationResult result)
+        {
             simulationEndCalls++;
             lastMethod = method;
             lastResult = result;
         }
 
         @Override
-        public void onBlockEntry(IRBlock block, SimulationState state) {
+        public void onBlockEntry(IRBlock block, SimulationState state)
+        {
             blockEntryCalls++;
             lastBlock = block;
             lastState = state;
         }
 
         @Override
-        public void onBlockExit(IRBlock block, SimulationState state) {
+        public void onBlockExit(IRBlock block, SimulationState state)
+        {
             blockExitCalls++;
             lastBlock = block;
             lastState = state;
         }
 
         @Override
-        public void onBeforeInstruction(IRInstruction instr, SimulationState state) {
+        public void onBeforeInstruction(IRInstruction instr, SimulationState state)
+        {
             beforeInstructionCalls++;
             lastInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onAfterInstruction(IRInstruction instr, SimulationState before, SimulationState after) {
+        public void onAfterInstruction(IRInstruction instr, SimulationState before, SimulationState after)
+        {
             afterInstructionCalls++;
             lastInstruction = instr;
             lastBeforeState = before;
@@ -655,63 +708,72 @@ class CompositeListenerTest {
         }
 
         @Override
-        public void onStackPush(SimValue value, IRInstruction source) {
+        public void onStackPush(SimValue value, IRInstruction source)
+        {
             stackPushCalls++;
             lastValue = value;
             lastInstruction = source;
         }
 
         @Override
-        public void onStackPop(SimValue value, IRInstruction consumer) {
+        public void onStackPop(SimValue value, IRInstruction consumer)
+        {
             stackPopCalls++;
             lastValue = value;
             lastInstruction = consumer;
         }
 
         @Override
-        public void onAllocation(NewInstruction instr, SimulationState state) {
+        public void onAllocation(NewInstruction instr, SimulationState state)
+        {
             allocationCalls++;
             lastNewInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onArrayAllocation(NewArrayInstruction instr, SimulationState state) {
+        public void onArrayAllocation(NewArrayInstruction instr, SimulationState state)
+        {
             arrayAllocationCalls++;
             lastNewArrayInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onFieldRead(FieldAccessInstruction instr, SimulationState state) {
+        public void onFieldRead(FieldAccessInstruction instr, SimulationState state)
+        {
             fieldReadCalls++;
             lastFieldAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {
+        public void onFieldWrite(FieldAccessInstruction instr, SimulationState state)
+        {
             fieldWriteCalls++;
             lastFieldAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onArrayRead(ArrayAccessInstruction instr, SimulationState state) {
+        public void onArrayRead(ArrayAccessInstruction instr, SimulationState state)
+        {
             arrayReadCalls++;
             lastArrayAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {
+        public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state)
+        {
             arrayWriteCalls++;
             lastArrayAccessInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onBranch(BranchInstruction instr, boolean taken, SimulationState state) {
+        public void onBranch(BranchInstruction instr, boolean taken, SimulationState state)
+        {
             branchCalls++;
             lastBranchInstruction = instr;
             lastBranchTaken = taken;
@@ -719,7 +781,8 @@ class CompositeListenerTest {
         }
 
         @Override
-        public void onSwitch(SwitchInstruction instr, int targetIndex, SimulationState state) {
+        public void onSwitch(SwitchInstruction instr, int targetIndex, SimulationState state)
+        {
             switchCalls++;
             lastSwitchInstruction = instr;
             lastTargetIndex = targetIndex;
@@ -727,64 +790,74 @@ class CompositeListenerTest {
         }
 
         @Override
-        public void onMethodCall(InvokeInstruction instr, SimulationState state) {
+        public void onMethodCall(InvokeInstruction instr, SimulationState state)
+        {
             methodCallCalls++;
             lastInvokeInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onMethodReturn(ReturnInstruction instr, SimulationState state) {
+        public void onMethodReturn(ReturnInstruction instr, SimulationState state)
+        {
             methodReturnCalls++;
             lastReturnInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onException(SimpleInstruction instr, SimulationState state) {
+        public void onException(SimpleInstruction instr, SimulationState state)
+        {
             exceptionCalls++;
             lastSimpleInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onMonitorEnter(SimpleInstruction instr, SimulationState state) {
+        public void onMonitorEnter(SimpleInstruction instr, SimulationState state)
+        {
             monitorEnterCalls++;
             lastSimpleInstruction = instr;
             lastState = state;
         }
 
         @Override
-        public void onMonitorExit(SimpleInstruction instr, SimulationState state) {
+        public void onMonitorExit(SimpleInstruction instr, SimulationState state)
+        {
             monitorExitCalls++;
             lastSimpleInstruction = instr;
             lastState = state;
         }
     }
 
-    // ========== Specialized Listener for Type Testing ==========
+    // Specialized Listener for Type Testing
 
-    private static class SpecializedListener implements SimulationListener {
+    private static class SpecializedListener implements SimulationListener
+    {
         // Minimal implementation for type testing
     }
 
-    // ========== Order Tracking Listener ==========
+    // Order Tracking Listener
 
-    private static class OrderTrackingListener implements SimulationListener {
+    private static class OrderTrackingListener implements SimulationListener
+    {
         static List<String> globalCallOrder = new ArrayList<>();
         String name;
 
-        OrderTrackingListener(String name) {
+        OrderTrackingListener(String name)
+        {
             this.name = name;
         }
 
         @Override
-        public void onSimulationStart(IRMethod method) {
+        public void onSimulationStart(IRMethod method)
+        {
             globalCallOrder.add(name);
         }
 
         @Override
-        public void onBlockEntry(IRBlock block, SimulationState state) {
+        public void onBlockEntry(IRBlock block, SimulationState state)
+        {
             globalCallOrder.add(name);
         }
     }

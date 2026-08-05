@@ -9,32 +9,25 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Query interface for value flow analysis.
+ * Def-use query over the values observed by a simulation run.
  *
- * <p>Provides methods to trace where values come from and where they go.
- *
- * <p>Example usage:
- * <pre>
+ * <pre>{@code
  * ValueFlowQuery query = ValueFlowQuery.from(result);
- *
- * // Find where a value comes from
  * IRInstruction origin = query.getDefiningInstruction(value);
- *
- * // Find where a value is used
- * List&lt;IRInstruction&gt; uses = query.getUses(value);
- *
- * // Check if value flows to another
+ * List<IRInstruction> uses = query.getUses(value);
  * boolean flows = query.flowsTo(source, target);
- * </pre>
+ * }</pre>
  */
-public class ValueFlowQuery {
+public class ValueFlowQuery
+{
 
     private final SimulationResult result;
     private final Map<SimValue, IRInstruction> definitions;
     private final Map<SimValue, List<IRInstruction>> uses;
     private final Map<SimValue, Set<SimValue>> dependencies;
 
-    private ValueFlowQuery(SimulationResult result) {
+    private ValueFlowQuery(SimulationResult result)
+    {
         this.result = result;
         this.definitions = new HashMap<>();
         this.uses = new HashMap<>();
@@ -43,26 +36,34 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Creates a value flow query from a simulation result.
+     * Builds the def-use flow graph over a completed simulation.
+     *
+     * @param result the simulation whose recorded states are indexed
+     * @return a query over that result
      */
-    public static ValueFlowQuery from(SimulationResult result) {
+    public static ValueFlowQuery from(SimulationResult result)
+    {
         return new ValueFlowQuery(result);
     }
 
-    private void buildFlowGraph() {
+    private void buildFlowGraph()
+    {
         // Reverse maps used to bridge the IR-level def-use (instruction operands) to SimValues:
         // which SimValue each instruction produced, and which instruction defines each SSA value.
         Map<IRInstruction, SimValue> producedBy = new HashMap<>();
         Map<Value, IRInstruction> ssaDef = new HashMap<>();
 
-        for (StateSnapshot snapshot : result.getAllStates()) {
+        for (StateSnapshot snapshot : result.getAllStates())
+        {
             indexSsaDefs(snapshot, ssaDef);
 
             IRInstruction instr = getCurrentInstruction(snapshot);
             if (instr == null) continue;
 
-            for (SimValue value : valuesIn(snapshot)) {
-                if (value != null && value.getSourceInstruction() == instr) {
+            for (SimValue value : valuesIn(snapshot))
+            {
+                if (value != null && value.getSourceInstruction() == instr)
+                {
                     definitions.put(value, instr);
                     producedBy.putIfAbsent(instr, value);
                 }
@@ -72,11 +73,14 @@ public class ValueFlowQuery {
         // An instruction's IR operands resolve (through their producing instruction) to the SimValues
         // it consumes: each produced value depends on those inputs, and each input is used by the
         // consuming instruction.
-        for (Map.Entry<IRInstruction, SimValue> produced : producedBy.entrySet()) {
-            for (Value operand : produced.getKey().getOperands()) {
+        for (Map.Entry<IRInstruction, SimValue> produced : producedBy.entrySet())
+        {
+            for (Value operand : produced.getKey().getOperands())
+            {
                 IRInstruction def = ssaDef.get(operand);
                 SimValue input = def == null ? null : producedBy.get(def);
-                if (input == null || input == produced.getValue()) {
+                if (input == null || input == produced.getValue())
+                {
                     continue;
                 }
                 dependencies.computeIfAbsent(produced.getValue(), k -> new HashSet<>()).add(input);
@@ -85,37 +89,49 @@ public class ValueFlowQuery {
         }
     }
 
-    private List<SimValue> valuesIn(StateSnapshot snapshot) {
+    private List<SimValue> valuesIn(StateSnapshot snapshot)
+    {
         List<SimValue> values = new ArrayList<>(snapshot.getStackValues());
         values.addAll(snapshot.getLocalValues().values());
         return values;
     }
 
-    private void indexSsaDefs(StateSnapshot snapshot, Map<Value, IRInstruction> ssaDef) {
-        if (snapshot.getBlock() == null) {
+    private void indexSsaDefs(StateSnapshot snapshot, Map<Value, IRInstruction> ssaDef)
+    {
+        if (snapshot.getBlock() == null)
+        {
             return;
         }
-        for (IRInstruction instr : snapshot.getBlock().getInstructions()) {
-            if (instr.getResult() != null) {
+        for (IRInstruction instr : snapshot.getBlock().getInstructions())
+        {
+            if (instr.getResult() != null)
+            {
                 ssaDef.putIfAbsent(instr.getResult(), instr);
             }
         }
     }
 
-    private IRInstruction getCurrentInstruction(StateSnapshot snapshot) {
+    private IRInstruction getCurrentInstruction(StateSnapshot snapshot)
+    {
         if (snapshot.getBlock() == null) return null;
         var instructions = snapshot.getBlock().getInstructions();
         int index = snapshot.getInstructionIndex();
-        if (index >= 0 && index < instructions.size()) {
+        if (index >= 0 && index < instructions.size())
+        {
             return instructions.get(index);
         }
         return null;
     }
 
     /**
-     * Gets the instruction that defined/produced a value.
+     * Resolves the instruction that produced a value, falling back to the value's own
+     * recorded source instruction.
+     *
+     * @param value the value to query
+     * @return the producing instruction, or null if the value is null or has no source
      */
-    public IRInstruction getDefiningInstruction(SimValue value) {
+    public IRInstruction getDefiningInstruction(SimValue value)
+    {
         if (value == null) return null;
         IRInstruction def = definitions.get(value);
         if (def != null) return def;
@@ -124,23 +140,36 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets the instructions that use a value.
+     * Looks up the instructions that consume a value as an operand.
+     *
+     * @param value the value to query
+     * @return its consumers, or an empty list if it has none recorded
      */
-    public List<IRInstruction> getUses(SimValue value) {
+    public List<IRInstruction> getUses(SimValue value)
+    {
         return uses.getOrDefault(value, Collections.emptyList());
     }
 
     /**
-     * Gets the values that a value depends on (its inputs).
+     * Looks up the inputs a value was computed from.
+     *
+     * @param value the value to query
+     * @return its input values, or an empty set if it has none recorded
      */
-    public Set<SimValue> getDependencies(SimValue value) {
+    public Set<SimValue> getDependencies(SimValue value)
+    {
         return dependencies.getOrDefault(value, Collections.emptySet());
     }
 
     /**
-     * Checks if a source value flows to a target value.
+     * Searches the dependent chain for a path from one value to another.
+     *
+     * @param source the value to start from
+     * @param target the value to reach
+     * @return true if target is reachable from source, false if either is null
      */
-    public boolean flowsTo(SimValue source, SimValue target) {
+    public boolean flowsTo(SimValue source, SimValue target)
+    {
         if (source == null || target == null) return false;
         if (source.equals(target)) return true;
 
@@ -149,7 +178,8 @@ public class ValueFlowQuery {
         Queue<SimValue> worklist = new LinkedList<>();
         worklist.add(source);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             SimValue current = worklist.poll();
             if (visited.contains(current)) continue;
             visited.add(current);
@@ -164,12 +194,18 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets values that depend on a value (its outputs).
+     * Scans the dependency map for values computed from the given one.
+     *
+     * @param value the input value
+     * @return the values that directly consume it
      */
-    public Set<SimValue> getDependents(SimValue value) {
+    public Set<SimValue> getDependents(SimValue value)
+    {
         Set<SimValue> result = new HashSet<>();
-        for (Map.Entry<SimValue, Set<SimValue>> entry : dependencies.entrySet()) {
-            if (entry.getValue().contains(value)) {
+        for (Map.Entry<SimValue, Set<SimValue>> entry : dependencies.entrySet())
+        {
+            if (entry.getValue().contains(value))
+            {
                 result.add(entry.getKey());
             }
         }
@@ -177,9 +213,14 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets the flow path between two values.
+     * Finds the shortest chain of dependent values leading from one value to another.
+     *
+     * @param source the value to start from
+     * @param target the value to reach
+     * @return the path including both endpoints, or an empty list if either is null or unreachable
      */
-    public List<SimValue> getFlowPath(SimValue source, SimValue target) {
+    public List<SimValue> getFlowPath(SimValue source, SimValue target)
+    {
         if (source == null || target == null) return Collections.emptyList();
         if (source.equals(target)) return List.of(source);
 
@@ -190,24 +231,29 @@ public class ValueFlowQuery {
         worklist.add(source);
         parent.put(source, null);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             SimValue current = worklist.poll();
             if (visited.contains(current)) continue;
             visited.add(current);
 
-            if (current.equals(target)) {
+            if (current.equals(target))
+            {
                 // Reconstruct path
                 List<SimValue> path = new ArrayList<>();
                 SimValue node = target;
-                while (node != null) {
+                while (node != null)
+                {
                     path.add(0, node);
                     node = parent.get(node);
                 }
                 return path;
             }
 
-            for (SimValue dep : getDependents(current)) {
-                if (!visited.contains(dep) && !parent.containsKey(dep)) {
+            for (SimValue dep : getDependents(current))
+            {
+                if (!visited.contains(dep) && !parent.containsKey(dep))
+                {
                     parent.put(dep, current);
                     worklist.add(dep);
                 }
@@ -218,13 +264,19 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets all values at a specific stack position across all states.
+     * Collects everything a stack slot held over the whole simulation.
+     *
+     * @param position the stack position to sample
+     * @return the distinct values seen at that position, in encounter order
      */
-    public List<SimValue> getValuesAtStackPosition(int position) {
+    public List<SimValue> getValuesAtStackPosition(int position)
+    {
         List<SimValue> values = new ArrayList<>();
-        for (StateSnapshot snapshot : result.getAllStates()) {
+        for (StateSnapshot snapshot : result.getAllStates())
+        {
             SimValue value = snapshot.getStackValue(position);
-            if (value != null && !values.contains(value)) {
+            if (value != null && !values.contains(value))
+            {
                 values.add(value);
             }
         }
@@ -232,13 +284,19 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets all values in a specific local variable across all states.
+     * Collects everything a local slot held over the whole simulation.
+     *
+     * @param localIndex the local variable slot to sample
+     * @return the distinct values seen in that slot, in encounter order
      */
-    public List<SimValue> getValuesInLocal(int localIndex) {
+    public List<SimValue> getValuesInLocal(int localIndex)
+    {
         List<SimValue> values = new ArrayList<>();
-        for (StateSnapshot snapshot : result.getAllStates()) {
+        for (StateSnapshot snapshot : result.getAllStates())
+        {
             SimValue value = snapshot.getLocalValue(localIndex);
-            if (value != null && !values.contains(value)) {
+            if (value != null && !values.contains(value))
+            {
                 values.add(value);
             }
         }
@@ -246,18 +304,26 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets all constant values observed.
+     * Scans every simulated state for constant stack and local values.
+     *
+     * @return the distinct constants observed, in encounter order
      */
-    public List<SimValue> getConstants() {
+    public List<SimValue> getConstants()
+    {
         List<SimValue> constants = new ArrayList<>();
-        for (StateSnapshot snapshot : result.getAllStates()) {
-            for (SimValue value : snapshot.getStackValues()) {
-                if (value != null && value.isConstant() && !constants.contains(value)) {
+        for (StateSnapshot snapshot : result.getAllStates())
+        {
+            for (SimValue value : snapshot.getStackValues())
+            {
+                if (value != null && value.isConstant() && !constants.contains(value))
+                {
                     constants.add(value);
                 }
             }
-            for (SimValue value : snapshot.getLocalValues().values()) {
-                if (value != null && value.isConstant() && !constants.contains(value)) {
+            for (SimValue value : snapshot.getLocalValues().values())
+            {
+                if (value != null && value.isConstant() && !constants.contains(value))
+                {
                     constants.add(value);
                 }
             }
@@ -266,14 +332,16 @@ public class ValueFlowQuery {
     }
 
     /**
-     * Gets the number of values tracked.
+     * @return the number of values with a recorded defining instruction
      */
-    public int getValueCount() {
+    public int getValueCount()
+    {
         return definitions.size();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ValueFlowQuery[values=" + definitions.size() + "]";
     }
 }

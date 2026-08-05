@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * unreachable statements. The consumed join's subtree is now structured even though the join's own
  * statements are spent.
  */
-class TwrRetryLoopFidelityTest {
+class TwrRetryLoopFidelityTest
+{
 
     private static final String SOURCE =
             "public class Retry {\n"
@@ -65,27 +66,25 @@ class TwrRetryLoopFidelityTest {
     private static String d1;
 
     @BeforeAll
-    static void compileAndDecompile() throws Exception {
+    static void compileAndDecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("twr-retry");
         Path src = dir.resolve("Retry.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("Retry.class")));
         d1 = ClassDecompiler.decompile(cf);
     }
 
     @Test
-    void loopKeepsBothExitsAndTheRetryArm() {
-        assertTrue(d1.contains("while ("),
-                "the retry loop must be recovered as a loop:\n" + d1);
-        assertTrue(d1.contains("return null;"),
-                "the fatal-error exit must survive inside the loop:\n" + d1);
-        assertTrue(d1.contains("maxLen * 3 / 2"),
-                "the grow-and-retry arm must survive:\n" + d1);
+    void loopKeepsBothExitsAndTheRetryArm()
+    {
+        assertTrue(d1.contains("while ("), "the retry loop must be recovered as a loop:\n" + d1);
+        assertTrue(d1.contains("return null;"), "the fatal-error exit must survive inside the loop:\n" + d1);
+        assertTrue(d1.contains("maxLen * 3 / 2"), "the grow-and-retry arm must survive:\n" + d1);
         int loopAt = d1.indexOf("while (");
         int growAt = d1.indexOf("maxLen * 3 / 2");
         assertTrue(growAt > loopAt, "the retry arm must be inside the loop:\n" + d1);

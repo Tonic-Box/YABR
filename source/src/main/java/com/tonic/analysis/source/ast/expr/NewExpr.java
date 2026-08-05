@@ -12,9 +12,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a new object expression: new Type(args) or outer.new Inner(args)
+ * A constructor call expression - new Type(args), or outer.new Inner(args) when an enclosing
+ * instance is present.
  */
-public final class NewExpr implements Expression {
+public final class NewExpr implements Expression
+{
 
     /**
      * The enclosing instance for inner class creation (e.g., outer.new Inner()).
@@ -29,114 +31,221 @@ public final class NewExpr implements Expression {
     private final SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
-    /** JVM constructor descriptor; null unless recovered from bytecode. */
+    /**
+     * JVM constructor descriptor; null unless recovered from bytecode.
+     */
     private String descriptor;
 
-    public NewExpr(Expression enclosingInstance, String className, List<Expression> arguments,
-                   SourceType type, SourceLocation location) {
+    /**
+     * Creates a constructor call, adopting the enclosing instance and arguments as children.
+     *
+     * @param enclosingInstance the outer instance for an inner class creation, or null
+     * @param className the instantiated class in internal format
+     * @param arguments the constructor arguments, or null for none
+     * @param type the expression type; defaults to a reference type over className when null
+     * @param location the source location; defaults to UNKNOWN when null
+     * @throws NullPointerException if className is null
+     */
+    public NewExpr(Expression enclosingInstance, String className, List<Expression> arguments, SourceType type, SourceLocation location)
+    {
         this.arguments = new NodeList<>(this);
         this.enclosingInstance = enclosingInstance;
         this.className = Objects.requireNonNull(className, "className cannot be null");
         this.type = type != null ? type : new ReferenceSourceType(className);
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        if (enclosingInstance != null) {
+        if (enclosingInstance != null)
+        {
             enclosingInstance.setParent(this);
         }
-        if (arguments != null) {
+        if (arguments != null)
+        {
             this.arguments.addAll(arguments);
         }
     }
 
-    public NewExpr(String className, List<Expression> arguments, SourceType type, SourceLocation location) {
+    /**
+     * Creates a constructor call with no enclosing instance.
+     *
+     * @param className the instantiated class in internal format
+     * @param arguments the constructor arguments, or null for none
+     * @param type the expression type; defaults to a reference type over className when null
+     * @param location the source location; defaults to UNKNOWN when null
+     * @throws NullPointerException if className is null
+     */
+    public NewExpr(String className, List<Expression> arguments, SourceType type, SourceLocation location)
+    {
         this(null, className, arguments, type, location);
     }
 
-    public NewExpr(String className, List<Expression> arguments, SourceType type) {
+    /**
+     * Creates a constructor call at an unknown source location.
+     *
+     * @param className the instantiated class in internal format
+     * @param arguments the constructor arguments, or null for none
+     * @param type the expression type; defaults to a reference type over className when null
+     * @throws NullPointerException if className is null
+     */
+    public NewExpr(String className, List<Expression> arguments, SourceType type)
+    {
         this(className, arguments, type, SourceLocation.UNKNOWN);
     }
 
-    public NewExpr(String className, List<Expression> arguments) {
+    /**
+     * Creates a constructor call typed as a reference to the instantiated class.
+     *
+     * @param className the instantiated class in internal format
+     * @param arguments the constructor arguments, or null for none
+     * @throws NullPointerException if className is null
+     */
+    public NewExpr(String className, List<Expression> arguments)
+    {
         this(className, arguments, null, SourceLocation.UNKNOWN);
     }
 
-    public NewExpr(String className) {
+    /**
+     * Creates a no-argument constructor call.
+     *
+     * @param className the instantiated class in internal format
+     * @throws NullPointerException if className is null
+     */
+    public NewExpr(String className)
+    {
         this(className, List.of(), null, SourceLocation.UNKNOWN);
     }
 
-    public Expression getEnclosingInstance() {
+    /**
+     * @return the enclosing instance
+     */
+    public Expression getEnclosingInstance()
+    {
         return enclosingInstance;
     }
 
-    public void setEnclosingInstance(Expression enclosingInstance) {
+    /**
+     * Replaces the enclosing instance, reparenting the new one and releasing the old.
+     *
+     * @param enclosingInstance the outer instance, or null to drop it
+     */
+    public void setEnclosingInstance(Expression enclosingInstance)
+    {
         withEnclosingInstance(enclosingInstance);
     }
 
-    public String getClassName() {
+    /**
+     * @return the class name
+     */
+    public String getClassName()
+    {
         return className;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public NewExpr withDescriptor(String descriptor) {
+    /**
+     * Records the JVM constructor descriptor recovered from bytecode.
+     *
+     * @param descriptor the constructor descriptor
+     * @return this expression
+     */
+    public NewExpr withDescriptor(String descriptor)
+    {
         this.descriptor = descriptor;
         return this;
     }
 
-    public NodeList<Expression> getArguments() {
+    /**
+     * @return the arguments
+     */
+    public NodeList<Expression> getArguments()
+    {
         return arguments;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the node this expression hangs under
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Adds an argument to this constructor call.
+     * Appends an argument, adopting it as a child.
+     *
+     * @param arg the argument to append
      */
-    public void addArgument(Expression arg) {
+    public void addArgument(Expression arg)
+    {
         arguments.add(arg);
     }
 
     /**
-     * Gets the number of arguments.
+     * @return the number of constructor arguments
      */
-    public int getArgumentCount() {
+    public int getArgumentCount()
+    {
         return arguments.size();
     }
 
     /**
-     * Gets the simple class name.
+     * @return the class name without its package, inner class segments kept
      */
-    public String getSimpleName() {
+    public String getSimpleName()
+    {
         return ClassNameUtil.getSimpleNameWithInnerClasses(className);
     }
 
     /**
-     * Returns true if this is an inner class creation with an enclosing instance.
+     * @return true if an enclosing instance is set
      */
-    public boolean isInnerClassCreation() {
+    public boolean isInnerClassCreation()
+    {
         return enclosingInstance != null;
     }
 
-    public NewExpr withEnclosingInstance(Expression enclosingInstance) {
+    /**
+     * Replaces the enclosing instance, reparenting the new one and releasing the old.
+     *
+     * @param enclosingInstance the outer instance, or null to drop it
+     * @return this expression
+     */
+    public NewExpr withEnclosingInstance(Expression enclosingInstance)
+    {
         ASTNode previous = this.enclosingInstance;
         this.enclosingInstance = enclosingInstance;
-        if (enclosingInstance != null) {
+        if (enclosingInstance != null)
+        {
             enclosingInstance.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
@@ -144,7 +253,8 @@ public final class NewExpr implements Expression {
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>();
         if (enclosingInstance != null) children.add(enclosingInstance);
         children.addAll(arguments);
@@ -152,18 +262,22 @@ public final class NewExpr implements Expression {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitNew(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        if (enclosingInstance != null) {
+        if (enclosingInstance != null)
+        {
             sb.append(enclosingInstance).append(".");
         }
         sb.append("new ").append(getSimpleName()).append("(");
-        for (int i = 0; i < arguments.size(); i++) {
+        for (int i = 0; i < arguments.size(); i++)
+        {
             if (i > 0) sb.append(", ");
             sb.append(arguments.get(i));
         }

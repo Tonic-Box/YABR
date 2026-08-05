@@ -29,7 +29,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * recovered structurally, and the catch binds the try's final value under a slot affinity so the
  * guard reads the variable's one home slot.
  */
-class GuardedCatchFidelityTest {
+class GuardedCatchFidelityTest
+{
 
     private static final String SOURCE =
             "public class GuardedCatch {\n"
@@ -55,14 +56,14 @@ class GuardedCatchFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("guarded-catch");
         Path src = dir.resolve("GuardedCatch.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("GuardedCatch.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -71,20 +72,23 @@ class GuardedCatchFidelityTest {
         recompiledClass = TestUtils.loadAndVerify(recovered);
     }
 
-    private static int closes() throws Exception {
+    private static int closes() throws Exception
+    {
         java.lang.reflect.Field f = recompiledClass.getDeclaredField("closes");
         f.setAccessible(true);
         return f.getInt(null);
     }
 
-    private static void reset() throws Exception {
+    private static void reset() throws Exception
+    {
         java.lang.reflect.Field f = recompiledClass.getDeclaredField("closes");
         f.setAccessible(true);
         f.setInt(null, 0);
     }
 
     @Test
-    void decompiledCatchKeepsTheGuardedEffect() {
+    void decompiledCatchKeepsTheGuardedEffect()
+    {
         assertTrue(d1.contains("closes++") || d1.contains("closes = closes + 1"),
                 "the catch body's guarded increment must survive decompilation:\n" + d1);
         assertTrue(d1.contains("in != null") || d1.contains("null != in"),
@@ -92,7 +96,8 @@ class GuardedCatchFidelityTest {
     }
 
     @Test
-    void normalPathReturnsResultWithoutClosing() throws Exception {
+    void normalPathReturnsResultWithoutClosing() throws Exception
+    {
         reset();
         Object r = recompiledClass.getMethod("use", boolean.class).invoke(null, false);
         assertEquals(7, r);
@@ -100,7 +105,8 @@ class GuardedCatchFidelityTest {
     }
 
     @Test
-    void exceptionPathSeesTheFaultTimeValueAndClosesOnce() throws Exception {
+    void exceptionPathSeesTheFaultTimeValueAndClosesOnce() throws Exception
+    {
         reset();
         Object r = recompiledClass.getMethod("use", boolean.class).invoke(null, true);
         assertEquals(-1, r);

@@ -39,7 +39,8 @@ BytecodeContext ctx = new BytecodeContext.Builder()
 BytecodeEngine engine = new BytecodeEngine(ctx);
 BytecodeResult result = engine.execute(method, ConcreteValue.intValue(42));
 
-if (result.isSuccess()) {
+if (result.isSuccess())
+{
     ConcreteValue returnValue = result.getReturnValue();
     System.out.println("Result: " + returnValue.asInt());
 }
@@ -86,7 +87,8 @@ BytecodeResult result = engine.execute(method, arg1, arg2);
 
 // Step-by-step execution
 engine.execute(method);
-while (engine.step()) {
+while (engine.step())
+{
     StackFrame frame = engine.getCurrentFrame();
     System.out.println("PC: " + frame.getPC());
 }
@@ -122,7 +124,8 @@ BytecodeEngine engine = new BytecodeEngine(ctx);
 engine.ensureClassInitialized("com/example/Config");
 
 // Check initialization state
-if (engine.isClassInitialized("com/example/Config")) {
+if (engine.isClassInitialized("com/example/Config"))
+{
     // Class has been initialized
 }
 
@@ -145,7 +148,8 @@ Execution outcome:
 BytecodeResult result = engine.execute(method);
 
 // Check status
-switch (result.getStatus()) {
+switch (result.getStatus())
+{
     case COMPLETED:
         ConcreteValue ret = result.getReturnValue();
         break;
@@ -408,7 +412,8 @@ registry.register("java/lang/System", "currentTimeMillis", "()J",
 registry.registerDefaults();
 
 // Check/execute
-if (registry.hasHandler(method)) {
+if (registry.hasHandler(method))
+{
     ConcreteValue result = registry.execute(method, receiver, args, nativeContext);
 }
 ```
@@ -433,11 +438,16 @@ Custom method invocation handling:
 RecursiveHandler handler = new RecursiveHandler(resolver, registry);
 InvocationResult result = handler.invoke(method, receiver, args, context);
 
-if (result.isPushFrame()) {
+if (result.isPushFrame())
+{
     StackFrame newFrame = result.getNewFrame();
-} else if (result.isNativeHandled()) {
+}
+else if (result.isNativeHandled())
+{
     ConcreteValue returnValue = result.getReturnValue();
-} else if (result.isException()) {
+}
+else if (result.isException())
+{
     ObjectInstance exception = result.getException();
 }
 
@@ -466,7 +476,8 @@ Method invocation outcome:
 InvocationResult result = handler.invoke(method, receiver, args, context);
 
 // Status types
-switch (result.getStatus()) {
+switch (result.getStatus())
+{
     case COMPLETED:        // Method returned normally
         ConcreteValue ret = result.getReturnValue();
         break;
@@ -562,10 +573,13 @@ Exception handlers use `ClassResolver.isAssignableFrom()` for type matching:
 BytecodeEngine engine = new BytecodeEngine(ctx);
 BytecodeResult result = engine.execute(methodWithTryCatch, args);
 
-if (result.getStatus() == BytecodeResult.Status.COMPLETED) {
+if (result.getStatus() == BytecodeResult.Status.COMPLETED)
+{
     // Exception was caught and handled, method returned normally
     ConcreteValue returnValue = result.getReturnValue();
-} else if (result.getStatus() == BytecodeResult.Status.EXCEPTION) {
+}
+else if (result.getStatus() == BytecodeResult.Status.EXCEPTION)
+{
     // Exception propagated to top-level (no handler found)
     ObjectInstance ex = result.getException();
     String exceptionType = ex.getClassName();  // e.g., "java/lang/ArithmeticException"
@@ -581,7 +595,8 @@ The exception table is read from the method's `CodeAttribute`:
 CodeAttribute code = method.getCodeAttribute();
 List<ExceptionTableEntry> handlers = code.getExceptionTable();
 
-for (ExceptionTableEntry entry : handlers) {
+for (ExceptionTableEntry entry : handlers)
+{
     int startPc = entry.getStartPc();      // Start of protected region (inclusive)
     int endPc = entry.getEndPc();          // End of protected region (exclusive)
     int handlerPc = entry.getHandlerPc();  // Target PC when exception matches
@@ -777,7 +792,8 @@ mgr.removeAllBreakpoints();
 Stepping granularity:
 
 ```java
-public enum StepMode {
+public enum StepMode
+{
     INTO,           // Step into method calls
     OVER,           // Step over method calls (stay in current method)
     OUT,            // Run until current method returns
@@ -792,34 +808,40 @@ Debug session events:
 ```java
 session.addListener(new DebugEventListener() {
     @Override
-    public void onSessionStart(DebugSession session) {
+    public void onSessionStart(DebugSession session)
+    {
         System.out.println("Debug session started");
     }
 
     @Override
-    public void onSessionStop(DebugSession session, BytecodeResult result) {
+    public void onSessionStop(DebugSession session, BytecodeResult result)
+    {
         System.out.println("Debug session ended: " + result.getStatus());
     }
 
     @Override
-    public void onBreakpointHit(DebugSession session, Breakpoint bp) {
+    public void onBreakpointHit(DebugSession session, Breakpoint bp)
+    {
         System.out.println("Hit breakpoint at PC " + bp.getPC());
     }
 
     @Override
-    public void onStepComplete(DebugSession session, DebugState state) {
+    public void onStepComplete(DebugSession session, DebugState state)
+    {
         System.out.println("Stepped to PC " + state.getPC());
     }
 
     @Override
-    public void onException(DebugSession session, ObjectInstance exception) {
+    public void onException(DebugSession session, ObjectInstance exception)
+    {
         System.out.println("Exception: " + exception.getClassName());
     }
 
     @Override
     public void onStateChange(DebugSession session,
                               DebugSessionState oldState,
-                              DebugSessionState newState) {
+                              DebugSessionState newState)
+    {
         System.out.println("State: " + oldState + " -> " + newState);
     }
 });
@@ -834,7 +856,8 @@ DebugSession session = new DebugSession(ctx);
 session.start(method, args);
 
 // Wait for breakpoint or step...
-if (session.isPaused()) {
+if (session.isPaused())
+{
     // Edit local variable at slot 0
     session.setLocalValue(0, ConcreteValue.intValue(100));
 
@@ -847,7 +870,8 @@ if (session.isPaused()) {
     ConcreteLocals locals = frame.getLocals();
     ConcreteValue objRef = locals.get(1);  // Get object reference from local slot 1
 
-    if (objRef.getTag() == ValueTag.REFERENCE && !objRef.isNull()) {
+    if (objRef.getTag() == ValueTag.REFERENCE && !objRef.isNull())
+    {
         ObjectInstance obj = objRef.asReference();
         obj.setField("com/example/MyClass", "counter", "I", 42);
     }
@@ -874,7 +898,8 @@ Lightweight immutable snapshot of a stack frame:
 DebugState state = session.getCurrentState();
 List<StackFrameInfo> callStack = state.getCallStack();
 
-for (StackFrameInfo frame : callStack) {
+for (StackFrameInfo frame : callStack)
+{
     String sig = frame.getMethodSignature();  // "com/example/MyClass.process(I)V"
     int pc = frame.getPC();                   // Current program counter
     int line = frame.getLineNumber();         // Source line number (-1 if unavailable)
@@ -887,7 +912,8 @@ Snapshot of a ConcreteValue with type and string representation:
 
 ```java
 LocalsSnapshot locals = state.getLocals();
-for (ValueInfo info : locals.getValues()) {
+for (ValueInfo info : locals.getValues())
+{
     String type = info.getType();            // "int", "long", "reference", etc.
     String str = info.getValueString();      // String representation
     Object raw = info.getRawValue();         // Actual value (Integer, Long, ObjectInstance, etc.)
@@ -925,8 +951,10 @@ import com.tonic.analysis.execution.invoke.*;
 import com.tonic.analysis.execution.resolve.*;
 import com.tonic.analysis.execution.state.*;
 
-public class ExecutionExample {
-    public static void debugMethod(MethodEntry method, ClassPool pool) {
+public class ExecutionExample
+{
+    public static void debugMethod(MethodEntry method, ClassPool pool)
+    {
         // Setup
         HeapManager heap = new SimpleHeapManager();
         ClassResolver resolver = new ClassResolver(pool);
@@ -956,7 +984,8 @@ public class ExecutionExample {
         // Add listener
         session.addListener(new DebugEventListener() {
             @Override
-            public void onBreakpointHit(DebugSession s, Breakpoint bp) {
+            public void onBreakpointHit(DebugSession s, Breakpoint bp)
+            {
                 DebugState state = s.getCurrentState();
                 System.out.println("=== Breakpoint Hit ===");
                 System.out.println("Method: " + state.getMethodSignature());
@@ -969,23 +998,28 @@ public class ExecutionExample {
         // Start and step through
         session.start(method, ConcreteValue.intValue(10));
 
-        while (session.isPaused()) {
+        while (session.isPaused())
+        {
             DebugState state = session.stepOver();
             System.out.println("PC: " + state.getPC() +
                              " Stack: " + state.getOperandStack());
         }
 
         // Get result
-        if (session.isStopped()) {
+        if (session.isStopped())
+        {
             BytecodeResult result = session.getResult();
             System.out.println("=== Execution Complete ===");
             System.out.println("Status: " + result.getStatus());
             System.out.println("Instructions: " + result.getInstructionsExecuted());
             System.out.println("Time: " + result.getExecutionTimeNanos() / 1_000_000.0 + "ms");
 
-            if (result.isSuccess()) {
+            if (result.isSuccess())
+            {
                 System.out.println("Return: " + result.getReturnValue());
-            } else if (result.hasException()) {
+            }
+            else if (result.hasException())
+            {
                 System.out.println("Exception: " + result.getException().getClassName());
                 result.getStackTrace().forEach(System.out::println);
             }
@@ -1093,9 +1127,12 @@ String descriptor = info.getDescriptor();        // e.g., "()Ljava/lang/Runnable
 int bsmIndex = info.getBootstrapMethodIndex();   // Bootstrap method index
 
 // Pattern detection
-if (info.isLambdaMetafactory()) {
+if (info.isLambdaMetafactory())
+{
     // Lambda or method reference
-} else if (info.isStringConcat()) {
+}
+else if (info.isStringConcat())
+{
     // String concatenation (Java 9+)
 }
 ```
@@ -1179,7 +1216,8 @@ Handles `StringConcatFactory` bootstrap methods for string concatenation:
 StringConcatHandler handler = new StringConcatHandler();
 
 // Check if invokedynamic is string concatenation
-if (handler.isStringConcat(invokeDynamicInfo)) {
+if (handler.isStringConcat(invokeDynamicInfo))
+{
     // Execute concatenation with recipe
     String recipe = "\u0001 + \u0001 = \u0001";  // \u0001 = dynamic arg, \u0002 = constant
     ConcreteValue[] args = { intVal1, intVal2, resultVal };
@@ -1208,7 +1246,8 @@ Creates proxy objects for lambda expressions:
 LambdaProxyFactory factory = new LambdaProxyFactory(heapManager);
 
 // Check if invokedynamic is lambda
-if (factory.isLambdaFactory(invokeDynamicInfo)) {
+if (factory.isLambdaFactory(invokeDynamicInfo))
+{
     // Captured variables from stack
     ConcreteValue[] captured = { ConcreteValue.intValue(42) };
 

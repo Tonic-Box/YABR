@@ -14,17 +14,20 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for PostDominatorTree analysis.
  * Covers post-dominator computation and post-dominance queries.
  */
-class PostDominatorTreeTest {
+class PostDominatorTreeTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
     }
 
-    // ========== Basic Tests ==========
+    // Basic Tests
 
     @Test
-    void computeOnEmptyMethod() {
+    void computeOnEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         PostDominatorTree tree = new PostDominatorTree(method);
 
@@ -34,7 +37,8 @@ class PostDominatorTreeTest {
     }
 
     @Test
-    void exitBlockPostDominatesItself() {
+    void exitBlockPostDominatesItself()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -47,10 +51,11 @@ class PostDominatorTreeTest {
         assertTrue(tree.postDominates(entry, entry));
     }
 
-    // ========== Post-Dominance Tests ==========
+    // Post-Dominance Tests
 
     @Test
-    void exitBlockPostDominatesAllBlocks() {
+    void exitBlockPostDominatesAllBlocks()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock middle = new IRBlock("middle");
@@ -74,7 +79,8 @@ class PostDominatorTreeTest {
     }
 
     @Test
-    void strictPostDominationExcludesSelf() {
+    void strictPostDominationExcludesSelf()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -88,10 +94,11 @@ class PostDominatorTreeTest {
         assertFalse(tree.strictlyPostDominates(entry, entry));
     }
 
-    // ========== Immediate Post-Dominator Tests ==========
+    // Immediate Post-Dominator Tests
 
     @Test
-    void immediatePostDominatorOfPredecessor() {
+    void immediatePostDominatorOfPredecessor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -109,10 +116,11 @@ class PostDominatorTreeTest {
         assertEquals(exit, tree.getImmediatePostDominator(entry));
     }
 
-    // ========== Post-Dominator Tree Children Tests ==========
+    // Post-Dominator Tree Children Tests
 
     @Test
-    void postDominatorTreeChildrenEmpty() {
+    void postDominatorTreeChildrenEmpty()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -127,7 +135,8 @@ class PostDominatorTreeTest {
     }
 
     @Test
-    void postDominatorTreeChildrenContainsPredecessor() {
+    void postDominatorTreeChildrenContainsPredecessor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -146,10 +155,11 @@ class PostDominatorTreeTest {
         assertTrue(children.contains(entry));
     }
 
-    // ========== Diamond CFG Tests ==========
+    // Diamond CFG Tests
 
     @Test
-    void diamondCFGMergePostDominatesBranches() {
+    void diamondCFGMergePostDominatesBranches()
+    {
         // Diamond: entry -> (A | B) -> merge
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -180,10 +190,11 @@ class PostDominatorTreeTest {
         assertFalse(tree.postDominates(branchB, branchA));
     }
 
-    // ========== findMergePoint Tests ==========
+    // findMergePoint Tests
 
     @Test
-    void findMergePointForDiamond() {
+    void findMergePointForDiamond()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock branchA = new IRBlock("branchA");
@@ -211,10 +222,11 @@ class PostDominatorTreeTest {
         assertNotNull(mergePoint);
     }
 
-    // ========== Linear CFG Tests ==========
+    // Linear CFG Tests
 
     @Test
-    void linearCFGPostDominance() {
+    void linearCFGPostDominance()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -244,10 +256,11 @@ class PostDominatorTreeTest {
         assertTrue(tree.postDominates(b1, b0));
     }
 
-    // ========== Exit Block Tests ==========
+    // Exit Block Tests
 
     @Test
-    void getExitBlocksContainsReturnBlock() {
+    void getExitBlocksContainsReturnBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -265,10 +278,11 @@ class PostDominatorTreeTest {
         assertTrue(tree.getExitBlocks().contains(exit));
     }
 
-    // ========== Method Reference Tests ==========
+    // Method Reference Tests
 
     @Test
-    void getMethodReturnsMethod() {
+    void getMethodReturnsMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         PostDominatorTree tree = new PostDominatorTree(method);
 

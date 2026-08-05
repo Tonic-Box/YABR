@@ -13,7 +13,8 @@ import java.util.Set;
  * legacy switch recovery. Produced by {@link RegionRecoveryBridge#decodeSwitch(IRBlock)}, which returns null
  * for shapes the engine does not own (string, pattern, comparison-chain synthesized switches).
  */
-public final class SwitchDescriptor {
+public final class SwitchDescriptor
+{
 
     private final IRBlock header;
     private final Expression selector;
@@ -22,13 +23,33 @@ public final class SwitchDescriptor {
     private final Set<IRBlock> caseHeaders;
     private final boolean desugaredSelector;
 
-    public SwitchDescriptor(IRBlock header, Expression selector, IRBlock merge, List<CaseSpec> cases,
-                            Set<IRBlock> caseHeaders) {
+    /**
+     * Creates a descriptor whose header successors are the case bodies.
+     *
+     * @param header the switch block
+     * @param selector the recovered selector expression
+     * @param merge where control resumes after the switch, or null if every case exits
+     * @param cases the cases in source order, default last
+     * @param caseHeaders every distinct case-body entry block
+     */
+    public SwitchDescriptor(IRBlock header, Expression selector, IRBlock merge, List<CaseSpec> cases, Set<IRBlock> caseHeaders)
+    {
         this(header, selector, merge, cases, caseHeaders, false);
     }
 
-    public SwitchDescriptor(IRBlock header, Expression selector, IRBlock merge, List<CaseSpec> cases,
-                            Set<IRBlock> caseHeaders, boolean desugaredSelector) {
+    /**
+     * Creates a descriptor, stating whether the header's successors are dispatch
+     * scaffolding rather than case bodies.
+     *
+     * @param header the switch block
+     * @param selector the recovered selector expression
+     * @param merge where control resumes after the switch, or null if every case exits
+     * @param cases the cases in source order, default last
+     * @param caseHeaders every distinct case-body entry block
+     * @param desugaredSelector true when the raw successors are a desugared dispatch chain
+     */
+    public SwitchDescriptor(IRBlock header, Expression selector, IRBlock merge, List<CaseSpec> cases, Set<IRBlock> caseHeaders, boolean desugaredSelector)
+    {
         this.header = header;
         this.selector = selector;
         this.merge = merge;
@@ -37,35 +58,53 @@ public final class SwitchDescriptor {
         this.desugaredSelector = desugaredSelector;
     }
 
-    /** Whether the raw CFG edges out of the header are a desugared dispatch scaffold (a string
-     * switch's hashCode/equals chains) rather than the case bodies: the model must follow the
-     * descriptor's case headers and merge instead of the raw successors. */
-    public boolean desugaredSelector() {
+    /**
+     * @return true when the raw CFG edges out of the header are a desugared dispatch scaffold - a
+     *         string switch's hashCode/equals chains - rather than the case bodies, so the model
+     *         must follow this descriptor's case headers and merge instead of the raw successors
+     */
+    public boolean desugaredSelector()
+    {
         return desugaredSelector;
     }
 
-    /** The switch block itself. */
-    public IRBlock header() {
+    /**
+     * @return the switch block itself
+     */
+    public IRBlock header()
+    {
         return header;
     }
 
-    /** The recovered selector expression (enum variable, {@code e.ordinal()}, or the raw key). */
-    public Expression selector() {
+    /**
+     * @return the recovered selector expression - an enum variable, {@code e.ordinal()}, or the raw key
+     */
+    public Expression selector()
+    {
         return selector;
     }
 
-    /** The block where control resumes after the switch, or null when every case exits. */
-    public IRBlock merge() {
+    /**
+     * @return the block where control resumes after the switch, or null when every case exits
+     */
+    public IRBlock merge()
+    {
         return merge;
     }
 
-    /** The cases in source order; the default, if any, is last. */
-    public List<CaseSpec> cases() {
+    /**
+     * @return the cases in source order, with the default, if any, last
+     */
+    public List<CaseSpec> cases()
+    {
         return cases;
     }
 
-    /** Every distinct case-body entry block (the sibling stop-set), excluding the merge. */
-    public Set<IRBlock> caseHeaders() {
+    /**
+     * @return every distinct case-body entry block, the sibling stop-set, excluding the merge
+     */
+    public Set<IRBlock> caseHeaders()
+    {
         return caseHeaders;
     }
 
@@ -74,32 +113,50 @@ public final class SwitchDescriptor {
      * constants resolved) expression labels, and the entry block of its body. The default case has {@code isDefault}
      * set and a null {@code header} when it is empty (its target is the merge).
      */
-    public static final class CaseSpec {
+    public static final class CaseSpec
+    {
         private final List<Integer> intLabels;
         private final List<Expression> exprLabels;
         private final boolean isDefault;
         private final IRBlock header;
 
-        public CaseSpec(List<Integer> intLabels, List<Expression> exprLabels, boolean isDefault, IRBlock header) {
+        public CaseSpec(List<Integer> intLabels, List<Expression> exprLabels, boolean isDefault, IRBlock header)
+        {
             this.intLabels = intLabels;
             this.exprLabels = exprLabels;
             this.isDefault = isDefault;
             this.header = header;
         }
 
-        public List<Integer> intLabels() {
+        /**
+         * @return the integer labels of this case, empty when it carries expression labels
+         */
+        public List<Integer> intLabels()
+        {
             return intLabels;
         }
 
-        public List<Expression> exprLabels() {
+        /**
+         * @return the enum-constant labels of this case, empty when it carries integer labels
+         */
+        public List<Expression> exprLabels()
+        {
             return exprLabels;
         }
 
-        public boolean isDefault() {
+        /**
+         * @return true if this is the default case
+         */
+        public boolean isDefault()
+        {
             return isDefault;
         }
 
-        public IRBlock header() {
+        /**
+         * @return the entry block of the case body, or null for an empty default
+         */
+        public IRBlock header()
+        {
             return header;
         }
     }

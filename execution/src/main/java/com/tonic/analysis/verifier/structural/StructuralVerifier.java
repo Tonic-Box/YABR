@@ -10,14 +10,22 @@ import java.util.Set;
 
 import static com.tonic.util.Opcode.*;
 
-public class StructuralVerifier {
+/**
+ * Bytecode checker for the structure of a method body - code length, opcode
+ * validity, wide prefixes, operands, branch targets landing on instruction
+ * boundaries, and the last instruction not falling off the end.
+ */
+public class StructuralVerifier
+{
     private final OperandValidator operandValidator;
 
     private static final Set<Integer> RESERVED_OPCODES;
-    static {
+    static
+    {
         Set<Integer> reserved = new HashSet<>();
         reserved.add(INVOKEDYNAMIC.getCode());
-        for (int i = BREAKPOINT.getCode(); i <= 0xFE; i++) {
+        for (int i = BREAKPOINT.getCode(); i <= 0xFE; i++)
+        {
             reserved.add(i);
         }
         RESERVED_OPCODES = Set.copyOf(reserved);
@@ -29,22 +37,38 @@ public class StructuralVerifier {
             IINC.getCode(), RET.getCode()
     );
 
-    public StructuralVerifier(ClassFile classFile) {
+    /**
+     * Creates a verifier whose operand checks resolve pool references against a class.
+     * @param classFile the class supplying the constant pool, or null to skip pool checks
+     */
+    public StructuralVerifier(ClassFile classFile)
+    {
         this.operandValidator = new OperandValidator(classFile != null ? classFile.getConstPool() : null);
     }
 
-    public void verify(MethodEntry method, ErrorCollector collector) {
+    /**
+     * Walks a method body and reports every structural fault to the collector,
+     * stopping early once the collector says to. Abstract and empty methods pass
+     * without a check.
+     * @param method the method to verify
+     * @param collector receives the verification errors
+     */
+    public void verify(MethodEntry method, ErrorCollector collector)
+    {
         CodeAttribute code = method.getCodeAttribute();
-        if (code == null) {
+        if (code == null)
+        {
             return;
         }
 
         byte[] bytecode = code.getCode();
-        if (bytecode == null || bytecode.length == 0) {
+        if (bytecode == null || bytecode.length == 0)
+        {
             return;
         }
 
-        if (bytecode.length > 65535) {
+        if (bytecode.length > 65535)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.CODE_TOO_LONG,
                     0,
@@ -56,14 +80,17 @@ public class StructuralVerifier {
         Set<Integer> instructionBoundaries = new HashSet<>();
         int offset = 0;
 
-        while (offset < bytecode.length) {
+        while (offset < bytecode.length)
+        {
             if (collector.shouldStop()) return;
 
             instructionBoundaries.add(offset);
             int opcode = Byte.toUnsignedInt(bytecode[offset]);
 
-            if (opcode > JSR_W.getCode() || RESERVED_OPCODES.contains(opcode)) {
-                if (opcode != INVOKEDYNAMIC.getCode()) {
+            if (opcode > JSR_W.getCode() || RESERVED_OPCODES.contains(opcode))
+            {
+                if (opcode != INVOKEDYNAMIC.getCode())
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INVALID_OPCODE,
                             offset,
@@ -75,8 +102,10 @@ public class StructuralVerifier {
                 }
             }
 
-            if (opcode == WIDE.getCode()) {
-                if (offset + 1 >= bytecode.length) {
+            if (opcode == WIDE.getCode())
+            {
+                if (offset + 1 >= bytecode.length)
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INSTRUCTION_FALLS_OFF_END,
                             offset,
@@ -85,7 +114,8 @@ public class StructuralVerifier {
                     return;
                 }
                 int wideOpcode = Byte.toUnsignedInt(bytecode[offset + 1]);
-                if (!WIDEABLE_OPCODES.contains(wideOpcode)) {
+                if (!WIDEABLE_OPCODES.contains(wideOpcode))
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INVALID_WIDE_OPCODE,
                             offset,
@@ -96,7 +126,8 @@ public class StructuralVerifier {
             }
 
             int length = getInstructionLength(opcode, offset, bytecode);
-            if (length <= 0) {
+            if (length <= 0)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.INVALID_OPCODE,
                         offset,
@@ -105,7 +136,8 @@ public class StructuralVerifier {
                 return;
             }
 
-            if (offset + length > bytecode.length) {
+            if (offset + length > bytecode.length)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.INSTRUCTION_FALLS_OFF_END,
                         offset,
@@ -126,29 +158,37 @@ public class StructuralVerifier {
         verifyLastInstruction(bytecode, collector);
     }
 
-    private void verifyBranchTargets(byte[] bytecode, Set<Integer> boundaries, ErrorCollector collector) {
+    private void verifyBranchTargets(byte[] bytecode, Set<Integer> boundaries, ErrorCollector collector)
+    {
         int offset = 0;
-        while (offset < bytecode.length) {
+        while (offset < bytecode.length)
+        {
             if (collector.shouldStop()) return;
 
             int opcode = Byte.toUnsignedInt(bytecode[offset]);
             int length = getInstructionLength(opcode, offset, bytecode);
-            if (length <= 0) {
+            if (length <= 0)
+            {
                 offset++;
                 continue;
             }
 
-            if (isBranchInstruction(opcode)) {
+            if (isBranchInstruction(opcode))
+            {
                 int target = getBranchTarget(opcode, offset, bytecode);
-                if (target >= 0 && target < bytecode.length) {
-                    if (!boundaries.contains(target)) {
+                if (target >= 0 && target < bytecode.length)
+                {
+                    if (!boundaries.contains(target))
+                    {
                         collector.addError(new VerificationError(
                                 VerificationErrorType.INVALID_BRANCH_TARGET,
                                 offset,
                                 "Branch target " + target + " is not an instruction boundary"
                         ));
                     }
-                } else {
+                }
+                else
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INVALID_BRANCH_TARGET,
                             offset,
@@ -157,9 +197,12 @@ public class StructuralVerifier {
                 }
             }
 
-            if (opcode == TABLESWITCH.getCode()) {
+            if (opcode == TABLESWITCH.getCode())
+            {
                 verifySwitchTargets(offset, bytecode, boundaries, collector, true);
-            } else if (opcode == LOOKUPSWITCH.getCode()) {
+            }
+            else if (opcode == LOOKUPSWITCH.getCode())
+            {
                 verifySwitchTargets(offset, bytecode, boundaries, collector, false);
             }
 
@@ -167,8 +210,8 @@ public class StructuralVerifier {
         }
     }
 
-    private void verifySwitchTargets(int offset, byte[] bytecode, Set<Integer> boundaries,
-                                     ErrorCollector collector, boolean isTableSwitch) {
+    private void verifySwitchTargets(int offset, byte[] bytecode, Set<Integer> boundaries, ErrorCollector collector, boolean isTableSwitch)
+    {
         int padding = (4 - ((offset + 1) % 4)) % 4;
         int baseOffset = offset + 1 + padding;
 
@@ -177,7 +220,8 @@ public class StructuralVerifier {
         int defaultOffset = readInt(bytecode, baseOffset);
         int defaultTarget = offset + defaultOffset;
 
-        if (defaultTarget < 0 || defaultTarget >= bytecode.length || !boundaries.contains(defaultTarget)) {
+        if (defaultTarget < 0 || defaultTarget >= bytecode.length || !boundaries.contains(defaultTarget))
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_BRANCH_TARGET,
                     offset,
@@ -185,12 +229,14 @@ public class StructuralVerifier {
             ));
         }
 
-        if (isTableSwitch) {
+        if (isTableSwitch)
+        {
             if (baseOffset + 12 > bytecode.length) return;
             int low = readInt(bytecode, baseOffset + 4);
             int high = readInt(bytecode, baseOffset + 8);
 
-            if (low > high) {
+            if (low > high)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.INVALID_OPERAND,
                         offset,
@@ -200,11 +246,13 @@ public class StructuralVerifier {
             }
 
             int jumpTableStart = baseOffset + 12;
-            for (int i = 0; i <= high - low; i++) {
+            for (int i = 0; i <= high - low; i++)
+            {
                 if (jumpTableStart + (i + 1) * 4 > bytecode.length) break;
                 int jumpOffset = readInt(bytecode, jumpTableStart + i * 4);
                 int target = offset + jumpOffset;
-                if (target < 0 || target >= bytecode.length || !boundaries.contains(target)) {
+                if (target < 0 || target >= bytecode.length || !boundaries.contains(target))
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INVALID_BRANCH_TARGET,
                             offset,
@@ -212,11 +260,14 @@ public class StructuralVerifier {
                     ));
                 }
             }
-        } else {
+        }
+        else
+        {
             if (baseOffset + 8 > bytecode.length) return;
             int npairs = readInt(bytecode, baseOffset + 4);
 
-            if (npairs < 0) {
+            if (npairs < 0)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.INVALID_OPERAND,
                         offset,
@@ -229,13 +280,15 @@ public class StructuralVerifier {
             int lastKey = Integer.MIN_VALUE;
             boolean firstKey = true;
 
-            for (int i = 0; i < npairs; i++) {
+            for (int i = 0; i < npairs; i++)
+            {
                 if (pairStart + (i + 1) * 8 > bytecode.length) break;
                 int key = readInt(bytecode, pairStart + i * 8);
                 int jumpOffset = readInt(bytecode, pairStart + i * 8 + 4);
                 int target = offset + jumpOffset;
 
-                if (!firstKey && key <= lastKey) {
+                if (!firstKey && key <= lastKey)
+                {
                     collector.addWarning(new VerificationError(
                             VerificationErrorType.INVALID_OPERAND,
                             offset,
@@ -246,7 +299,8 @@ public class StructuralVerifier {
                 firstKey = false;
                 lastKey = key;
 
-                if (target < 0 || target >= bytecode.length || !boundaries.contains(target)) {
+                if (target < 0 || target >= bytecode.length || !boundaries.contains(target))
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INVALID_BRANCH_TARGET,
                             offset,
@@ -257,14 +311,16 @@ public class StructuralVerifier {
         }
     }
 
-    private void verifyLastInstruction(byte[] bytecode, ErrorCollector collector) {
+    private void verifyLastInstruction(byte[] bytecode, ErrorCollector collector)
+    {
         if (bytecode.length == 0) return;
 
         int offset = 0;
         int lastOffset = 0;
         int lastOpcode = 0;
 
-        while (offset < bytecode.length) {
+        while (offset < bytecode.length)
+        {
             lastOffset = offset;
             lastOpcode = Byte.toUnsignedInt(bytecode[offset]);
             int length = getInstructionLength(lastOpcode, offset, bytecode);
@@ -272,7 +328,8 @@ public class StructuralVerifier {
             offset += length;
         }
 
-        if (!isTerminatingInstruction(lastOpcode)) {
+        if (!isTerminatingInstruction(lastOpcode))
+        {
             collector.addWarning(new VerificationError(
                     VerificationErrorType.INSTRUCTION_FALLS_OFF_END,
                     lastOffset,
@@ -283,14 +340,16 @@ public class StructuralVerifier {
         }
     }
 
-    private boolean isTerminatingInstruction(int opcode) {
+    private boolean isTerminatingInstruction(int opcode)
+    {
         return (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) ||
                opcode == ATHROW.getCode() ||
                opcode == GOTO.getCode() ||
                opcode == GOTO_W.getCode();
     }
 
-    private boolean isBranchInstruction(int opcode) {
+    private boolean isBranchInstruction(int opcode)
+    {
         return (opcode >= IFEQ.getCode() && opcode <= IF_ACMPNE.getCode()) ||
                opcode == GOTO.getCode() ||
                opcode == JSR.getCode() ||
@@ -300,20 +359,26 @@ public class StructuralVerifier {
                opcode == JSR_W.getCode();
     }
 
-    private int getBranchTarget(int opcode, int offset, byte[] bytecode) {
-        if (opcode == GOTO_W.getCode() || opcode == JSR_W.getCode()) {
+    private int getBranchTarget(int opcode, int offset, byte[] bytecode)
+    {
+        if (opcode == GOTO_W.getCode() || opcode == JSR_W.getCode())
+        {
             if (offset + 4 >= bytecode.length) return -1;
             int branchOffset = readInt(bytecode, offset + 1);
             return offset + branchOffset;
-        } else {
+        }
+        else
+        {
             if (offset + 2 >= bytecode.length) return -1;
             short branchOffset = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
             return offset + branchOffset;
         }
     }
 
-    private int getInstructionLength(int opcode, int offset, byte[] bytecode) {
-        if (opcode == TABLESWITCH.getCode()) {
+    private int getInstructionLength(int opcode, int offset, byte[] bytecode)
+    {
+        if (opcode == TABLESWITCH.getCode())
+        {
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int baseOffset = offset + 1 + padding;
             if (baseOffset + 12 > bytecode.length) return -1;
@@ -323,7 +388,8 @@ public class StructuralVerifier {
             return 1 + padding + 12 + (high - low + 1) * 4;
         }
 
-        if (opcode == LOOKUPSWITCH.getCode()) {
+        if (opcode == LOOKUPSWITCH.getCode())
+        {
             int padding = (4 - ((offset + 1) % 4)) % 4;
             int baseOffset = offset + 1 + padding;
             if (baseOffset + 8 > bytecode.length) return -1;
@@ -332,20 +398,23 @@ public class StructuralVerifier {
             return 1 + padding + 8 + npairs * 8;
         }
 
-        if (opcode == WIDE.getCode()) {
+        if (opcode == WIDE.getCode())
+        {
             if (offset + 1 >= bytecode.length) return -1;
             int wideOpcode = Byte.toUnsignedInt(bytecode[offset + 1]);
             return wideOpcode == IINC.getCode() ? 6 : 4;
         }
 
         Opcode op = Opcode.fromCode(opcode);
-        if (op == Opcode.UNKNOWN) {
+        if (op == Opcode.UNKNOWN)
+        {
             return -1;
         }
         return 1 + op.getOperandCount();
     }
 
-    private int readInt(byte[] bytecode, int offset) {
+    private int readInt(byte[] bytecode, int offset)
+    {
         return ((bytecode[offset] & 0xFF) << 24) |
                ((bytecode[offset + 1] & 0xFF) << 16) |
                ((bytecode[offset + 2] & 0xFF) << 8) |

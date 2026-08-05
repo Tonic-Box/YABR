@@ -22,20 +22,24 @@ import static org.junit.jupiter.api.Assertions.*;
  * end-to-end in {@code NameRecoveryStrategyTest}, against a class compiled with debug info - the only place
  * the difference between the modes is observable.
  */
-class NameRecovererTest {
+class NameRecovererTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         SSAValue.resetIdCounter();
     }
 
-    // ========== Constructor and Initialization Tests ==========
+    // Constructor and Initialization Tests
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructor_withValidInputs_initializesCorrectly() throws IOException {
+        void constructor_withValidInputs_initializesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -51,7 +55,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void constructor_withAlwaysSyntheticStrategy_initializesCorrectly() throws IOException {
+        void constructor_withAlwaysSyntheticStrategy_initializesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -67,7 +72,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void constructor_withParametersOnlyStrategy_initializesCorrectly() throws IOException {
+        void constructor_withParametersOnlyStrategy_initializesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -83,7 +89,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void constructor_withMethodWithoutCodeAttribute_handlesGracefully() throws IOException {
+        void constructor_withMethodWithoutCodeAttribute_handlesGracefully() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -98,13 +105,15 @@ class NameRecovererTest {
         }
     }
 
-    // ========== Synthetic Name Generation Tests ==========
+    // Synthetic Name Generation Tests
 
     @Nested
-    class SyntheticNameGenerationTests {
+    class SyntheticNameGenerationTests
+    {
 
         @Test
-        void generateSyntheticName_forIntType_returnsIPrefix() throws IOException {
+        void generateSyntheticName_forIntType_returnsIPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -122,7 +131,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forLongType_returnsLPrefix() throws IOException {
+        void generateSyntheticName_forLongType_returnsLPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -140,7 +150,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forFloatType_returnsFPrefix() throws IOException {
+        void generateSyntheticName_forFloatType_returnsFPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -158,7 +169,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forDoubleType_returnsDPrefix() throws IOException {
+        void generateSyntheticName_forDoubleType_returnsDPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -176,7 +188,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forBooleanType_returnsFlagPrefix() throws IOException {
+        void generateSyntheticName_forBooleanType_returnsFlagPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -194,7 +207,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forCharType_returnsCPrefix() throws IOException {
+        void generateSyntheticName_forCharType_returnsCPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -212,7 +226,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forByteType_returnsIPrefix() throws IOException {
+        void generateSyntheticName_forByteType_returnsIPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -230,7 +245,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forShortType_returnsIPrefix() throws IOException {
+        void generateSyntheticName_forShortType_returnsIPrefix() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -248,7 +264,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forObjectType_returnsFirstLetterLowercase() throws IOException {
+        void generateSyntheticName_forObjectType_returnsFirstLetterLowercase() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -267,7 +284,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forSimpleClassName_returnsFirstLetterLowercase() throws IOException {
+        void generateSyntheticName_forSimpleClassName_returnsFirstLetterLowercase() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -286,7 +304,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_incrementsCounter() throws IOException {
+        void generateSyntheticName_incrementsCounter() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -310,7 +329,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_differentTypes_independentCounters() throws IOException {
+        void generateSyntheticName_differentTypes_independentCounters() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -334,14 +354,15 @@ class NameRecovererTest {
         }
     }
 
-
-    // ========== RecoverName with PREFER_DEBUG_INFO Strategy Tests ==========
+    // RecoverName with PREFER_DEBUG_INFO Strategy Tests
 
     @Nested
-    class PreferDebugInfoStrategyTests {
+    class PreferDebugInfoStrategyTests
+    {
 
         @Test
-        void recoverName_preferDebugInfo_noDebugInfo_generatesSynthetic() throws IOException {
+        void recoverName_preferDebugInfo_noDebugInfo_generatesSynthetic() throws IOException
+        {
             // Test synthetic name generation for local variables
             // Using generateSyntheticName directly to avoid SSA lifter parameter confusion
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
@@ -354,7 +375,6 @@ class NameRecovererTest {
             NameRecoverer recoverer = new NameRecoverer(ir, method, NameRecoveryStrategy.PREFER_DEBUG_INFO);
 
             SSAValue value = new SSAValue(PrimitiveType.INT);
-            // Use generateSyntheticName directly
             String name = recoverer.generateSyntheticName(value);
 
             assertTrue(name.startsWith("i"));
@@ -362,17 +382,17 @@ class NameRecovererTest {
 
 
 
-
     }
 
-    // ========== RecoverName with PARAMETERS_ONLY Strategy Tests ==========
+    // RecoverName with PARAMETERS_ONLY Strategy Tests
 
     @Nested
-    class ParametersOnlyStrategyTests {
-
+    class ParametersOnlyStrategyTests
+    {
 
         @Test
-        void recoverName_parametersOnly_forLocalVariable_generatesSynthetic() throws IOException {
+        void recoverName_parametersOnly_forLocalVariable_generatesSynthetic() throws IOException
+        {
             // Test synthetic name generation for locals with PARAMETERS_ONLY strategy
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicMethod("test", "()V")
@@ -393,14 +413,15 @@ class NameRecovererTest {
 
     }
 
-
-    // ========== Reference Type Synthetic Name Tests ==========
+    // Reference Type Synthetic Name Tests
 
     @Nested
-    class ReferenceTypeSyntheticNameTests {
+    class ReferenceTypeSyntheticNameTests
+    {
 
         @Test
-        void generateSyntheticName_forArrayList_returnsA() throws IOException {
+        void generateSyntheticName_forArrayList_returnsA() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -419,7 +440,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forHashMap_returnsH() throws IOException {
+        void generateSyntheticName_forHashMap_returnsH() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -438,7 +460,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forInnerClass_handlesDollarSign() throws IOException {
+        void generateSyntheticName_forInnerClass_handlesDollarSign() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -457,7 +480,8 @@ class NameRecovererTest {
         }
 
         @Test
-        void generateSyntheticName_forCustomClass_usesFirstLetter() throws IOException {
+        void generateSyntheticName_forCustomClass_usesFirstLetter() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -477,14 +501,15 @@ class NameRecovererTest {
     }
 
 
-
-    // ========== Strategy Getter Tests ==========
+    // Strategy Getter Tests
 
     @Nested
-    class StrategyGetterTests {
+    class StrategyGetterTests
+    {
 
         @Test
-        void getStrategy_returnsCorrectStrategy() throws IOException {
+        void getStrategy_returnsCorrectStrategy() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()

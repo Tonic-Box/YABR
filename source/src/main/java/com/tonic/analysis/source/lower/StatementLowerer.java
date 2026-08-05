@@ -34,7 +34,8 @@ import java.util.Set;
 /**
  * Lowers AST Statement nodes to IR instructions and blocks.
  */
-public class StatementLowerer {
+public class StatementLowerer
+{
 
     private final LoweringContext ctx;
     private final ExpressionLowerer exprLowerer;
@@ -49,95 +50,140 @@ public class StatementLowerer {
 
     /**
      * Creates a new statement lowerer.
-     *
      * @param ctx the lowering context
      * @param exprLowerer the expression lowerer
      */
-    public StatementLowerer(LoweringContext ctx, ExpressionLowerer exprLowerer) {
+    public StatementLowerer(LoweringContext ctx, ExpressionLowerer exprLowerer)
+    {
         this.ctx = ctx;
         this.exprLowerer = exprLowerer;
     }
 
     /**
-     * Lowers a statement to IR.
+     * Lowers one statement into the context's current block.
+     *
+     * @param stmt the statement to lower, dispatched on its concrete type
      */
-    public void lower(Statement stmt) {
-        if (stmt instanceof MonitorExitStmt) {
-            ctx.getCurrentBlock().addInstruction(
-                    SimpleInstruction.createMonitorExit(((MonitorExitStmt) stmt).monitor));
-        } else if (stmt instanceof BlockStmt) {
+    public void lower(Statement stmt)
+    {
+        if (stmt instanceof MonitorExitStmt)
+        {
+            ctx.getCurrentBlock().addInstruction(SimpleInstruction.createMonitorExit(((MonitorExitStmt) stmt).monitor));
+        }
+        else if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
             lowerBlock(block);
-        } else if (stmt instanceof VarDeclStmt) {
+        }
+        else if (stmt instanceof VarDeclStmt)
+        {
             VarDeclStmt decl = (VarDeclStmt) stmt;
             lowerVarDecl(decl);
-        } else if (stmt instanceof ExprStmt) {
+        }
+        else if (stmt instanceof ExprStmt)
+        {
             ExprStmt expr = (ExprStmt) stmt;
             lowerExprStmt(expr);
-        } else if (stmt instanceof ReturnStmt) {
+        }
+        else if (stmt instanceof ReturnStmt)
+        {
             ReturnStmt ret = (ReturnStmt) stmt;
             lowerReturn(ret);
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
             lowerIf(ifStmt);
-        } else if (stmt instanceof WhileStmt) {
+        }
+        else if (stmt instanceof WhileStmt)
+        {
             WhileStmt whileStmt = (WhileStmt) stmt;
             lowerWhile(whileStmt);
-        } else if (stmt instanceof DoWhileStmt) {
+        }
+        else if (stmt instanceof DoWhileStmt)
+        {
             DoWhileStmt doWhile = (DoWhileStmt) stmt;
             lowerDoWhile(doWhile);
-        } else if (stmt instanceof ForStmt) {
+        }
+        else if (stmt instanceof ForStmt)
+        {
             ForStmt forStmt = (ForStmt) stmt;
             lowerFor(forStmt);
-        } else if (stmt instanceof ForEachStmt) {
+        }
+        else if (stmt instanceof ForEachStmt)
+        {
             ForEachStmt forEach = (ForEachStmt) stmt;
             lowerForEach(forEach);
-        } else if (stmt instanceof SwitchStmt) {
+        }
+        else if (stmt instanceof SwitchStmt)
+        {
             SwitchStmt switchStmt = (SwitchStmt) stmt;
             lowerSwitch(switchStmt);
-        } else if (stmt instanceof ThrowStmt) {
+        }
+        else if (stmt instanceof ThrowStmt)
+        {
             ThrowStmt throwStmt = (ThrowStmt) stmt;
             lowerThrow(throwStmt);
-        } else if (stmt instanceof BreakStmt) {
+        }
+        else if (stmt instanceof BreakStmt)
+        {
             BreakStmt breakStmt = (BreakStmt) stmt;
             lowerBreak(breakStmt);
-        } else if (stmt instanceof ContinueStmt) {
+        }
+        else if (stmt instanceof ContinueStmt)
+        {
             ContinueStmt contStmt = (ContinueStmt) stmt;
             lowerContinue(contStmt);
-        } else if (stmt instanceof TryCatchStmt) {
+        }
+        else if (stmt instanceof TryCatchStmt)
+        {
             TryCatchStmt tryCatch = (TryCatchStmt) stmt;
             lowerTryCatch(tryCatch);
-        } else if (stmt instanceof SynchronizedStmt) {
+        }
+        else if (stmt instanceof SynchronizedStmt)
+        {
             SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
             lowerSynchronized(syncStmt);
-        } else if (stmt instanceof LabeledStmt) {
+        }
+        else if (stmt instanceof LabeledStmt)
+        {
             LabeledStmt labeled = (LabeledStmt) stmt;
             lowerLabeled(labeled);
-        } else if (stmt instanceof IRRegionStmt) {
+        }
+        else if (stmt instanceof IRRegionStmt)
+        {
             IRRegionStmt irRegion = (IRRegionStmt) stmt;
             lowerIRRegion(irRegion);
-        } else {
+        }
+        else
+        {
             throw new LoweringException("Unsupported statement type: " + stmt.getClass().getSimpleName());
         }
     }
 
-    private void lowerBlock(BlockStmt block) {
-        for (Statement stmt : block.getStatements()) {
+    private void lowerBlock(BlockStmt block)
+    {
+        for (Statement stmt : block.getStatements())
+        {
             lower(stmt);
-            if (ctx.getCurrentBlock().getTerminator() != null) {
+            if (ctx.getCurrentBlock().getTerminator() != null)
+            {
                 break;
             }
         }
     }
 
-    /** An Object-typed reference says nothing about the value - any specific declared type beats it. */
-    private static boolean isUnspecificReference(IRType type) {
+    /**
+     * An Object-typed reference says nothing about the value - any specific declared type beats it.
+     */
+    private static boolean isUnspecificReference(IRType type)
+    {
         return type instanceof ReferenceType
-                && "java/lang/Object".equals(
-                        ((ReferenceType) type).getInternalName());
+                && "java/lang/Object".equals(((ReferenceType) type).getInternalName());
     }
 
-    private void lowerVarDecl(VarDeclStmt decl) {
+    private void lowerVarDecl(VarDeclStmt decl)
+    {
         SourceType type = decl.getType();
         String name = decl.getName();
         Expression init = decl.getInitializer();
@@ -148,56 +194,65 @@ public class StatementLowerer {
                 IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(type)),
                 false, ctx.getTypeResolver().signatureOf(type));
 
-        if (init != null) {
+        if (init != null)
+        {
             ctx.pushExpectedType(type);
             Value value;
-            try {
+            try
+            {
                 value = exprLowerer.lower(init);
-            } finally {
+            }
+            finally
+            {
                 ctx.popExpectedType();
             }
-            if (value instanceof SSAValue) {
+            if (value instanceof SSAValue)
+            {
                 SSAValue ssaVal = (SSAValue) value;
                 // The declared type is ground truth. An initializer whose resolved type degraded to
                 // Object (an unresolvable call return, say) would poison every later use of the variable
                 // - `byte[] bytes = data.getBytes(...)` then `bytes.length` reads a field on Object -
                 // so re-type the value to what the source declares.
                 IRType declared =
-                        IRType.fromDescriptor(
-                                ctx.getTypeResolver().descriptorOf(type));
+                        IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(type));
                 if (isUnspecificReference(ssaVal.getType()) && declared != null
                         && !isUnspecificReference(declared)
                         && !(declared instanceof PrimitiveType)
                         && !(ssaVal.getDefinition()
-                                instanceof ConstantInstruction)) {
+                                instanceof ConstantInstruction))
+                                {
                     // A checkcast, not a copy: the degraded value is Object ON THE STACK too (its
                     // descriptor said so), and the verifier holds the bytecode to that - a later
                     // arraylength or member access needs the frame narrowed, not just the SSA type.
                     SSAValue retyped = ctx.newValue(declared);
-                    ctx.getCurrentBlock().addInstruction(
-                            TypeCheckInstruction.createCast(
-                                    retyped, ssaVal, declared));
+                    ctx.getCurrentBlock().addInstruction(TypeCheckInstruction.createCast(retyped, ssaVal, declared));
                     ssaVal = retyped;
                 }
                 ctx.setVariable(name, ssaVal);
-            } else {
+            }
+            else
+            {
                 IRType irType = type.toIRType();
                 SSAValue ssaVal = ctx.newValue(irType);
                 ctx.getCurrentBlock().addInstruction(new ConstantInstruction(ssaVal, (Constant) value));
                 ctx.setVariable(name, ssaVal);
             }
-        } else {
+        }
+        else
+        {
             IRType irType = type.toIRType();
             SSAValue ssaVal = ctx.newValue(irType);
             ctx.setVariable(name, ssaVal);
         }
     }
 
-    private void lowerExprStmt(ExprStmt stmt) {
+    private void lowerExprStmt(ExprStmt stmt)
+    {
         exprLowerer.lower(stmt.getExpression());
     }
 
-    private void lowerReturn(ReturnStmt ret) {
+    private void lowerReturn(ReturnStmt ret)
+    {
         Expression value = ret.getValue();
         // The return value is evaluated before any enclosing finally runs (JLS 14.20.2). Its SSA value
         // is an immutable snapshot, so a finally that reassigns the same variable cannot clobber it.
@@ -208,20 +263,22 @@ public class StatementLowerer {
         // finally again (JLS 14.20.2) - keeping it on the stack would make its own return re-drain it
         // forever. If a finally exits abruptly it has already drained the ones enclosing it, so stop.
         Deque<Statement> saved = new ArrayDeque<>(finallyStack);
-        while (!finallyStack.isEmpty() && ctx.getCurrentBlock().getTerminator() == null) {
+        while (!finallyStack.isEmpty() && ctx.getCurrentBlock().getTerminator() == null)
+        {
             lower(finallyStack.pop());
         }
         finallyStack.clear();
         finallyStack.addAll(saved);
-        if (ctx.getCurrentBlock().getTerminator() != null) {
+        if (ctx.getCurrentBlock().getTerminator() != null)
+        {
             return;
         }
 
-        ctx.getCurrentBlock().addInstruction(
-                retVal != null ? new ReturnInstruction(retVal) : new ReturnInstruction());
+        ctx.getCurrentBlock().addInstruction(retVal != null ? new ReturnInstruction(retVal) : new ReturnInstruction());
     }
 
-    private void lowerIf(IfStmt ifStmt) {
+    private void lowerIf(IfStmt ifStmt)
+    {
         IRBlock thenBlock = ctx.createBlock();
         IRBlock elseBlock = ifStmt.getElseBranch() != null ? ctx.createBlock() : null;
         IRBlock mergeBlock = ctx.createBlock();
@@ -232,33 +289,42 @@ public class StatementLowerer {
         ctx.setCurrentBlock(thenBlock);
         lower(ifStmt.getThenBranch());
         boolean thenFallsThrough = ctx.getCurrentBlock().getTerminator() == null;
-        if (thenFallsThrough) {
+        if (thenFallsThrough)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
             ctx.getCurrentBlock().addSuccessor(mergeBlock, EdgeType.NORMAL);
         }
         IRBlock thenEndBlock = ctx.getCurrentBlock();
 
         boolean elseFallsThrough;
-        if (elseBlock != null) {
+        if (elseBlock != null)
+        {
             ctx.setCurrentBlock(elseBlock);
             lower(ifStmt.getElseBranch());
             elseFallsThrough = ctx.getCurrentBlock().getTerminator() == null;
-            if (elseFallsThrough) {
+            if (elseFallsThrough)
+            {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
                 ctx.getCurrentBlock().addSuccessor(mergeBlock, EdgeType.NORMAL);
             }
-        } else {
+        }
+        else
+        {
             elseFallsThrough = true;
         }
 
-        if (thenFallsThrough || elseFallsThrough) {
+        if (thenFallsThrough || elseFallsThrough)
+        {
             ctx.setCurrentBlock(mergeBlock);
-        } else {
+        }
+        else
+        {
             ctx.setCurrentBlock(thenEndBlock);
         }
     }
 
-    private void lowerWhile(WhileStmt whileStmt) {
+    private void lowerWhile(WhileStmt whileStmt)
+    {
         IRBlock condBlock = ctx.createBlock();
         IRBlock bodyBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
@@ -267,14 +333,17 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
-        if (isTrueLiteral(whileStmt.getCondition())) {
+        if (isTrueLiteral(whileStmt.getCondition()))
+        {
             // `while (true)`: an infinite loop with no false-exit branch. Emitting a conditional test would
             // make the exit block reachable by fall-through, and a value-returning method whose loop never
             // exits normally would then get a synthetic void return there (a VerifyError). The exit block is
             // reached only by a `break` inside the body.
             condBlock.addInstruction(SimpleInstruction.createGoto(bodyBlock));
             condBlock.addSuccessor(bodyBlock, EdgeType.NORMAL);
-        } else {
+        }
+        else
+        {
             exprLowerer.lowerCondition(whileStmt.getCondition(), bodyBlock, exitBlock);
         }
 
@@ -282,7 +351,8 @@ public class StatementLowerer {
 
         ctx.setCurrentBlock(bodyBlock);
         lower(whileStmt.getBody());
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
             ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
         }
@@ -291,12 +361,14 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    private boolean isTrueLiteral(Expression e) {
+    private boolean isTrueLiteral(Expression e)
+    {
         return e instanceof LiteralExpr
                 && Boolean.TRUE.equals(((LiteralExpr) e).getValue());
     }
 
-    private void lowerDoWhile(DoWhileStmt doWhile) {
+    private void lowerDoWhile(DoWhileStmt doWhile)
+    {
         IRBlock bodyBlock = ctx.createBlock();
         IRBlock condBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
@@ -308,7 +380,8 @@ public class StatementLowerer {
 
         ctx.setCurrentBlock(bodyBlock);
         lower(doWhile.getBody());
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
             ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
         }
@@ -320,8 +393,10 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    private void lowerFor(ForStmt forStmt) {
-        for (Statement init : forStmt.getInit()) {
+    private void lowerFor(ForStmt forStmt)
+    {
+        for (Statement init : forStmt.getInit())
+        {
             lower(init);
         }
 
@@ -335,9 +410,12 @@ public class StatementLowerer {
 
         ctx.setCurrentBlock(condBlock);
         Expression cond = forStmt.getCondition();
-        if (cond != null) {
+        if (cond != null)
+        {
             exprLowerer.lowerCondition(cond, bodyBlock, exitBlock);
-        } else {
+        }
+        else
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
             condBlock.addSuccessor(bodyBlock, EdgeType.NORMAL);
         }
@@ -346,13 +424,15 @@ public class StatementLowerer {
 
         ctx.setCurrentBlock(bodyBlock);
         lower(forStmt.getBody());
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(updateBlock));
             ctx.getCurrentBlock().addSuccessor(updateBlock, EdgeType.NORMAL);
         }
 
         ctx.setCurrentBlock(updateBlock);
-        for (Expression update : forStmt.getUpdate()) {
+        for (Expression update : forStmt.getUpdate())
+        {
             exprLowerer.lower(update);
         }
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
@@ -362,7 +442,8 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    private void lowerForEach(ForEachStmt forEach) {
+    private void lowerForEach(ForEachStmt forEach)
+    {
         Value iterable = exprLowerer.lower(forEach.getIterable());
 
         IRType intType = PrimitiveType.INT;
@@ -403,7 +484,8 @@ public class StatementLowerer {
         ctx.setVariable(forEach.getVariable().getName(), elem);
 
         lower(forEach.getBody());
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(updateBlock));
             ctx.getCurrentBlock().addSuccessor(updateBlock, EdgeType.NORMAL);
         }
@@ -422,10 +504,12 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    private void lowerSwitch(SwitchStmt switchStmt) {
+    private void lowerSwitch(SwitchStmt switchStmt)
+    {
         Value selector = exprLowerer.lower(switchStmt.getSelector());
         String enumClass = hasEnumLabels(switchStmt) ? enumSelectorClass(switchStmt, selector) : null;
-        if (enumClass != null) {
+        if (enumClass != null)
+        {
             selector = lowerOrdinalOf(selector, enumClass);
         }
 
@@ -434,48 +518,60 @@ public class StatementLowerer {
 
         List<SwitchCase> cases = switchStmt.getCases();
         IRBlock[] caseBlocks = new IRBlock[cases.size()];
-        for (int i = 0; i < cases.size(); i++) {
+        for (int i = 0; i < cases.size(); i++)
+        {
             caseBlocks[i] = ctx.createBlock();
-            if (cases.get(i).isDefault()) {
+            if (cases.get(i).isDefault())
+            {
                 defaultBlock = caseBlocks[i];
             }
         }
 
-        if (defaultBlock == null) {
+        if (defaultBlock == null)
+        {
             defaultBlock = exitBlock;
         }
 
         SwitchInstruction switchInstr = new SwitchInstruction(selector, defaultBlock);
-        for (int i = 0; i < cases.size(); i++) {
+        for (int i = 0; i < cases.size(); i++)
+        {
             SwitchCase sc = cases.get(i);
             // A default case may also carry value labels (`case 6: default:`); they register as
             // explicit entries on the same block, exactly as javac lays them out.
             // Parsed/desugared cases carry their labels as constant expressions; recovered ones use
             // integer labels. Honor both, or the switch lowers with no cases (a bare goto to default).
-            if (sc.hasExpressionLabels()) {
-                for (Expression label : sc.expressionLabels()) {
+            if (sc.hasExpressionLabels())
+            {
+                for (Expression label : sc.expressionLabels())
+                {
                     Integer key = enumClass != null
                             ? enumOrdinalLabel(label, enumClass)
                             : constIntLabel(label);
-                    if (key == null) {
+                    if (key == null)
+                    {
                         throw new LoweringException("Unresolvable switch case label: " + label
                                 + " (enum " + enumClass + ", selector type "
                                 + switchStmt.getSelector().getType() + ")");
                     }
                     switchInstr.addCase(key, caseBlocks[i]);
                 }
-            } else {
-                for (Integer label : sc.labels()) {
+            }
+            else
+            {
+                for (Integer label : sc.labels())
+                {
                     switchInstr.addCase(label, caseBlocks[i]);
                 }
             }
         }
         ctx.getCurrentBlock().addInstruction(switchInstr);
 
-        for (IRBlock caseBlock : caseBlocks) {
+        for (IRBlock caseBlock : caseBlocks)
+        {
             ctx.getCurrentBlock().addSuccessor(caseBlock, EdgeType.NORMAL);
         }
-        if (defaultBlock == exitBlock) {
+        if (defaultBlock == exitBlock)
+        {
             ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
         }
 
@@ -483,22 +579,29 @@ public class StatementLowerer {
         // pass through to the enclosing loop's update (null continue-target keeps the resolver searching outward).
         ctx.pushLoop(null, null, exitBlock, finallyStack.size());
 
-        for (int i = 0; i < cases.size(); i++) {
+        for (int i = 0; i < cases.size(); i++)
+        {
             ctx.setCurrentBlock(caseBlocks[i]);
             SwitchCase sc = cases.get(i);
 
-            for (Statement stmt : sc.statements()) {
+            for (Statement stmt : sc.statements())
+            {
                 lower(stmt);
-                if (ctx.getCurrentBlock().getTerminator() != null) {
+                if (ctx.getCurrentBlock().getTerminator() != null)
+                {
                     break;
                 }
             }
 
-            if (ctx.getCurrentBlock().getTerminator() == null) {
-                if (i + 1 < cases.size()) {
+            if (ctx.getCurrentBlock().getTerminator() == null)
+            {
+                if (i + 1 < cases.size())
+                {
                     ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(caseBlocks[i + 1]));
                     ctx.getCurrentBlock().addSuccessor(caseBlocks[i + 1], EdgeType.NORMAL);
-                } else {
+                }
+                else
+                {
                     ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
                     ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
                 }
@@ -509,15 +612,21 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    /** Whether any case label names an enum constant rather than carrying a constant value. */
-    private boolean hasEnumLabels(SwitchStmt switchStmt) {
-        for (SwitchCase sc : switchStmt.getCases()) {
-            if (!sc.hasExpressionLabels()) {
+    /**
+     * Whether any case label names an enum constant rather than carrying a constant value.
+     */
+    private boolean hasEnumLabels(SwitchStmt switchStmt)
+    {
+        for (SwitchCase sc : switchStmt.getCases())
+        {
+            if (!sc.hasExpressionLabels())
+            {
                 continue;
             }
-            for (Expression label : sc.expressionLabels()) {
-                if (constIntLabel(label) == null
-                        && !(label instanceof LiteralExpr)) {
+            for (Expression label : sc.expressionLabels())
+            {
+                if (constIntLabel(label) == null && !(label instanceof LiteralExpr))
+                {
                     return true;
                 }
             }
@@ -530,21 +639,27 @@ public class StatementLowerer {
      * its type comes from a resolved descriptor - with the declared source type as the fallback for values
      * whose IR type is unspecific. Named labels with no enum class to resolve against cannot lower.
      */
-    private String enumSelectorClass(SwitchStmt switchStmt, Value selector) {
-        if (selector instanceof SSAValue) {
+    private String enumSelectorClass(SwitchStmt switchStmt, Value selector)
+    {
+        if (selector instanceof SSAValue)
+        {
             IRType irType = selector.getType();
-            if (irType instanceof ReferenceType) {
+            if (irType instanceof ReferenceType)
+            {
                 String internal = ((ReferenceType) irType).getInternalName();
-                if (internal != null && !"java/lang/Object".equals(internal)) {
+                if (internal != null && !"java/lang/Object".equals(internal))
+                {
                     return internal;
                 }
             }
         }
         SourceType type = switchStmt.getSelector().getType();
-        if (type instanceof ReferenceSourceType) {
+        if (type instanceof ReferenceSourceType)
+        {
             String name = ((ReferenceSourceType) type).getInternalName();
             String resolved = name.contains("/") ? name : ctx.getTypeResolver().resolveClassName(name);
-            if (resolved != null && !"java/lang/Object".equals(resolved)) {
+            if (resolved != null && !"java/lang/Object".equals(resolved))
+            {
                 return resolved;
             }
         }
@@ -552,8 +667,11 @@ public class StatementLowerer {
                 + " cannot be determined (type " + type + ")");
     }
 
-    /** Dispatches an enum selector on its ordinal, the int the case keys index. */
-    private Value lowerOrdinalOf(Value selector, String enumClass) {
+    /**
+     * Dispatches an enum selector on its ordinal, the int the case keys index.
+     */
+    private Value lowerOrdinalOf(Value selector, String enumClass)
+    {
         SSAValue ordinal = ctx.newValue(PrimitiveType.INT);
         List<Value> args = new ArrayList<>();
         args.add(selector);
@@ -562,37 +680,52 @@ public class StatementLowerer {
         return ordinal;
     }
 
-    /** The ordinal of an enum-constant case label ({@code NAME} or {@code Type.NAME}), or null. */
-    private Integer enumOrdinalLabel(Expression label, String enumClass) {
+    /**
+     * The ordinal of an enum-constant case label ({@code NAME} or {@code Type.NAME}), or null.
+     */
+    private Integer enumOrdinalLabel(Expression label, String enumClass)
+    {
         String name = null;
-        if (label instanceof VarRefExpr) {
+        if (label instanceof VarRefExpr)
+        {
             name = ((VarRefExpr) label).getName();
-        } else if (label instanceof FieldAccessExpr) {
+        }
+        else if (label instanceof FieldAccessExpr)
+        {
             name = ((FieldAccessExpr) label).getFieldName();
         }
-        if (name == null) {
+        if (name == null)
+        {
             return null;
         }
-        return EnumConstants.ordinalByName(
-                ctx.getTypeResolver().getClassPool(), enumClass, name);
+        return EnumConstants.ordinalByName(ctx.getTypeResolver().getClassPool(), enumClass, name);
     }
 
-    private Integer constIntLabel(Expression label) {
-        if (label instanceof LiteralExpr) {
+    private Integer constIntLabel(Expression label)
+    {
+        if (label instanceof LiteralExpr)
+        {
             Object v = ((LiteralExpr) label).getValue();
-            if (v instanceof Integer) {
+            if (v instanceof Integer)
+            {
                 return (Integer) v;
             }
-            if (v instanceof Character) {
+            if (v instanceof Character)
+            {
                 return (int) (Character) v;
             }
-            if (v instanceof Number) {
+            if (v instanceof Number)
+            {
                 return ((Number) v).intValue();
             }
-            if (v instanceof String) {
-                try {
+            if (v instanceof String)
+            {
+                try
+                {
                     return Integer.parseInt(((String) v).trim());
-                } catch (NumberFormatException ignored) {
+                }
+                catch (NumberFormatException ignored)
+                {
                     return null;
                 }
             }
@@ -600,16 +733,19 @@ public class StatementLowerer {
         return null;
     }
 
-    private void lowerThrow(ThrowStmt throwStmt) {
+    private void lowerThrow(ThrowStmt throwStmt)
+    {
         Value exception = exprLowerer.lower(throwStmt.getException());
         SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
         ctx.getCurrentBlock().addInstruction(throwInstr);
     }
 
-    private void lowerBreak(BreakStmt breakStmt) {
+    private void lowerBreak(BreakStmt breakStmt)
+    {
         LoweringContext.LoopTargets frame = ctx.getBreakFrame(breakStmt.getTargetLabel());
         drainFinallyAboveDepth(frame.finallyDepth());
-        if (ctx.getCurrentBlock().getTerminator() != null) {
+        if (ctx.getCurrentBlock().getTerminator() != null)
+        {
             return;
         }
         IRBlock target = frame.breakTarget();
@@ -617,10 +753,12 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(target, EdgeType.NORMAL);
     }
 
-    private void lowerContinue(ContinueStmt contStmt) {
+    private void lowerContinue(ContinueStmt contStmt)
+    {
         LoweringContext.LoopTargets frame = ctx.getContinueFrame(contStmt.getTargetLabel());
         drainFinallyAboveDepth(frame.finallyDepth());
-        if (ctx.getCurrentBlock().getTerminator() != null) {
+        if (ctx.getCurrentBlock().getTerminator() != null)
+        {
             return;
         }
         IRBlock target = frame.continueTarget();
@@ -635,14 +773,18 @@ public class StatementLowerer {
      * {@code synchronized} inside the loop must emit that block's {@code monitorexit} before jumping,
      * otherwise the monitor leaks and the round trip throws {@code IllegalMonitorStateException}.
      */
-    private void drainFinallyAboveDepth(int targetDepth) {
+    private void drainFinallyAboveDepth(int targetDepth)
+    {
         int toDrain = finallyStack.size() - targetDepth;
         int drained = 0;
-        for (Statement fin : finallyStack) {
-            if (drained >= toDrain) {
+        for (Statement fin : finallyStack)
+        {
+            if (drained >= toDrain)
+            {
                 break;
             }
-            if (ctx.getCurrentBlock().getTerminator() != null) {
+            if (ctx.getCurrentBlock().getTerminator() != null)
+            {
                 return;
             }
             lower(fin);
@@ -650,8 +792,10 @@ public class StatementLowerer {
         }
     }
 
-    private void lowerTryCatch(TryCatchStmt tryCatch) {
-        if (!tryCatch.getResources().isEmpty()) {
+    private void lowerTryCatch(TryCatchStmt tryCatch)
+    {
+        if (!tryCatch.getResources().isEmpty())
+        {
             lowerTryWithResources(tryCatch);
             return;
         }
@@ -669,14 +813,16 @@ public class StatementLowerer {
 
         ctx.setCurrentBlock(tryBlock);
         // Protect the try body and catch bodies: a return out of either must run this finally first.
-        if (finallyBlock != null) {
+        if (finallyBlock != null)
+        {
             finallyStack.push(tryCatch.getFinallyBlock());
         }
         java.util.Map<String, SSAValue> preTryVars = ctx.snapshotVariables();
         int blocksBeforeTryBody = ctx.getIrMethod().getBlocks().size();
         lower(tryCatch.getTryBlock());
         IRBlock tryEnd = ctx.getCurrentBlock();
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
             ctx.getCurrentBlock().addSuccessor(normalExit, EdgeType.NORMAL);
         }
@@ -689,9 +835,11 @@ public class StatementLowerer {
         // each store keeps it current at any fault point.
         java.util.Map<String, SSAValue> postTryVars = ctx.snapshotVariables();
         java.util.List<String> reassignedInTry = new java.util.ArrayList<>();
-        for (java.util.Map.Entry<String, SSAValue> e : preTryVars.entrySet()) {
+        for (java.util.Map.Entry<String, SSAValue> e : preTryVars.entrySet())
+        {
             SSAValue after = postTryVars.get(e.getKey());
-            if (after != null && after != e.getValue()) {
+            if (after != null && after != e.getValue())
+            {
                 reassignedInTry.add(e.getKey());
             }
         }
@@ -703,12 +851,14 @@ public class StatementLowerer {
         Set<IRBlock> tryBodyBlocks = new LinkedHashSet<>();
         tryBodyBlocks.add(tryBlock);
         List<IRBlock> allBlocks = ctx.getIrMethod().getBlocks();
-        for (int i = blocksBeforeTryBody; i < allBlocks.size(); i++) {
+        for (int i = blocksBeforeTryBody; i < allBlocks.size(); i++)
+        {
             tryBodyBlocks.add(allBlocks.get(i));
         }
 
         List<IRBlock> catchBlocks = new java.util.ArrayList<>();
-        for (CatchClause catchClause : tryCatch.getCatches()) {
+        for (CatchClause catchClause : tryCatch.getCatches())
+        {
             IRBlock catchBlock = ctx.createBlock();
             catchBlocks.add(catchBlock);
             tryBlock.addSuccessor(catchBlock, EdgeType.EXCEPTION);
@@ -725,7 +875,8 @@ public class StatementLowerer {
             catchBlock.addInstruction(SimpleInstruction.createCatch(exVar));
             ctx.declareLocal(exVarName, exVarIrType, false);
             ctx.setVariable(exVarName, exVar);
-            for (String name : reassignedInTry) {
+            for (String name : reassignedInTry)
+            {
                 SSAValue pre = preTryVars.get(name);
                 SSAValue post = postTryVars.get(name);
                 ctx.getIrMethod().addSlotAffinity(pre, post);
@@ -733,7 +884,8 @@ public class StatementLowerer {
             }
 
             lower(catchClause.body());
-            if (ctx.getCurrentBlock().getTerminator() == null) {
+            if (ctx.getCurrentBlock().getTerminator() == null)
+            {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
                 ctx.getCurrentBlock().addSuccessor(normalExit, EdgeType.NORMAL);
             }
@@ -741,7 +893,8 @@ public class StatementLowerer {
             // Register the exception table entry/entries. A multi-catch shares one handler block but
             // needs one table entry per caught type; without this the protected region is never recorded
             // and the handler ends up as dead, frame-less code that fails verification.
-            for (SourceType caught : catchClause.exceptionTypes()) {
+            for (SourceType caught : catchClause.exceptionTypes())
+            {
                 String catchType = ctx.getTypeResolver()
                         .resolveClassName(((ReferenceType) caught.toIRType()).getInternalName());
                 ExceptionHandler handler =
@@ -751,7 +904,8 @@ public class StatementLowerer {
             }
         }
 
-        if (finallyBlock != null) {
+        if (finallyBlock != null)
+        {
             // The try/catch bodies are lowered; the finally copies below are not themselves protected.
             finallyStack.pop();
             // Synthetic catch-all so the finally also runs when an exception escapes the try/catches (javac
@@ -776,14 +930,16 @@ public class StatementLowerer {
             // to the pre-try state and e.g. skipping a guarded close on the exception path). The slot-affinity
             // requests make the pre-try init, the in-try store and this read share the variable's one slot,
             // so the slot is definitely assigned before the protected range and current at the fault.
-            for (String name : reassignedInTry) {
+            for (String name : reassignedInTry)
+            {
                 SSAValue pre = preTryVars.get(name);
                 ctx.getIrMethod().addSlotAffinity(pre, postTryVars.get(name));
                 ctx.getIrMethod().addSlotAffinity(pre, normalFinallyVars.get(name));
                 ctx.setVariable(name, postTryVars.get(name));
             }
             lower(tryCatch.getFinallyBlock());
-            if (ctx.getCurrentBlock().getTerminator() == null) {
+            if (ctx.getCurrentBlock().getTerminator() == null)
+            {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createThrow(caught));
             }
             Set<IRBlock> finallyProtected = new LinkedHashSet<>(tryBodyBlocks);
@@ -801,10 +957,12 @@ public class StatementLowerer {
             // When the try and every catch end in a return/throw, each exit already ran the finally via the
             // finally-stack drain and nothing jumps here; lowering the copy anyway leaves an unreachable
             // finally body and a dangling exit block whose synthesized return fails verification.
-            if (!finallyBlock.getPredecessors().isEmpty()) {
+            if (!finallyBlock.getPredecessors().isEmpty())
+            {
                 ctx.setCurrentBlock(finallyBlock);
                 lower(tryCatch.getFinallyBlock());
-                if (ctx.getCurrentBlock().getTerminator() == null) {
+                if (ctx.getCurrentBlock().getTerminator() == null)
+                {
                     ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
                     ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
                 }
@@ -814,7 +972,8 @@ public class StatementLowerer {
         // Mirror lowerIf: when no path reaches the exit (every try/catch path returned or threw), stay on
         // the current terminated block so the method-end synthesized return is not emitted into a dead
         // block - a bare return in a value-returning method fails verification.
-        if (!exitBlock.getPredecessors().isEmpty()) {
+        if (!exitBlock.getPredecessors().isEmpty())
+        {
             ctx.setCurrentBlock(exitBlock);
         }
     }
@@ -827,9 +986,11 @@ public class StatementLowerer {
      * resources nest right to left; a try-with-resources that also has its own catch/finally wraps the resource
      * management in an ordinary try so the existing lowering handles the catch/finally around it.
      */
-    private void lowerTryWithResources(TryCatchStmt tryCatch) {
+    private void lowerTryWithResources(TryCatchStmt tryCatch)
+    {
         List<Expression> resources = tryCatch.getResources();
-        if (!tryCatch.getCatches().isEmpty() || tryCatch.getFinallyBlock() != null) {
+        if (!tryCatch.getCatches().isEmpty() || tryCatch.getFinallyBlock() != null)
+        {
             TryCatchStmt inner = new TryCatchStmt(tryCatch.getTryBlock(), new java.util.ArrayList<>(), null,
                     new java.util.ArrayList<>(resources), tryCatch.getLocation());
             java.util.List<Statement> wrapped = new java.util.ArrayList<>();
@@ -842,8 +1003,10 @@ public class StatementLowerer {
         lowerResource(resources, 0, tryCatch.getTryBlock());
     }
 
-    private void lowerResource(List<Expression> resources, int idx, Statement innerBody) {
-        if (idx >= resources.size()) {
+    private void lowerResource(List<Expression> resources, int idx, Statement innerBody)
+    {
+        if (idx >= resources.size())
+        {
             lower(innerBody);
             return;
         }
@@ -862,7 +1025,8 @@ public class StatementLowerer {
         lowerResource(resources, idx + 1, innerBody);
         finallyStack.pop();
         IRBlock tryEnd = ctx.getCurrentBlock();
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(closeBlock));
             ctx.getCurrentBlock().addSuccessor(closeBlock, EdgeType.NORMAL);
         }
@@ -870,13 +1034,15 @@ public class StatementLowerer {
         Set<IRBlock> tryBodyBlocks = new LinkedHashSet<>();
         tryBodyBlocks.add(tryBlock);
         List<IRBlock> allBlocks = ctx.getIrMethod().getBlocks();
-        for (int i = blocksBefore; i < allBlocks.size(); i++) {
+        for (int i = blocksBefore; i < allBlocks.size(); i++)
+        {
             tryBodyBlocks.add(allBlocks.get(i));
         }
 
         ctx.setCurrentBlock(closeBlock);
         lower(closeCall(resource));
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
             ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
         }
@@ -908,7 +1074,8 @@ public class StatementLowerer {
         ctx.setCurrentBlock(suppressTryBlock);
         lower(closeCall(resource));
         IRBlock suppressTryEnd = ctx.getCurrentBlock();
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(throwBlock));
             ctx.getCurrentBlock().addSuccessor(throwBlock, EdgeType.NORMAL);
         }
@@ -927,7 +1094,8 @@ public class StatementLowerer {
                 java.util.List.of(new VarRefExpr(suppressedName, throwableSrc)),
                 false, null);
         lower(new ExprStmt(addSuppressed));
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(throwBlock));
             ctx.getCurrentBlock().addSuccessor(throwBlock, EdgeType.NORMAL);
         }
@@ -946,17 +1114,23 @@ public class StatementLowerer {
         ctx.setCurrentBlock(exitBlock);
     }
 
-    /** A {@code resource.close()} statement, with a fresh receiver copy so it can be emitted on several paths. */
-    private Statement closeCall(Expression resource) {
+    /**
+     * A {@code resource.close()} statement, with a fresh receiver copy so it can be emitted on several paths.
+     */
+    private Statement closeCall(Expression resource)
+    {
         return new ExprStmt(new MethodCallExpr(copyResource(resource), "close",
                 resourceOwner(resource), new java.util.ArrayList<>(), false, null));
     }
 
-    private String resourceOwner(Expression resource) {
+    private String resourceOwner(Expression resource)
+    {
         SourceType type = resource.getType();
-        if (type != null) {
+        if (type != null)
+        {
             IRType ir = type.toIRType();
-            if (ir instanceof ReferenceType) {
+            if (ir instanceof ReferenceType)
+            {
                 String name = ((ReferenceType) ir).getInternalName();
                 // The parsed declaration carries the SIMPLE name; the invoke owner needs the internal one.
                 return name.contains("/") ? name : ctx.getTypeResolver().resolveClassName(name);
@@ -965,8 +1139,10 @@ public class StatementLowerer {
         return "java/lang/AutoCloseable";
     }
 
-    private Expression copyResource(Expression resource) {
-        if (resource instanceof VarRefExpr) {
+    private Expression copyResource(Expression resource)
+    {
+        if (resource instanceof VarRefExpr)
+        {
             VarRefExpr ref =
                     (VarRefExpr) resource;
             return new VarRefExpr(ref.getName(), ref.getType());
@@ -984,7 +1160,8 @@ public class StatementLowerer {
      * the release only on fall-through (the prior behaviour) leaked the monitor whenever the body returned,
      * throwing {@code IllegalMonitorStateException} and dropping the synchronized shape on re-decompilation.
      */
-    private void lowerSynchronized(SynchronizedStmt syncStmt) {
+    private void lowerSynchronized(SynchronizedStmt syncStmt)
+    {
         Value monitor = exprLowerer.lower(syncStmt.getLock());
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createMonitorEnter(monitor));
@@ -1000,7 +1177,8 @@ public class StatementLowerer {
         lower(syncStmt.getBody());
         finallyStack.pop();
         IRBlock tryEnd = ctx.getCurrentBlock();
-        if (ctx.getCurrentBlock().getTerminator() == null) {
+        if (ctx.getCurrentBlock().getTerminator() == null)
+        {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createMonitorExit(monitor));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
             ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
@@ -1009,7 +1187,8 @@ public class StatementLowerer {
         Set<IRBlock> bodyBlocks = new LinkedHashSet<>();
         bodyBlocks.add(tryBlock);
         List<IRBlock> allBlocks = ctx.getIrMethod().getBlocks();
-        for (int i = blocksBeforeBody; i < allBlocks.size(); i++) {
+        for (int i = blocksBeforeBody; i < allBlocks.size(); i++)
+        {
             bodyBlocks.add(allBlocks.get(i));
         }
 
@@ -1034,24 +1213,30 @@ public class StatementLowerer {
      * it emits a {@code monitorexit} of the block's monitor. It exists only during lowering (it is drained by
      * the abrupt-exit paths, never emitted or visited), so its visitor entry point is unsupported.
      */
-    private static final class MonitorExitStmt implements Statement {
+    private static final class MonitorExitStmt implements Statement
+    {
         private final Value monitor;
-        MonitorExitStmt(Value monitor) {
+        MonitorExitStmt(Value monitor)
+        {
             this.monitor = monitor;
         }
         @Override
-        public ASTNode getParent() {
+        public ASTNode getParent()
+        {
             return null;
         }
         @Override
-        public void setParent(ASTNode parent) {
+        public void setParent(ASTNode parent)
+        {
         }
         @Override
-        public SourceLocation getLocation() {
+        public SourceLocation getLocation()
+        {
             return SourceLocation.UNKNOWN;
         }
         @Override
-        public <T> T accept(SourceVisitor<T> visitor) {
+        public <T> T accept(SourceVisitor<T> visitor)
+        {
             throw new UnsupportedOperationException("synthetic monitor-exit cleanup is lowered directly");
         }
     }
@@ -1061,40 +1246,54 @@ public class StatementLowerer {
      * the loop before lowering - the loop's own lowering registers the label (via {@code pushLoop}), which is what
      * a labeled {@code break}/{@code continue} inside it resolves against.
      */
-    private void lowerLabeled(LabeledStmt labeled) {
+    private void lowerLabeled(LabeledStmt labeled)
+    {
         Statement inner = labeled.getStatement();
         String label = labeled.getLabel();
-        if (inner instanceof ForStmt && inner.getLabel() == null) {
+        if (inner instanceof ForStmt && inner.getLabel() == null)
+        {
             ((ForStmt) inner).setLabel(label);
-        } else if (inner instanceof WhileStmt && inner.getLabel() == null) {
+        }
+        else if (inner instanceof WhileStmt && inner.getLabel() == null)
+        {
             ((WhileStmt) inner).setLabel(label);
-        } else if (inner instanceof DoWhileStmt && inner.getLabel() == null) {
+        }
+        else if (inner instanceof DoWhileStmt && inner.getLabel() == null)
+        {
             ((DoWhileStmt) inner).setLabel(label);
-        } else if (inner instanceof ForEachStmt && inner.getLabel() == null) {
+        }
+        else if (inner instanceof ForEachStmt && inner.getLabel() == null)
+        {
             ((ForEachStmt) inner).setLabel(label);
         }
         lower(inner);
     }
 
-    private void lowerIRRegion(IRRegionStmt irRegion) {
+    private void lowerIRRegion(IRRegionStmt irRegion)
+    {
         List<IRBlock> blocks = irRegion.getBlocks();
-        if (blocks.isEmpty()) {
+        if (blocks.isEmpty())
+        {
             return;
         }
 
         Set<IRBlock> regionBlocks = new HashSet<>(blocks);
 
-        for (IRBlock block : blocks) {
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!regionBlocks.contains(succ) && !ctx.getIrMethod().getBlocks().contains(succ)) {
-                    throw new LoweringException(
-                        "IRRegion has external successor not in method: " + succ.getName());
+        for (IRBlock block : blocks)
+        {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!regionBlocks.contains(succ) && !ctx.getIrMethod().getBlocks().contains(succ))
+                {
+                    throw new LoweringException("IRRegion has external successor not in method: " + succ.getName());
                 }
             }
         }
 
-        for (IRBlock block : blocks) {
-            if (!ctx.getIrMethod().getBlocks().contains(block)) {
+        for (IRBlock block : blocks)
+        {
+            if (!ctx.getIrMethod().getBlocks().contains(block))
+            {
                 ctx.getIrMethod().addBlock(block);
             }
         }
@@ -1104,9 +1303,12 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addSuccessor(entry, EdgeType.NORMAL);
 
         IRBlock exitBlock = null;
-        for (IRBlock block : blocks) {
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!regionBlocks.contains(succ)) {
+        for (IRBlock block : blocks)
+        {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!regionBlocks.contains(succ))
+                {
                     exitBlock = succ;
                     break;
                 }
@@ -1114,9 +1316,12 @@ public class StatementLowerer {
             if (exitBlock != null) break;
         }
 
-        if (exitBlock != null) {
+        if (exitBlock != null)
+        {
             ctx.setCurrentBlock(exitBlock);
-        } else {
+        }
+        else
+        {
             ctx.setCurrentBlock(blocks.get(blocks.size() - 1));
         }
     }

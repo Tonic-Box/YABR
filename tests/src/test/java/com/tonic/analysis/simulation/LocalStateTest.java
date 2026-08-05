@@ -8,21 +8,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for LocalState.
+ * * Tests for LocalState.
  */
-class LocalStateTest {
+class LocalStateTest
+{
 
     @Test
-    void testEmptyState() {
+    void testEmptyState()
+    {
         LocalState locals = LocalState.empty();
         assertEquals(0, locals.size());
         assertFalse(locals.isDefined(0));
-        // get() returns unknown for undefined indices
         assertTrue(locals.get(0).isUnknown());
     }
 
     @Test
-    void testSet() {
+    void testSet()
+    {
         LocalState locals = LocalState.empty();
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
@@ -35,7 +37,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testSetMultiple() {
+    void testSetMultiple()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
         SimValue v3 = SimValue.constant(3, PrimitiveType.INT, null);
@@ -55,7 +58,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testSetWide() {
+    void testSetWide()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
 
         LocalState locals = LocalState.empty().setWide(0, value);
@@ -67,7 +71,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testSetWideOverwrites() {
+    void testSetWideOverwrites()
+    {
         SimValue existing = SimValue.constant(42, PrimitiveType.INT, null);
         SimValue wide = SimValue.ofType(PrimitiveType.DOUBLE, null);
 
@@ -81,7 +86,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testMerge() {
+    void testMerge()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
         SimValue v3 = SimValue.constant(3, PrimitiveType.INT, null);
@@ -99,7 +105,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testGetAll() {
+    void testGetAll()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -114,7 +121,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testOf() {
+    void testOf()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -126,7 +134,8 @@ class LocalStateTest {
     }
 
     @Test
-    void testIsDefined() {
+    void testIsDefined()
+    {
         SimValue value = SimValue.unknown(null);
 
         LocalState locals = LocalState.empty().set(5, value);

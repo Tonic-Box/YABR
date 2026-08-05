@@ -9,28 +9,10 @@ import com.tonic.analysis.ssa.ir.FieldAccessInstruction;
 import java.util.*;
 
 /**
- * Listener that tracks field and array access during simulation.
- *
- * <p>Tracks:
- * <ul>
- *   <li>Field reads (GETFIELD, GETSTATIC)</li>
- *   <li>Field writes (PUTFIELD, PUTSTATIC)</li>
- *   <li>Array reads</li>
- *   <li>Array writes</li>
- *   <li>Access counts per field</li>
- * </ul>
- *
- * <p>Example usage:
- * <pre>
- * FieldAccessListener listener = new FieldAccessListener();
- * engine.addListener(listener);
- * engine.simulate(method);
- *
- * System.out.println("Field reads: " + listener.getFieldReadCount());
- * System.out.println("Field writes: " + listener.getFieldWriteCount());
- * </pre>
+ * Simulation listener that counts field and array reads and writes, both in total and per field.
  */
-public class FieldAccessListener extends AbstractListener {
+public class FieldAccessListener extends AbstractListener
+{
 
     private int fieldReadCount;
     private int fieldWriteCount;
@@ -41,12 +23,17 @@ public class FieldAccessListener extends AbstractListener {
 
     private final Map<FieldReference, AccessStats> fieldAccesses;
 
-    public FieldAccessListener() {
+    /**
+     * Creates a listener with all counters at zero.
+     */
+    public FieldAccessListener()
+    {
         this.fieldAccesses = new HashMap<>();
     }
 
     @Override
-    public void onSimulationStart(IRMethod method) {
+    public void onSimulationStart(IRMethod method)
+    {
         super.onSimulationStart(method);
         fieldReadCount = 0;
         fieldWriteCount = 0;
@@ -58,9 +45,11 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     @Override
-    public void onFieldRead(FieldAccessInstruction instr, SimulationState state) {
+    public void onFieldRead(FieldAccessInstruction instr, SimulationState state)
+    {
         fieldReadCount++;
-        if (instr.isStatic()) {
+        if (instr.isStatic())
+        {
             staticFieldReadCount++;
         }
 
@@ -69,9 +58,11 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     @Override
-    public void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {
+    public void onFieldWrite(FieldAccessInstruction instr, SimulationState state)
+    {
         fieldWriteCount++;
-        if (instr.isStatic()) {
+        if (instr.isStatic())
+        {
             staticFieldWriteCount++;
         }
 
@@ -80,92 +71,110 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     @Override
-    public void onArrayRead(ArrayAccessInstruction instr, SimulationState state) {
+    public void onArrayRead(ArrayAccessInstruction instr, SimulationState state)
+    {
         arrayReadCount++;
     }
 
     @Override
-    public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {
+    public void onArrayWrite(ArrayAccessInstruction instr, SimulationState state)
+    {
         arrayWriteCount++;
     }
 
     /**
-     * Gets the total number of field reads.
+     * @return the number of field reads seen, static and instance combined
      */
-    public int getFieldReadCount() {
+    public int getFieldReadCount()
+    {
         return fieldReadCount;
     }
 
     /**
-     * Gets the total number of field writes.
+     * @return the number of field writes seen, static and instance combined
      */
-    public int getFieldWriteCount() {
+    public int getFieldWriteCount()
+    {
         return fieldWriteCount;
     }
 
     /**
-     * Gets the number of static field reads.
+     * @return the number of static field reads seen
      */
-    public int getStaticFieldReadCount() {
+    public int getStaticFieldReadCount()
+    {
         return staticFieldReadCount;
     }
 
     /**
-     * Gets the number of static field writes.
+     * @return the number of static field writes seen
      */
-    public int getStaticFieldWriteCount() {
+    public int getStaticFieldWriteCount()
+    {
         return staticFieldWriteCount;
     }
 
     /**
-     * Gets the number of instance field reads.
+     * @return the field reads that were not static
      */
-    public int getInstanceFieldReadCount() {
+    public int getInstanceFieldReadCount()
+    {
         return fieldReadCount - staticFieldReadCount;
     }
 
     /**
-     * Gets the number of instance field writes.
+     * @return the field writes that were not static
      */
-    public int getInstanceFieldWriteCount() {
+    public int getInstanceFieldWriteCount()
+    {
         return fieldWriteCount - staticFieldWriteCount;
     }
 
     /**
-     * Gets the total number of array reads.
+     * @return the number of array element reads seen
      */
-    public int getArrayReadCount() {
+    public int getArrayReadCount()
+    {
         return arrayReadCount;
     }
 
     /**
-     * Gets the total number of array writes.
+     * @return the number of array element writes seen
      */
-    public int getArrayWriteCount() {
+    public int getArrayWriteCount()
+    {
         return arrayWriteCount;
     }
 
     /**
-     * Gets the total number of field accesses.
+     * @return the field reads plus the field writes
      */
-    public int getTotalFieldAccesses() {
+    public int getTotalFieldAccesses()
+    {
         return fieldReadCount + fieldWriteCount;
     }
 
     /**
-     * Gets the total number of array accesses.
+     * @return the array reads plus the array writes
      */
-    public int getTotalArrayAccesses() {
+    public int getTotalArrayAccesses()
+    {
         return arrayReadCount + arrayWriteCount;
     }
 
     /**
-     * Gets the read count for a specific field.
+     * Looks up the read count of one field, ignoring its descriptor.
+     *
+     * @param owner internal name of the declaring class
+     * @param name field name
+     * @return the recorded read count, or 0 if the field was never read
      */
-    public int getReadCount(String owner, String name) {
-        for (Map.Entry<FieldReference, AccessStats> entry : fieldAccesses.entrySet()) {
-            if (entry.getKey().getOwner().equals(owner) &&
-                entry.getKey().getName().equals(name)) {
+    public int getReadCount(String owner, String name)
+    {
+        for (Map.Entry<FieldReference, AccessStats> entry : fieldAccesses.entrySet())
+        {
+            if (entry.getKey().getOwner().equals(owner) && entry.getKey().getName().equals(name))
+            {
                 return entry.getValue().getReadCount();
             }
         }
@@ -173,12 +182,18 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     /**
-     * Gets the write count for a specific field.
+     * Looks up the write count of one field, ignoring its descriptor.
+     *
+     * @param owner internal name of the declaring class
+     * @param name field name
+     * @return the recorded write count, or 0 if the field was never written
      */
-    public int getWriteCount(String owner, String name) {
-        for (Map.Entry<FieldReference, AccessStats> entry : fieldAccesses.entrySet()) {
-            if (entry.getKey().getOwner().equals(owner) &&
-                entry.getKey().getName().equals(name)) {
+    public int getWriteCount(String owner, String name)
+    {
+        for (Map.Entry<FieldReference, AccessStats> entry : fieldAccesses.entrySet())
+        {
+            if (entry.getKey().getOwner().equals(owner) && entry.getKey().getName().equals(name))
+            {
                 return entry.getValue().getWriteCount();
             }
         }
@@ -186,47 +201,64 @@ public class FieldAccessListener extends AbstractListener {
     }
 
     /**
-     * Gets access statistics for all fields.
+     * @return an unmodifiable view of the per-field access counts
      */
-    public Map<FieldReference, AccessStats> getFieldAccesses() {
+    public Map<FieldReference, AccessStats> getFieldAccesses()
+    {
         return Collections.unmodifiableMap(fieldAccesses);
     }
 
     /**
-     * Gets the number of distinct fields accessed.
+     * @return the number of distinct fields touched
      */
-    public int getDistinctFieldCount() {
+    public int getDistinctFieldCount()
+    {
         return fieldAccesses.size();
     }
 
     /**
      * Represents a field reference.
      */
-    public static class FieldReference {
+    public static class FieldReference
+    {
         private final String owner;
         private final String name;
         private final String descriptor;
 
-        public FieldReference(String owner, String name, String descriptor) {
+        public FieldReference(String owner, String name, String descriptor)
+        {
             this.owner = owner;
             this.name = name;
             this.descriptor = descriptor;
         }
 
-        public String getOwner() {
+        /**
+         * @return the owner
+         */
+        public String getOwner()
+        {
             return owner;
         }
 
-        public String getName() {
+        /**
+         * @return the name
+         */
+        public String getName()
+        {
             return name;
         }
 
-        public String getDescriptor() {
+        /**
+         * @return the descriptor
+         */
+        public String getDescriptor()
+        {
             return descriptor;
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(Object o)
+        {
             if (this == o) return true;
             if (!(o instanceof FieldReference)) return false;
             FieldReference that = (FieldReference) o;
@@ -236,51 +268,76 @@ public class FieldAccessListener extends AbstractListener {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(owner, name, descriptor);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return owner + "." + name + ":" + descriptor;
         }
     }
 
     /**
-     * Access statistics for a field.
+     * Read and write counts for one field.
      */
-    public static class AccessStats {
+    public static class AccessStats
+    {
         private int readCount;
         private int writeCount;
 
-        public void incrementReads() {
+        /**
+         * Records one read of the field.
+         */
+        public void incrementReads()
+        {
             readCount++;
         }
 
-        public void incrementWrites() {
+        /**
+         * Records one write of the field.
+         */
+        public void incrementWrites()
+        {
             writeCount++;
         }
 
-        public int getReadCount() {
+        /**
+         * @return the read count
+         */
+        public int getReadCount()
+        {
             return readCount;
         }
 
-        public int getWriteCount() {
+        /**
+         * @return the write count
+         */
+        public int getWriteCount()
+        {
             return writeCount;
         }
 
-        public int getTotalCount() {
+        /**
+         * @return the read count plus the write count
+         */
+        public int getTotalCount()
+        {
             return readCount + writeCount;
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return "reads=" + readCount + ", writes=" + writeCount;
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "FieldAccessListener[fieldReads=" + fieldReadCount +
             ", fieldWrites=" + fieldWriteCount +
             ", arrayReads=" + arrayReadCount +

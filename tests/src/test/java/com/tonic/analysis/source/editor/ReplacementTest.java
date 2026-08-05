@@ -21,34 +21,39 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests all replacement types: Keep, Remove, ExprReplacement, StmtReplacement,
  * BlockReplacement, InsertBeforeReplacement, InsertAfterReplacement.
  */
-class ReplacementTest {
+class ReplacementTest
+{
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private static Expression createTestExpression() {
+    private static Expression createTestExpression()
+    {
         return LiteralExpr.ofInt(42);
     }
 
-    private static Expression createTestExpression(String name) {
+    private static Expression createTestExpression(String name)
+    {
         return new VarRefExpr(name, ReferenceSourceType.OBJECT);
     }
 
-    private static Statement createTestStatement() {
+    private static Statement createTestStatement()
+    {
         return new ReturnStmt(LiteralExpr.ofInt(1));
     }
 
-    private static Statement createTestStatement(int value) {
+    private static Statement createTestStatement(int value)
+    {
         return new ReturnStmt(LiteralExpr.ofInt(value));
     }
 
-    // ========== Type Enum Tests ==========
+    // Type Enum Tests
 
     @Test
-    void typeEnumHasAllValues() {
+    void typeEnumHasAllValues()
+    {
         Replacement.Type[] types = Replacement.Type.values();
         assertEquals(7, types.length);
 
-        // Verify all expected types exist
         assertEquals(Replacement.Type.KEEP, Replacement.Type.valueOf("KEEP"));
         assertEquals(Replacement.Type.REPLACE_EXPR, Replacement.Type.valueOf("REPLACE_EXPR"));
         assertEquals(Replacement.Type.REPLACE_STMT, Replacement.Type.valueOf("REPLACE_STMT"));
@@ -58,65 +63,75 @@ class ReplacementTest {
         assertEquals(Replacement.Type.INSERT_AFTER, Replacement.Type.valueOf("INSERT_AFTER"));
     }
 
-    // ========== Keep Replacement Tests ==========
+    // Keep Replacement Tests
 
     @Test
-    void keepReturnsInstance() {
+    void keepReturnsInstance()
+    {
         Replacement r = Replacement.keep();
         assertNotNull(r);
     }
 
     @Test
-    void keepReturnsSameInstance() {
+    void keepReturnsSameInstance()
+    {
         Replacement r1 = Replacement.keep();
         Replacement r2 = Replacement.keep();
         assertSame(r1, r2);
     }
 
     @Test
-    void keepHasCorrectType() {
+    void keepHasCorrectType()
+    {
         Replacement r = Replacement.keep();
         assertEquals(Replacement.Type.KEEP, r.getType());
     }
 
     @Test
-    void keepIsKeepReturnsTrue() {
+    void keepIsKeepReturnsTrue()
+    {
         Replacement r = Replacement.keep();
         assertTrue(r.isKeep());
     }
 
     @Test
-    void keepIsReplaceReturnsFalse() {
+    void keepIsReplaceReturnsFalse()
+    {
         Replacement r = Replacement.keep();
         assertFalse(r.isReplace());
     }
 
     @Test
-    void keepIsRemoveReturnsFalse() {
+    void keepIsRemoveReturnsFalse()
+    {
         Replacement r = Replacement.keep();
         assertFalse(r.isRemove());
     }
 
     @Test
-    void keepIsInsertReturnsFalse() {
+    void keepIsInsertReturnsFalse()
+    {
         Replacement r = Replacement.keep();
         assertFalse(r.isInsert());
     }
 
     @Test
-    void keepGetExpressionReturnsNull() {
+    void keepGetExpressionReturnsNull()
+    {
         Replacement r = Replacement.keep();
         assertNull(r.getExpression());
     }
 
     @Test
-    void keepGetStatementReturnsNull() {
+    void keepGetStatementReturnsNull()
+    {
         Replacement r = Replacement.keep();
         assertNull(r.getStatement());
     }
 
     @Test
-    void keepGetStatementsReturnsEmptyList() {
+    void keepGetStatementsReturnsEmptyList()
+    {
         Replacement r = Replacement.keep();
         List<Statement> stmts = r.getStatements();
         assertNotNull(stmts);
@@ -124,70 +139,81 @@ class ReplacementTest {
     }
 
     @Test
-    void keepToString() {
+    void keepToString()
+    {
         Replacement r = Replacement.keep();
         assertEquals("Replacement.keep()", r.toString());
     }
 
-    // ========== Remove Replacement Tests ==========
+    // Remove Replacement Tests
 
     @Test
-    void removeReturnsInstance() {
+    void removeReturnsInstance()
+    {
         Replacement r = Replacement.remove();
         assertNotNull(r);
     }
 
     @Test
-    void removeReturnsSameInstance() {
+    void removeReturnsSameInstance()
+    {
         Replacement r1 = Replacement.remove();
         Replacement r2 = Replacement.remove();
         assertSame(r1, r2);
     }
 
     @Test
-    void removeHasCorrectType() {
+    void removeHasCorrectType()
+    {
         Replacement r = Replacement.remove();
         assertEquals(Replacement.Type.REMOVE, r.getType());
     }
 
     @Test
-    void removeIsRemoveReturnsTrue() {
+    void removeIsRemoveReturnsTrue()
+    {
         Replacement r = Replacement.remove();
         assertTrue(r.isRemove());
     }
 
     @Test
-    void removeIsKeepReturnsFalse() {
+    void removeIsKeepReturnsFalse()
+    {
         Replacement r = Replacement.remove();
         assertFalse(r.isKeep());
     }
 
     @Test
-    void removeIsReplaceReturnsFalse() {
+    void removeIsReplaceReturnsFalse()
+    {
         Replacement r = Replacement.remove();
         assertFalse(r.isReplace());
     }
 
     @Test
-    void removeIsInsertReturnsFalse() {
+    void removeIsInsertReturnsFalse()
+    {
         Replacement r = Replacement.remove();
         assertFalse(r.isInsert());
     }
 
     @Test
-    void removeGetExpressionReturnsNull() {
+    void removeGetExpressionReturnsNull()
+    {
         Replacement r = Replacement.remove();
         assertNull(r.getExpression());
     }
 
     @Test
-    void removeGetStatementReturnsNull() {
+    void removeGetStatementReturnsNull()
+    {
         Replacement r = Replacement.remove();
         assertNull(r.getStatement());
     }
 
     @Test
-    void removeGetStatementsReturnsEmptyList() {
+    void removeGetStatementsReturnsEmptyList()
+    {
         Replacement r = Replacement.remove();
         List<Statement> stmts = r.getStatements();
         assertNotNull(stmts);
@@ -195,50 +221,57 @@ class ReplacementTest {
     }
 
     @Test
-    void removeToString() {
+    void removeToString()
+    {
         Replacement r = Replacement.remove();
         assertEquals("Replacement.remove()", r.toString());
     }
 
-    // ========== Expression Replacement Tests ==========
+    // Expression Replacement Tests
 
     @Test
-    void withExpressionCreatesReplacement() {
+    void withExpressionCreatesReplacement()
+    {
         Expression expr = createTestExpression();
         Replacement r = Replacement.with(expr);
         assertNotNull(r);
     }
 
     @Test
-    void withExpressionHasCorrectType() {
+    void withExpressionHasCorrectType()
+    {
         Expression expr = createTestExpression();
         Replacement r = Replacement.with(expr);
         assertEquals(Replacement.Type.REPLACE_EXPR, r.getType());
     }
 
     @Test
-    void withExpressionIsReplaceReturnsTrue() {
+    void withExpressionIsReplaceReturnsTrue()
+    {
         Expression expr = createTestExpression();
         Replacement r = Replacement.with(expr);
         assertTrue(r.isReplace());
     }
 
     @Test
-    void withExpressionGetExpressionReturnsExpression() {
+    void withExpressionGetExpressionReturnsExpression()
+    {
         Expression expr = createTestExpression();
         Replacement r = Replacement.with(expr);
         assertSame(expr, r.getExpression());
     }
 
     @Test
-    void withExpressionGetStatementReturnsNull() {
+    void withExpressionGetStatementReturnsNull()
+    {
         Expression expr = createTestExpression();
         Replacement r = Replacement.with(expr);
         assertNull(r.getStatement());
     }
 
     @Test
-    void withExpressionGetStatementsReturnsEmptyList() {
+    void withExpressionGetStatementsReturnsEmptyList()
+    {
         Expression expr = createTestExpression();
         Replacement r = Replacement.with(expr);
         List<Statement> stmts = r.getStatements();
@@ -247,7 +280,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withNullExpressionThrowsException() {
+    void withNullExpressionThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.with((Expression) null);
         });
@@ -255,7 +289,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withExpressionToString() {
+    void withExpressionToString()
+    {
         Expression expr = LiteralExpr.ofInt(42);
         Replacement r = Replacement.with(expr);
         String str = r.toString();
@@ -263,45 +298,51 @@ class ReplacementTest {
         assertTrue(str.contains("42"));
     }
 
-    // ========== Statement Replacement Tests ==========
+    // Statement Replacement Tests
 
     @Test
-    void withStatementCreatesReplacement() {
+    void withStatementCreatesReplacement()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.with(stmt);
         assertNotNull(r);
     }
 
     @Test
-    void withStatementHasCorrectType() {
+    void withStatementHasCorrectType()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.with(stmt);
         assertEquals(Replacement.Type.REPLACE_STMT, r.getType());
     }
 
     @Test
-    void withStatementIsReplaceReturnsTrue() {
+    void withStatementIsReplaceReturnsTrue()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.with(stmt);
         assertTrue(r.isReplace());
     }
 
     @Test
-    void withStatementGetStatementReturnsStatement() {
+    void withStatementGetStatementReturnsStatement()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.with(stmt);
         assertSame(stmt, r.getStatement());
     }
 
     @Test
-    void withStatementGetExpressionReturnsNull() {
+    void withStatementGetExpressionReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.with(stmt);
         assertNull(r.getExpression());
     }
 
     @Test
-    void withStatementGetStatementsReturnsEmptyList() {
+    void withStatementGetStatementsReturnsEmptyList()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.with(stmt);
         List<Statement> stmts = r.getStatements();
@@ -310,7 +351,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withNullStatementThrowsException() {
+    void withNullStatementThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.with((Statement) null);
         });
@@ -318,17 +360,19 @@ class ReplacementTest {
     }
 
     @Test
-    void withStatementToString() {
+    void withStatementToString()
+    {
         Statement stmt = new ReturnStmt(LiteralExpr.ofInt(5));
         Replacement r = Replacement.with(stmt);
         String str = r.toString();
         assertTrue(str.contains("Replacement.with("));
     }
 
-    // ========== Block Replacement Tests (varargs) ==========
+    // Block Replacement Tests (varargs)
 
     @Test
-    void withBlockVarargsCreatesReplacement() {
+    void withBlockVarargsCreatesReplacement()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.withBlock(stmt1, stmt2);
@@ -336,7 +380,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsHasCorrectType() {
+    void withBlockVarargsHasCorrectType()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.withBlock(stmt1, stmt2);
@@ -344,7 +389,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsIsReplaceReturnsTrue() {
+    void withBlockVarargsIsReplaceReturnsTrue()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.withBlock(stmt1, stmt2);
@@ -352,7 +398,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsGetStatementsReturnsStatements() {
+    void withBlockVarargsGetStatementsReturnsStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.withBlock(stmt1, stmt2);
@@ -363,21 +410,24 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsGetExpressionReturnsNull() {
+    void withBlockVarargsGetExpressionReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.withBlock(stmt);
         assertNull(r.getExpression());
     }
 
     @Test
-    void withBlockVarargsGetStatementReturnsNull() {
+    void withBlockVarargsGetStatementReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.withBlock(stmt);
         assertNull(r.getStatement());
     }
 
     @Test
-    void withBlockVarargsSingleStatement() {
+    void withBlockVarargsSingleStatement()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.withBlock(stmt);
         List<Statement> stmts = r.getStatements();
@@ -386,7 +436,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsMultipleStatements() {
+    void withBlockVarargsMultipleStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Statement stmt3 = createTestStatement(3);
@@ -396,7 +447,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsNullThrowsException() {
+    void withBlockVarargsNullThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.withBlock((Statement[]) null);
         });
@@ -404,7 +456,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsEmptyThrowsException() {
+    void withBlockVarargsEmptyThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.withBlock(new Statement[0]);
         });
@@ -412,31 +465,35 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockVarargsToString() {
+    void withBlockVarargsToString()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.withBlock(stmt1, stmt2);
         assertEquals("Replacement.withBlock(2 statements)", r.toString());
     }
 
-    // ========== Block Replacement Tests (List) ==========
+    // Block Replacement Tests (List)
 
     @Test
-    void withBlockListCreatesReplacement() {
+    void withBlockListCreatesReplacement()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2));
         Replacement r = Replacement.withBlock(stmts);
         assertNotNull(r);
     }
 
     @Test
-    void withBlockListHasCorrectType() {
+    void withBlockListHasCorrectType()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2));
         Replacement r = Replacement.withBlock(stmts);
         assertEquals(Replacement.Type.REPLACE_BLOCK, r.getType());
     }
 
     @Test
-    void withBlockListGetStatementsReturnsStatements() {
+    void withBlockListGetStatementsReturnsStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         List<Statement> stmts = Arrays.asList(stmt1, stmt2);
@@ -448,7 +505,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockListNullThrowsException() {
+    void withBlockListNullThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.withBlock((List<Statement>) null);
         });
@@ -456,7 +514,8 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockListEmptyThrowsException() {
+    void withBlockListEmptyThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.withBlock(Collections.emptyList());
         });
@@ -464,16 +523,18 @@ class ReplacementTest {
     }
 
     @Test
-    void withBlockListToString() {
+    void withBlockListToString()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2), createTestStatement(3));
         Replacement r = Replacement.withBlock(stmts);
         assertEquals("Replacement.withBlock(3 statements)", r.toString());
     }
 
-    // ========== Insert Before Replacement Tests (varargs) ==========
+    // Insert Before Replacement Tests (varargs)
 
     @Test
-    void insertBeforeVarargsCreatesReplacement() {
+    void insertBeforeVarargsCreatesReplacement()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.insertBefore(stmt1, stmt2);
@@ -481,21 +542,24 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeVarargsHasCorrectType() {
+    void insertBeforeVarargsHasCorrectType()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertBefore(stmt);
         assertEquals(Replacement.Type.INSERT_BEFORE, r.getType());
     }
 
     @Test
-    void insertBeforeVarargsIsInsertReturnsTrue() {
+    void insertBeforeVarargsIsInsertReturnsTrue()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertBefore(stmt);
         assertTrue(r.isInsert());
     }
 
     @Test
-    void insertBeforeVarargsGetStatementsReturnsStatements() {
+    void insertBeforeVarargsGetStatementsReturnsStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.insertBefore(stmt1, stmt2);
@@ -506,21 +570,24 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeVarargsGetExpressionReturnsNull() {
+    void insertBeforeVarargsGetExpressionReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertBefore(stmt);
         assertNull(r.getExpression());
     }
 
     @Test
-    void insertBeforeVarargsGetStatementReturnsNull() {
+    void insertBeforeVarargsGetStatementReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertBefore(stmt);
         assertNull(r.getStatement());
     }
 
     @Test
-    void insertBeforeVarargsNullThrowsException() {
+    void insertBeforeVarargsNullThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertBefore((Statement[]) null);
         });
@@ -528,7 +595,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeVarargsEmptyThrowsException() {
+    void insertBeforeVarargsEmptyThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertBefore(new Statement[0]);
         });
@@ -536,31 +604,35 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeVarargsToString() {
+    void insertBeforeVarargsToString()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.insertBefore(stmt1, stmt2);
         assertEquals("Replacement.insertBefore(2 statements)", r.toString());
     }
 
-    // ========== Insert Before Replacement Tests (List) ==========
+    // Insert Before Replacement Tests (List)
 
     @Test
-    void insertBeforeListCreatesReplacement() {
+    void insertBeforeListCreatesReplacement()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2));
         Replacement r = Replacement.insertBefore(stmts);
         assertNotNull(r);
     }
 
     @Test
-    void insertBeforeListHasCorrectType() {
+    void insertBeforeListHasCorrectType()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement());
         Replacement r = Replacement.insertBefore(stmts);
         assertEquals(Replacement.Type.INSERT_BEFORE, r.getType());
     }
 
     @Test
-    void insertBeforeListGetStatementsReturnsStatements() {
+    void insertBeforeListGetStatementsReturnsStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         List<Statement> stmts = Arrays.asList(stmt1, stmt2);
@@ -572,7 +644,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeListNullThrowsException() {
+    void insertBeforeListNullThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertBefore((List<Statement>) null);
         });
@@ -580,7 +653,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeListEmptyThrowsException() {
+    void insertBeforeListEmptyThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertBefore(Collections.emptyList());
         });
@@ -588,16 +662,18 @@ class ReplacementTest {
     }
 
     @Test
-    void insertBeforeListToString() {
+    void insertBeforeListToString()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2), createTestStatement(3));
         Replacement r = Replacement.insertBefore(stmts);
         assertEquals("Replacement.insertBefore(3 statements)", r.toString());
     }
 
-    // ========== Insert After Replacement Tests (varargs) ==========
+    // Insert After Replacement Tests (varargs)
 
     @Test
-    void insertAfterVarargsCreatesReplacement() {
+    void insertAfterVarargsCreatesReplacement()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.insertAfter(stmt1, stmt2);
@@ -605,21 +681,24 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterVarargsHasCorrectType() {
+    void insertAfterVarargsHasCorrectType()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertAfter(stmt);
         assertEquals(Replacement.Type.INSERT_AFTER, r.getType());
     }
 
     @Test
-    void insertAfterVarargsIsInsertReturnsTrue() {
+    void insertAfterVarargsIsInsertReturnsTrue()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertAfter(stmt);
         assertTrue(r.isInsert());
     }
 
     @Test
-    void insertAfterVarargsGetStatementsReturnsStatements() {
+    void insertAfterVarargsGetStatementsReturnsStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.insertAfter(stmt1, stmt2);
@@ -630,21 +709,24 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterVarargsGetExpressionReturnsNull() {
+    void insertAfterVarargsGetExpressionReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertAfter(stmt);
         assertNull(r.getExpression());
     }
 
     @Test
-    void insertAfterVarargsGetStatementReturnsNull() {
+    void insertAfterVarargsGetStatementReturnsNull()
+    {
         Statement stmt = createTestStatement();
         Replacement r = Replacement.insertAfter(stmt);
         assertNull(r.getStatement());
     }
 
     @Test
-    void insertAfterVarargsNullThrowsException() {
+    void insertAfterVarargsNullThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertAfter((Statement[]) null);
         });
@@ -652,7 +734,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterVarargsEmptyThrowsException() {
+    void insertAfterVarargsEmptyThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertAfter(new Statement[0]);
         });
@@ -660,31 +743,35 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterVarargsToString() {
+    void insertAfterVarargsToString()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Replacement r = Replacement.insertAfter(stmt1, stmt2);
         assertEquals("Replacement.insertAfter(2 statements)", r.toString());
     }
 
-    // ========== Insert After Replacement Tests (List) ==========
+    // Insert After Replacement Tests (List)
 
     @Test
-    void insertAfterListCreatesReplacement() {
+    void insertAfterListCreatesReplacement()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2));
         Replacement r = Replacement.insertAfter(stmts);
         assertNotNull(r);
     }
 
     @Test
-    void insertAfterListHasCorrectType() {
+    void insertAfterListHasCorrectType()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement());
         Replacement r = Replacement.insertAfter(stmts);
         assertEquals(Replacement.Type.INSERT_AFTER, r.getType());
     }
 
     @Test
-    void insertAfterListGetStatementsReturnsStatements() {
+    void insertAfterListGetStatementsReturnsStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         List<Statement> stmts = Arrays.asList(stmt1, stmt2);
@@ -696,7 +783,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterListNullThrowsException() {
+    void insertAfterListNullThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertAfter((List<Statement>) null);
         });
@@ -704,7 +792,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterListEmptyThrowsException() {
+    void insertAfterListEmptyThrowsException()
+    {
         Exception e = assertThrows(IllegalArgumentException.class, () -> {
             Replacement.insertAfter(Collections.emptyList());
         });
@@ -712,16 +801,18 @@ class ReplacementTest {
     }
 
     @Test
-    void insertAfterListToString() {
+    void insertAfterListToString()
+    {
         List<Statement> stmts = Arrays.asList(createTestStatement(1), createTestStatement(2), createTestStatement(3));
         Replacement r = Replacement.insertAfter(stmts);
         assertEquals("Replacement.insertAfter(3 statements)", r.toString());
     }
 
-    // ========== Type Classification Tests ==========
+    // Type Classification Tests
 
     @Test
-    void isReplaceReturnsTrueForExprReplacement() {
+    void isReplaceReturnsTrueForExprReplacement()
+    {
         Replacement r = Replacement.with(createTestExpression());
         assertTrue(r.isReplace());
         assertFalse(r.isKeep());
@@ -730,7 +821,8 @@ class ReplacementTest {
     }
 
     @Test
-    void isReplaceReturnsTrueForStmtReplacement() {
+    void isReplaceReturnsTrueForStmtReplacement()
+    {
         Replacement r = Replacement.with(createTestStatement());
         assertTrue(r.isReplace());
         assertFalse(r.isKeep());
@@ -739,7 +831,8 @@ class ReplacementTest {
     }
 
     @Test
-    void isReplaceReturnsTrueForBlockReplacement() {
+    void isReplaceReturnsTrueForBlockReplacement()
+    {
         Replacement r = Replacement.withBlock(createTestStatement());
         assertTrue(r.isReplace());
         assertFalse(r.isKeep());
@@ -748,7 +841,8 @@ class ReplacementTest {
     }
 
     @Test
-    void isInsertReturnsTrueForInsertBefore() {
+    void isInsertReturnsTrueForInsertBefore()
+    {
         Replacement r = Replacement.insertBefore(createTestStatement());
         assertTrue(r.isInsert());
         assertFalse(r.isKeep());
@@ -757,7 +851,8 @@ class ReplacementTest {
     }
 
     @Test
-    void isInsertReturnsTrueForInsertAfter() {
+    void isInsertReturnsTrueForInsertAfter()
+    {
         Replacement r = Replacement.insertAfter(createTestStatement());
         assertTrue(r.isInsert());
         assertFalse(r.isKeep());
@@ -765,10 +860,11 @@ class ReplacementTest {
         assertFalse(r.isReplace());
     }
 
-    // ========== Edge Cases and Integration Tests ==========
+    // Edge Cases and Integration Tests
 
     @Test
-    void multipleReplacementsWithDifferentTypes() {
+    void multipleReplacementsWithDifferentTypes()
+    {
         Expression expr = createTestExpression();
         Statement stmt = createTestStatement();
 
@@ -788,8 +884,8 @@ class ReplacementTest {
     }
 
     @Test
-    void replacementWithComplexExpression() {
-        // Create a variable reference expression
+    void replacementWithComplexExpression()
+    {
         VarRefExpr var = new VarRefExpr("myVariable", PrimitiveSourceType.INT);
         Replacement r = Replacement.with(var);
 
@@ -798,8 +894,8 @@ class ReplacementTest {
     }
 
     @Test
-    void replacementWithComplexStatement() {
-        // Create an expression statement
+    void replacementWithComplexStatement()
+    {
         ExprStmt exprStmt = new ExprStmt(LiteralExpr.ofString("test"));
         Replacement r = Replacement.with(exprStmt);
 
@@ -808,7 +904,8 @@ class ReplacementTest {
     }
 
     @Test
-    void blockReplacementWithMixedStatements() {
+    void blockReplacementWithMixedStatements()
+    {
         ReturnStmt returnStmt = new ReturnStmt(LiteralExpr.ofInt(1));
         ExprStmt exprStmt = new ExprStmt(LiteralExpr.ofString("test"));
 
@@ -821,7 +918,8 @@ class ReplacementTest {
     }
 
     @Test
-    void insertReplacementWithMultipleStatements() {
+    void insertReplacementWithMultipleStatements()
+    {
         Statement stmt1 = createTestStatement(1);
         Statement stmt2 = createTestStatement(2);
         Statement stmt3 = createTestStatement(3);
@@ -834,7 +932,8 @@ class ReplacementTest {
     }
 
     @Test
-    void verifyTypeGetterForAllReplacements() {
+    void verifyTypeGetterForAllReplacements()
+    {
         assertEquals(Replacement.Type.KEEP, Replacement.keep().getType());
         assertEquals(Replacement.Type.REMOVE, Replacement.remove().getType());
         assertEquals(Replacement.Type.REPLACE_EXPR, Replacement.with(createTestExpression()).getType());

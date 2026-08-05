@@ -11,10 +11,16 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public final class FileIOHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the java.io file classes, standing in for real file
+ * descriptors with inert stubs that report empty or failed I/O.
+ */
+public final class FileIOHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerFileDescriptorHandlers(registry);
         registerFileInputStreamHandlers(registry);
         registerFileOutputStreamHandlers(registry);
@@ -24,15 +30,13 @@ public final class FileIOHandlers implements NativeHandlerProvider {
         registerConsoleHandlers(registry);
     }
 
-    private void registerFileDescriptorHandlers(NativeRegistry registry) {
-        registry.register("java/io/FileDescriptor", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerFileDescriptorHandlers(NativeRegistry registry)
+    {
+        registry.register("java/io/FileDescriptor", "initIDs", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/FileDescriptor", "sync", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileDescriptor", "sync", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/FileDescriptor", "close0", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileDescriptor", "close0", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/io/FileDescriptor", "getHandle", "(I)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(-1L));
@@ -40,16 +44,14 @@ public final class FileIOHandlers implements NativeHandlerProvider {
         registry.register("java/io/FileDescriptor", "getAppend", "(I)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("java/io/FileCleanable", "cleanupClose0", "(IJ)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileCleanable", "cleanupClose0", "(IJ)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerFileInputStreamHandlers(NativeRegistry registry) {
-        registry.register("java/io/FileInputStream", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerFileInputStreamHandlers(NativeRegistry registry)
+    {
+        registry.register("java/io/FileInputStream", "initIDs", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/FileInputStream", "open0", "(Ljava/lang/String;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileInputStream", "open0", "(Ljava/lang/String;)V", (receiver, args, ctx) -> null);
 
         registry.register("java/io/FileInputStream", "read0", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
@@ -64,26 +66,22 @@ public final class FileIOHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
     }
 
-    private void registerFileOutputStreamHandlers(NativeRegistry registry) {
-        registry.register("java/io/FileOutputStream", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerFileOutputStreamHandlers(NativeRegistry registry)
+    {
+        registry.register("java/io/FileOutputStream", "initIDs", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/FileOutputStream", "open0", "(Ljava/lang/String;Z)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileOutputStream", "open0", "(Ljava/lang/String;Z)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/FileOutputStream", "write", "(IZ)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileOutputStream", "write", "(IZ)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/FileOutputStream", "writeBytes", "([BIIZ)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/FileOutputStream", "writeBytes", "([BIIZ)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerRandomAccessFileHandlers(NativeRegistry registry) {
-        registry.register("java/io/RandomAccessFile", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerRandomAccessFileHandlers(NativeRegistry registry)
+    {
+        registry.register("java/io/RandomAccessFile", "initIDs", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/RandomAccessFile", "open0", "(Ljava/lang/String;I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/RandomAccessFile", "open0", "(Ljava/lang/String;I)V", (receiver, args, ctx) -> null);
 
         registry.register("java/io/RandomAccessFile", "read0", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
@@ -91,14 +89,11 @@ public final class FileIOHandlers implements NativeHandlerProvider {
         registry.register("java/io/RandomAccessFile", "readBytes", "([BII)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
 
-        registry.register("java/io/RandomAccessFile", "write0", "(I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/RandomAccessFile", "write0", "(I)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/RandomAccessFile", "writeBytes", "([BII)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/RandomAccessFile", "writeBytes", "([BII)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/io/RandomAccessFile", "seek0", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/RandomAccessFile", "seek0", "(J)V", (receiver, args, ctx) -> null);
 
         registry.register("java/io/RandomAccessFile", "getFilePointer", "()J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
@@ -106,25 +101,28 @@ public final class FileIOHandlers implements NativeHandlerProvider {
         registry.register("java/io/RandomAccessFile", "length", "()J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
 
-        registry.register("java/io/RandomAccessFile", "setLength", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/RandomAccessFile", "setLength", "(J)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerWinNTFileSystemHandlers(NativeRegistry registry) {
-        registry.register("java/io/WinNTFileSystem", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerWinNTFileSystemHandlers(NativeRegistry registry)
+    {
+        registry.register("java/io/WinNTFileSystem", "initIDs", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/io/WinNTFileSystem", "canonicalize0", "(Ljava/lang/String;)Ljava/lang/String;",
             (receiver, args, ctx) -> {
-                if (args == null || args.length == 0 || args[0].isNull()) {
+                if (args == null || args.length == 0 || args[0].isNull())
+                {
                     return ConcreteValue.nullRef();
                 }
                 String path = ctx.getHeapManager().extractString(args[0].asReference());
                 if (path == null) return ConcreteValue.nullRef();
-                try {
+                try
+                {
                     String canonical = new File(path).getCanonicalPath();
                     return ConcreteValue.reference(ctx.getHeapManager().internString(canonical));
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     return ConcreteValue.reference(args[0].asReference());
                 }
             });
@@ -132,7 +130,8 @@ public final class FileIOHandlers implements NativeHandlerProvider {
         registry.register("java/io/WinNTFileSystem", "canonicalizeWithPrefix0", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
             (receiver, args, ctx) -> {
                 if (args == null || args.length < 2) return ConcreteValue.nullRef();
-                if (!args[1].isNull()) {
+                if (!args[1].isNull())
+                {
                     return ConcreteValue.reference(args[1].asReference());
                 }
                 return ConcreteValue.nullRef();
@@ -194,7 +193,8 @@ public final class FileIOHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.intValue(4));
     }
 
-    private void registerObjectStreamHandlers(NativeRegistry registry) {
+    private void registerObjectStreamHandlers(NativeRegistry registry)
+    {
         registry.register("java/io/ObjectInputStream", "bytesToFloats", "([BI[FII)V",
             (receiver, args, ctx) -> {
                 if (args == null || args.length < 5) return null;
@@ -204,9 +204,11 @@ public final class FileIOHandlers implements NativeHandlerProvider {
                 ArrayInstance dst = (ArrayInstance) args[2].asReference();
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
-                for (int i = 0; i < count; i++) {
+                for (int i = 0; i < count; i++)
+                {
                     int bits = 0;
-                    for (int j = 0; j < 4; j++) {
+                    for (int j = 0; j < 4; j++)
+                    {
                         bits = (bits << 8) | (src.getByte(srcPos + i * 4 + j) & 0xFF);
                     }
                     dst.set(dstPos + i, Float.intBitsToFloat(bits));
@@ -223,9 +225,11 @@ public final class FileIOHandlers implements NativeHandlerProvider {
                 ArrayInstance dst = (ArrayInstance) args[2].asReference();
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
-                for (int i = 0; i < count; i++) {
+                for (int i = 0; i < count; i++)
+                {
                     long bits = 0;
-                    for (int j = 0; j < 8; j++) {
+                    for (int j = 0; j < 8; j++)
+                    {
                         bits = (bits << 8) | (src.getByte(srcPos + i * 8 + j) & 0xFF);
                     }
                     dst.set(dstPos + i, Double.longBitsToDouble(bits));
@@ -242,11 +246,13 @@ public final class FileIOHandlers implements NativeHandlerProvider {
                 ArrayInstance dst = (ArrayInstance) args[2].asReference();
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
-                for (int i = 0; i < count; i++) {
+                for (int i = 0; i < count; i++)
+                {
                     Object val = src.get(srcPos + i);
                     float f = val instanceof Float ? (Float) val : 0.0f;
                     int bits = Float.floatToIntBits(f);
-                    for (int j = 0; j < 4; j++) {
+                    for (int j = 0; j < 4; j++)
+                    {
                         dst.setByte(dstPos + i * 4 + (3 - j), (byte) (bits & 0xFF));
                         bits >>= 8;
                     }
@@ -263,11 +269,13 @@ public final class FileIOHandlers implements NativeHandlerProvider {
                 ArrayInstance dst = (ArrayInstance) args[2].asReference();
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
-                for (int i = 0; i < count; i++) {
+                for (int i = 0; i < count; i++)
+                {
                     Object val = src.get(srcPos + i);
                     double d = val instanceof Double ? (Double) val : 0.0;
                     long bits = Double.doubleToLongBits(d);
-                    for (int j = 0; j < 8; j++) {
+                    for (int j = 0; j < 8; j++)
+                    {
                         dst.setByte(dstPos + i * 8 + (7 - j), (byte) (bits & 0xFF));
                         bits >>= 8;
                     }
@@ -275,19 +283,17 @@ public final class FileIOHandlers implements NativeHandlerProvider {
                 return null;
             });
 
-        registry.register("java/io/ObjectStreamClass", "initNative", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/io/ObjectStreamClass", "initNative", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/io/ObjectStreamClass", "hasStaticInitializer", "(Ljava/lang/Class;)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
     }
 
-    private void registerConsoleHandlers(NativeRegistry registry) {
-        registry.register("java/io/Console", "istty", "()Z",
-            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+    private void registerConsoleHandlers(NativeRegistry registry)
+    {
+        registry.register("java/io/Console", "istty", "()Z", (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("java/io/Console", "echo", "(Z)Z",
-            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+        registry.register("java/io/Console", "echo", "(Z)Z", (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
         registry.register("java/io/Console", "encoding", "()Ljava/lang/String;",
             (receiver, args, ctx) -> ConcreteValue.reference(ctx.getHeapManager().internString("UTF-8")));

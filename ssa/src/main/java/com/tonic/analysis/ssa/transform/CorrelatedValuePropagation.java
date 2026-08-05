@@ -11,20 +11,23 @@ import java.util.*;
 /**
  * Correlated Value Propagation (CVP).
  * Uses control flow to derive facts about values. When passing a branch
- * like if (x < 10), CVP knows x is in range [MIN, 9] in the true branch.
+ * like if (x &lt; 10), CVP knows x is in range [MIN, 9] in the true branch.
  */
-public class CorrelatedValuePropagation implements IRTransform {
+public class CorrelatedValuePropagation implements IRTransform
+{
 
     private DominatorTree domTree;
     private Map<IRBlock, Map<Integer, ValueRange>> blockRanges;
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "CorrelatedValuePropagation";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         if (method.getEntryBlock() == null) return false;
 
         domTree = new DominatorTree(method);
@@ -37,37 +40,44 @@ public class CorrelatedValuePropagation implements IRTransform {
         return optimizeBranches(method);
     }
 
-    private void propagateRanges(IRMethod method) {
+    private void propagateRanges(IRMethod method)
+    {
         Queue<IRBlock> worklist = new LinkedList<>();
         Set<IRBlock> visited = new HashSet<>();
         worklist.add(method.getEntryBlock());
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock block = worklist.poll();
             if (visited.contains(block)) continue;
             visited.add(block);
 
             Map<Integer, ValueRange> ranges = new HashMap<>();
             IRBlock idom = domTree.getImmediateDominator(block);
-            if (idom != null && blockRanges.containsKey(idom)) {
+            if (idom != null && blockRanges.containsKey(idom))
+            {
                 ranges.putAll(blockRanges.get(idom));
             }
 
-            for (IRBlock pred : block.getPredecessors()) {
+            for (IRBlock pred : block.getPredecessors())
+            {
                 applyEdgeConstraints(pred, block, ranges);
             }
 
             blockRanges.put(block, ranges);
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!visited.contains(succ)) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!visited.contains(succ))
+                {
                     worklist.add(succ);
                 }
             }
         }
     }
 
-    private void applyEdgeConstraints(IRBlock pred, IRBlock target, Map<Integer, ValueRange> ranges) {
+    private void applyEdgeConstraints(IRBlock pred, IRBlock target, Map<Integer, ValueRange> ranges)
+    {
         IRInstruction term = pred.getTerminator();
         if (!(term instanceof BranchInstruction)) return;
         BranchInstruction branch = (BranchInstruction) term;
@@ -92,29 +102,37 @@ public class CorrelatedValuePropagation implements IRTransform {
         ranges.put(valueId, newRange);
     }
 
-    private Long getConstantValue(Value value, CompareOp op) {
-        if (value == null) {
+    private Long getConstantValue(Value value, CompareOp op)
+    {
+        if (value == null)
+        {
             return isUnaryOp(op) ? 0L : null;
         }
-        if (value instanceof IntConstant) {
+        if (value instanceof IntConstant)
+        {
             IntConstant ic = (IntConstant) value;
             return (long) ic.getValue();
         }
-        if (value instanceof LongConstant) {
+        if (value instanceof LongConstant)
+        {
             LongConstant lc = (LongConstant) value;
             return lc.getValue();
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     IntConstant ic = (IntConstant) c;
                     return (long) ic.getValue();
                 }
-                if (c instanceof LongConstant) {
+                if (c instanceof LongConstant)
+                {
                     LongConstant lc = (LongConstant) c;
                     return lc.getValue();
                 }
@@ -123,14 +141,17 @@ public class CorrelatedValuePropagation implements IRTransform {
         return null;
     }
 
-    private boolean isUnaryOp(CompareOp op) {
+    private boolean isUnaryOp(CompareOp op)
+    {
         return op == CompareOp.IFEQ || op == CompareOp.IFNE ||
                op == CompareOp.IFLT || op == CompareOp.IFGE ||
                op == CompareOp.IFGT || op == CompareOp.IFLE;
     }
 
-    private ValueRange deriveConstraint(CompareOp op, long constant, boolean isTrueEdge) {
-        switch (op) {
+    private ValueRange deriveConstraint(CompareOp op, long constant, boolean isTrueEdge)
+    {
+        switch (op)
+        {
             case LT:
                 return isTrueEdge ? ValueRange.lessThan(constant) : ValueRange.greaterOrEqual(constant);
             case LE:
@@ -167,10 +188,12 @@ public class CorrelatedValuePropagation implements IRTransform {
         }
     }
 
-    private boolean optimizeBranches(IRMethod method) {
+    private boolean optimizeBranches(IRMethod method)
+    {
         boolean changed = false;
 
-        for (IRBlock block : new ArrayList<>(method.getBlocks())) {
+        for (IRBlock block : new ArrayList<>(method.getBlocks()))
+        {
             IRInstruction term = block.getTerminator();
             if (!(term instanceof BranchInstruction)) continue;
             BranchInstruction branch = (BranchInstruction) term;
@@ -192,7 +215,8 @@ public class CorrelatedValuePropagation implements IRTransform {
             block.removeSuccessor(deadTarget);
             deadTarget.getPredecessors().remove(block);
 
-            for (PhiInstruction phi : deadTarget.getPhiInstructions()) {
+            for (PhiInstruction phi : deadTarget.getPhiInstructions())
+            {
                 phi.removeIncoming(block);
             }
 
@@ -202,7 +226,8 @@ public class CorrelatedValuePropagation implements IRTransform {
         return changed;
     }
 
-    private Boolean evaluateBranchWithRanges(BranchInstruction branch, Map<Integer, ValueRange> ranges) {
+    private Boolean evaluateBranchWithRanges(BranchInstruction branch, Map<Integer, ValueRange> ranges)
+    {
         Value left = branch.getLeft();
         Value right = branch.getRight();
         CompareOp op = branch.getCondition();
@@ -220,10 +245,12 @@ public class CorrelatedValuePropagation implements IRTransform {
         return evaluateComparison(range, op, constant);
     }
 
-    private Boolean evaluateComparison(ValueRange range, CompareOp op, long constant) {
+    private Boolean evaluateComparison(ValueRange range, CompareOp op, long constant)
+    {
         if (range.isEmpty()) return null;
 
-        switch (op) {
+        switch (op)
+        {
             case LT:
             case IFLT:
                 if (range.getMax() < constant) return true;

@@ -10,25 +10,45 @@ import java.util.*;
 
 import static com.tonic.util.Opcode.*;
 
-public class ControlFlowVerifier {
-    public ControlFlowVerifier() {
+/**
+ * Verification pass over a method's control-flow graph: reachability and path termination.
+ */
+public class ControlFlowVerifier
+{
+    /**
+     * Creates a stateless control-flow pass.
+     */
+    public ControlFlowVerifier()
+    {
     }
 
-    public void verify(MethodEntry method, ErrorCollector collector) {
+    /**
+     * Checks a method's control flow, warning on unreachable instructions and erroring where
+     * execution can fall off the end of the code.
+     * @param method the method to check
+     * @param collector the sink for findings
+     */
+    public void verify(MethodEntry method, ErrorCollector collector)
+    {
         CodeAttribute code = method.getCodeAttribute();
-        if (code == null) {
+        if (code == null)
+        {
             return;
         }
 
         byte[] bytecode = code.getCode();
-        if (bytecode == null || bytecode.length == 0) {
+        if (bytecode == null || bytecode.length == 0)
+        {
             return;
         }
 
         CodeWriter codeWriter;
-        try {
+        try
+        {
             codeWriter = new CodeWriter(method);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return;
         }
 
@@ -38,8 +58,10 @@ public class ControlFlowVerifier {
 
         findReachableInstructions(instructionMap, bytecode, reachable, terminating, code);
 
-        for (Integer offset : instructionMap.keySet()) {
-            if (!reachable.contains(offset)) {
+        for (Integer offset : instructionMap.keySet())
+        {
+            if (!reachable.contains(offset))
+            {
                 collector.addWarning(new VerificationError(
                         VerificationErrorType.UNREACHABLE_CODE,
                         offset,
@@ -52,69 +74,81 @@ public class ControlFlowVerifier {
         verifyAllPathsTerminate(instructionMap, bytecode, reachable, collector);
     }
 
-    private void findReachableInstructions(Map<Integer, Instruction> instructions, byte[] bytecode,
-                                           Set<Integer> reachable, Set<Integer> terminating,
-                                           CodeAttribute code) {
+    private void findReachableInstructions(Map<Integer, Instruction> instructions, byte[] bytecode, Set<Integer> reachable, Set<Integer> terminating, CodeAttribute code)
+    {
         Deque<Integer> worklist = new ArrayDeque<>();
         worklist.add(0);
 
-        for (var entry : code.getExceptionTable()) {
+        for (var entry : code.getExceptionTable())
+        {
             worklist.add(entry.getHandlerPc());
         }
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             int offset = worklist.poll();
-            if (reachable.contains(offset)) {
+            if (reachable.contains(offset))
+            {
                 continue;
             }
             reachable.add(offset);
 
             Instruction instr = instructions.get(offset);
-            if (instr == null) {
+            if (instr == null)
+            {
                 continue;
             }
 
             int opcode = instr.getOpcode();
 
-            if (isTerminatingInstruction(opcode)) {
+            if (isTerminatingInstruction(opcode))
+            {
                 terminating.add(offset);
                 continue;
             }
 
             List<Integer> successors = getSuccessors(instr, offset, bytecode);
-            for (int succ : successors) {
-                if (!reachable.contains(succ) && instructions.containsKey(succ)) {
+            for (int succ : successors)
+            {
+                if (!reachable.contains(succ) && instructions.containsKey(succ))
+                {
                     worklist.add(succ);
                 }
             }
         }
     }
 
-    private void verifyAllPathsTerminate(Map<Integer, Instruction> instructions, byte[] bytecode,
-                                         Set<Integer> reachable, ErrorCollector collector) {
+    private void verifyAllPathsTerminate(Map<Integer, Instruction> instructions, byte[] bytecode, Set<Integer> reachable, ErrorCollector collector)
+    {
 
-        for (Integer offset : reachable) {
+        for (Integer offset : reachable)
+        {
             Instruction instr = instructions.get(offset);
             if (instr == null) continue;
 
             int opcode = instr.getOpcode();
-            if (isTerminatingInstruction(opcode)) {
+            if (isTerminatingInstruction(opcode))
+            {
                 continue;
             }
 
             List<Integer> successors = getSuccessors(instr, offset, bytecode);
 
             boolean hasValidSuccessor = false;
-            for (int succ : successors) {
-                if (instructions.containsKey(succ)) {
+            for (int succ : successors)
+            {
+                if (instructions.containsKey(succ))
+                {
                     hasValidSuccessor = true;
                     break;
                 }
             }
 
-            if (!hasValidSuccessor && successors.isEmpty()) {
+            if (!hasValidSuccessor && successors.isEmpty())
+            {
                 int nextOffset = offset + instr.getLength();
-                if (nextOffset >= bytecode.length) {
+                if (nextOffset >= bytecode.length)
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.INSTRUCTION_FALLS_OFF_END,
                             offset,
@@ -125,35 +159,45 @@ public class ControlFlowVerifier {
         }
     }
 
-    private Map<Integer, Set<Integer>> buildPredecessorMap(Map<Integer, Instruction> instructions,
-                                                           byte[] bytecode, CodeAttribute code) {
+    private Map<Integer, Set<Integer>> buildPredecessorMap(Map<Integer, Instruction> instructions, byte[] bytecode, CodeAttribute code)
+    {
         Map<Integer, Set<Integer>> predecessors = new HashMap<>();
 
-        for (Integer offset : instructions.keySet()) {
+        for (Integer offset : instructions.keySet())
+        {
             predecessors.put(offset, new HashSet<>());
         }
 
-        for (Map.Entry<Integer, Instruction> entry : instructions.entrySet()) {
+        for (Map.Entry<Integer, Instruction> entry : instructions.entrySet())
+        {
             int offset = entry.getKey();
             Instruction instr = entry.getValue();
 
             List<Integer> successors = getSuccessors(instr, offset, bytecode);
-            for (int succ : successors) {
-                if (predecessors.containsKey(succ)) {
+            for (int succ : successors)
+            {
+                if (predecessors.containsKey(succ))
+                {
                     predecessors.get(succ).add(offset);
                 }
             }
         }
 
-        for (var exEntry : code.getExceptionTable()) {
+        for (var exEntry : code.getExceptionTable())
+        {
             int handlerPc = exEntry.getHandlerPc();
-            if (predecessors.containsKey(handlerPc)) {
-                for (int pc = exEntry.getStartPc(); pc < exEntry.getEndPc(); ) {
-                    if (instructions.containsKey(pc)) {
+            if (predecessors.containsKey(handlerPc))
+            {
+                for (int pc = exEntry.getStartPc(); pc < exEntry.getEndPc(); )
+                {
+                    if (instructions.containsKey(pc))
+                    {
                         predecessors.get(handlerPc).add(pc);
                         Instruction instr = instructions.get(pc);
                         pc += instr.getLength();
-                    } else {
+                    }
+                    else
+                    {
                         pc++;
                     }
                 }
@@ -163,73 +207,89 @@ public class ControlFlowVerifier {
         return predecessors;
     }
 
-    private boolean isTerminatingInstruction(int opcode) {
+    private boolean isTerminatingInstruction(int opcode)
+    {
         return (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) ||
                opcode == ATHROW.getCode() ||
                opcode == GOTO.getCode() ||
                opcode == GOTO_W.getCode();
     }
 
-    private List<Integer> getSuccessors(Instruction instr, int offset, byte[] bytecode) {
+    private List<Integer> getSuccessors(Instruction instr, int offset, byte[] bytecode)
+    {
         List<Integer> successors = new ArrayList<>();
         int opcode = instr.getOpcode();
 
-        if (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) {
+        if (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode())
+        {
             return successors;
         }
-        if (opcode == ATHROW.getCode()) {
+        if (opcode == ATHROW.getCode())
+        {
             return successors;
         }
 
         int nextOffset = offset + instr.getLength();
 
-        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode()) {
-            if (instr instanceof GotoInstruction) {
+        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode())
+        {
+            if (instr instanceof GotoInstruction)
+            {
                 int target = offset + ((GotoInstruction) instr).getBranchOffset();
                 successors.add(target);
             }
             return successors;
         }
 
-        if (instr instanceof ConditionalBranchInstruction) {
+        if (instr instanceof ConditionalBranchInstruction)
+        {
             ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
             successors.add(offset + branch.getBranchOffset());
-            if (nextOffset < bytecode.length) {
+            if (nextOffset < bytecode.length)
+            {
                 successors.add(nextOffset);
             }
             return successors;
         }
 
-        if (instr instanceof TableSwitchInstruction) {
+        if (instr instanceof TableSwitchInstruction)
+        {
             TableSwitchInstruction ts = (TableSwitchInstruction) instr;
             successors.add(offset + ts.getDefaultOffset());
-            for (int jumpOffset : ts.getJumpOffsets().values()) {
+            for (int jumpOffset : ts.getJumpOffsets().values())
+            {
                 successors.add(offset + jumpOffset);
             }
             return successors;
         }
 
-        if (instr instanceof LookupSwitchInstruction) {
+        if (instr instanceof LookupSwitchInstruction)
+        {
             LookupSwitchInstruction ls = (LookupSwitchInstruction) instr;
             successors.add(offset + ls.getDefaultOffset());
-            for (int jumpOffset : ls.getMatchOffsets().values()) {
+            for (int jumpOffset : ls.getMatchOffsets().values())
+            {
                 successors.add(offset + jumpOffset);
             }
             return successors;
         }
 
-        if (opcode == JSR.getCode() || opcode == JSR_W.getCode()) {
-            if (instr instanceof JsrInstruction) {
+        if (opcode == JSR.getCode() || opcode == JSR_W.getCode())
+        {
+            if (instr instanceof JsrInstruction)
+            {
                 JsrInstruction jsr = (JsrInstruction) instr;
                 successors.add(offset + jsr.getBranchOffset());
             }
-            if (nextOffset < bytecode.length) {
+            if (nextOffset < bytecode.length)
+            {
                 successors.add(nextOffset);
             }
             return successors;
         }
 
-        if (nextOffset < bytecode.length) {
+        if (nextOffset < bytecode.length)
+        {
             successors.add(nextOffset);
         }
 
@@ -237,12 +297,16 @@ public class ControlFlowVerifier {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<Integer, Instruction> getInstructionsMap(CodeWriter codeWriter) {
-        try {
+    private Map<Integer, Instruction> getInstructionsMap(CodeWriter codeWriter)
+    {
+        try
+        {
             java.lang.reflect.Field f = CodeWriter.class.getDeclaredField("instructions");
             f.setAccessible(true);
             return (Map<Integer, Instruction>) f.get(codeWriter);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return new TreeMap<>();
         }
     }

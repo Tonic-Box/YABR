@@ -5,69 +5,108 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 
 /**
- * Represents a continue statement: continue [label]
+ * A continue statement with an optional target label.
  */
-public final class ContinueStmt implements Statement {
+public final class ContinueStmt implements Statement
+{
 
     private String targetLabel;
     private SourceLocation location;
     private ASTNode parent;
 
-    public ContinueStmt(String targetLabel, SourceLocation location) {
+    /**
+     * Creates a continue statement.
+     * @param targetLabel label to continue to, or null for an unlabeled continue
+     * @param location source location, or null for unknown
+     */
+    public ContinueStmt(String targetLabel, SourceLocation location)
+    {
         this.targetLabel = targetLabel;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public ContinueStmt(String targetLabel) {
+    /**
+     * Creates a continue statement with an unknown location.
+     * @param targetLabel label to continue to, or null for an unlabeled continue
+     */
+    public ContinueStmt(String targetLabel)
+    {
         this(targetLabel, SourceLocation.UNKNOWN);
     }
 
     /**
      * Creates an unlabeled continue statement.
      */
-    public ContinueStmt() {
+    public ContinueStmt()
+    {
         this(null, SourceLocation.UNKNOWN);
     }
 
-    public String getTargetLabel() {
+    /**
+     * @return the target label
+     */
+    public String getTargetLabel()
+    {
         return targetLabel;
     }
 
-    public void setTargetLabel(String targetLabel) {
+    /**
+     * Sets the label this continue targets.
+     * @param targetLabel the new target label, or null for an unlabeled continue
+     */
+    public void setTargetLabel(String targetLabel)
+    {
         this.targetLabel = targetLabel;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Checks if this continue has a target label.
+     * @return true if this continue targets a label
      */
-    public boolean hasLabel() {
+    public boolean hasLabel()
+    {
         return targetLabel != null;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitContinue(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return targetLabel != null ? "continue " + targetLabel : "continue";
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

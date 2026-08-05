@@ -9,7 +9,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public abstract class PDGNode {
+/**
+ * Base node of a program dependence graph, identified by an id and holding its own
+ * incoming and outgoing dependence edges plus optional taint marking.
+ */
+public abstract class PDGNode
+{
 
     private final int id;
     private final PDGNodeType type;
@@ -21,132 +26,246 @@ public abstract class PDGNode {
     private boolean tainted;
     private String taintLabel;
 
-    protected PDGNode(int id, PDGNodeType type, IRBlock block) {
+    protected PDGNode(int id, PDGNodeType type, IRBlock block)
+    {
         this.id = id;
         this.type = type;
         this.block = block;
     }
 
-    public int getId() {
+    /**
+     * @return the id
+     */
+    public int getId()
+    {
         return id;
     }
 
-    public PDGNodeType getType() {
+    /**
+     * @return the type
+     */
+    public PDGNodeType getType()
+    {
         return type;
     }
 
-    public IRBlock getBlock() {
+    /**
+     * @return the block
+     */
+    public IRBlock getBlock()
+    {
         return block;
     }
 
-    public void setBlock(IRBlock block) {
+    /**
+     * Sets the block this node belongs to.
+     * @param block the owning block, may be null for region nodes
+     */
+    public void setBlock(IRBlock block)
+    {
         this.block = block;
     }
 
-    public boolean isTainted() {
+    /**
+     * @return whether tainted
+     */
+    public boolean isTainted()
+    {
         return tainted;
     }
 
-    public void setTainted(boolean tainted) {
+    /**
+     * Marks or clears this node as carrying tainted data.
+     * @param tainted whether the node is tainted
+     */
+    public void setTainted(boolean tainted)
+    {
         this.tainted = tainted;
     }
 
-    public String getTaintLabel() {
+    /**
+     * @return the taint label
+     */
+    public String getTaintLabel()
+    {
         return taintLabel;
     }
 
-    public void setTaintLabel(String taintLabel) {
+    /**
+     * Sets the label describing where the taint on this node came from.
+     * @param taintLabel the taint label
+     */
+    public void setTaintLabel(String taintLabel)
+    {
         this.taintLabel = taintLabel;
     }
 
+    /**
+     * @return a short human-readable description of what this node represents
+     */
     public abstract String getLabel();
 
+    /**
+     * @return the values this node reads
+     */
     public abstract List<Value> getUsedValues();
 
+    /**
+     * @return the value this node defines, or null if it defines none
+     */
     public abstract SSAValue getDefinedValue();
 
-    public void addIncomingEdge(PDGEdge edge) {
-        if (!incomingEdges.contains(edge)) {
+    /**
+     * Records an edge arriving at this node, ignoring duplicates.
+     * @param edge the incoming edge
+     */
+    public void addIncomingEdge(PDGEdge edge)
+    {
+        if (!incomingEdges.contains(edge))
+        {
             incomingEdges.add(edge);
         }
     }
 
-    public void addOutgoingEdge(PDGEdge edge) {
-        if (!outgoingEdges.contains(edge)) {
+    /**
+     * Records an edge leaving this node, ignoring duplicates.
+     * @param edge the outgoing edge
+     */
+    public void addOutgoingEdge(PDGEdge edge)
+    {
+        if (!outgoingEdges.contains(edge))
+        {
             outgoingEdges.add(edge);
         }
     }
 
-    public void removeIncomingEdge(PDGEdge edge) {
+    /**
+     * Drops an edge arriving at this node.
+     * @param edge the incoming edge to remove
+     */
+    public void removeIncomingEdge(PDGEdge edge)
+    {
         incomingEdges.remove(edge);
     }
 
-    public void removeOutgoingEdge(PDGEdge edge) {
+    /**
+     * Drops an edge leaving this node.
+     * @param edge the outgoing edge to remove
+     */
+    public void removeOutgoingEdge(PDGEdge edge)
+    {
         outgoingEdges.remove(edge);
     }
 
-    public List<PDGEdge> getIncomingEdges() {
+    /**
+     * @return an unmodifiable view of the edges arriving at this node
+     */
+    public List<PDGEdge> getIncomingEdges()
+    {
         return Collections.unmodifiableList(incomingEdges);
     }
 
-    public List<PDGEdge> getOutgoingEdges() {
+    /**
+     * @return an unmodifiable view of the edges leaving this node
+     */
+    public List<PDGEdge> getOutgoingEdges()
+    {
         return Collections.unmodifiableList(outgoingEdges);
     }
 
-    public List<PDGNode> getPredecessors() {
+    /**
+     * @return the source node of each incoming edge, one entry per edge
+     */
+    public List<PDGNode> getPredecessors()
+    {
         List<PDGNode> predecessors = new ArrayList<>();
-        for (PDGEdge edge : incomingEdges) {
+        for (PDGEdge edge : incomingEdges)
+        {
             predecessors.add(edge.getSource());
         }
         return predecessors;
     }
 
-    public List<PDGNode> getSuccessors() {
+    /**
+     * @return the target node of each outgoing edge, one entry per edge
+     */
+    public List<PDGNode> getSuccessors()
+    {
         List<PDGNode> successors = new ArrayList<>();
-        for (PDGEdge edge : outgoingEdges) {
+        for (PDGEdge edge : outgoingEdges)
+        {
             successors.add(edge.getTarget());
         }
         return successors;
     }
 
-    public List<PDGEdge> getControlDependenceEdges() {
+    /**
+     * @return the incoming edges that are control dependences
+     */
+    public List<PDGEdge> getControlDependenceEdges()
+    {
         List<PDGEdge> result = new ArrayList<>();
-        for (PDGEdge edge : incomingEdges) {
-            if (edge.getType().isControlDependence()) {
+        for (PDGEdge edge : incomingEdges)
+        {
+            if (edge.getType().isControlDependence())
+            {
                 result.add(edge);
             }
         }
         return result;
     }
 
-    public List<PDGEdge> getDataDependenceEdges() {
+    /**
+     * @return the incoming edges that are data dependences
+     */
+    public List<PDGEdge> getDataDependenceEdges()
+    {
         List<PDGEdge> result = new ArrayList<>();
-        for (PDGEdge edge : incomingEdges) {
-            if (edge.getType().isDataDependence()) {
+        for (PDGEdge edge : incomingEdges)
+        {
+            if (edge.getType().isDataDependence())
+            {
                 result.add(edge);
             }
         }
         return result;
     }
 
-    public boolean hasIncomingEdges() {
+    /**
+     * @return whether any edge arrives at this node
+     */
+    public boolean hasIncomingEdges()
+    {
         return !incomingEdges.isEmpty();
     }
 
-    public boolean hasOutgoingEdges() {
+    /**
+     * @return whether any edge leaves this node
+     */
+    public boolean hasOutgoingEdges()
+    {
         return !outgoingEdges.isEmpty();
     }
 
-    public int getInDegree() {
+    /**
+     * @return the number of incoming edges
+     */
+    public int getInDegree()
+    {
         return incomingEdges.size();
     }
 
-    public int getOutDegree() {
+    /**
+     * @return the number of outgoing edges
+     */
+    public int getOutDegree()
+    {
         return outgoingEdges.size();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PDGNode pdgNode = (PDGNode) o;
@@ -154,12 +273,14 @@ public abstract class PDGNode {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Integer.hashCode(id);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("PDGNode[%d: %s - %s]", id, type.getDisplayName(), getLabel());
     }
 }

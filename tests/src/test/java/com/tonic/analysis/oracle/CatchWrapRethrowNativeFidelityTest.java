@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Asserts a round-trip fixed point and that both paths execute (the normal return, and the wrapped rethrow on the
  * caught path).
  */
-class CatchWrapRethrowNativeFidelityTest {
+class CatchWrapRethrowNativeFidelityTest
+{
 
     private static final String SOURCE =
             "public class CatchWrap {\n"
@@ -48,14 +49,14 @@ class CatchWrapRethrowNativeFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("catch-wrap-native");
         Path src = dir.resolve("CatchWrap.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("CatchWrap.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -67,14 +68,16 @@ class CatchWrapRethrowNativeFidelityTest {
     }
 
     @Test
-    void isRoundTripFixedPointWithACatchNotAFinally() {
+    void isRoundTripFixedPointWithACatchNotAFinally()
+    {
         assertTrue(d1.contains("catch (ArithmeticException"), "the wrapping catch must be recovered as a catch:\n" + d1);
         assertTrue(d1.contains("throw new IllegalStateException"), "the rethrow must be preserved:\n" + d1);
         assertEquals(d1, d2, "a catch that wraps and rethrows must be a round-trip fixed point");
     }
 
     @Test
-    void normalAndCaughtPathsExecute() throws Exception {
+    void normalAndCaughtPathsExecute() throws Exception
+    {
         assertEquals(5, recompiledClass.getDeclaredMethod("m", int.class).invoke(null, 2),
                 "the normal path must return the computed value");
         InvocationTargetException wrapper = assertThrows(InvocationTargetException.class,

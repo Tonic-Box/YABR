@@ -15,15 +15,18 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * Tests ClassFilter, MethodFilter, PackageFilter, FieldFilter, and AnnotationFilter.
  */
-class InstrumentationFilterTest {
+class InstrumentationFilterTest
+{
 
-    // ========== ClassFilter Tests ==========
+    // ClassFilter Tests
 
     @Nested
-    class ClassFilterTests {
+    class ClassFilterTests
+    {
 
         @Test
-        void exactClassMatch() throws IOException {
+        void exactClassMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -34,7 +37,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void exactClassNoMatch() throws IOException {
+        void exactClassNoMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/OtherClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -45,7 +49,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void wildcardSingleLevel() throws IOException {
+        void wildcardSingleLevel() throws IOException
+        {
             ClassFile cf1 = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -67,7 +72,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void wildcardDoubleLevel() throws IOException {
+        void wildcardDoubleLevel() throws IOException
+        {
             ClassFile cf1 = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -89,7 +95,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void dotNotationConvertedToSlash() throws IOException {
+        void dotNotationConvertedToSlash() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -100,7 +107,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void isWildcardFlag() {
+        void isWildcardFlag()
+        {
             ClassFilter exact = ClassFilter.exact("com/example/MyClass");
             ClassFilter wildcard = ClassFilter.matching("com/example/*");
 
@@ -109,7 +117,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void filterToString() {
+        void filterToString()
+        {
             ClassFilter filter = ClassFilter.exact("com/example/MyClass");
             String str = filter.toString();
             assertTrue(str.contains("ClassFilter"));
@@ -117,7 +126,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesMethodDefaultsToTrue() throws IOException {
+        void matchesMethodDefaultsToTrue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -131,19 +141,22 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesFieldDefaultsToTrue() {
+        void matchesFieldDefaultsToTrue()
+        {
             ClassFilter filter = ClassFilter.exact("com/example/MyClass");
             assertTrue(filter.matchesField("owner", "name", "I"));
         }
     }
 
-    // ========== MethodFilter Tests ==========
+    // MethodFilter Tests
 
     @Nested
-    class MethodFilterTests {
+    class MethodFilterTests
+    {
 
         @Test
-        void exactNameMatch() throws IOException {
+        void exactNameMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("process", "()V")
                     .vreturn()
@@ -156,7 +169,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void exactNameNoMatch() throws IOException {
+        void exactNameNoMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("process", "()V")
                     .vreturn()
@@ -169,7 +183,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void startingWithPattern() throws IOException {
+        void startingWithPattern() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("getData", "()V")
                     .vreturn()
@@ -182,7 +197,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void endingWithPattern() throws IOException {
+        void endingWithPattern() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("processData", "()V")
                     .vreturn()
@@ -195,7 +211,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void containingPattern() throws IOException {
+        void containingPattern() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("handleUserData", "()V")
                     .vreturn()
@@ -208,7 +225,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void descriptorMatching() throws IOException {
+        void descriptorMatching() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -224,7 +242,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void descriptorWildcard() throws IOException {
+        void descriptorWildcard() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("getValue", "()I")
                     .iconst(42)
@@ -238,7 +257,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void wildcardPattern() throws IOException {
+        void wildcardPattern() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("getUser", "()V")
                     .vreturn()
@@ -252,7 +272,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void filterToString() {
+        void filterToString()
+        {
             MethodFilter nameOnly = MethodFilter.named("process");
             MethodFilter withDesc = MethodFilter.signature("add", "(II)I");
 
@@ -265,7 +286,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesClassDefaultsToTrue() throws IOException {
+        void matchesClassDefaultsToTrue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Methods")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -276,13 +298,15 @@ class InstrumentationFilterTest {
         }
     }
 
-    // ========== PackageFilter Tests ==========
+    // PackageFilter Tests
 
     @Nested
-    class PackageFilterTests {
+    class PackageFilterTests
+    {
 
         @Test
-        void packagePrefixMatch() throws IOException {
+        void packagePrefixMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -293,7 +317,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void subpackageIncluded() throws IOException {
+        void subpackageIncluded() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/sub/Nested")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -304,7 +329,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void subpackageExcluded() throws IOException {
+        void subpackageExcluded() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/sub/Nested")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -315,7 +341,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void exactPackageMatch() throws IOException {
+        void exactPackageMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -326,7 +353,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void differentPackageNoMatch() throws IOException {
+        void differentPackageNoMatch() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("org/other/OtherClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -337,7 +365,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void dotNotationNormalized() throws IOException {
+        void dotNotationNormalized() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -348,7 +377,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void trailingSlashNormalized() {
+        void trailingSlashNormalized()
+        {
             PackageFilter filter1 = new PackageFilter("com/example/");
             PackageFilter filter2 = new PackageFilter("com/example");
 
@@ -356,7 +386,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void filterToString() {
+        void filterToString()
+        {
             PackageFilter with = PackageFilter.of("com/example");
             PackageFilter without = PackageFilter.exactPackage("com/example");
 
@@ -369,7 +400,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void includeSubpackagesFlag() {
+        void includeSubpackagesFlag()
+        {
             PackageFilter with = PackageFilter.of("com/example");
             PackageFilter without = PackageFilter.exactPackage("com/example");
 
@@ -378,13 +410,15 @@ class InstrumentationFilterTest {
         }
     }
 
-    // ========== FieldFilter Tests ==========
+    // FieldFilter Tests
 
     @Nested
-    class FieldFilterTests {
+    class FieldFilterTests
+    {
 
         @Test
-        void exactNameMatch() {
+        void exactNameMatch()
+        {
             FieldFilter filter = FieldFilter.named("count");
 
             assertTrue(filter.matchesField("com/test/Test", "count", "I"));
@@ -392,7 +426,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void wildcardNameMatch() {
+        void wildcardNameMatch()
+        {
             FieldFilter filter = FieldFilter.matching("m_*");
 
             assertTrue(filter.matchesField("any", "m_value", "I"));
@@ -401,7 +436,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void typeFilter() {
+        void typeFilter()
+        {
             FieldFilter filter = FieldFilter.ofType("Ljava/lang/String;");
 
             assertTrue(filter.matchesField("any", "any", "Ljava/lang/String;"));
@@ -409,7 +445,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void classFilter() {
+        void classFilter()
+        {
             FieldFilter filter = FieldFilter.inClass("com/example/MyClass");
 
             assertTrue(filter.matchesField("com/example/MyClass", "field1", "I"));
@@ -418,7 +455,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void specificFieldFilter() {
+        void specificFieldFilter()
+        {
             FieldFilter filter = FieldFilter.specific("com/example/Config", "timeout");
 
             assertTrue(filter.matchesField("com/example/Config", "timeout", "J"));
@@ -427,7 +465,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void combinedPatterns() {
+        void combinedPatterns()
+        {
             FieldFilter filter = new FieldFilter("com/example/*", "m_*", "L*;");
 
             assertTrue(filter.matchesField("com/example/Test", "m_name", "Ljava/lang/String;"));
@@ -437,7 +476,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void nullPatternMatchesAll() {
+        void nullPatternMatchesAll()
+        {
             // namePattern only, owner and type can be anything
             FieldFilter filter = FieldFilter.named("data");
 
@@ -446,7 +486,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void filterToString() {
+        void filterToString()
+        {
             FieldFilter filter = FieldFilter.specific("com/example/Test", "field");
             String str = filter.toString();
 
@@ -456,7 +497,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void forFieldAlias() {
+        void forFieldAlias()
+        {
             FieldFilter f1 = FieldFilter.named("test");
             FieldFilter f2 = FieldFilter.forField("test");
 
@@ -466,13 +508,15 @@ class InstrumentationFilterTest {
         }
     }
 
-    // ========== AnnotationFilter Tests ==========
+    // AnnotationFilter Tests
 
     @Nested
-    class AnnotationFilterTests {
+    class AnnotationFilterTests
+    {
 
         @Test
-        void filterCreation() {
+        void filterCreation()
+        {
             AnnotationFilter filter = AnnotationFilter.forAnnotation("Ljavax/inject/Inject;");
 
             assertEquals("Ljavax/inject/Inject;", filter.getAnnotationType());
@@ -482,7 +526,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void filterWithoutAnnotation() {
+        void filterWithoutAnnotation()
+        {
             AnnotationFilter filter = AnnotationFilter.withoutAnnotation("LDeprecated;");
 
             assertEquals("LDeprecated;", filter.getAnnotationType());
@@ -490,7 +535,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void builderPattern() {
+        void builderPattern()
+        {
             AnnotationFilter filter = AnnotationFilter.builder()
                 .annotationType("Ljavax/inject/Inject;")
                 .matchPresent(true)
@@ -503,7 +549,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesClassWithoutAnnotation() throws IOException {
+        void matchesClassWithoutAnnotation() throws IOException
+        {
             // Class without annotations
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoAnnot")
                 .publicStaticMethod("test", "()V")
@@ -519,7 +566,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesMethodWithoutAnnotation() throws IOException {
+        void matchesMethodWithoutAnnotation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoAnnot")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -535,7 +583,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesFieldAlwaysTrue() {
+        void matchesFieldAlwaysTrue()
+        {
             AnnotationFilter filter = AnnotationFilter.forAnnotation("LTest;");
 
             // Field annotation checking not implemented, always returns true
@@ -543,7 +592,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void matchesMethodCallAlwaysTrue() {
+        void matchesMethodCallAlwaysTrue()
+        {
             AnnotationFilter filter = AnnotationFilter.forAnnotation("LTest;");
 
             // Method call annotation checking not implemented, always returns true
@@ -551,7 +601,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void checkClassDisabled() throws IOException {
+        void checkClassDisabled() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoAnnot")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -568,7 +619,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void checkMethodDisabled() throws IOException {
+        void checkMethodDisabled() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoAnnot")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -587,13 +639,15 @@ class InstrumentationFilterTest {
         }
     }
 
-    // ========== InstrumentationFilter Interface Tests ==========
+    // InstrumentationFilter Interface Tests
 
     @Nested
-    class InstrumentationFilterInterfaceTests {
+    class InstrumentationFilterInterfaceTests
+    {
 
         @Test
-        void defaultMatchesClassReturnsTrue() throws IOException {
+        void defaultMatchesClassReturnsTrue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -606,7 +660,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void defaultMatchesMethodReturnsTrue() throws IOException {
+        void defaultMatchesMethodReturnsTrue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -617,25 +672,29 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void defaultMatchesFieldReturnsTrue() {
+        void defaultMatchesFieldReturnsTrue()
+        {
             InstrumentationFilter filter = new InstrumentationFilter() {};
             assertTrue(filter.matchesField("owner", "name", "I"));
         }
 
         @Test
-        void defaultMatchesMethodCallReturnsTrue() {
+        void defaultMatchesMethodCallReturnsTrue()
+        {
             InstrumentationFilter filter = new InstrumentationFilter() {};
             assertTrue(filter.matchesMethodCall("owner", "name", "()V"));
         }
     }
 
-    // ========== Filter Composition Tests ==========
+    // Filter Composition Tests
 
     @Nested
-    class FilterCompositionTests {
+    class FilterCompositionTests
+    {
 
         @Test
-        void multipleFiltersAndLogic() throws IOException {
+        void multipleFiltersAndLogic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/ServiceImpl")
                 .publicStaticMethod("getData", "()V")
                     .vreturn()
@@ -652,7 +711,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void differentPackagesOrLogic() throws IOException {
+        void differentPackagesOrLogic() throws IOException
+        {
             ClassFile cf1 = BytecodeBuilder.forClass("com/api/Handler")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -676,13 +736,15 @@ class InstrumentationFilterTest {
         }
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void emptyClassName() throws IOException {
+        void emptyClassName() throws IOException
+        {
             // Edge case: class name with no package
             ClassFile cf = BytecodeBuilder.forClass("SimpleClass")
                 .publicStaticMethod("test", "()V")
@@ -694,7 +756,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void specialMethodNames() throws IOException {
+        void specialMethodNames() throws IOException
+        {
             // Test underscore prefix pattern - common in generated code
             ClassFile cf = BytecodeBuilder.forClass("com/test/Special")
                 .publicStaticMethod("_generated_0", "()V")
@@ -708,7 +771,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void deeplyNestedPackage() throws IOException {
+        void deeplyNestedPackage() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/example/very/deep/nested/pkg/MyClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -719,7 +783,8 @@ class InstrumentationFilterTest {
         }
 
         @Test
-        void initMethodFilter() throws IOException {
+        void initMethodFilter() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Init")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -734,11 +799,14 @@ class InstrumentationFilterTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }

@@ -13,7 +13,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public final class DebugSession {
+/**
+ * Interactive stepping debugger over a {@link BytecodeEngine}, driving breakpoints, step modes,
+ * and state snapshots for listeners.
+ */
+public final class DebugSession
+{
 
     private final BytecodeContext context;
     private final BreakpointManager breakpointManager;
@@ -31,15 +36,30 @@ public final class DebugSession {
     private volatile boolean pauseRequested;
     private boolean instructionExecutedThisStep;
 
-    public DebugSession(BytecodeContext context) {
+    /**
+     * Creates an idle session with a fresh breakpoint manager.
+     * @param context the execution configuration
+     * @throws IllegalArgumentException if context is null
+     */
+    public DebugSession(BytecodeContext context)
+    {
         this(context, new BreakpointManager());
     }
 
-    public DebugSession(BytecodeContext context, BreakpointManager breakpointManager) {
-        if (context == null) {
+    /**
+     * Creates an idle session using the given breakpoint manager.
+     * @param context the execution configuration
+     * @param breakpointManager the breakpoint registry to use
+     * @throws IllegalArgumentException if context or breakpointManager is null
+     */
+    public DebugSession(BytecodeContext context, BreakpointManager breakpointManager)
+    {
+        if (context == null)
+        {
             throw new IllegalArgumentException("Context cannot be null");
         }
-        if (breakpointManager == null) {
+        if (breakpointManager == null)
+        {
             throw new IllegalArgumentException("Breakpoint manager cannot be null");
         }
 
@@ -54,16 +74,33 @@ public final class DebugSession {
         this.pauseRequested = false;
     }
 
-    public BytecodeEngine getEngine() {
+    /**
+     * @return the engine
+     */
+    public BytecodeEngine getEngine()
+    {
         return engine;
     }
 
-    public DebugSessionState getState() {
+    /**
+     * @return the state
+     */
+    public DebugSessionState getState()
+    {
         return state;
     }
 
-    public void start(MethodEntry method, ConcreteValue... args) {
-        if (state != DebugSessionState.IDLE) {
+    /**
+     * Initializes the engine with the method's initial frame and pauses before the first
+     * instruction.
+     * @param method the method to debug
+     * @param args argument values for the initial frame
+     * @throws IllegalStateException if the session was already started
+     */
+    public void start(MethodEntry method, ConcreteValue... args)
+    {
+        if (state != DebugSessionState.IDLE)
+        {
             throw new IllegalStateException("Session already started. Current state: " + state);
         }
 
@@ -73,30 +110,42 @@ public final class DebugSession {
         this.lastState = null;
         this.pauseRequested = false;
 
-        try {
+        try
+        {
             StackFrame initialFrame = new StackFrame(method, args);
             engine.getCallStack().push(initialFrame);
             changeState(DebugSessionState.PAUSED);
             notifySessionStart();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             changeState(DebugSessionState.STOPPED);
             throw e;
         }
     }
 
-    public void stop() {
-        if (state == DebugSessionState.IDLE) {
+    /**
+     * Terminates the session, interrupting the engine and notifying listeners.
+     * @throws IllegalStateException if the session was never started
+     */
+    public void stop()
+    {
+        if (state == DebugSessionState.IDLE)
+        {
             throw new IllegalStateException("Session not started");
         }
-        if (state == DebugSessionState.STOPPED) {
+        if (state == DebugSessionState.STOPPED)
+        {
             return;
         }
 
-        if (engine != null) {
+        if (engine != null)
+        {
             engine.interrupt();
         }
 
-        if (result == null) {
+        if (result == null)
+        {
             result = BytecodeResult.interrupted();
         }
 
@@ -104,14 +153,26 @@ public final class DebugSession {
         notifySessionStop(result);
     }
 
-    public void pause() {
-        if (state != DebugSessionState.RUNNING) {
+    /**
+     * Requests a pause of a running execution at the next instruction boundary.
+     * @throws IllegalStateException if the session is not running
+     */
+    public void pause()
+    {
+        if (state != DebugSessionState.RUNNING)
+        {
             throw new IllegalStateException("Cannot pause. Current state: " + state);
         }
         this.pauseRequested = true;
     }
 
-    public DebugState resume() {
+    /**
+     * Resumes free-running execution until a breakpoint, pause request, or completion.
+     * @return the state when execution pauses or finishes
+     * @throws IllegalStateException if the session is idle, stopped, or already running
+     */
+    public DebugState resume()
+    {
         ensureValidForStepping();
 
         this.currentStepMode = StepMode.RUN;
@@ -120,7 +181,13 @@ public final class DebugSession {
         return executeUntilPause();
     }
 
-    public DebugState stepInto() {
+    /**
+     * Executes a single instruction, pausing inside any invoked method.
+     * @return the state when execution pauses or finishes
+     * @throws IllegalStateException if the session is idle, stopped, or already running
+     */
+    public DebugState stepInto()
+    {
         ensureValidForStepping();
 
         this.currentStepMode = StepMode.STEP_INTO;
@@ -130,7 +197,13 @@ public final class DebugSession {
         return executeStep();
     }
 
-    public DebugState stepOver() {
+    /**
+     * Executes one instruction without pausing inside deeper frames.
+     * @return the state when execution pauses or finishes
+     * @throws IllegalStateException if the session is idle, stopped, or already running
+     */
+    public DebugState stepOver()
+    {
         ensureValidForStepping();
 
         this.currentStepMode = StepMode.STEP_OVER;
@@ -141,7 +214,13 @@ public final class DebugSession {
         return executeStep();
     }
 
-    public DebugState stepOut() {
+    /**
+     * Runs until the current frame returns to its caller.
+     * @return the state when execution pauses or finishes
+     * @throws IllegalStateException if the session is idle, stopped, or already running
+     */
+    public DebugState stepOut()
+    {
         ensureValidForStepping();
 
         this.currentStepMode = StepMode.STEP_OUT;
@@ -151,11 +230,19 @@ public final class DebugSession {
         return executeStep();
     }
 
-    public DebugState runToCursor(int pc) {
+    /**
+     * Runs until the current method reaches the given pc.
+     * @param pc the target program counter
+     * @return the state when execution pauses or finishes
+     * @throws IllegalStateException if the session cannot step or has no current frame
+     */
+    public DebugState runToCursor(int pc)
+    {
         ensureValidForStepping();
 
         StackFrame currentFrame = engine.getCurrentFrame();
-        if (currentFrame == null) {
+        if (currentFrame == null)
+        {
             throw new IllegalStateException("No current frame");
         }
 
@@ -167,112 +254,201 @@ public final class DebugSession {
         return executeStep();
     }
 
-    public boolean isRunning() {
+    /**
+     * @return true if the session is running
+     */
+    public boolean isRunning()
+    {
         return state == DebugSessionState.RUNNING;
     }
 
-    public boolean isPaused() {
+    /**
+     * @return true if the session is paused
+     */
+    public boolean isPaused()
+    {
         return state == DebugSessionState.PAUSED;
     }
 
-    public boolean isStopped() {
+    /**
+     * @return true if the session is stopped
+     */
+    public boolean isStopped()
+    {
         return state == DebugSessionState.STOPPED;
     }
 
-    public DebugState getCurrentState() {
+    /**
+     * @return a freshly built snapshot of the session's execution state
+     */
+    public DebugState getCurrentState()
+    {
         return buildCurrentState();
     }
 
-    public BytecodeResult getResult() {
-        if (state != DebugSessionState.STOPPED) {
+    /**
+     * Returns the final execution result.
+     * @return the result of the finished execution
+     * @throws IllegalStateException if the session is not stopped
+     */
+    public BytecodeResult getResult()
+    {
+        if (state != DebugSessionState.STOPPED)
+        {
             throw new IllegalStateException("Result only available when stopped. Current state: " + state);
         }
         return result;
     }
 
-    public void addBreakpoint(Breakpoint bp) {
+    /**
+     * Adds a breakpoint to the session's manager.
+     * @param bp the breakpoint to add
+     */
+    public void addBreakpoint(Breakpoint bp)
+    {
         breakpointManager.addBreakpoint(bp);
     }
 
-    public void removeBreakpoint(Breakpoint bp) {
+    /**
+     * Removes a breakpoint from the session's manager.
+     * @param bp the breakpoint to remove
+     */
+    public void removeBreakpoint(Breakpoint bp)
+    {
         breakpointManager.removeBreakpoint(bp);
     }
 
-    public List<Breakpoint> getBreakpoints() {
+    /**
+     * @return a copy of all registered breakpoints
+     */
+    public List<Breakpoint> getBreakpoints()
+    {
         return breakpointManager.getAllBreakpoints();
     }
 
-    public StackFrame getCurrentFrame() {
+    /**
+     * @return the frame on top of the call stack, or null if not started or empty
+     */
+    public StackFrame getCurrentFrame()
+    {
         return engine != null ? engine.getCurrentFrame() : null;
     }
 
-    public List<StackFrame> getCallStack() {
-        if (engine == null || engine.getCallStack() == null) {
+    /**
+     * @return a snapshot of the current call stack, empty if not started
+     */
+    public List<StackFrame> getCallStack()
+    {
+        if (engine == null || engine.getCallStack() == null)
+        {
             return new ArrayList<>();
         }
         return engine.getCallStack().snapshot();
     }
 
-    public void setLocalValue(int slot, ConcreteValue value) {
+    /**
+     * Overwrites a local variable slot in the current frame while paused.
+     * @param slot the local variable slot
+     * @param value the replacement value
+     * @throws IllegalStateException if the session is not paused or there is no current frame
+     * @throws IllegalArgumentException if value is null
+     */
+    public void setLocalValue(int slot, ConcreteValue value)
+    {
         ensurePausedForEditing();
         StackFrame frame = getCurrentFrame();
-        if (frame == null) {
+        if (frame == null)
+        {
             throw new IllegalStateException("No current frame");
         }
-        if (value == null) {
+        if (value == null)
+        {
             throw new IllegalArgumentException("Value cannot be null");
         }
         frame.getLocals().set(slot, value);
     }
 
-    public void setStackValue(int index, ConcreteValue value) {
+    /**
+     * Overwrites an operand stack entry in the current frame while paused.
+     * @param index the stack entry index
+     * @param value the replacement value
+     * @throws IllegalStateException if the session is not paused or there is no current frame
+     * @throws IllegalArgumentException if value is null
+     */
+    public void setStackValue(int index, ConcreteValue value)
+    {
         ensurePausedForEditing();
         StackFrame frame = getCurrentFrame();
-        if (frame == null) {
+        if (frame == null)
+        {
             throw new IllegalStateException("No current frame");
         }
-        if (value == null) {
+        if (value == null)
+        {
             throw new IllegalArgumentException("Value cannot be null");
         }
         frame.getStack().set(index, value);
     }
 
-    private void ensurePausedForEditing() {
-        if (state != DebugSessionState.PAUSED) {
+    private void ensurePausedForEditing()
+    {
+        if (state != DebugSessionState.PAUSED)
+        {
             throw new IllegalStateException("Can only edit values when paused. Current state: " + state);
         }
     }
 
-    public void addListener(DebugEventListener listener) {
-        if (listener != null) {
+    /**
+     * Registers a debug event listener.
+     * @param listener the listener to add; ignored if null
+     */
+    public void addListener(DebugEventListener listener)
+    {
+        if (listener != null)
+        {
             listeners.add(listener);
         }
     }
 
-    public void removeListener(DebugEventListener listener) {
-        if (listener != null) {
+    /**
+     * Unregisters a debug event listener.
+     * @param listener the listener to remove; ignored if null
+     */
+    public void removeListener(DebugEventListener listener)
+    {
+        if (listener != null)
+        {
             listeners.remove(listener);
         }
     }
 
-    private void ensureValidForStepping() {
-        if (state == DebugSessionState.IDLE) {
+    private void ensureValidForStepping()
+    {
+        if (state == DebugSessionState.IDLE)
+        {
             throw new IllegalStateException("Session not started");
         }
-        if (state == DebugSessionState.STOPPED) {
+        if (state == DebugSessionState.STOPPED)
+        {
             throw new IllegalStateException("Session already stopped");
         }
-        if (state == DebugSessionState.RUNNING) {
+        if (state == DebugSessionState.RUNNING)
+        {
             throw new IllegalStateException("Session already running");
         }
     }
 
-    private DebugState executeStep() {
-        try {
-            while (true) {
-                if (engine.getCallStack().isEmpty()) {
+    private DebugState executeStep()
+    {
+        try
+        {
+            while (true)
+            {
+                if (engine.getCallStack().isEmpty())
+                {
                     ConcreteValue returnValue = engine.getLastReturnValue();
-                    if (returnValue == null) {
+                    if (returnValue == null)
+                    {
                         returnValue = ConcreteValue.nullRef();
                     }
                     result = BytecodeResult.completed(returnValue);
@@ -283,10 +459,13 @@ public final class DebugSession {
 
                 StackFrame currentFrame = engine.getCurrentFrame();
 
-                if (currentFrame.isCompleted()) {
-                    if (!engine.step()) {
+                if (currentFrame.isCompleted())
+                {
+                    if (!engine.step())
+                    {
                         ConcreteValue returnValue = engine.getLastReturnValue();
-                        if (returnValue == null) {
+                        if (returnValue == null)
+                        {
                             returnValue = ConcreteValue.nullRef();
                         }
                         result = BytecodeResult.completed(returnValue);
@@ -295,14 +474,16 @@ public final class DebugSession {
                         return buildCurrentState();
                     }
                     currentFrame = engine.getCurrentFrame();
-                    if (currentFrame == null) {
+                    if (currentFrame == null)
+                    {
                         continue;
                     }
                     continue;
                 }
 
                 Breakpoint bp = breakpointManager.checkBreakpoint(currentFrame);
-                if (bp != null && currentStepMode == StepMode.RUN) {
+                if (bp != null && currentStepMode == StepMode.RUN)
+                {
                     bp.incrementHitCount();
                     changeState(DebugSessionState.PAUSED);
                     lastState = buildCurrentState(bp);
@@ -313,9 +494,11 @@ public final class DebugSession {
                 boolean stepResult = engine.step();
                 instructionExecutedThisStep = true;
 
-                if (!stepResult) {
+                if (!stepResult)
+                {
                     ConcreteValue returnValue = engine.getLastReturnValue();
-                    if (returnValue == null) {
+                    if (returnValue == null)
+                    {
                         returnValue = ConcreteValue.nullRef();
                     }
                     result = BytecodeResult.completed(returnValue);
@@ -326,7 +509,8 @@ public final class DebugSession {
 
                 currentFrame = engine.getCurrentFrame();
 
-                if (currentFrame != null && currentFrame.getException() != null) {
+                if (currentFrame != null && currentFrame.getException() != null)
+                {
                     ObjectInstance exception = currentFrame.getException();
                     List<String> trace = buildStackTrace();
                     result = BytecodeResult.exception(exception, trace);
@@ -336,14 +520,17 @@ public final class DebugSession {
                     return buildCurrentState();
                 }
 
-                if (currentFrame != null && shouldPause(currentFrame)) {
+                if (currentFrame != null && shouldPause(currentFrame))
+                {
                     changeState(DebugSessionState.PAUSED);
                     lastState = buildCurrentState();
                     notifyStepComplete(lastState);
                     return lastState;
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             ObjectInstance exception = wrapException(e);
             List<String> trace = buildStackTrace();
             result = BytecodeResult.exception(exception, trace);
@@ -354,20 +541,24 @@ public final class DebugSession {
         }
     }
 
-    private DebugState executeUntilPause() {
+    private DebugState executeUntilPause()
+    {
         this.pauseRequested = false;
         return executeStep();
     }
 
-    private boolean shouldPause(StackFrame frame) {
-        if (pauseRequested) {
+    private boolean shouldPause(StackFrame frame)
+    {
+        if (pauseRequested)
+        {
             pauseRequested = false;
             return true;
         }
 
         int currentDepth = engine.getCallStack().depth();
 
-        switch (currentStepMode) {
+        switch (currentStepMode)
+        {
             case STEP_INTO:
                 return true;
 
@@ -388,12 +579,15 @@ public final class DebugSession {
         }
     }
 
-    private DebugState buildCurrentState() {
+    private DebugState buildCurrentState()
+    {
         return buildCurrentState(null);
     }
 
-    private DebugState buildCurrentState(Breakpoint hitBreakpoint) {
-        if (engine == null || engine.getCallStack().isEmpty()) {
+    private DebugState buildCurrentState(Breakpoint hitBreakpoint)
+    {
+        if (engine == null || engine.getCallStack().isEmpty())
+        {
             return new DebugState.Builder()
                     .status(mapStateToDebugStatus())
                     .instructionCount(engine != null ? engine.getInstructionCount() : 0)
@@ -403,7 +597,8 @@ public final class DebugSession {
 
         StackFrame currentFrame = engine.getCurrentFrame();
         List<StackFrameInfo> stackInfo = new ArrayList<>();
-        for (StackFrame frame : engine.getCallStack().topToBottom()) {
+        for (StackFrame frame : engine.getCallStack().topToBottom())
+        {
             stackInfo.add(new StackFrameInfo(frame));
         }
 
@@ -421,8 +616,10 @@ public final class DebugSession {
                 .build();
     }
 
-    private DebugState.Status mapStateToDebugStatus() {
-        switch (state) {
+    private DebugState.Status mapStateToDebugStatus()
+    {
+        switch (state)
+        {
             case IDLE:
                 return DebugState.Status.IDLE;
             case RUNNING:
@@ -438,57 +635,75 @@ public final class DebugSession {
         }
     }
 
-    private void changeState(DebugSessionState newState) {
+    private void changeState(DebugSessionState newState)
+    {
         DebugSessionState oldState = this.state;
         this.state = newState;
-        if (oldState != newState) {
+        if (oldState != newState)
+        {
             notifyStateChange(oldState, newState);
         }
     }
 
-    private ObjectInstance wrapException(Exception e) {
+    private ObjectInstance wrapException(Exception e)
+    {
         String exceptionClass = e.getClass().getName().replace('.', '/');
         String message = e.getMessage();
 
         ObjectInstance wrapped = tryCreateException(exceptionClass);
-        if (wrapped == null) {
+        if (wrapped == null)
+        {
             wrapped = tryCreateException("java/lang/Exception");
         }
-        if (wrapped == null) {
+        if (wrapped == null)
+        {
             wrapped = tryCreateException("java/lang/Throwable");
         }
-        if (wrapped == null) {
+        if (wrapped == null)
+        {
             wrapped = tryCreateException("java/lang/Object");
         }
 
-        if (wrapped != null && message != null) {
-            try {
+        if (wrapped != null && message != null)
+        {
+            try
+            {
                 ObjectInstance messageStr = context.getHeapManager().internString(message);
                 wrapped.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
-            } catch (Exception ignored) {
+            }
+            catch (Exception ignored)
+            {
             }
         }
 
         return wrapped;
     }
 
-    private ObjectInstance tryCreateException(String className) {
-        try {
+    private ObjectInstance tryCreateException(String className)
+    {
+        try
+        {
             return context.getHeapManager().newObject(className);
-        } catch (Exception ignored) {
+        }
+        catch (Exception ignored)
+        {
             return null;
         }
     }
 
-    private List<String> buildStackTrace() {
+    private List<String> buildStackTrace()
+    {
         List<String> trace = new ArrayList<>();
-        if (engine != null && !engine.getCallStack().isEmpty()) {
-            for (StackFrame frame : engine.getCallStack().topToBottom()) {
+        if (engine != null && !engine.getCallStack().isEmpty())
+        {
+            for (StackFrame frame : engine.getCallStack().topToBottom())
+            {
                 StringBuilder sb = new StringBuilder();
                 sb.append(frame.getMethodSignature());
                 sb.append(" (pc=").append(frame.getPC());
                 int line = frame.getLineNumber();
-                if (line >= 0) {
+                if (line >= 0)
+                {
                     sb.append(", line=").append(line);
                 }
                 sb.append(")");
@@ -498,67 +713,98 @@ public final class DebugSession {
         return trace;
     }
 
-    private void notifySessionStart() {
-        for (DebugEventListener listener : listeners) {
-            try {
+    private void notifySessionStart()
+    {
+        for (DebugEventListener listener : listeners)
+        {
+            try
+            {
                 listener.onSessionStart(this);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.err.println("[YABR] Listener exception in onSessionStart: " + e.getMessage());
             }
         }
     }
 
-    private void notifySessionStop(BytecodeResult result) {
-        for (DebugEventListener listener : listeners) {
-            try {
+    private void notifySessionStop(BytecodeResult result)
+    {
+        for (DebugEventListener listener : listeners)
+        {
+            try
+            {
                 listener.onSessionStop(this, result);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.err.println("[YABR] Listener exception in onSessionStop: " + e.getMessage());
             }
         }
     }
 
-    private void notifyBreakpointHit(Breakpoint breakpoint) {
-        for (DebugEventListener listener : listeners) {
-            try {
+    private void notifyBreakpointHit(Breakpoint breakpoint)
+    {
+        for (DebugEventListener listener : listeners)
+        {
+            try
+            {
                 listener.onBreakpointHit(this, breakpoint);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.err.println("[YABR] Listener exception in onBreakpointHit: " + e.getMessage());
             }
         }
     }
 
-    private void notifyStepComplete(DebugState state) {
-        for (DebugEventListener listener : listeners) {
-            try {
+    private void notifyStepComplete(DebugState state)
+    {
+        for (DebugEventListener listener : listeners)
+        {
+            try
+            {
                 listener.onStepComplete(this, state);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.err.println("[YABR] Listener exception in onStepComplete: " + e.getMessage());
             }
         }
     }
 
-    private void notifyException(ObjectInstance exception) {
-        for (DebugEventListener listener : listeners) {
-            try {
+    private void notifyException(ObjectInstance exception)
+    {
+        for (DebugEventListener listener : listeners)
+        {
+            try
+            {
                 listener.onException(this, exception);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.err.println("[YABR] Listener exception in onException: " + e.getMessage());
             }
         }
     }
 
-    private void notifyStateChange(DebugSessionState oldState, DebugSessionState newState) {
-        for (DebugEventListener listener : listeners) {
-            try {
+    private void notifyStateChange(DebugSessionState oldState, DebugSessionState newState)
+    {
+        for (DebugEventListener listener : listeners)
+        {
+            try
+            {
                 listener.onStateChange(this, oldState, newState);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.err.println("[YABR] Listener exception in onStateChange: " + e.getMessage());
             }
         }
     }
 
-    private static class DebugInterceptor implements BytecodeListener {
+    private static class DebugInterceptor implements BytecodeListener
+    {
 
     }
 }

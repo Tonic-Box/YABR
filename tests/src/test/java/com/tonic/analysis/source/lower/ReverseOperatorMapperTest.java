@@ -15,12 +15,14 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ReverseOperatorMapper.
  * Covers mapping of AST operators to IR operators.
  */
-class ReverseOperatorMapperTest {
+class ReverseOperatorMapperTest
+{
 
-    // ========== Binary Operator Tests ==========
+    // Binary Operator Tests
 
     @Test
-    void toIRBinaryOp_ArithmeticOperators() {
+    void toIRBinaryOp_ArithmeticOperators()
+    {
         assertEquals(BinaryOp.ADD, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.ADD));
         assertEquals(BinaryOp.SUB, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.SUB));
         assertEquals(BinaryOp.MUL, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.MUL));
@@ -29,21 +31,24 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void toIRBinaryOp_BitwiseOperators() {
+    void toIRBinaryOp_BitwiseOperators()
+    {
         assertEquals(BinaryOp.AND, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.BAND));
         assertEquals(BinaryOp.OR, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.BOR));
         assertEquals(BinaryOp.XOR, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.BXOR));
     }
 
     @Test
-    void toIRBinaryOp_ShiftOperators() {
+    void toIRBinaryOp_ShiftOperators()
+    {
         assertEquals(BinaryOp.SHL, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.SHL));
         assertEquals(BinaryOp.SHR, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.SHR));
         assertEquals(BinaryOp.USHR, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.USHR));
     }
 
     @Test
-    void toIRBinaryOp_CompoundAssignmentOperators() {
+    void toIRBinaryOp_CompoundAssignmentOperators()
+    {
         assertEquals(BinaryOp.ADD, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.ADD_ASSIGN));
         assertEquals(BinaryOp.SUB, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.SUB_ASSIGN));
         assertEquals(BinaryOp.MUL, ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.MUL_ASSIGN));
@@ -58,7 +63,8 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void toIRBinaryOp_ComparisonOperatorsReturnNull() {
+    void toIRBinaryOp_ComparisonOperatorsReturnNull()
+    {
         // Comparison operators are handled separately
         assertNull(ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.EQ));
         assertNull(ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.NE));
@@ -69,21 +75,24 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void toIRBinaryOp_LogicalOperatorsReturnNull() {
+    void toIRBinaryOp_LogicalOperatorsReturnNull()
+    {
         // Logical operators are handled separately (short-circuit)
         assertNull(ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.AND));
         assertNull(ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.OR));
     }
 
     @Test
-    void toIRBinaryOp_AssignmentReturnsNull() {
+    void toIRBinaryOp_AssignmentReturnsNull()
+    {
         assertNull(ReverseOperatorMapper.toIRBinaryOp(BinaryOperator.ASSIGN));
     }
 
-    // ========== Comparison Operator Tests ==========
+    // Comparison Operator Tests
 
     @Test
-    void toCompareOp_AllComparisonOperators() {
+    void toCompareOp_AllComparisonOperators()
+    {
         assertEquals(CompareOp.EQ, ReverseOperatorMapper.toCompareOp(BinaryOperator.EQ));
         assertEquals(CompareOp.NE, ReverseOperatorMapper.toCompareOp(BinaryOperator.NE));
         assertEquals(CompareOp.LT, ReverseOperatorMapper.toCompareOp(BinaryOperator.LT));
@@ -93,16 +102,18 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void toCompareOp_NonComparisonOperatorsReturnNull() {
+    void toCompareOp_NonComparisonOperatorsReturnNull()
+    {
         assertNull(ReverseOperatorMapper.toCompareOp(BinaryOperator.ADD));
         assertNull(ReverseOperatorMapper.toCompareOp(BinaryOperator.AND));
         assertNull(ReverseOperatorMapper.toCompareOp(BinaryOperator.ASSIGN));
     }
 
-    // ========== Single-Operand Compare Op Tests ==========
+    // Single-Operand Compare Op Tests
 
     @Test
-    void toSingleOperandCompareOp_AllComparisonOperators() {
+    void toSingleOperandCompareOp_AllComparisonOperators()
+    {
         assertEquals(CompareOp.IFEQ, ReverseOperatorMapper.toSingleOperandCompareOp(BinaryOperator.EQ));
         assertEquals(CompareOp.IFNE, ReverseOperatorMapper.toSingleOperandCompareOp(BinaryOperator.NE));
         assertEquals(CompareOp.IFLT, ReverseOperatorMapper.toSingleOperandCompareOp(BinaryOperator.LT));
@@ -112,20 +123,23 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void toSingleOperandCompareOp_NonComparisonOperatorsReturnNull() {
+    void toSingleOperandCompareOp_NonComparisonOperatorsReturnNull()
+    {
         assertNull(ReverseOperatorMapper.toSingleOperandCompareOp(BinaryOperator.ADD));
         assertNull(ReverseOperatorMapper.toSingleOperandCompareOp(BinaryOperator.AND));
     }
 
-    // ========== Unary Operator Tests ==========
+    // Unary Operator Tests
 
     @Test
-    void toIRUnaryOp_NegOperator() {
+    void toIRUnaryOp_NegOperator()
+    {
         assertEquals(UnaryOp.NEG, ReverseOperatorMapper.toIRUnaryOp(UnaryOperator.NEG));
     }
 
     @Test
-    void toIRUnaryOp_OtherOperatorsReturnNull() {
+    void toIRUnaryOp_OtherOperatorsReturnNull()
+    {
         // Other unary operators are handled specially
         assertNull(ReverseOperatorMapper.toIRUnaryOp(UnaryOperator.POS));
         assertNull(ReverseOperatorMapper.toIRUnaryOp(UnaryOperator.NOT));
@@ -134,48 +148,41 @@ class ReverseOperatorMapperTest {
         assertNull(ReverseOperatorMapper.toIRUnaryOp(UnaryOperator.POST_INC));
     }
 
-    // ========== Cast Operator Tests ==========
+    // Cast Operator Tests
 
     @Test
-    void getCastOp_IntCasts() {
-        assertEquals(UnaryOp.I2L, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.LONG));
-        assertEquals(UnaryOp.I2F, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.FLOAT));
-        assertEquals(UnaryOp.I2D, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.DOUBLE));
-        assertEquals(UnaryOp.I2B, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.BYTE));
-        assertEquals(UnaryOp.I2C, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.CHAR));
-        assertEquals(UnaryOp.I2S, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.SHORT));
+    void getCastOp_IntCasts()
+    {
+        assertEquals(UnaryOp.I2L, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.LONG));
+        assertEquals(UnaryOp.I2F, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.FLOAT));
+        assertEquals(UnaryOp.I2D, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.DOUBLE));
+        assertEquals(UnaryOp.I2B, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.BYTE));
+        assertEquals(UnaryOp.I2C, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.CHAR));
+        assertEquals(UnaryOp.I2S, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.SHORT));
     }
 
     @Test
-    void getCastOp_LongCasts() {
-        assertEquals(UnaryOp.L2I, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.LONG, PrimitiveSourceType.INT));
-        assertEquals(UnaryOp.L2F, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.LONG, PrimitiveSourceType.FLOAT));
+    void getCastOp_LongCasts()
+    {
+        assertEquals(UnaryOp.L2I, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.LONG, PrimitiveSourceType.INT));
+        assertEquals(UnaryOp.L2F, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.LONG, PrimitiveSourceType.FLOAT));
         assertEquals(UnaryOp.L2D, ReverseOperatorMapper.getCastOp(
             PrimitiveSourceType.LONG, PrimitiveSourceType.DOUBLE));
     }
 
     @Test
-    void getCastOp_FloatCasts() {
-        assertEquals(UnaryOp.F2I, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.FLOAT, PrimitiveSourceType.INT));
-        assertEquals(UnaryOp.F2L, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.FLOAT, PrimitiveSourceType.LONG));
+    void getCastOp_FloatCasts()
+    {
+        assertEquals(UnaryOp.F2I, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.FLOAT, PrimitiveSourceType.INT));
+        assertEquals(UnaryOp.F2L, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.FLOAT, PrimitiveSourceType.LONG));
         assertEquals(UnaryOp.F2D, ReverseOperatorMapper.getCastOp(
             PrimitiveSourceType.FLOAT, PrimitiveSourceType.DOUBLE));
     }
 
     @Test
-    void getCastOp_DoubleCasts() {
-        assertEquals(UnaryOp.D2I, ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.DOUBLE, PrimitiveSourceType.INT));
+    void getCastOp_DoubleCasts()
+    {
+        assertEquals(UnaryOp.D2I, ReverseOperatorMapper.getCastOp(PrimitiveSourceType.DOUBLE, PrimitiveSourceType.INT));
         assertEquals(UnaryOp.D2L, ReverseOperatorMapper.getCastOp(
             PrimitiveSourceType.DOUBLE, PrimitiveSourceType.LONG));
         assertEquals(UnaryOp.D2F, ReverseOperatorMapper.getCastOp(
@@ -183,24 +190,23 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void getCastOp_SameTypeReturnsNull() {
-        assertNull(ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.INT, PrimitiveSourceType.INT));
-        assertNull(ReverseOperatorMapper.getCastOp(
-            PrimitiveSourceType.LONG, PrimitiveSourceType.LONG));
+    void getCastOp_SameTypeReturnsNull()
+    {
+        assertNull(ReverseOperatorMapper.getCastOp(PrimitiveSourceType.INT, PrimitiveSourceType.INT));
+        assertNull(ReverseOperatorMapper.getCastOp(PrimitiveSourceType.LONG, PrimitiveSourceType.LONG));
     }
 
     @Test
-    void getCastOp_NonPrimitiveReturnsNull() {
-        assertNull(ReverseOperatorMapper.getCastOp(
-            ReferenceSourceType.OBJECT,
-            ReferenceSourceType.STRING));
+    void getCastOp_NonPrimitiveReturnsNull()
+    {
+        assertNull(ReverseOperatorMapper.getCastOp(ReferenceSourceType.OBJECT, ReferenceSourceType.STRING));
     }
 
-    // ========== Compound Assignment Base Operator Tests ==========
+    // Compound Assignment Base Operator Tests
 
     @Test
-    void getBaseOperator_AllCompoundAssignments() {
+    void getBaseOperator_AllCompoundAssignments()
+    {
         assertEquals(BinaryOperator.ADD, ReverseOperatorMapper.getBaseOperator(BinaryOperator.ADD_ASSIGN));
         assertEquals(BinaryOperator.SUB, ReverseOperatorMapper.getBaseOperator(BinaryOperator.SUB_ASSIGN));
         assertEquals(BinaryOperator.MUL, ReverseOperatorMapper.getBaseOperator(BinaryOperator.MUL_ASSIGN));
@@ -215,35 +221,40 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void getBaseOperator_NonCompoundReturnsNull() {
+    void getBaseOperator_NonCompoundReturnsNull()
+    {
         assertNull(ReverseOperatorMapper.getBaseOperator(BinaryOperator.ADD));
         assertNull(ReverseOperatorMapper.getBaseOperator(BinaryOperator.ASSIGN));
         assertNull(ReverseOperatorMapper.getBaseOperator(BinaryOperator.AND));
     }
 
-    // ========== Comparison/Float/Double Op Tests ==========
+    // Comparison/Float/Double Op Tests
 
     @Test
-    void getLongCompareOp_ReturnsLCMP() {
+    void getLongCompareOp_ReturnsLCMP()
+    {
         assertEquals(BinaryOp.LCMP, ReverseOperatorMapper.getLongCompareOp());
     }
 
     @Test
-    void getFloatCompareOp_WithNaNBias() {
+    void getFloatCompareOp_WithNaNBias()
+    {
         assertEquals(BinaryOp.FCMPG, ReverseOperatorMapper.getFloatCompareOp(true));
         assertEquals(BinaryOp.FCMPL, ReverseOperatorMapper.getFloatCompareOp(false));
     }
 
     @Test
-    void getDoubleCompareOp_WithNaNBias() {
+    void getDoubleCompareOp_WithNaNBias()
+    {
         assertEquals(BinaryOp.DCMPG, ReverseOperatorMapper.getDoubleCompareOp(true));
         assertEquals(BinaryOp.DCMPL, ReverseOperatorMapper.getDoubleCompareOp(false));
     }
 
-    // ========== Predicate Tests ==========
+    // Predicate Tests
 
     @Test
-    void isComparison_CorrectlyIdentifies() {
+    void isComparison_CorrectlyIdentifies()
+    {
         assertTrue(ReverseOperatorMapper.isComparison(BinaryOperator.EQ));
         assertTrue(ReverseOperatorMapper.isComparison(BinaryOperator.NE));
         assertTrue(ReverseOperatorMapper.isComparison(BinaryOperator.LT));
@@ -252,7 +263,8 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void isLogical_CorrectlyIdentifies() {
+    void isLogical_CorrectlyIdentifies()
+    {
         assertTrue(ReverseOperatorMapper.isLogical(BinaryOperator.AND));
         assertTrue(ReverseOperatorMapper.isLogical(BinaryOperator.OR));
         assertFalse(ReverseOperatorMapper.isLogical(BinaryOperator.BAND));
@@ -260,7 +272,8 @@ class ReverseOperatorMapperTest {
     }
 
     @Test
-    void isAssignment_CorrectlyIdentifies() {
+    void isAssignment_CorrectlyIdentifies()
+    {
         assertTrue(ReverseOperatorMapper.isAssignment(BinaryOperator.ASSIGN));
         assertTrue(ReverseOperatorMapper.isAssignment(BinaryOperator.ADD_ASSIGN));
         assertTrue(ReverseOperatorMapper.isAssignment(BinaryOperator.MUL_ASSIGN));

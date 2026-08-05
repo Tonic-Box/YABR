@@ -11,10 +11,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StackMapTableAttributeTest {
+class StackMapTableAttributeTest
+{
 
     @Test
-    void constructorWithMemberParent() {
+    void constructorWithMemberParent()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         assertNotNull(attr.getFrames());
@@ -23,7 +25,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void constructorWithClassParent() {
+    void constructorWithClassParent()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (ClassFile) null, 10, 0);
 
         assertNotNull(attr.getFrames());
@@ -32,7 +35,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void setFramesUpdatesCount() {
+    void setFramesUpdatesCount()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
@@ -47,7 +51,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void setFramesMakesDefensiveCopy() {
+    void setFramesMakesDefensiveCopy()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
@@ -61,7 +66,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void setFramesWithEmptyList() {
+    void setFramesWithEmptyList()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         attr.setFrames(Collections.emptyList());
@@ -71,7 +77,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void updateLengthWithNoFrames() {
+    void updateLengthWithNoFrames()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         attr.setFrames(Collections.emptyList());
@@ -79,7 +86,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void updateLengthWithSameFrames() {
+    void updateLengthWithSameFrames()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
@@ -92,7 +100,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void createFactoryMethod() {
+    void createFactoryMethod()
+    {
         List<StackMapFrame> frames = new ArrayList<>();
         frames.add(new SameFrame(5));
         frames.add(new SameFrame(15));
@@ -104,7 +113,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void getFramesPreservesOrder() {
+    void getFramesPreservesOrder()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
@@ -124,7 +134,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void toStringContainsRelevantInfo() {
+    void toStringContainsRelevantInfo()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
@@ -138,7 +149,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void sameFrameProperties() {
+    void sameFrameProperties()
+    {
         SameFrame frame = new SameFrame(30);
 
         assertEquals(30, frame.getFrameType());
@@ -147,7 +159,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void sameFrameRanges() {
+    void sameFrameRanges()
+    {
         SameFrame low = new SameFrame(0);
         SameFrame mid = new SameFrame(32);
         SameFrame high = new SameFrame(63);
@@ -162,11 +175,13 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void multipleSameFrameUpdatesLength() {
+    void multipleSameFrameUpdatesLength()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++)
+        {
             frames.add(new SameFrame(i));
         }
 
@@ -177,7 +192,8 @@ class StackMapTableAttributeTest {
     }
 
     @Test
-    void replaceFrames() {
+    void replaceFrames()
+    {
         StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames1 = new ArrayList<>();

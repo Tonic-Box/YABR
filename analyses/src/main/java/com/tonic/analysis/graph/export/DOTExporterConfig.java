@@ -1,6 +1,11 @@
 package com.tonic.analysis.graph.export;
 
-public class DOTExporterConfig {
+/**
+ * Immutable rendering settings for a {@link DOTExporter} - layout, fonts, label
+ * truncation and the default node and edge styles.
+ */
+public class DOTExporterConfig
+{
 
     private final String graphName;
     private final boolean directed;
@@ -15,7 +20,8 @@ public class DOTExporterConfig {
     private final NodeStyle defaultNodeStyle;
     private final EdgeStyle defaultEdgeStyle;
 
-    private DOTExporterConfig(Builder builder) {
+    private DOTExporterConfig(Builder builder)
+    {
         this.graphName = builder.graphName;
         this.directed = builder.directed;
         this.includeLegend = builder.includeLegend;
@@ -30,65 +36,125 @@ public class DOTExporterConfig {
         this.defaultEdgeStyle = builder.defaultEdgeStyle;
     }
 
-    public String getGraphName() {
+    /**
+     * @return the graph name
+     */
+    public String getGraphName()
+    {
         return graphName;
     }
 
-    public boolean isDirected() {
+    /**
+     * @return whether directed
+     */
+    public boolean isDirected()
+    {
         return directed;
     }
 
-    public boolean isIncludeLegend() {
+    /**
+     * @return whether include legend
+     */
+    public boolean isIncludeLegend()
+    {
         return includeLegend;
     }
 
-    public boolean isClusterByMethod() {
+    /**
+     * @return whether cluster by method
+     */
+    public boolean isClusterByMethod()
+    {
         return clusterByMethod;
     }
 
-    public boolean isShowNodeIds() {
+    /**
+     * @return whether show node ids
+     */
+    public boolean isShowNodeIds()
+    {
         return showNodeIds;
     }
 
-    public boolean isTruncateLabels() {
+    /**
+     * @return whether truncate labels
+     */
+    public boolean isTruncateLabels()
+    {
         return truncateLabels;
     }
 
-    public int getMaxLabelLength() {
+    /**
+     * @return the max label length
+     */
+    public int getMaxLabelLength()
+    {
         return maxLabelLength;
     }
 
-    public String getFontName() {
+    /**
+     * @return the font name
+     */
+    public String getFontName()
+    {
         return fontName;
     }
 
-    public int getFontSize() {
+    /**
+     * @return the font size
+     */
+    public int getFontSize()
+    {
         return fontSize;
     }
 
-    public String getRankDir() {
+    /**
+     * @return the rank dir
+     */
+    public String getRankDir()
+    {
         return rankDir;
     }
 
-    public NodeStyle getDefaultNodeStyle() {
+    /**
+     * @return the default node style
+     */
+    public NodeStyle getDefaultNodeStyle()
+    {
         return defaultNodeStyle;
     }
 
-    public EdgeStyle getDefaultEdgeStyle() {
+    /**
+     * @return the default edge style
+     */
+    public EdgeStyle getDefaultEdgeStyle()
+    {
         return defaultEdgeStyle;
     }
 
-    public static DOTExporterConfig defaults() {
+    /**
+     * @return a config with every setting left at its default
+     */
+    public static DOTExporterConfig defaults()
+    {
         return DOTExporterConfig.builder().build();
     }
 
-    public static DOTExporterConfig leftToRight() {
+    /**
+     * @return a config that lays the graph out left to right instead of top to bottom
+     */
+    public static DOTExporterConfig leftToRight()
+    {
         return DOTExporterConfig.builder()
             .rankDir("LR")
             .build();
     }
 
-    public static DOTExporterConfig compact() {
+    /**
+     * @return a config with the legend, method clustering and node ids turned off
+     */
+    public static DOTExporterConfig compact()
+    {
         return DOTExporterConfig.builder()
             .includeLegend(false)
             .clusterByMethod(false)
@@ -96,11 +162,19 @@ public class DOTExporterConfig {
             .build();
     }
 
-    public static Builder builder() {
+    /**
+     * @return a new builder seeded with the default settings
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Mutable accumulator for the exporter settings.
+     */
+    public static class Builder
+    {
         private String graphName = "G";
         private boolean directed = true;
         private boolean includeLegend = true;
@@ -114,192 +188,380 @@ public class DOTExporterConfig {
         private NodeStyle defaultNodeStyle = NodeStyle.defaults();
         private EdgeStyle defaultEdgeStyle = EdgeStyle.defaults();
 
-        public Builder graphName(String graphName) {
+        /**
+         * Sets the identifier written after the digraph keyword.
+         * @param graphName the DOT graph name
+         * @return this builder
+         */
+        public Builder graphName(String graphName)
+        {
             this.graphName = graphName;
             return this;
         }
 
-        public Builder directed(boolean directed) {
+        /**
+         * Selects a digraph with arrow edges or a plain graph with undirected edges.
+         * @param directed true to emit a digraph
+         * @return this builder
+         */
+        public Builder directed(boolean directed)
+        {
             this.directed = directed;
             return this;
         }
 
-        public Builder includeLegend(boolean includeLegend) {
+        /**
+         * Controls whether a legend subgraph is emitted.
+         * @param includeLegend true to emit the legend
+         * @return this builder
+         */
+        public Builder includeLegend(boolean includeLegend)
+        {
             this.includeLegend = includeLegend;
             return this;
         }
 
-        public Builder clusterByMethod(boolean clusterByMethod) {
+        /**
+         * Controls whether nodes are grouped into per-method clusters.
+         * @param clusterByMethod true to cluster
+         * @return this builder
+         */
+        public Builder clusterByMethod(boolean clusterByMethod)
+        {
             this.clusterByMethod = clusterByMethod;
             return this;
         }
 
-        public Builder showNodeIds(boolean showNodeIds) {
+        /**
+         * Controls whether node ids appear in node labels.
+         * @param showNodeIds true to show ids
+         * @return this builder
+         */
+        public Builder showNodeIds(boolean showNodeIds)
+        {
             this.showNodeIds = showNodeIds;
             return this;
         }
 
-        public Builder truncateLabels(boolean truncateLabels) {
+        /**
+         * Controls whether over-long labels are cut down to the maximum length.
+         * @param truncateLabels true to truncate
+         * @return this builder
+         */
+        public Builder truncateLabels(boolean truncateLabels)
+        {
             this.truncateLabels = truncateLabels;
             return this;
         }
 
-        public Builder maxLabelLength(int maxLabelLength) {
+        /**
+         * Sets the label length at which truncation kicks in.
+         * @param maxLabelLength the character budget for a label
+         * @return this builder
+         */
+        public Builder maxLabelLength(int maxLabelLength)
+        {
             this.maxLabelLength = maxLabelLength;
             return this;
         }
 
-        public Builder fontName(String fontName) {
+        /**
+         * Sets the font applied to the graph, nodes and edges.
+         * @param fontName the font family name
+         * @return this builder
+         */
+        public Builder fontName(String fontName)
+        {
             this.fontName = fontName;
             return this;
         }
 
-        public Builder fontSize(int fontSize) {
+        /**
+         * Sets the graph and node font size; edges are rendered two points smaller.
+         * @param fontSize the point size
+         * @return this builder
+         */
+        public Builder fontSize(int fontSize)
+        {
             this.fontSize = fontSize;
             return this;
         }
 
-        public Builder rankDir(String rankDir) {
+        /**
+         * Sets the DOT rankdir, such as "TB" or "LR".
+         * @param rankDir the layout direction
+         * @return this builder
+         */
+        public Builder rankDir(String rankDir)
+        {
             this.rankDir = rankDir;
             return this;
         }
 
-        public Builder defaultNodeStyle(NodeStyle defaultNodeStyle) {
+        /**
+         * Sets the style applied to nodes that carry no style of their own.
+         * @param defaultNodeStyle the fallback node style
+         * @return this builder
+         */
+        public Builder defaultNodeStyle(NodeStyle defaultNodeStyle)
+        {
             this.defaultNodeStyle = defaultNodeStyle;
             return this;
         }
 
-        public Builder defaultEdgeStyle(EdgeStyle defaultEdgeStyle) {
+        /**
+         * Sets the style applied to edges that carry no style of their own.
+         * @param defaultEdgeStyle the fallback edge style
+         * @return this builder
+         */
+        public Builder defaultEdgeStyle(EdgeStyle defaultEdgeStyle)
+        {
             this.defaultEdgeStyle = defaultEdgeStyle;
             return this;
         }
 
-        public DOTExporterConfig build() {
+        /**
+         * @return an immutable config holding the accumulated settings
+         */
+        public DOTExporterConfig build()
+        {
             return new DOTExporterConfig(this);
         }
     }
 
-    public static class NodeStyle {
+    /**
+     * Shape and colour attributes applied to a DOT node.
+     */
+    public static class NodeStyle
+    {
         private final String shape;
         private final String fillColor;
         private final String borderColor;
         private final String style;
 
-        private NodeStyle(Builder builder) {
+        private NodeStyle(Builder builder)
+        {
             this.shape = builder.shape;
             this.fillColor = builder.fillColor;
             this.borderColor = builder.borderColor;
             this.style = builder.style;
         }
 
-        public String getShape() {
+        /**
+         * @return the shape
+         */
+        public String getShape()
+        {
             return shape;
         }
 
-        public String getFillColor() {
+        /**
+         * @return the fill color
+         */
+        public String getFillColor()
+        {
             return fillColor;
         }
 
-        public String getBorderColor() {
+        /**
+         * @return the border color
+         */
+        public String getBorderColor()
+        {
             return borderColor;
         }
 
-        public String getStyle() {
+        /**
+         * @return the style
+         */
+        public String getStyle()
+        {
             return style;
         }
 
-        public static NodeStyle defaults() {
+        /**
+         * @return a filled white box with a black border
+         */
+        public static NodeStyle defaults()
+        {
             return NodeStyle.builder().build();
         }
 
-        public static Builder builder() {
+        /**
+         * @return a new builder seeded with the default node style
+         */
+        public static Builder builder()
+        {
             return new Builder();
         }
 
-        public static class Builder {
+        /**
+         * Mutable accumulator for a node style.
+         */
+        public static class Builder
+        {
             private String shape = "box";
             private String fillColor = "white";
             private String borderColor = "black";
             private String style = "filled";
 
-            public Builder shape(String shape) {
+            /**
+             * Sets the DOT node shape, such as "box" or "ellipse".
+             * @param shape the shape name
+             * @return this builder
+             */
+            public Builder shape(String shape)
+            {
                 this.shape = shape;
                 return this;
             }
 
-            public Builder fillColor(String fillColor) {
+            /**
+             * Sets the interior colour.
+             * @param fillColor a DOT colour name or hex value
+             * @return this builder
+             */
+            public Builder fillColor(String fillColor)
+            {
                 this.fillColor = fillColor;
                 return this;
             }
 
-            public Builder borderColor(String borderColor) {
+            /**
+             * Sets the outline colour.
+             * @param borderColor a DOT colour name or hex value
+             * @return this builder
+             */
+            public Builder borderColor(String borderColor)
+            {
                 this.borderColor = borderColor;
                 return this;
             }
 
-            public Builder style(String style) {
+            /**
+             * Sets the DOT style attribute, such as "filled" or "dashed".
+             * @param style the style name
+             * @return this builder
+             */
+            public Builder style(String style)
+            {
                 this.style = style;
                 return this;
             }
 
-            public NodeStyle build() {
+            /**
+             * @return an immutable node style holding the accumulated attributes
+             */
+            public NodeStyle build()
+            {
                 return new NodeStyle(this);
             }
         }
     }
 
-    public static class EdgeStyle {
+    /**
+     * Colour, line style and arrow head applied to a DOT edge.
+     */
+    public static class EdgeStyle
+    {
         private final String color;
         private final String style;
         private final String arrowHead;
 
-        private EdgeStyle(Builder builder) {
+        private EdgeStyle(Builder builder)
+        {
             this.color = builder.color;
             this.style = builder.style;
             this.arrowHead = builder.arrowHead;
         }
 
-        public String getColor() {
+        /**
+         * @return the color
+         */
+        public String getColor()
+        {
             return color;
         }
 
-        public String getStyle() {
+        /**
+         * @return the style
+         */
+        public String getStyle()
+        {
             return style;
         }
 
-        public String getArrowHead() {
+        /**
+         * @return the arrow head
+         */
+        public String getArrowHead()
+        {
             return arrowHead;
         }
 
-        public static EdgeStyle defaults() {
+        /**
+         * @return a solid black edge with a normal arrow head
+         */
+        public static EdgeStyle defaults()
+        {
             return EdgeStyle.builder().build();
         }
 
-        public static Builder builder() {
+        /**
+         * @return a new builder seeded with the default edge style
+         */
+        public static Builder builder()
+        {
             return new Builder();
         }
 
-        public static class Builder {
+        /**
+         * Mutable accumulator for an edge style.
+         */
+        public static class Builder
+        {
             private String color = "black";
             private String style = "solid";
             private String arrowHead = "normal";
 
-            public Builder color(String color) {
+            /**
+             * Sets the line colour.
+             * @param color a DOT colour name or hex value
+             * @return this builder
+             */
+            public Builder color(String color)
+            {
                 this.color = color;
                 return this;
             }
 
-            public Builder style(String style) {
+            /**
+             * Sets the DOT style attribute, such as "solid" or "dotted".
+             * @param style the style name
+             * @return this builder
+             */
+            public Builder style(String style)
+            {
                 this.style = style;
                 return this;
             }
 
-            public Builder arrowHead(String arrowHead) {
+            /**
+             * Sets the DOT arrowhead attribute, such as "normal" or "empty".
+             * @param arrowHead the arrow head name
+             * @return this builder
+             */
+            public Builder arrowHead(String arrowHead)
+            {
                 this.arrowHead = arrowHead;
                 return this;
             }
 
-            public EdgeStyle build() {
+            /**
+             * @return an immutable edge style holding the accumulated attributes
+             */
+            public EdgeStyle build()
+            {
                 return new EdgeStyle(this);
             }
         }

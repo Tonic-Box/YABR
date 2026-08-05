@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * try/catch recovery - instead of sending the whole method to the legacy walk. Asserts a round-trip fixed
  * point, that both tries and all spans survive, and that the recompiled bytecode executes every path.
  */
-class SequentialTryStagingFidelityTest {
+class SequentialTryStagingFidelityTest
+{
 
     private static final String SOURCE =
             "public class SeqTry {\n"
@@ -63,14 +64,14 @@ class SequentialTryStagingFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("seq-try-staging");
         Path src = dir.resolve("SeqTry.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("SeqTry.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -85,8 +86,10 @@ class SequentialTryStagingFidelityTest {
     }
 
     @Test
-    void everySpanSurvivesBothDecompiles() {
-        for (String d : new String[] {d1, d2}) {
+    void everySpanSurvivesBothDecompiles()
+    {
+        for (String d : new String[] {d1, d2})
+        {
             assertEquals(2, countOccurrences(d, "catch (NumberFormatException"),
                     "both tries must survive as separate catch clauses:\n" + d);
             assertTrue(d.contains("\"badA\""), "the first catch body must survive:\n" + d);
@@ -98,12 +101,14 @@ class SequentialTryStagingFidelityTest {
     }
 
     @Test
-    void recoveredFormIsStable() {
+    void recoveredFormIsStable()
+    {
         assertEquals(d2, d3, "the staged recovery must reach a fixed point on its own output");
     }
 
     @Test
-    void everyPathExecutes() throws Exception {
+    void everyPathExecutes() throws Exception
+    {
         assertEquals("empty", invoke("", "", false), "the prelude's early return must execute");
         assertEquals("badA", invoke("x", "2", false), "the first catch path must execute");
         assertEquals("badB", invoke("3", "y", false), "the second catch path must execute");
@@ -112,15 +117,18 @@ class SequentialTryStagingFidelityTest {
         assertEquals("neg", invoke("3", "-99", false), "the continuation guard must execute");
     }
 
-    private static String invoke(String a, String b, boolean flag) throws Exception {
+    private static String invoke(String a, String b, boolean flag) throws Exception
+    {
         return (String) recompiledClass
                 .getDeclaredMethod("m", String.class, String.class, boolean.class)
                 .invoke(null, a, b, flag);
     }
 
-    private static int countOccurrences(String text, String needle) {
+    private static int countOccurrences(String text, String needle)
+    {
         int count = 0;
-        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1)) {
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1))
+        {
             count++;
         }
         return count;

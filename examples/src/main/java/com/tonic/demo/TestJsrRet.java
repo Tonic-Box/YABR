@@ -11,20 +11,22 @@ import java.io.*;
 import java.util.ArrayList;
 
 /**
- * Test for JSR/RET bytecode handling in the SSA lifter/lowerer.
- *
- * This test creates a class with a method that uses JSR/RET instructions
- * (the legacy subroutine mechanism deprecated in Java 7) and verifies
- * that the SSA framework can lift and lower it correctly.
+ * Demo showing that the SSA framework can lift and lower legacy JSR/RET subroutine bytecode.
  */
-public class TestJsrRet {
+public class TestJsrRet
+{
 
-    public static void main(String[] args) throws Exception {
+    /**
+     * Builds JSR/RET test classes and runs the lift/lower checks against them.
+     * @param args unused
+     * @throws Exception if class generation or execution fails
+     */
+    public static void main(String[] args) throws Exception
+    {
         Logger.setLog(false);
 
         System.out.println("=== JSR/RET Bytecode Test ===\n");
 
-        // Test 1: Simple JSR/RET pattern
         testSimpleJsrRet();
 
         // Test 2: Test that we can at least parse and lift JSR/RET
@@ -35,10 +37,8 @@ public class TestJsrRet {
 
     /**
      * Creates a simple class with a method using JSR/RET bytecode.
-     *
      * The bytecode pattern simulates a classic try-finally using JSR:
-     *
-     *  0: iconst_1          // Push 1
+     * 0: iconst_1          // Push 1
      *  1: istore_1          // Store to local 1 (result = 1)
      *  2: jsr 8             // Jump to subroutine at offset 8
      *  5: iload_1           // Load result
@@ -50,17 +50,16 @@ public class TestJsrRet {
      * 11: iadd              // Add (result += 2)
      * 12: istore_1          // Store back
      * 13: ret 2             // Return to caller (address in local 2)
-     *
      * Expected behavior: method returns 3 (1 + 2)
      */
-    private static void testSimpleJsrRet() throws Exception {
+    private static void testSimpleJsrRet() throws Exception
+    {
         System.out.println("Test 1: Creating class with JSR/RET bytecode...");
 
         ClassPool classPool = ClassPool.getDefault();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile classFile = ClassFactory.createClass(classPool, "com/tonic/test/JsrRetTest", classAccess);
 
-        // Create method: public static int jsrMethod()
         int methodAccess = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(methodAccess, "jsrMethod", "I");
 
@@ -99,21 +98,27 @@ public class TestJsrRet {
         System.out.println("  Saved to C:\\test\\new\\JsrRetTest.class");
 
         // Try to load and execute
-        try {
+        try
+        {
             CustomClassLoader loader = new CustomClassLoader();
             Class<?> loadedClass = loader.defineClass("com.tonic.test.JsrRetTest", classBytes);
             java.lang.reflect.Method m = loadedClass.getMethod("jsrMethod");
             Object result = m.invoke(null);
             System.out.println("  Direct execution result: " + result + " (expected: 3)");
 
-            if ((Integer) result != 3) {
+            if ((Integer) result != 3)
+            {
                 System.out.println("  WARNING: Direct execution returned unexpected value!");
             }
-        } catch (VerifyError e) {
+        }
+        catch (VerifyError e)
+        {
             // Modern JVMs reject JSR/RET in class files with version >= 51 (Java 7)
             System.out.println("  Note: JVM rejected JSR/RET (expected for class version >= 51)");
             System.out.println("  Error: " + e.getMessage());
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.out.println("  Execution failed: " + e.getMessage());
         }
 
@@ -123,14 +128,14 @@ public class TestJsrRet {
     /**
      * Tests that the SSA lifter can handle JSR/RET bytecode.
      */
-    private static void testJsrRetLifting() throws Exception {
+    private static void testJsrRetLifting() throws Exception
+    {
         System.out.println("Test 2: Testing SSA lifting of JSR/RET bytecode...");
 
         ClassPool classPool = ClassPool.getDefault();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile classFile = ClassFactory.createClass(classPool, "com/tonic/test/JsrRetLift", classAccess);
 
-        // Create method with JSR/RET
         int methodAccess = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(methodAccess, "testMethod", "I");
 
@@ -170,7 +175,8 @@ public class TestJsrRet {
         System.out.println("   13: ret 2");
 
         // Try SSA lifting
-        try {
+        try
+        {
             SSA ssa = new SSA(classFile.getConstPool());
             IRMethod irMethod = ssa.lift(method);
 
@@ -179,11 +185,12 @@ public class TestJsrRet {
             System.out.println("  Number of blocks: " + irMethod.getBlocks().size());
             System.out.println("  Entry block: " + irMethod.getEntryBlock().getName());
 
-            // Print IR
             System.out.println("\n  IR representation:");
-            for (var block : irMethod.getBlocks()) {
+            for (var block : irMethod.getBlocks())
+            {
                 System.out.println("    " + block.getName() + ":");
-                for (var instr : block.getInstructions()) {
+                for (var instr : block.getInstructions())
+                {
                     System.out.println("      " + instr);
                 }
             }
@@ -196,9 +203,9 @@ public class TestJsrRet {
             System.out.println("  Lowering successful!");
             System.out.println("  New bytecode length: " + newBytecode.length + " bytes");
 
-            // Print new bytecode
             System.out.print("  New bytecode: ");
-            for (int i = 0; i < Math.min(20, newBytecode.length); i++) {
+            for (int i = 0; i < Math.min(20, newBytecode.length); i++)
+            {
                 System.out.printf("%02X ", newBytecode[i] & 0xFF);
             }
             if (newBytecode.length > 20) System.out.print("...");
@@ -209,25 +216,33 @@ public class TestJsrRet {
             classFile.rebuild();
             byte[] loweredBytes = classFile.write();
 
-            try {
+            try
+            {
                 CustomClassLoader loader = new CustomClassLoader();
                 Class<?> loadedClass = loader.defineClass("com.tonic.test.JsrRetLift", loweredBytes);
                 java.lang.reflect.Method m = loadedClass.getMethod("testMethod");
                 Object result = m.invoke(null);
                 System.out.println("  Lowered code execution result: " + result + " (expected: 3)");
 
-                if ((Integer) result == 3) {
+                if ((Integer) result == 3)
+                {
                     System.out.println("  Semantic preservation: VERIFIED");
-                } else {
+                }
+                else
+                {
                     System.out.println("  WARNING: Result mismatch - expected 3 but got " + result);
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 System.out.println("  Could not execute lowered code: " + ex.getMessage());
             }
 
             System.out.println("  Test 2: PASSED\n");
 
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.out.println("  SSA processing failed: " + e.getClass().getSimpleName());
             System.out.println("  Message: " + e.getMessage());
             e.printStackTrace(System.out);
@@ -236,10 +251,18 @@ public class TestJsrRet {
     }
 
     /**
-     * Custom class loader for loading generated classes.
+     * Class loader exposing defineClass for the generated test classes.
      */
-    private static class CustomClassLoader extends ClassLoader {
-        public Class<?> defineClass(String name, byte[] bytes) {
+    private static class CustomClassLoader extends ClassLoader
+    {
+        /**
+         * Defines a class from raw bytes.
+         * @param name the class name, or null to derive it from the bytes
+         * @param bytes the class file bytes
+         * @return the defined class
+         */
+        public Class<?> defineClass(String name, byte[] bytes)
+        {
             return defineClass(name, bytes, 0, bytes.length);
         }
     }

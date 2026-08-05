@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * A staged literal reaching the argument as a bare {@code 0}/{@code 1} is likewise rewritten to the boolean
  * the descriptor declares.
  */
-class BooleanArgumentFoldTest {
+class BooleanArgumentFoldTest
+{
 
     private static final String[] LINES = {
             "public class BoolParam {",
@@ -43,20 +44,19 @@ class BooleanArgumentFoldTest {
     };
 
     @Test
-    void aBooleanArgumentStaysABoolean() throws Exception {
+    void aBooleanArgumentStaysABoolean() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("bool-param");
         Path src = dir.resolve("BoolParam.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("BoolParam.class")));
         Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
-        assertEquals("m3=true;gt=false;m3=false;gt=false;", original,
-                "the fixture itself must take both truth values");
+        assertEquals("m3=true;gt=false;m3=false;gt=false;", original, "the fixture itself must take both truth values");
 
         String d1 = ClassDecompiler.decompile(cf);
         assertFalse(d1.contains("? 0 : 1") || d1.contains("? 1 : 0"),

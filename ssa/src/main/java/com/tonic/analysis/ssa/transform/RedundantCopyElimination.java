@@ -11,21 +11,23 @@ import java.util.*;
 
 /**
  * Removes redundant copy instructions and simplifies assignment chains.
- *
  * This pass eliminates:
  * 1. Identity copies: x = x (no-ops)
- * 2. Redundant load-store pairs: store x, v; load x -> v (when no intervening store)
- * 3. Chained copies: a = b; c = a -> c = b (propagates through chains)
+ * 2. Redundant load-store pairs: store x, v; load x -&gt; v (when no intervening store)
+ * 3. Chained copies: a = b; c = a -&gt; c = b (propagates through chains)
  */
-public class RedundantCopyElimination implements IRTransform {
+public class RedundantCopyElimination implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "RedundantCopyElimination";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
         changed |= removeIdentityCopies(method);
@@ -39,7 +41,8 @@ public class RedundantCopyElimination implements IRTransform {
      * Removes CopyInstruction where source equals result (identity copies).
      * These are no-ops that can be safely removed.
      */
-    private boolean removeIdentityCopies(IRMethod method) {
+    private boolean removeIdentityCopies(IRMethod method)
+    {
         boolean changed = false;
 
         // Exclude the leading self-copy of each handler block: the lowerer turns it into the astore that
@@ -47,30 +50,39 @@ public class RedundantCopyElimination implements IRTransform {
         // no-op would drop the astore and corrupt the handler.
         Set<IRInstruction> exceptionCaptureMarkers = handlerExceptionCaptureMarkers(method);
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             List<IRInstruction> toRemove = new ArrayList<>();
 
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof CopyInstruction) {
-                    if (exceptionCaptureMarkers.contains(instr)) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof CopyInstruction)
+                {
+                    if (exceptionCaptureMarkers.contains(instr))
+                    {
                         continue;
                     }
                     CopyInstruction copy = (CopyInstruction) instr;
                     Value source = copy.getSource();
                     SSAValue result = copy.getResult();
 
-                    if (source.equals(result)) {
+                    if (source.equals(result))
+                    {
                         toRemove.add(instr);
-                    } else if (source instanceof SSAValue) {
+                    }
+                    else if (source instanceof SSAValue)
+                    {
                         SSAValue srcSSA = (SSAValue) source;
-                        if (srcSSA.getName().equals(result.getName())) {
+                        if (srcSSA.getName().equals(result.getName()))
+                        {
                             toRemove.add(instr);
                         }
                     }
                 }
             }
 
-            for (IRInstruction instr : toRemove) {
+            for (IRInstruction instr : toRemove)
+            {
                 block.removeInstruction(instr);
                 changed = true;
             }
@@ -85,17 +97,22 @@ public class RedundantCopyElimination implements IRTransform {
      * exactly as {@code BytecodeEmitter.identifyHandlerExceptionCaptures} does (first instruction, a
      * CopyInstruction whose source IS its result) so the two passes agree on which copies are critical.
      */
-    private static Set<IRInstruction> handlerExceptionCaptureMarkers(IRMethod method) {
+    private static Set<IRInstruction> handlerExceptionCaptureMarkers(IRMethod method)
+    {
         Set<IRInstruction> markers = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (ExceptionHandler handler : method.getExceptionHandlers()) {
+        for (ExceptionHandler handler : method.getExceptionHandlers())
+        {
             IRBlock handlerBlock = handler.getHandlerBlock();
-            if (handlerBlock == null || handlerBlock.getInstructions().isEmpty()) {
+            if (handlerBlock == null || handlerBlock.getInstructions().isEmpty())
+            {
                 continue;
             }
             IRInstruction first = handlerBlock.getInstructions().get(0);
-            if (first instanceof CopyInstruction) {
+            if (first instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) first;
-                if (copy.getResult() != null && copy.getSource() == copy.getResult()) {
+                if (copy.getResult() != null && copy.getSource() == copy.getResult())
+                {
                     markers.add(first);
                 }
             }
@@ -106,29 +123,36 @@ public class RedundantCopyElimination implements IRTransform {
     /**
      * Removes redundant load-store sequences where a value is stored
      * then immediately loaded without any intervening modification.
-     *
-     * Pattern: store_local N, v; ... load_local N -> replace load with v
+     * Pattern: store_local N, v; ... load_local N -&gt; replace load with v
      */
-    private boolean removeRedundantLoadStore(IRMethod method) {
+    private boolean removeRedundantLoadStore(IRMethod method)
+    {
         boolean changed = false;
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             Map<Integer, Value> localValues = new HashMap<>();
             List<IRInstruction> toRemove = new ArrayList<>();
             Map<IRInstruction, Value> replacements = new HashMap<>();
 
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof StoreLocalInstruction)
+                {
                     StoreLocalInstruction store = (StoreLocalInstruction) instr;
                     localValues.put(store.getLocalIndex(), store.getValue());
-                } else if (instr instanceof LoadLocalInstruction) {
+                }
+                else if (instr instanceof LoadLocalInstruction)
+                {
                     LoadLocalInstruction load = (LoadLocalInstruction) instr;
                     Integer localIdx = load.getLocalIndex();
-                    if (localValues.containsKey(localIdx)) {
+                    if (localValues.containsKey(localIdx))
+                    {
                         Value storedValue = localValues.get(localIdx);
                         SSAValue loadResult = load.getResult();
 
-                        if (loadResult != null && storedValue != null) {
+                        if (loadResult != null && storedValue != null)
+                        {
                             replacements.put(instr, storedValue);
                             toRemove.add(instr);
                         }
@@ -136,17 +160,20 @@ public class RedundantCopyElimination implements IRTransform {
                 }
             }
 
-            for (Map.Entry<IRInstruction, Value> entry : replacements.entrySet()) {
+            for (Map.Entry<IRInstruction, Value> entry : replacements.entrySet())
+            {
                 IRInstruction loadInstr = entry.getKey();
                 Value replacement = entry.getValue();
                 SSAValue loadResult = loadInstr.getResult();
 
-                if (loadResult != null) {
+                if (loadResult != null)
+                {
                     replaceAllUses(method, loadResult, replacement);
                 }
             }
 
-            for (IRInstruction instr : toRemove) {
+            for (IRInstruction instr : toRemove)
+            {
                 block.removeInstruction(instr);
                 changed = true;
             }
@@ -158,21 +185,29 @@ public class RedundantCopyElimination implements IRTransform {
     /**
      * Replaces all uses of oldValue with newValue throughout the method.
      */
-    private void replaceAllUses(IRMethod method, SSAValue oldValue, Value newValue) {
-        for (IRBlock block : method.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks())) {
+    private void replaceAllUses(IRMethod method, SSAValue oldValue, Value newValue)
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks()))
+                {
                     Value incoming = phi.getIncoming(pred);
-                    if (incoming.equals(oldValue)) {
+                    if (incoming.equals(oldValue))
+                    {
                         phi.removeIncoming(pred);
                         phi.addIncoming(newValue, pred);
                     }
                 }
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
-                for (Value operand : new ArrayList<>(instr.getOperands())) {
-                    if (operand.equals(oldValue)) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                for (Value operand : new ArrayList<>(instr.getOperands()))
+                {
+                    if (operand.equals(oldValue))
+                    {
                         instr.replaceOperand(operand, newValue);
                     }
                 }

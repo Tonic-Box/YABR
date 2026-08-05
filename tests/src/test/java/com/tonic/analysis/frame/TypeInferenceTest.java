@@ -18,14 +18,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for TypeInference class.
  * Tests all bytecode instruction types and their effects on TypeState.
  */
-class TypeInferenceTest {
+class TypeInferenceTest
+{
 
     private ConstPool constPool;
     private TypeInference inference;
     private TypeState initialState;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/TypeInferenceTest", access);
@@ -36,10 +38,11 @@ class TypeInferenceTest {
         initialState = TypeState.empty();
     }
 
-    // ========== 1. Constant Push Instructions (0x00-0x14) ==========
+    // 1. Constant Push Instructions (0x00-0x14)
 
     @Test
-    void testNop() {
+    void testNop()
+    {
         Instruction nop = new NopInstruction(0x00, 0);
         TypeState result = inference.apply(initialState, nop);
 
@@ -48,7 +51,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAConstNull() {
+    void testAConstNull()
+    {
         Instruction aconst = new AConstNullInstruction(0x01, 0);
         TypeState result = inference.apply(initialState, aconst);
 
@@ -57,7 +61,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIConstM1() {
+    void testIConstM1()
+    {
         Instruction iconst = new IConstInstruction(0x02, 0, -1);
         TypeState result = inference.apply(initialState, iconst);
 
@@ -66,8 +71,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIConst0Through5() {
-        for (int opcode = 0x03; opcode <= 0x08; opcode++) {
+    void testIConst0Through5()
+    {
+        for (int opcode = 0x03; opcode <= 0x08; opcode++)
+        {
             Instruction iconst = new IConstInstruction(opcode, 0, opcode - 0x03);
             TypeState result = inference.apply(initialState, iconst);
 
@@ -77,7 +84,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLConst0() {
+    void testLConst0()
+    {
         Instruction lconst = new LConstInstruction(0x09, 0, 0L);
         TypeState result = inference.apply(initialState, lconst);
 
@@ -87,7 +95,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLConst1() {
+    void testLConst1()
+    {
         Instruction lconst = new LConstInstruction(0x0A, 0, 1L);
         TypeState result = inference.apply(initialState, lconst);
 
@@ -96,8 +105,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFConst0Through2() {
-        for (int opcode = 0x0B; opcode <= 0x0D; opcode++) {
+    void testFConst0Through2()
+    {
+        for (int opcode = 0x0B; opcode <= 0x0D; opcode++)
+        {
             Instruction fconst = new FConstInstruction(opcode, 0, (float)(opcode - 0x0B));
             TypeState result = inference.apply(initialState, fconst);
 
@@ -107,7 +118,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDConst0() {
+    void testDConst0()
+    {
         Instruction dconst = new DConstInstruction(0x0E, 0, 0.0);
         TypeState result = inference.apply(initialState, dconst);
 
@@ -116,7 +128,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDConst1() {
+    void testDConst1()
+    {
         Instruction dconst = new DConstInstruction(0x0F, 0, 1.0);
         TypeState result = inference.apply(initialState, dconst);
 
@@ -125,7 +138,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testBipush() {
+    void testBipush()
+    {
         Instruction bipush = new BipushInstruction(0x10, 0, (byte)42);
         TypeState result = inference.apply(initialState, bipush);
 
@@ -134,7 +148,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testSipush() {
+    void testSipush()
+    {
         Instruction sipush = new SipushInstruction(0x11, 0, (short)1000);
         TypeState result = inference.apply(initialState, sipush);
 
@@ -143,7 +158,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLdcInteger() {
+    void testLdcInteger()
+    {
         int intIndex = constPool.findOrAddInteger(42).getIndex(constPool);
         Instruction ldc = new LdcInstruction(constPool, 0x12, 0, intIndex);
         TypeState result = inference.apply(initialState, ldc);
@@ -153,7 +169,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLdcFloat() {
+    void testLdcFloat()
+    {
         int floatIndex = constPool.findOrAddFloat(3.14f).getIndex(constPool);
         Instruction ldc = new LdcInstruction(constPool, 0x12, 0, floatIndex);
         TypeState result = inference.apply(initialState, ldc);
@@ -163,7 +180,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLdcString() {
+    void testLdcString()
+    {
         int stringIndex = constPool.findOrAddString("test").getIndex(constPool);
         Instruction ldc = new LdcInstruction(constPool, 0x12, 0, stringIndex);
         TypeState result = inference.apply(initialState, ldc);
@@ -173,7 +191,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLdcClass() {
+    void testLdcClass()
+    {
         int classIndex = constPool.findOrAddClass("java/lang/String").getIndex(constPool);
         ClassRefItem classRef = constPool.findOrAddClass("java/lang/String");
         // Create LDC that loads a Class constant
@@ -185,7 +204,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLdcWLong() {
+    void testLdcWLong()
+    {
         int longIndex = constPool.findOrAddLong(42L).getIndex(constPool);
         Instruction ldc2w = new Ldc2WInstruction(constPool, 0x14, 0, longIndex);
         TypeState result = inference.apply(initialState, ldc2w);
@@ -195,7 +215,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLdcWDouble() {
+    void testLdcWDouble()
+    {
         int doubleIndex = constPool.findOrAddDouble(3.14).getIndex(constPool);
         Instruction ldc2w = new Ldc2WInstruction(constPool, 0x14, 0, doubleIndex);
         TypeState result = inference.apply(initialState, ldc2w);
@@ -204,10 +225,11 @@ class TypeInferenceTest {
         assertEquals(VerificationType.DOUBLE, result.peek(1));
     }
 
-    // ========== 2. Load Instructions (0x15-0x2D) ==========
+    // 2. Load Instructions (0x15-0x2D)
 
     @Test
-    void testILoad() {
+    void testILoad()
+    {
         Instruction iload = new ILoadInstruction(0x15, 0, 5);
         TypeState result = inference.apply(initialState, iload);
 
@@ -216,8 +238,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testILoad0Through3() {
-        for (int opcode = 0x1A; opcode <= 0x1D; opcode++) {
+    void testILoad0Through3()
+    {
+        for (int opcode = 0x1A; opcode <= 0x1D; opcode++)
+        {
             Instruction iload = new ILoadInstruction(opcode, 0, opcode - 0x1A);
             TypeState result = inference.apply(initialState, iload);
 
@@ -227,7 +251,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLLoad() {
+    void testLLoad()
+    {
         Instruction lload = new LLoadInstruction(0x16, 0, 5);
         TypeState result = inference.apply(initialState, lload);
 
@@ -236,8 +261,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLLoad0Through3() {
-        for (int opcode = 0x1E; opcode <= 0x21; opcode++) {
+    void testLLoad0Through3()
+    {
+        for (int opcode = 0x1E; opcode <= 0x21; opcode++)
+        {
             Instruction lload = new LLoadInstruction(opcode, 0, opcode - 0x1E);
             TypeState result = inference.apply(initialState, lload);
 
@@ -247,7 +274,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFLoad() {
+    void testFLoad()
+    {
         Instruction fload = new FLoadInstruction(0x17, 0, 5);
         TypeState result = inference.apply(initialState, fload);
 
@@ -256,8 +284,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFLoad0Through3() {
-        for (int opcode = 0x22; opcode <= 0x25; opcode++) {
+    void testFLoad0Through3()
+    {
+        for (int opcode = 0x22; opcode <= 0x25; opcode++)
+        {
             Instruction fload = new FLoadInstruction(opcode, 0, opcode - 0x22);
             TypeState result = inference.apply(initialState, fload);
 
@@ -267,7 +297,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDLoad() {
+    void testDLoad()
+    {
         Instruction dload = new DLoadInstruction(0x18, 0, 5);
         TypeState result = inference.apply(initialState, dload);
 
@@ -276,8 +307,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDLoad0Through3() {
-        for (int opcode = 0x26; opcode <= 0x29; opcode++) {
+    void testDLoad0Through3()
+    {
+        for (int opcode = 0x26; opcode <= 0x29; opcode++)
+        {
             Instruction dload = new DLoadInstruction(opcode, 0, opcode - 0x26);
             TypeState result = inference.apply(initialState, dload);
 
@@ -287,7 +320,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testALoad() {
+    void testALoad()
+    {
         // Setup state with object in local 5
         int objClassIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
         TypeState stateWithLocal = initialState.setLocal(5, VerificationType.object(objClassIndex));
@@ -300,10 +334,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testALoad0Through3() {
+    void testALoad0Through3()
+    {
         int objClassIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
 
-        for (int opcode = 0x2A; opcode <= 0x2D; opcode++) {
+        for (int opcode = 0x2A; opcode <= 0x2D; opcode++)
+        {
             int localIndex = opcode - 0x2A;
             TypeState stateWithLocal = initialState.setLocal(localIndex, VerificationType.object(objClassIndex));
 
@@ -315,11 +351,11 @@ class TypeInferenceTest {
         }
     }
 
-    // ========== 3. Array Load Instructions (0x2E-0x35) ==========
+    // 3. Array Load Instructions (0x2E-0x35)
 
     @Test
-    void testIALoad() {
-        // Setup: array and index on stack
+    void testIALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction iaload = new IALoadInstruction(0x2E, 0);
@@ -330,7 +366,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLALoad() {
+    void testLALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction laload = new LALoadInstruction(0x2F, 0);
@@ -341,7 +378,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFALoad() {
+    void testFALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction faload = new FALoadInstruction(0x30, 0);
@@ -352,7 +390,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDALoad() {
+    void testDALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction daload = new DALoadInstruction(0x31, 0);
@@ -363,7 +402,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAALoad() {
+    void testAALoad()
+    {
         int arrayClassIndex = constPool.findOrAddClass("[Ljava/lang/Object;").getIndex(constPool);
         TypeState state = initialState
                 .push(VerificationType.object(arrayClassIndex))
@@ -377,7 +417,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testBALoad() {
+    void testBALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction baload = new BALOADInstruction(0x33, 0);
@@ -388,7 +429,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testCALoad() {
+    void testCALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction caload = new CALoadInstruction(0x34, 0);
@@ -399,7 +441,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testSALoad() {
+    void testSALoad()
+    {
         TypeState state = initialState.push(VerificationType.object(1)).push(VerificationType.INTEGER);
 
         Instruction saload = new SALoadInstruction(0x35, 0);
@@ -409,10 +452,11 @@ class TypeInferenceTest {
         assertEquals(VerificationType.INTEGER, result.peek());
     }
 
-    // ========== 4. Store Instructions (0x36-0x4E) ==========
+    // 4. Store Instructions (0x36-0x4E)
 
     @Test
-    void testIStore() {
+    void testIStore()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction istore = new IStoreInstruction(0x36, 0, 5);
@@ -423,8 +467,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIStore0Through3() {
-        for (int opcode = 0x3B; opcode <= 0x3E; opcode++) {
+    void testIStore0Through3()
+    {
+        for (int opcode = 0x3B; opcode <= 0x3E; opcode++)
+        {
             TypeState state = initialState.push(VerificationType.INTEGER);
             int localIndex = opcode - 0x3B;
 
@@ -437,7 +483,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLStore() {
+    void testLStore()
+    {
         TypeState state = initialState.push(VerificationType.LONG);
 
         Instruction lstore = new LStoreInstruction(0x37, 0, 5);
@@ -449,8 +496,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLStore0Through3() {
-        for (int opcode = 0x3F; opcode <= 0x42; opcode++) {
+    void testLStore0Through3()
+    {
+        for (int opcode = 0x3F; opcode <= 0x42; opcode++)
+        {
             TypeState state = initialState.push(VerificationType.LONG);
             int localIndex = opcode - 0x3F;
 
@@ -463,7 +512,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFStore() {
+    void testFStore()
+    {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
         Instruction fstore = new FStoreInstruction(0x38, 0, 5);
@@ -474,8 +524,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFStore0Through3() {
-        for (int opcode = 0x43; opcode <= 0x46; opcode++) {
+    void testFStore0Through3()
+    {
+        for (int opcode = 0x43; opcode <= 0x46; opcode++)
+        {
             TypeState state = initialState.push(VerificationType.FLOAT);
             int localIndex = opcode - 0x43;
 
@@ -488,7 +540,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDStore() {
+    void testDStore()
+    {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
         Instruction dstore = new DStoreInstruction(0x39, 0, 5);
@@ -500,8 +553,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDStore0Through3() {
-        for (int opcode = 0x47; opcode <= 0x4A; opcode++) {
+    void testDStore0Through3()
+    {
+        for (int opcode = 0x47; opcode <= 0x4A; opcode++)
+        {
             TypeState state = initialState.push(VerificationType.DOUBLE);
             int localIndex = opcode - 0x47;
 
@@ -514,7 +569,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAStore() {
+    void testAStore()
+    {
         int objClassIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
         TypeState state = initialState.push(VerificationType.object(objClassIndex));
 
@@ -526,10 +582,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAStore0Through3() {
+    void testAStore0Through3()
+    {
         int objClassIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
 
-        for (int opcode = 0x4B; opcode <= 0x4E; opcode++) {
+        for (int opcode = 0x4B; opcode <= 0x4E; opcode++)
+        {
             TypeState state = initialState.push(VerificationType.object(objClassIndex));
             int localIndex = opcode - 0x4B;
 
@@ -541,11 +599,11 @@ class TypeInferenceTest {
         }
     }
 
-    // ========== 5. Array Store Instructions (0x4F-0x56) ==========
+    // 5. Array Store Instructions (0x4F-0x56)
 
     @Test
-    void testIAStore() {
-        // Setup: array, index, value on stack
+    void testIAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -558,7 +616,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLAStore() {
+    void testLAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -571,7 +630,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFAStore() {
+    void testFAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -584,7 +644,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDAStore() {
+    void testDAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -597,7 +658,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAAStore() {
+    void testAAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -610,7 +672,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testBAStore() {
+    void testBAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -623,7 +686,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testCAStore() {
+    void testCAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -636,7 +700,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testSAStore() {
+    void testSAStore()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.INTEGER)
@@ -648,10 +713,11 @@ class TypeInferenceTest {
         assertEquals(0, result.getStackSize());
     }
 
-    // ========== 6. Stack Manipulation (0x57-0x5F) ==========
+    // 6. Stack Manipulation (0x57-0x5F)
 
     @Test
-    void testPop() {
+    void testPop()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction pop = new PopInstruction(0x57, 0);
@@ -661,7 +727,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testPop2() {
+    void testPop2()
+    {
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.INTEGER);
@@ -673,7 +740,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDup() {
+    void testDup()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction dup = new DupInstruction(0x59, 0);
@@ -685,7 +753,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDupX1() {
+    void testDupX1()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.INTEGER);
@@ -700,7 +769,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDupX2() {
+    void testDupX2()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.FLOAT)
@@ -717,7 +787,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDup2() {
+    void testDup2()
+    {
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -733,7 +804,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDup2X1() {
+    void testDup2X1()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.INTEGER)
@@ -746,7 +818,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDup2X2() {
+    void testDup2X2()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.FLOAT)
@@ -760,7 +833,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testSwap() {
+    void testSwap()
+    {
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -773,10 +847,11 @@ class TypeInferenceTest {
         assertEquals(VerificationType.FLOAT, result.peek(1));
     }
 
-    // ========== 7. Arithmetic Operations (0x60-0x84) ==========
+    // 7. Arithmetic Operations (0x60-0x84)
 
     @Test
-    void testIAdd() {
+    void testIAdd()
+    {
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.INTEGER);
@@ -789,7 +864,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLAdd() {
+    void testLAdd()
+    {
         TypeState state = initialState
                 .push(VerificationType.LONG)
                 .push(VerificationType.LONG);
@@ -802,7 +878,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFAdd() {
+    void testFAdd()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.FLOAT);
@@ -815,7 +892,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDAdd() {
+    void testDAdd()
+    {
         TypeState state = initialState
                 .push(VerificationType.DOUBLE)
                 .push(VerificationType.DOUBLE);
@@ -828,10 +906,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIntegerArithmeticOps() {
+    void testIntegerArithmeticOps()
+    {
         int[] opcodes = {0x60, 0x64, 0x68, 0x6C, 0x70}; // iadd, isub, imul, idiv, irem
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.INTEGER);
@@ -845,7 +925,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIntegerLogicalOps() {
+    void testIntegerLogicalOps()
+    {
         // Test iand (0x7E), ior (0x80), ixor (0x82) using specific instruction classes
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
@@ -873,10 +954,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLongArithmeticOps() {
+    void testLongArithmeticOps()
+    {
         int[] opcodes = {0x61, 0x65, 0x69, 0x6D, 0x71}; // ladd, lsub, lmul, ldiv, lrem
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.LONG)
                     .push(VerificationType.LONG);
@@ -890,7 +973,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLongLogicalOps() {
+    void testLongLogicalOps()
+    {
         // Test land (0x7F), lor (0x81), lxor (0x83) using specific instruction classes
         TypeState state = initialState
                 .push(VerificationType.LONG)
@@ -918,10 +1002,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFloatArithmeticOps() {
+    void testFloatArithmeticOps()
+    {
         int[] opcodes = {0x66, 0x6A, 0x6E, 0x72}; // fsub, fmul, fdiv, frem
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.FLOAT)
                     .push(VerificationType.FLOAT);
@@ -935,10 +1021,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDoubleArithmeticOps() {
+    void testDoubleArithmeticOps()
+    {
         int[] opcodes = {0x67, 0x6B, 0x6F, 0x73}; // dsub, dmul, ddiv, drem
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.DOUBLE)
                     .push(VerificationType.DOUBLE);
@@ -952,7 +1040,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testINeg() {
+    void testINeg()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction ineg = new INegInstruction(0x74, 0);
@@ -963,7 +1052,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLNeg() {
+    void testLNeg()
+    {
         TypeState state = initialState.push(VerificationType.LONG);
 
         Instruction lneg = new LNegInstruction(0x75, 0);
@@ -974,7 +1064,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFNeg() {
+    void testFNeg()
+    {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
         Instruction fneg = new FNegInstruction(0x76, 0);
@@ -985,7 +1076,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDNeg() {
+    void testDNeg()
+    {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
         Instruction dneg = new DNegInstruction(0x77, 0);
@@ -996,10 +1088,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIShiftOps() {
+    void testIShiftOps()
+    {
         int[] opcodes = {0x78, 0x7A, 0x7C}; // ishl, ishr, iushr
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.INTEGER);
@@ -1013,10 +1107,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLShiftOps() {
+    void testLShiftOps()
+    {
         int[] opcodes = {0x79, 0x7B, 0x7D}; // lshl, lshr, lushr
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.LONG)
                     .push(VerificationType.INTEGER);
@@ -1030,7 +1126,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIInc() {
+    void testIInc()
+    {
         TypeState state = initialState.setLocal(5, VerificationType.INTEGER);
 
         Instruction iinc = new IIncInstruction(0x84, 0, 5, 1);
@@ -1040,10 +1137,11 @@ class TypeInferenceTest {
         assertEquals(VerificationType.INTEGER, result.getLocal(5));
     }
 
-    // ========== 8. Type Conversions (0x85-0x93) ==========
+    // 8. Type Conversions (0x85-0x93)
 
     @Test
-    void testI2L() {
+    void testI2L()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction i2l = new I2LInstruction(0x85, 0);
@@ -1054,7 +1152,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testI2F() {
+    void testI2F()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction i2f = new ConversionInstruction(0x86, 0);
@@ -1065,7 +1164,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testI2D() {
+    void testI2D()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction i2d = new ConversionInstruction(0x87, 0);
@@ -1076,7 +1176,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testL2I() {
+    void testL2I()
+    {
         TypeState state = initialState.push(VerificationType.LONG);
 
         Instruction l2i = new ConversionInstruction(0x88, 0);
@@ -1087,7 +1188,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testL2F() {
+    void testL2F()
+    {
         TypeState state = initialState.push(VerificationType.LONG);
 
         Instruction l2f = new ConversionInstruction(0x89, 0);
@@ -1098,7 +1200,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testL2D() {
+    void testL2D()
+    {
         TypeState state = initialState.push(VerificationType.LONG);
 
         Instruction l2d = new ConversionInstruction(0x8A, 0);
@@ -1109,7 +1212,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testF2I() {
+    void testF2I()
+    {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
         Instruction f2i = new ConversionInstruction(0x8B, 0);
@@ -1120,7 +1224,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testF2L() {
+    void testF2L()
+    {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
         Instruction f2l = new ConversionInstruction(0x8C, 0);
@@ -1131,7 +1236,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testF2D() {
+    void testF2D()
+    {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
         Instruction f2d = new ConversionInstruction(0x8D, 0);
@@ -1142,7 +1248,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testD2I() {
+    void testD2I()
+    {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
         Instruction d2i = new ConversionInstruction(0x8E, 0);
@@ -1153,7 +1260,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testD2L() {
+    void testD2L()
+    {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
         Instruction d2l = new ConversionInstruction(0x8F, 0);
@@ -1164,7 +1272,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testD2F() {
+    void testD2F()
+    {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
         Instruction d2f = new ConversionInstruction(0x90, 0);
@@ -1175,7 +1284,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testI2B() {
+    void testI2B()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction i2b = new NarrowingConversionInstruction(0x91, 0);
@@ -1186,7 +1296,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testI2C() {
+    void testI2C()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction i2c = new NarrowingConversionInstruction(0x92, 0);
@@ -1197,7 +1308,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testI2S() {
+    void testI2S()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction i2s = new NarrowingConversionInstruction(0x93, 0);
@@ -1207,10 +1319,11 @@ class TypeInferenceTest {
         assertEquals(VerificationType.INTEGER, result.peek());
     }
 
-    // ========== 9. Comparisons (0x94-0x98) ==========
+    // 9. Comparisons (0x94-0x98)
 
     @Test
-    void testLCmp() {
+    void testLCmp()
+    {
         TypeState state = initialState
                 .push(VerificationType.LONG)
                 .push(VerificationType.LONG);
@@ -1223,7 +1336,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFCmpL() {
+    void testFCmpL()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.FLOAT);
@@ -1236,7 +1350,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFCmpG() {
+    void testFCmpG()
+    {
         TypeState state = initialState
                 .push(VerificationType.FLOAT)
                 .push(VerificationType.FLOAT);
@@ -1249,7 +1364,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDCmpL() {
+    void testDCmpL()
+    {
         TypeState state = initialState
                 .push(VerificationType.DOUBLE)
                 .push(VerificationType.DOUBLE);
@@ -1262,7 +1378,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDCmpG() {
+    void testDCmpG()
+    {
         TypeState state = initialState
                 .push(VerificationType.DOUBLE)
                 .push(VerificationType.DOUBLE);
@@ -1274,13 +1391,15 @@ class TypeInferenceTest {
         assertEquals(VerificationType.INTEGER, result.peek());
     }
 
-    // ========== 10. Control Flow (0x99-0xAB) ==========
+    // 10. Control Flow (0x99-0xAB)
 
     @Test
-    void testConditionalBranchesOneOperand() {
+    void testConditionalBranchesOneOperand()
+    {
         int[] opcodes = {0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E}; // ifeq, ifne, iflt, ifge, ifgt, ifle
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState.push(VerificationType.INTEGER);
 
             Instruction branch = new ConditionalBranchInstruction(opcode, 0, (short)10);
@@ -1291,10 +1410,12 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testConditionalBranchesTwoOperands() {
+    void testConditionalBranchesTwoOperands()
+    {
         int[] opcodes = {0x9F, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4}; // if_icmpeq, if_icmpne, if_icmplt, if_icmpge, if_icmpgt, if_icmple
 
-        for (int opcode : opcodes) {
+        for (int opcode : opcodes)
+        {
             TypeState state = initialState
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.INTEGER);
@@ -1307,7 +1428,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIfACmpEq() {
+    void testIfACmpEq()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.object(1));
@@ -1319,7 +1441,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIfACmpNe() {
+    void testIfACmpNe()
+    {
         TypeState state = initialState
                 .push(VerificationType.object(1))
                 .push(VerificationType.object(1));
@@ -1331,7 +1454,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testGoto() {
+    void testGoto()
+    {
         Instruction gotoInstr = new GotoInstruction(0xA7, 0, (short)10);
         TypeState result = inference.apply(initialState, gotoInstr);
 
@@ -1340,7 +1464,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testJsr() {
+    void testJsr()
+    {
         Instruction jsr = new JsrInstruction(0xA8, 0, 10);
         TypeState result = inference.apply(initialState, jsr);
 
@@ -1349,7 +1474,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testRet() {
+    void testRet()
+    {
         Instruction ret = new RetInstruction(0xA9, 0, 5);
         TypeState result = inference.apply(initialState, ret);
 
@@ -1357,7 +1483,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testTableSwitch() {
+    void testTableSwitch()
+    {
         java.util.Map<Integer, Integer> jumpOffsets = new java.util.HashMap<>();
         jumpOffsets.put(0, 15);
         jumpOffsets.put(1, 20);
@@ -1371,7 +1498,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLookupSwitch() {
+    void testLookupSwitch()
+    {
         java.util.Map<Integer, Integer> matchOffsets = new java.util.HashMap<>();
         matchOffsets.put(1, 15);
         matchOffsets.put(2, 20);
@@ -1383,10 +1511,11 @@ class TypeInferenceTest {
         assertEquals(0, result.getStackSize());
     }
 
-    // ========== 11. Returns (0xAC-0xB1) ==========
+    // 11. Returns (0xAC-0xB1)
 
     @Test
-    void testIReturn() {
+    void testIReturn()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction ireturn = new MethodReturnInstruction(0xAC, 0);
@@ -1396,7 +1525,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLReturn() {
+    void testLReturn()
+    {
         TypeState state = initialState.push(VerificationType.LONG);
 
         Instruction lreturn = new MethodReturnInstruction(0xAD, 0);
@@ -1406,7 +1536,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testFReturn() {
+    void testFReturn()
+    {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
         Instruction freturn = new MethodReturnInstruction(0xAE, 0);
@@ -1416,7 +1547,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testDReturn() {
+    void testDReturn()
+    {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
         Instruction dreturn = new MethodReturnInstruction(0xAF, 0);
@@ -1426,7 +1558,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAReturn() {
+    void testAReturn()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction areturn = new MethodReturnInstruction(0xB0, 0);
@@ -1436,7 +1569,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testReturn() {
+    void testReturn()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER).push(VerificationType.FLOAT);
 
         Instruction returnInstr = new MethodReturnInstruction(0xB1, 0);
@@ -1445,11 +1579,11 @@ class TypeInferenceTest {
         assertEquals(0, result.getStackSize());
     }
 
-    // ========== 12. Field Access (0xB2-0xB5) ==========
+    // 12. Field Access (0xB2-0xB5)
 
     @Test
-    void testGetStatic() {
-        // Create field reference with integer type
+    void testGetStatic()
+    {
         FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/test/Test", "testField", "I");
         int fieldIndex = fieldRef.getIndex(constPool);
 
@@ -1461,8 +1595,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testGetStaticLong() {
-        // Create field reference with long type
+    void testGetStaticLong()
+    {
         FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/test/Test", "testField", "J");
         int fieldIndex = fieldRef.getIndex(constPool);
 
@@ -1474,7 +1608,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testPutStatic() {
+    void testPutStatic()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/test/Test", "testField", "I");
@@ -1487,7 +1622,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testGetField() {
+    void testGetField()
+    {
         int objClassIndex = constPool.findOrAddClass("com/test/Test").getIndex(constPool);
         TypeState state = initialState.push(VerificationType.object(objClassIndex));
 
@@ -1502,7 +1638,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testPutField() {
+    void testPutField()
+    {
         int objClassIndex = constPool.findOrAddClass("com/test/Test").getIndex(constPool);
         TypeState state = initialState
                 .push(VerificationType.object(objClassIndex))
@@ -1517,10 +1654,11 @@ class TypeInferenceTest {
         assertEquals(0, result.getStackSize());
     }
 
-    // ========== 13. Method Invocation (0xB6-0xBA) ==========
+    // 13. Method Invocation (0xB6-0xBA)
 
     @Test
-    void testInvokeVirtual() {
+    void testInvokeVirtual()
+    {
         int classIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
         TypeState state = initialState.push(VerificationType.object(classIndex));
 
@@ -1537,7 +1675,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testInvokeVirtualWithArgs() {
+    void testInvokeVirtualWithArgs()
+    {
         int classIndex = constPool.findOrAddClass("java/lang/StringBuilder").getIndex(constPool);
         TypeState state = initialState
                 .push(VerificationType.object(classIndex))
@@ -1556,7 +1695,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testInvokeSpecial() {
+    void testInvokeSpecial()
+    {
         int classIndex = constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
         TypeState state = initialState.push(VerificationType.UNINITIALIZED_THIS);
 
@@ -1572,7 +1712,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testInvokeStatic() {
+    void testInvokeStatic()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         int classIndex = constPool.findOrAddClass("java/lang/Integer").getIndex(constPool);
@@ -1589,7 +1730,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testInvokeInterface() {
+    void testInvokeInterface()
+    {
         int classIndex = constPool.findOrAddClass("java/util/List").getIndex(constPool);
         TypeState state = initialState.push(VerificationType.object(classIndex));
 
@@ -1606,7 +1748,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testInvokeDynamic() {
+    void testInvokeDynamic()
+    {
         int nameIndex = constPool.findOrAddUtf8("test").getIndex(constPool);
         int descIndex = constPool.findOrAddUtf8("()Ljava/lang/String;").getIndex(constPool);
         int natIndex = constPool.findOrAddNameAndType(nameIndex, descIndex).getIndex(constPool);
@@ -1622,10 +1765,11 @@ class TypeInferenceTest {
         assertTrue(result.peek() instanceof VerificationType.ObjectType);
     }
 
-    // ========== 14. Object Operations (0xBB-0xC5) ==========
+    // 14. Object Operations (0xBB-0xC5)
 
     @Test
-    void testNew() {
+    void testNew()
+    {
         Instruction newInstr = new NewObjectInstruction(constPool, 0xBB, 0,
                 constPool.findOrAddClass("java/lang/Object").getIndex(constPool));
         TypeState result = inference.apply(initialState, newInstr);
@@ -1636,7 +1780,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testNewArray() {
+    void testNewArray()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         Instruction newarray = new NewPrimitiveArrayInstruction(0xBC, 0, 10, 0); // T_INT
@@ -1647,7 +1792,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testANewArray() {
+    void testANewArray()
+    {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
         int classIndex = constPool.findOrAddClass("java/lang/String").getIndex(constPool);
@@ -1659,7 +1805,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testArrayLength() {
+    void testArrayLength()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction arraylength = new ArrayLengthInstruction(0xBE, 0);
@@ -1670,7 +1817,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testAThrow() {
+    void testAThrow()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction athrow = new ATHROWInstruction(0xBF, 0);
@@ -1680,7 +1828,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testCheckCast() {
+    void testCheckCast()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         int classIndex = constPool.findOrAddClass("java/lang/String").getIndex(constPool);
@@ -1693,7 +1842,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testInstanceOf() {
+    void testInstanceOf()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         int classIndex = constPool.findOrAddClass("java/lang/String").getIndex(constPool);
@@ -1705,7 +1855,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testMonitorEnter() {
+    void testMonitorEnter()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction monitorenter = new MonitorEnterInstruction(0xC2, 0);
@@ -1715,7 +1866,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testMonitorExit() {
+    void testMonitorExit()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction monitorexit = new MonitorExitInstruction(0xC3, 0);
@@ -1725,9 +1877,10 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testWide() {
+    void testWide()
+    {
         // A WIDE-prefixed iload (local index > 255) pushes an int, exactly like its narrow form. This
-        // previously asserted a no-op (assertSame) — codifying the bug where TypeInference dispatched on the
+        // previously asserted a no-op (assertSame) - codifying the bug where TypeInference dispatched on the
         // 0xC4 prefix, matched nothing, and ignored the wrapped instruction's stack effect.
         Instruction wide = new WideInstruction(0xC4, 0, Opcode.ILOAD, 300);
         TypeState result = inference.apply(initialState, wide);
@@ -1737,7 +1890,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testMultiANewArray() {
+    void testMultiANewArray()
+    {
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.INTEGER);
@@ -1752,7 +1906,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIfNull() {
+    void testIfNull()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction ifnull = new ConditionalBranchInstruction(0xC6, 0, (short)10);
@@ -1762,7 +1917,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testIfNonNull() {
+    void testIfNonNull()
+    {
         TypeState state = initialState.push(VerificationType.object(1));
 
         Instruction ifnonnull = new ConditionalBranchInstruction(0xC7, 0, (short)10);
@@ -1772,7 +1928,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testGotoW() {
+    void testGotoW()
+    {
         Instruction gotow = new GotoInstruction(0xC8, 0, 100000);
         TypeState result = inference.apply(initialState, gotow);
 
@@ -1780,12 +1937,14 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testJsrW() {
+    void testJsrW()
+    {
         // JSR_W (0xC9) is handled similarly to JSR but with a wider branch offset
         // Create a mock instruction with opcode 0xC9
         Instruction jsrw = new GotoInstruction(0xC8, 0, 100000) {
             @Override
-            public int getOpcode() {
+            public int getOpcode()
+            {
                 return 0xC9;
             }
         };
@@ -1795,10 +1954,11 @@ class TypeInferenceTest {
         assertEquals(VerificationType.TOP, result.peek());
     }
 
-    // ========== Edge Cases and Integration Tests ==========
+    // Edge Cases and Integration Tests
 
     @Test
-    void testComplexStackManipulation() {
+    void testComplexStackManipulation()
+    {
         // Test a sequence: push int, push float, dup_x1, pop
         TypeState state = initialState
                 .push(VerificationType.INTEGER)
@@ -1814,7 +1974,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLocalVariableOverwrite() {
+    void testLocalVariableOverwrite()
+    {
         // Store int in local 5, then store float in local 5
         TypeState state = initialState.push(VerificationType.INTEGER);
 
@@ -1829,7 +1990,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testLongDoubleTwoSlotHandling() {
+    void testLongDoubleTwoSlotHandling()
+    {
         // Ensure long and double properly occupy two slots
         TypeState state = initialState.push(VerificationType.LONG);
 
@@ -1845,7 +2007,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testMethodCallWithMultipleArgs() {
+    void testMethodCallWithMultipleArgs()
+    {
         int classIndex = constPool.findOrAddClass("java/lang/String").getIndex(constPool);
         TypeState state = initialState
                 .push(VerificationType.object(classIndex))
@@ -1865,20 +2028,22 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testUnknownOpcodeReturnsStateUnchanged() {
+    void testUnknownOpcodeReturnsStateUnchanged()
+    {
         Instruction unknown = new UnknownInstruction(0xFF, 0, 1);
         TypeState result = inference.apply(initialState, unknown);
 
         assertSame(initialState, result);
     }
 
-    // ========== WIDE-prefixed load/store (locals > 255) ==========
+    // WIDE-prefixed load/store (locals > 255)
 
     @Test
-    void testWideReferenceStoreThenLoadAdjustsStack() {
+    void testWideReferenceStoreThenLoadAdjustsStack()
+    {
         // Regression: a WIDE-prefixed load/store (used for local indices > 255) must apply the wrapped
         // opcode's stack effect. TypeInference dispatched on the 0xC4 prefix, which matched no case, so the
-        // stack height was left unchanged — a wide astore never popped, under-counting frames downstream.
+        // stack height was left unchanged - a wide astore never popped, under-counting frames downstream.
         TypeState s = inference.apply(initialState, new AConstNullInstruction(0x01, 0));
         assertEquals(1, s.getStackSize());
 
@@ -1891,7 +2056,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testWideLongStoreThenLoadIsCategoryTwo() {
+    void testWideLongStoreThenLoadIsCategoryTwo()
+    {
         TypeState s = inference.apply(initialState, new LConstInstruction(0x09, 0, 0L));
         assertEquals(2, s.getStackSize());
 
@@ -1903,7 +2069,8 @@ class TypeInferenceTest {
     }
 
     @Test
-    void testWideIincLeavesStackUnchanged() {
+    void testWideIincLeavesStackUnchanged()
+    {
         TypeState s = inference.apply(initialState, new IConstInstruction(0x04, 0, 1));
         assertEquals(1, s.getStackSize());
 

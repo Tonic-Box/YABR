@@ -8,71 +8,109 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.List;
 
 /**
- * Prints AST nodes in a structured tree format for debugging.
- * Similar to IRPrinter for SSA IR, but for the expression/statement AST.
+ * Debug visitor that renders an expression/statement AST as an indented tree, optionally with types.
  */
-public class ASTPrinter implements SourceVisitor<Void> {
+public class ASTPrinter implements SourceVisitor<Void>
+{
 
     private final StringBuilder output;
     private int indentLevel;
     private final String indentString;
     private final boolean showTypes;
 
-    public ASTPrinter() {
+    /**
+     * Creates a printer that annotates nodes with their types.
+     */
+    public ASTPrinter()
+    {
         this(true);
     }
 
-    public ASTPrinter(boolean showTypes) {
+    /**
+     * Creates a printer.
+     * @param showTypes whether to annotate nodes with their types
+     */
+    public ASTPrinter(boolean showTypes)
+    {
         this.output = new StringBuilder();
         this.indentLevel = 0;
         this.indentString = "  ";
         this.showTypes = showTypes;
     }
 
-    public static String format(ASTNode node) {
+    /**
+     * Formats a node as an indented tree with type annotations.
+     * @param node the node to format
+     * @return the tree rendering
+     */
+    public static String format(ASTNode node)
+    {
         ASTPrinter printer = new ASTPrinter();
         node.accept(printer);
         return printer.toString();
     }
 
-    public static String format(ASTNode node, boolean showTypes) {
+    /**
+     * Formats a node as an indented tree.
+     * @param node the node to format
+     * @param showTypes whether to annotate nodes with their types
+     * @return the tree rendering
+     */
+    public static String format(ASTNode node, boolean showTypes)
+    {
         ASTPrinter printer = new ASTPrinter(showTypes);
         node.accept(printer);
         return printer.toString();
     }
 
-    public static String formatCompact(ASTNode node) {
+    /**
+     * Formats a node as an indented tree without type annotations.
+     * @param node the node to format
+     * @return the tree rendering
+     */
+    public static String formatCompact(ASTNode node)
+    {
         return format(node, false);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return output.toString();
     }
 
-    private void indent() {
+    private void indent()
+    {
         indentLevel++;
     }
 
-    private void dedent() {
+    private void dedent()
+    {
         indentLevel--;
     }
 
-    private void appendIndent() {
-        for (int i = 0; i < indentLevel; i++) {
+    private void appendIndent()
+    {
+        for (int i = 0; i < indentLevel; i++)
+        {
             output.append(indentString);
         }
     }
 
-    private void appendLine(String text) {
+    private void appendLine(String text)
+    {
         appendIndent();
         output.append(text).append("\n");
     }
 
-    private void appendNode(String label, ASTNode node) {
-        if (node == null) {
+    private void appendNode(String label, ASTNode node)
+    {
+        if (node == null)
+        {
             appendLine(label + ": null");
-        } else {
+        }
+        else
+        {
             appendLine(label + ":");
             indent();
             node.accept(this);
@@ -80,19 +118,26 @@ public class ASTPrinter implements SourceVisitor<Void> {
         }
     }
 
-    private void appendType(SourceType type) {
-        if (showTypes && type != null) {
+    private void appendType(SourceType type)
+    {
+        if (showTypes && type != null)
+        {
             output.append(" : ").append(type.toJavaSource());
         }
     }
 
-    private <T extends ASTNode> void appendNodeList(String label, List<T> nodes) {
-        if (nodes == null || nodes.isEmpty()) {
+    private <T extends ASTNode> void appendNodeList(String label, List<T> nodes)
+    {
+        if (nodes == null || nodes.isEmpty())
+        {
             appendLine(label + ": []");
-        } else {
+        }
+        else
+        {
             appendLine(label + ": [" + nodes.size() + "]");
             indent();
-            for (int i = 0; i < nodes.size(); i++) {
+            for (int i = 0; i < nodes.size(); i++)
+            {
                 appendLine("[" + i + "]:");
                 indent();
                 nodes.get(i).accept(this);
@@ -103,7 +148,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitBinary(BinaryExpr expr) {
+    public Void visitBinary(BinaryExpr expr)
+    {
         appendIndent();
         output.append("BinaryExpr(").append(expr.getOperator().name()).append(")");
         appendType(expr.getType());
@@ -116,7 +162,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitUnary(UnaryExpr expr) {
+    public Void visitUnary(UnaryExpr expr)
+    {
         appendIndent();
         output.append("UnaryExpr(").append(expr.getOperator().name()).append(")");
         appendType(expr.getType());
@@ -128,17 +175,25 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitLiteral(LiteralExpr expr) {
+    public Void visitLiteral(LiteralExpr expr)
+    {
         appendIndent();
         output.append("LiteralExpr(");
         Object value = expr.getValue();
-        if (value == null) {
+        if (value == null)
+        {
             output.append("null");
-        } else if (value instanceof String) {
+        }
+        else if (value instanceof String)
+        {
             output.append("\"").append(escapeString((String) value)).append("\"");
-        } else if (value instanceof Character) {
+        }
+        else if (value instanceof Character)
+        {
             output.append("'").append(value).append("'");
-        } else {
+        }
+        else
+        {
             output.append(value);
         }
         output.append(")");
@@ -148,7 +203,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitVarRef(VarRefExpr expr) {
+    public Void visitVarRef(VarRefExpr expr)
+    {
         appendIndent();
         output.append("VarRefExpr(").append(expr.getName()).append(")");
         appendType(expr.getType());
@@ -157,16 +213,19 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitFieldAccess(FieldAccessExpr expr) {
+    public Void visitFieldAccess(FieldAccessExpr expr)
+    {
         appendIndent();
         output.append("FieldAccessExpr(").append(expr.getFieldName());
-        if (expr.isStatic()) {
+        if (expr.isStatic())
+        {
             output.append(", static, owner=").append(expr.getOwnerClass());
         }
         output.append(")");
         appendType(expr.getType());
         output.append("\n");
-        if (!expr.isStatic() && expr.getReceiver() != null) {
+        if (!expr.isStatic() && expr.getReceiver() != null)
+        {
             indent();
             appendNode("receiver", expr.getReceiver());
             dedent();
@@ -175,7 +234,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitArrayAccess(ArrayAccessExpr expr) {
+    public Void visitArrayAccess(ArrayAccessExpr expr)
+    {
         appendIndent();
         output.append("ArrayAccessExpr");
         appendType(expr.getType());
@@ -188,17 +248,20 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitMethodCall(MethodCallExpr expr) {
+    public Void visitMethodCall(MethodCallExpr expr)
+    {
         appendIndent();
         output.append("MethodCallExpr(").append(expr.getMethodName());
-        if (expr.isStatic()) {
+        if (expr.isStatic())
+        {
             output.append(", static, owner=").append(expr.getOwnerClass());
         }
         output.append(")");
         appendType(expr.getType());
         output.append("\n");
         indent();
-        if (!expr.isStatic() && expr.getReceiver() != null) {
+        if (!expr.isStatic() && expr.getReceiver() != null)
+        {
             appendNode("receiver", expr.getReceiver());
         }
         appendNodeList("arguments", expr.getArguments());
@@ -207,7 +270,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitNew(NewExpr expr) {
+    public Void visitNew(NewExpr expr)
+    {
         appendIndent();
         output.append("NewExpr(").append(expr.getClassName()).append(")");
         appendType(expr.getType());
@@ -219,7 +283,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitNewArray(NewArrayExpr expr) {
+    public Void visitNewArray(NewArrayExpr expr)
+    {
         appendIndent();
         output.append("NewArrayExpr(elementType=").append(expr.getElementType().toJavaSource());
         output.append(", dims=").append(expr.getDimensions().size());
@@ -228,7 +293,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
         output.append("\n");
         indent();
         appendNodeList("dimensions", expr.getDimensions());
-        if (expr.getInitializer() != null) {
+        if (expr.getInitializer() != null)
+        {
             appendNode("initializer", expr.getInitializer());
         }
         dedent();
@@ -236,7 +302,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitArrayInit(ArrayInitExpr expr) {
+    public Void visitArrayInit(ArrayInitExpr expr)
+    {
         appendIndent();
         output.append("ArrayInitExpr");
         appendType(expr.getType());
@@ -248,7 +315,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitCast(CastExpr expr) {
+    public Void visitCast(CastExpr expr)
+    {
         appendIndent();
         output.append("CastExpr(targetType=").append(expr.getTargetType().toJavaSource()).append(")");
         appendType(expr.getType());
@@ -260,10 +328,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitInstanceOf(InstanceOfExpr expr) {
+    public Void visitInstanceOf(InstanceOfExpr expr)
+    {
         appendIndent();
         output.append("InstanceOfExpr(checkType=").append(expr.getCheckType().toJavaSource());
-        if (expr.getPatternVariable() != null) {
+        if (expr.getPatternVariable() != null)
+        {
             output.append(", pattern=").append(expr.getPatternVariable());
         }
         output.append(")");
@@ -276,7 +346,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitTernary(TernaryExpr expr) {
+    public Void visitTernary(TernaryExpr expr)
+    {
         appendIndent();
         output.append("TernaryExpr");
         appendType(expr.getType());
@@ -290,7 +361,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitThis(ThisExpr expr) {
+    public Void visitThis(ThisExpr expr)
+    {
         appendIndent();
         output.append("ThisExpr");
         appendType(expr.getType());
@@ -299,7 +371,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitSuper(SuperExpr expr) {
+    public Void visitSuper(SuperExpr expr)
+    {
         appendIndent();
         output.append("SuperExpr");
         appendType(expr.getType());
@@ -308,7 +381,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitClass(ClassExpr expr) {
+    public Void visitClass(ClassExpr expr)
+    {
         appendIndent();
         output.append("ClassExpr(").append(expr.getClassType().toJavaSource()).append(")");
         appendType(expr.getType());
@@ -317,17 +391,20 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitLambda(LambdaExpr expr) {
+    public Void visitLambda(LambdaExpr expr)
+    {
         appendIndent();
         output.append("LambdaExpr");
         appendType(expr.getType());
         output.append("\n");
         indent();
         List<LambdaParameter> params = expr.getParameters();
-        if (params != null && !params.isEmpty()) {
+        if (params != null && !params.isEmpty())
+        {
             appendLine("parameters: [" + params.size() + "]");
             indent();
-            for (int i = 0; i < params.size(); i++) {
+            for (int i = 0; i < params.size(); i++)
+            {
                 LambdaParameter p = params.get(i);
                 appendLine("[" + i + "]: " + p.name() + " : " +
                     (p.type() != null ? p.type().toJavaSource() : "inferred"));
@@ -340,16 +417,19 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitMethodRef(MethodRefExpr expr) {
+    public Void visitMethodRef(MethodRefExpr expr)
+    {
         appendIndent();
         output.append("MethodRefExpr(").append(expr.getMethodName());
-        if (expr.getOwnerClass() != null) {
+        if (expr.getOwnerClass() != null)
+        {
             output.append(", owner=").append(expr.getOwnerClass());
         }
         output.append(")");
         appendType(expr.getType());
         output.append("\n");
-        if (expr.getReceiver() != null) {
+        if (expr.getReceiver() != null)
+        {
             indent();
             appendNode("receiver", expr.getReceiver());
             dedent();
@@ -358,7 +438,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitInvokeDynamic(InvokeDynamicExpr expr) {
+    public Void visitInvokeDynamic(InvokeDynamicExpr expr)
+    {
         appendIndent();
         output.append("InvokeDynamicExpr(").append(expr.getName()).append(")");
         appendType(expr.getType());
@@ -370,7 +451,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitDynamicConstant(DynamicConstantExpr expr) {
+    public Void visitDynamicConstant(DynamicConstantExpr expr)
+    {
         appendIndent();
         output.append("DynamicConstantExpr(").append(expr.getName()).append(")");
         appendType(expr.getType());
@@ -379,7 +461,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitBlock(BlockStmt stmt) {
+    public Void visitBlock(BlockStmt stmt)
+    {
         appendIndent();
         output.append("BlockStmt");
         output.append("\n");
@@ -390,14 +473,16 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitIf(IfStmt stmt) {
+    public Void visitIf(IfStmt stmt)
+    {
         appendIndent();
         output.append("IfStmt");
         output.append("\n");
         indent();
         appendNode("condition", stmt.getCondition());
         appendNode("thenBranch", stmt.getThenBranch());
-        if (stmt.hasElse()) {
+        if (stmt.hasElse())
+        {
             appendNode("elseBranch", stmt.getElseBranch());
         }
         dedent();
@@ -405,10 +490,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitWhile(WhileStmt stmt) {
+    public Void visitWhile(WhileStmt stmt)
+    {
         appendIndent();
         output.append("WhileStmt");
-        if (stmt.getLabel() != null) {
+        if (stmt.getLabel() != null)
+        {
             output.append(" [label=").append(stmt.getLabel()).append("]");
         }
         output.append("\n");
@@ -420,10 +507,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitDoWhile(DoWhileStmt stmt) {
+    public Void visitDoWhile(DoWhileStmt stmt)
+    {
         appendIndent();
         output.append("DoWhileStmt");
-        if (stmt.getLabel() != null) {
+        if (stmt.getLabel() != null)
+        {
             output.append(" [label=").append(stmt.getLabel()).append("]");
         }
         output.append("\n");
@@ -435,10 +524,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitFor(ForStmt stmt) {
+    public Void visitFor(ForStmt stmt)
+    {
         appendIndent();
         output.append("ForStmt");
-        if (stmt.getLabel() != null) {
+        if (stmt.getLabel() != null)
+        {
             output.append(" [label=").append(stmt.getLabel()).append("]");
         }
         output.append("\n");
@@ -452,10 +543,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitForEach(ForEachStmt stmt) {
+    public Void visitForEach(ForEachStmt stmt)
+    {
         appendIndent();
         output.append("ForEachStmt");
-        if (stmt.getLabel() != null) {
+        if (stmt.getLabel() != null)
+        {
             output.append(" [label=").append(stmt.getLabel()).append("]");
         }
         output.append("\n");
@@ -468,7 +561,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitSwitch(SwitchStmt stmt) {
+    public Void visitSwitch(SwitchStmt stmt)
+    {
         appendIndent();
         output.append("SwitchStmt");
         output.append("\n");
@@ -477,23 +571,31 @@ public class ASTPrinter implements SourceVisitor<Void> {
         List<SwitchCase> cases = stmt.getCases();
         appendLine("cases: [" + cases.size() + "]");
         indent();
-        for (int i = 0; i < cases.size(); i++) {
+        for (int i = 0; i < cases.size(); i++)
+        {
             SwitchCase c = cases.get(i);
             appendIndent();
             output.append("[").append(i).append("]: ");
-            if (c.isDefault()) {
+            if (c.isDefault())
+            {
                 output.append("default");
-            } else if (c.hasExpressionLabels()) {
+            }
+            else if (c.hasExpressionLabels())
+            {
                 output.append("case ");
                 List<Expression> labels = c.expressionLabels();
-                for (int j = 0; j < labels.size(); j++) {
+                for (int j = 0; j < labels.size(); j++)
+                {
                     if (j > 0) output.append(", ");
                     output.append(labels.get(j));
                 }
-            } else {
+            }
+            else
+            {
                 output.append("case ");
                 List<Integer> labels = c.labels();
-                for (int j = 0; j < labels.size(); j++) {
+                for (int j = 0; j < labels.size(); j++)
+                {
                     if (j > 0) output.append(", ");
                     output.append(labels.get(j));
                 }
@@ -509,25 +611,30 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitTryCatch(TryCatchStmt stmt) {
+    public Void visitTryCatch(TryCatchStmt stmt)
+    {
         appendIndent();
         output.append("TryCatchStmt");
         output.append("\n");
         indent();
-        if (stmt.hasResources()) {
+        if (stmt.hasResources())
+        {
             appendNodeList("resources", stmt.getResources());
         }
         appendNode("tryBlock", stmt.getTryBlock());
         List<CatchClause> catches = stmt.getCatches();
-        if (catches != null && !catches.isEmpty()) {
+        if (catches != null && !catches.isEmpty())
+        {
             appendLine("catchClauses: [" + catches.size() + "]");
             indent();
-            for (int i = 0; i < catches.size(); i++) {
+            for (int i = 0; i < catches.size(); i++)
+            {
                 CatchClause c = catches.get(i);
                 appendIndent();
                 output.append("[").append(i).append("]: catch(");
                 List<SourceType> types = c.exceptionTypes();
-                for (int j = 0; j < types.size(); j++) {
+                for (int j = 0; j < types.size(); j++)
+                {
                     if (j > 0) output.append(" | ");
                     output.append(types.get(j).toJavaSource());
                 }
@@ -538,7 +645,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
             }
             dedent();
         }
-        if (stmt.getFinallyBlock() != null) {
+        if (stmt.getFinallyBlock() != null)
+        {
             appendNode("finallyBlock", stmt.getFinallyBlock());
         }
         dedent();
@@ -546,11 +654,13 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitReturn(ReturnStmt stmt) {
+    public Void visitReturn(ReturnStmt stmt)
+    {
         appendIndent();
         output.append("ReturnStmt");
         output.append("\n");
-        if (stmt.getValue() != null) {
+        if (stmt.getValue() != null)
+        {
             indent();
             appendNode("value", stmt.getValue());
             dedent();
@@ -559,7 +669,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitThrow(ThrowStmt stmt) {
+    public Void visitThrow(ThrowStmt stmt)
+    {
         appendIndent();
         output.append("ThrowStmt");
         output.append("\n");
@@ -570,10 +681,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitBreak(BreakStmt stmt) {
+    public Void visitBreak(BreakStmt stmt)
+    {
         appendIndent();
         output.append("BreakStmt");
-        if (stmt.getTargetLabel() != null) {
+        if (stmt.getTargetLabel() != null)
+        {
             output.append(" [target=").append(stmt.getTargetLabel()).append("]");
         }
         output.append("\n");
@@ -581,10 +694,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitContinue(ContinueStmt stmt) {
+    public Void visitContinue(ContinueStmt stmt)
+    {
         appendIndent();
         output.append("ContinueStmt");
-        if (stmt.getTargetLabel() != null) {
+        if (stmt.getTargetLabel() != null)
+        {
             output.append(" [target=").append(stmt.getTargetLabel()).append("]");
         }
         output.append("\n");
@@ -592,16 +707,19 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitVarDecl(VarDeclStmt stmt) {
+    public Void visitVarDecl(VarDeclStmt stmt)
+    {
         appendIndent();
         output.append("VarDeclStmt(").append(stmt.getName());
         output.append(" : ").append(stmt.getType().toJavaSource());
-        if (stmt.isFinal()) {
+        if (stmt.isFinal())
+        {
             output.append(", final");
         }
         output.append(")");
         output.append("\n");
-        if (stmt.getInitializer() != null) {
+        if (stmt.getInitializer() != null)
+        {
             indent();
             appendNode("initializer", stmt.getInitializer());
             dedent();
@@ -610,7 +728,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitExprStmt(ExprStmt stmt) {
+    public Void visitExprStmt(ExprStmt stmt)
+    {
         appendIndent();
         output.append("ExprStmt");
         output.append("\n");
@@ -621,7 +740,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitSynchronized(SynchronizedStmt stmt) {
+    public Void visitSynchronized(SynchronizedStmt stmt)
+    {
         appendIndent();
         output.append("SynchronizedStmt");
         output.append("\n");
@@ -633,7 +753,8 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitLabeled(LabeledStmt stmt) {
+    public Void visitLabeled(LabeledStmt stmt)
+    {
         appendIndent();
         output.append("LabeledStmt(").append(stmt.getLabel()).append(")");
         output.append("\n");
@@ -644,10 +765,12 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitIRRegion(IRRegionStmt stmt) {
+    public Void visitIRRegion(IRRegionStmt stmt)
+    {
         appendIndent();
         output.append("IRRegionStmt(blocks=").append(stmt.getBlocks().size());
-        if (stmt.getReason() != null) {
+        if (stmt.getReason() != null)
+        {
             output.append(", reason=\"").append(stmt.getReason()).append("\"");
         }
         output.append(")");
@@ -655,24 +778,27 @@ public class ASTPrinter implements SourceVisitor<Void> {
         return null;
     }
 
-    // ==================== Type visitors ====================
+    // Type visitors
 
     @Override
-    public Void visitPrimitiveType(PrimitiveSourceType type) {
+    public Void visitPrimitiveType(PrimitiveSourceType type)
+    {
         appendIndent();
         output.append("PrimitiveType(").append(type.toJavaSource()).append(")\n");
         return null;
     }
 
     @Override
-    public Void visitReferenceType(ReferenceSourceType type) {
+    public Void visitReferenceType(ReferenceSourceType type)
+    {
         appendIndent();
         output.append("ReferenceType(").append(type.getInternalName()).append(")\n");
         return null;
     }
 
     @Override
-    public Void visitArrayType(ArraySourceType type) {
+    public Void visitArrayType(ArraySourceType type)
+    {
         appendIndent();
         output.append("ArrayType(elementType=").append(type.getElementType().toJavaSource());
         output.append(", dims=").append(type.getDimensions()).append(")\n");
@@ -680,26 +806,33 @@ public class ASTPrinter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitVoidType(VoidSourceType type) {
+    public Void visitVoidType(VoidSourceType type)
+    {
         appendIndent();
         output.append("VoidType\n");
         return null;
     }
 
-    private String escapeString(String s) {
+    private String escapeString(String s)
+    {
         if (s == null) return "";
         StringBuilder sb = new StringBuilder();
-        for (char c : s.toCharArray()) {
-            switch (c) {
+        for (char c : s.toCharArray())
+        {
+            switch (c)
+            {
                 case '\n': sb.append("\\n"); break;
                 case '\r': sb.append("\\r"); break;
                 case '\t': sb.append("\\t"); break;
                 case '\\': sb.append("\\\\"); break;
                 case '"': sb.append("\\\""); break;
                 default:
-                    if (c < 32 || c > 126) {
+                    if (c < 32 || c > 126)
+                    {
                         sb.append(String.format("\\u%04x", (int) c));
-                    } else {
+                    }
+                    else
+                    {
                         sb.append(c);
                     }
             }

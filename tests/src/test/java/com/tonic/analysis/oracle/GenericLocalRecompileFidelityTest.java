@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@code invokeinterface}, throwing {@code IncompatibleClassChangeError} at call time. This decompiles, recompiles,
  * LOADS and EXECUTES the method - the gates otherwise never run recompiled code, so neither error is caught.
  */
-class GenericLocalRecompileFidelityTest {
+class GenericLocalRecompileFidelityTest
+{
 
     private static final String SOURCE =
             "public class GenericLocal {\n"
@@ -40,14 +41,14 @@ class GenericLocalRecompileFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("generic-local");
         Path src = dir.resolve("GenericLocal.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("GenericLocal.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -58,7 +59,8 @@ class GenericLocalRecompileFidelityTest {
     }
 
     @Test
-    void loadsAndExecutes() throws Exception {
+    void loadsAndExecutes() throws Exception
+    {
         assertEquals(2, recompiledClass.getDeclaredMethod("m").invoke(null),
                 "the generic-local method must load (aligned LVTT) and run (invokeinterface on the List calls)");
     }

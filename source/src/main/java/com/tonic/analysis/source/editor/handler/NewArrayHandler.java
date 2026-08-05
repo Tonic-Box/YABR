@@ -9,11 +9,11 @@ import com.tonic.analysis.source.editor.Replacement;
  * Use this to intercept and transform array creation.
  */
 @FunctionalInterface
-public interface NewArrayHandler {
+public interface NewArrayHandler
+{
 
     /**
      * Handle a new array expression.
-     *
      * @param ctx      the editing context
      * @param newArray the new array expression
      * @return the replacement action

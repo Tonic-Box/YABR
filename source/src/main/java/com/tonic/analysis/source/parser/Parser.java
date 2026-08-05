@@ -7,7 +7,12 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import java.util.*;
 
-public class Parser {
+/**
+ * Recursive-descent parser over a Lexer token stream, tracking a scope stack so declared variable
+ * types are known while parsing expressions.
+ */
+public class Parser
+{
 
     private final Lexer lexer;
     private final String source;
@@ -47,7 +52,16 @@ public class Parser {
         Map.entry("SuppressWarnings", "java/lang/SuppressWarnings")
     );
 
-    public Parser(Lexer lexer, String source, ParseErrorListener errorListener) {
+    /**
+     * Creates a parser and reads the first token.
+     *
+     * @param lexer supplies the token stream
+     * @param source the text the tokens came from, used for error context
+     * @param errorListener where parse errors are reported; defaults to rethrowing when null
+     * @throws ParseException if the listener rethrows and the first token cannot be read
+     */
+    public Parser(Lexer lexer, String source, ParseErrorListener errorListener)
+    {
         this.lexer = lexer;
         this.source = source;
         this.errorListener = errorListener != null ? errorListener : ParseErrorListener.throwing();
@@ -55,52 +69,79 @@ public class Parser {
         advance();
     }
 
-    private void pushScope() {
+    private void pushScope()
+    {
         scopes.push(new HashMap<>());
     }
 
-    private void popScope() {
-        if (scopes.size() > 1) {
+    private void popScope()
+    {
+        if (scopes.size() > 1)
+        {
             scopes.pop();
         }
     }
 
-    private void defineVariable(String name, SourceType type) {
-        if(scopes.peek() == null) {
+    private void defineVariable(String name, SourceType type)
+    {
+        if(scopes.peek() == null)
+        {
             throw new IllegalStateException("No scope available to define variable: " + name);
         }
         scopes.peek().put(name, type);
     }
 
-    private SourceType lookupVariable(String name) {
-        for (Map<String, SourceType> scope : scopes) {
-            if (scope.containsKey(name)) {
+    private SourceType lookupVariable(String name)
+    {
+        for (Map<String, SourceType> scope : scopes)
+        {
+            if (scope.containsKey(name))
+            {
                 return scope.get(name);
             }
         }
         return ReferenceSourceType.OBJECT;
     }
 
-    public Parser(Lexer lexer, String source) {
+    /**
+     * Creates a parser that throws on the first parse error.
+     *
+     * @param lexer supplies the token stream
+     * @param source the text the tokens came from, used for error context
+     * @throws ParseException if the first token cannot be read
+     */
+    public Parser(Lexer lexer, String source)
+    {
         this(lexer, source, ParseErrorListener.throwing());
     }
 
-    public CompilationUnit parseCompilationUnit() {
+    /**
+     * Parses a whole file: optional package declaration, imports, then type declarations.
+     *
+     * @return the compilation unit
+     * @throws ParseException if the input does not parse and the error listener rethrows
+     */
+    public CompilationUnit parseCompilationUnit()
+    {
         CompilationUnit cu = new CompilationUnit(currentLocation());
 
-        if (check(TokenType.PACKAGE)) {
+        if (check(TokenType.PACKAGE))
+        {
             advance();
             cu.setPackageName(parseQualifiedName());
             consume(TokenType.SEMICOLON, "Expected ';' after package declaration");
         }
 
-        while (check(TokenType.IMPORT)) {
+        while (check(TokenType.IMPORT))
+        {
             cu.addImport(parseImport());
         }
 
-        while (!isAtEnd()) {
+        while (!isAtEnd())
+        {
             TypeDecl type = parseTypeDeclaration();
-            if (type != null) {
+            if (type != null)
+            {
                 cu.addType(type);
             }
         }
@@ -108,19 +149,41 @@ public class Parser {
         return cu;
     }
 
-    public Expression parseExpression() {
+    /**
+     * Parses a single expression, assignment included.
+     *
+     * @return the expression
+     * @throws ParseException if the input does not parse and the error listener rethrows
+     */
+    public Expression parseExpression()
+    {
         return parseExpressionWithPrecedence(Precedence.ASSIGNMENT.getLevel());
     }
 
-    public Statement parseStatement() {
+    /**
+     * Parses a single statement.
+     *
+     * @return the statement
+     * @throws ParseException if the input does not parse and the error listener rethrows
+     */
+    public Statement parseStatement()
+    {
         return parseBlockStatement();
     }
 
-    public SourceType parseType() {
+    /**
+     * Parses a type reference, including array and generic forms.
+     *
+     * @return the type
+     * @throws ParseException if the input does not parse and the error listener rethrows
+     */
+    public SourceType parseType()
+    {
         return parseTypeReference();
     }
 
-    private ImportDecl parseImport() {
+    private ImportDecl parseImport()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.IMPORT, "Expected 'import'");
 
@@ -128,7 +191,8 @@ public class Parser {
         String name = parseQualifiedName();
         boolean isWildcard = false;
 
-        if (match(TokenType.DOT)) {
+        if (match(TokenType.DOT))
+        {
             consume(TokenType.STAR, "Expected '*' after '.'");
             isWildcard = true;
         }
@@ -137,31 +201,49 @@ public class Parser {
         return new ImportDecl(name, isStatic, isWildcard, loc);
     }
 
-    private TypeDecl parseTypeDeclaration() {
+    private TypeDecl parseTypeDeclaration()
+    {
         List<AnnotationExpr> annotations = new ArrayList<>();
         Set<Modifier> modifiers = EnumSet.noneOf(Modifier.class);
 
-        while (check(TokenType.AT) || current.isModifier() || isSealedContextual()) {
-            if (check(TokenType.AT)) {
+        while (check(TokenType.AT) || current.isModifier() || isSealedContextual())
+        {
+            if (check(TokenType.AT))
+            {
                 annotations.add(parseAnnotation());
-            } else if (isSealedContextual()) {
+            }
+            else if (isSealedContextual())
+            {
                 consumeSealedContextual();
-            } else {
+            }
+            else
+            {
                 modifiers.add(parseModifier());
             }
         }
 
-        if (isRecordDeclAhead()) {
+        if (isRecordDeclAhead())
+        {
             return parseRecord(modifiers, annotations);
-        } else if (check(TokenType.CLASS)) {
+        }
+        else if (check(TokenType.CLASS))
+        {
             return parseClass(modifiers, annotations);
-        } else if (check(TokenType.INTERFACE)) {
+        }
+        else if (check(TokenType.INTERFACE))
+        {
             return parseInterface(modifiers, annotations);
-        } else if (check(TokenType.ENUM)) {
+        }
+        else if (check(TokenType.ENUM))
+        {
             return parseEnum(modifiers, annotations);
-        } else if (check(TokenType.AT) && checkNext(TokenType.INTERFACE)) {
+        }
+        else if (check(TokenType.AT) && checkNext(TokenType.INTERFACE))
+        {
             return parseAnnotationTypeDecl(modifiers, annotations);
-        } else if (!isAtEnd()) {
+        }
+        else if (!isAtEnd())
+        {
             error("Expected class, interface, or enum declaration");
             advance();
         }
@@ -169,27 +251,33 @@ public class Parser {
         return null;
     }
 
-    private ClassDecl parseClass(Set<Modifier> modifiers, List<AnnotationExpr> annotations) {
+    private ClassDecl parseClass(Set<Modifier> modifiers, List<AnnotationExpr> annotations)
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.CLASS, "Expected 'class'");
 
         String name = consume(TokenType.IDENTIFIER, "Expected class name").getText();
         ClassDecl cls = new ClassDecl(name, loc);
         cls.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             cls.addAnnotation(ann);
         }
 
-        if (match(TokenType.LT)) {
+        if (match(TokenType.LT))
+        {
             parseTypeParameters(cls.getTypeParameters());
         }
 
-        if (match(TokenType.EXTENDS)) {
+        if (match(TokenType.EXTENDS))
+        {
             cls.withSuperclass(parseTypeReference());
         }
 
-        if (match(TokenType.IMPLEMENTS)) {
-            do {
+        if (match(TokenType.IMPLEMENTS))
+        {
+            do
+            {
                 cls.addInterface(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
@@ -205,8 +293,10 @@ public class Parser {
      * a component list {@code (} (or type parameters {@code <}). The trailing {@code (}/{@code <}
      * disambiguates from a field/variable whose type is literally named {@code record} in legacy code.
      */
-    private boolean isRecordDeclAhead() {
-        if (!checkIdentifier("record") || lexer.peekAhead(0).getType() != TokenType.IDENTIFIER) {
+    private boolean isRecordDeclAhead()
+    {
+        if (!checkIdentifier("record") || lexer.peekAhead(0).getType() != TokenType.IDENTIFIER)
+        {
             return false;
         }
         TokenType afterName = lexer.peekAhead(1).getType();
@@ -219,22 +309,28 @@ public class Parser {
      * compiler-synthesized and not represented here (recompilation edits an existing class, which
      * already carries them).
      */
-    private ClassDecl parseRecord(Set<Modifier> modifiers, List<AnnotationExpr> annotations) {
+    private ClassDecl parseRecord(Set<Modifier> modifiers, List<AnnotationExpr> annotations)
+    {
         SourceLocation loc = currentLocation();
         advance(); // contextual 'record'
         String name = consume(TokenType.IDENTIFIER, "Expected record name").getText();
         ClassDecl cls = new ClassDecl(name, loc);
         cls.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             cls.addAnnotation(ann);
         }
-        if (match(TokenType.LT)) {
+        if (match(TokenType.LT))
+        {
             parseTypeParameters(cls.getTypeParameters());
         }
         consume(TokenType.LPAREN, "Expected '(' for record components");
-        if (!check(TokenType.RPAREN)) {
-            do {
-                while (check(TokenType.AT)) {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
+                while (check(TokenType.AT))
+                {
                     parseAnnotation();
                 }
                 SourceType type = parseTypeReference();
@@ -244,8 +340,10 @@ public class Parser {
             } while (match(TokenType.COMMA));
         }
         consume(TokenType.RPAREN, "Expected ')' after record components");
-        if (match(TokenType.IMPLEMENTS)) {
-            do {
+        if (match(TokenType.IMPLEMENTS))
+        {
+            do
+            {
                 cls.addInterface(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
@@ -254,23 +352,28 @@ public class Parser {
         return cls;
     }
 
-    private InterfaceDecl parseInterface(Set<Modifier> modifiers, List<AnnotationExpr> annotations) {
+    private InterfaceDecl parseInterface(Set<Modifier> modifiers, List<AnnotationExpr> annotations)
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.INTERFACE, "Expected 'interface'");
 
         String name = consume(TokenType.IDENTIFIER, "Expected interface name").getText();
         InterfaceDecl iface = new InterfaceDecl(name, loc);
         iface.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             iface.addAnnotation(ann);
         }
 
-        if (match(TokenType.LT)) {
+        if (match(TokenType.LT))
+        {
             parseTypeParameters(iface.getTypeParameters());
         }
 
-        if (match(TokenType.EXTENDS)) {
-            do {
+        if (match(TokenType.EXTENDS))
+        {
+            do
+            {
                 iface.addExtendedInterface(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
@@ -281,19 +384,23 @@ public class Parser {
         return iface;
     }
 
-    private EnumDecl parseEnum(Set<Modifier> modifiers, List<AnnotationExpr> annotations) {
+    private EnumDecl parseEnum(Set<Modifier> modifiers, List<AnnotationExpr> annotations)
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.ENUM, "Expected 'enum'");
 
         String name = consume(TokenType.IDENTIFIER, "Expected enum name").getText();
         EnumDecl enumDecl = new EnumDecl(name, loc);
         enumDecl.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             enumDecl.addAnnotation(ann);
         }
 
-        if (match(TokenType.IMPLEMENTS)) {
-            do {
+        if (match(TokenType.IMPLEMENTS))
+        {
+            do
+            {
                 enumDecl.addInterface(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
@@ -302,55 +409,67 @@ public class Parser {
         return enumDecl;
     }
 
-    private TypeDecl parseAnnotationTypeDecl(Set<Modifier> modifiers, List<AnnotationExpr> annotations) {
+    private TypeDecl parseAnnotationTypeDecl(Set<Modifier> modifiers, List<AnnotationExpr> annotations)
+    {
         consume(TokenType.AT, "Expected '@'");
         consume(TokenType.INTERFACE, "Expected 'interface'");
         String name = consume(TokenType.IDENTIFIER, "Expected annotation type name").getText();
         InterfaceDecl annType = new InterfaceDecl(name, currentLocation());
         annType.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             annType.addAnnotation(ann);
         }
         consume(TokenType.LBRACE, "Expected '{'");
-        while (!check(TokenType.RBRACE) && !isAtEnd()) {
+        while (!check(TokenType.RBRACE) && !isAtEnd())
+        {
             parseMemberDeclaration(annType);
         }
         consume(TokenType.RBRACE, "Expected '}'");
         return annType;
     }
 
-    private void parseClassBody(ClassDecl cls) {
+    private void parseClassBody(ClassDecl cls)
+    {
         consume(TokenType.LBRACE, "Expected '{' before class body");
 
-        while (!check(TokenType.RBRACE) && !isAtEnd()) {
+        while (!check(TokenType.RBRACE) && !isAtEnd())
+        {
             parseMemberDeclaration(cls);
         }
 
         consume(TokenType.RBRACE, "Expected '}' after class body");
     }
 
-    private void parseInterfaceBody(InterfaceDecl iface) {
+    private void parseInterfaceBody(InterfaceDecl iface)
+    {
         consume(TokenType.LBRACE, "Expected '{' before interface body");
 
-        while (!check(TokenType.RBRACE) && !isAtEnd()) {
+        while (!check(TokenType.RBRACE) && !isAtEnd())
+        {
             parseMemberDeclaration(iface);
         }
 
         consume(TokenType.RBRACE, "Expected '}' after interface body");
     }
 
-    private void parseEnumBody(EnumDecl enumDecl) {
+    private void parseEnumBody(EnumDecl enumDecl)
+    {
         consume(TokenType.LBRACE, "Expected '{' before enum body");
 
-        if (!check(TokenType.SEMICOLON) && !check(TokenType.RBRACE)) {
-            do {
+        if (!check(TokenType.SEMICOLON) && !check(TokenType.RBRACE))
+        {
+            do
+            {
                 if (check(TokenType.RBRACE) || check(TokenType.SEMICOLON)) break;
                 enumDecl.addConstant(parseEnumConstant());
             } while (match(TokenType.COMMA));
         }
 
-        if (match(TokenType.SEMICOLON)) {
-            while (!check(TokenType.RBRACE) && !isAtEnd()) {
+        if (match(TokenType.SEMICOLON))
+        {
+            while (!check(TokenType.RBRACE) && !isAtEnd())
+            {
                 parseMemberDeclaration(enumDecl);
             }
         }
@@ -358,47 +477,63 @@ public class Parser {
         consume(TokenType.RBRACE, "Expected '}' after enum body");
     }
 
-    private EnumConstantDecl parseEnumConstant() {
+    private EnumConstantDecl parseEnumConstant()
+    {
         SourceLocation loc = currentLocation();
         List<AnnotationExpr> annotations = new ArrayList<>();
-        while (check(TokenType.AT)) {
+        while (check(TokenType.AT))
+        {
             annotations.add(parseAnnotation());
         }
 
         String name = consume(TokenType.IDENTIFIER, "Expected enum constant name").getText();
         EnumConstantDecl constant = new EnumConstantDecl(name, loc);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             constant.addAnnotation(ann);
         }
 
-        if (match(TokenType.LPAREN)) {
-            if (!check(TokenType.RPAREN)) {
-                do {
+        if (match(TokenType.LPAREN))
+        {
+            if (!check(TokenType.RPAREN))
+            {
+                do
+                {
                     constant.addArgument(parseExpression());
                 } while (match(TokenType.COMMA));
             }
             consume(TokenType.RPAREN, "Expected ')' after arguments");
         }
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             advance();
-            while (!check(TokenType.RBRACE) && !isAtEnd()) {
+            while (!check(TokenType.RBRACE) && !isAtEnd())
+            {
                 List<AnnotationExpr> memberAnns = new ArrayList<>();
                 Set<Modifier> memberMods = EnumSet.noneOf(Modifier.class);
-                while (check(TokenType.AT) || current.isModifier()) {
-                    if (check(TokenType.AT)) {
+                while (check(TokenType.AT) || current.isModifier())
+                {
+                    if (check(TokenType.AT))
+                    {
                         memberAnns.add(parseAnnotation());
-                    } else {
+                    }
+                    else
+                    {
                         memberMods.add(parseModifier());
                     }
                 }
                 SourceType type = parseTypeReference();
                 String memberName = consumeName("Expected member name").getText();
-                if (check(TokenType.LPAREN)) {
+                if (check(TokenType.LPAREN))
+                {
                     MethodDecl method = parseMethod(memberMods, memberAnns, type, memberName);
                     constant.addMethod(method);
-                } else {
-                    for (FieldDecl field : parseField(memberMods, memberAnns, type, memberName)) {
+                }
+                else
+                {
+                    for (FieldDecl field : parseField(memberMods, memberAnns, type, memberName))
+                    {
                         constant.addField(field);
                     }
                 }
@@ -409,21 +544,26 @@ public class Parser {
         return constant;
     }
 
-    private void parseMemberDeclaration(TypeDecl owner) {
+    private void parseMemberDeclaration(TypeDecl owner)
+    {
         if (match(TokenType.SEMICOLON)) return;
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             BlockStmt block = parseInitializerBlock();
-            if (owner instanceof ClassDecl) {
+            if (owner instanceof ClassDecl)
+            {
                 ((ClassDecl) owner).addInstanceInitializer(block);
             }
             return;
         }
 
-        if (check(TokenType.STATIC) && checkNext(TokenType.LBRACE)) {
+        if (check(TokenType.STATIC) && checkNext(TokenType.LBRACE))
+        {
             advance();
             BlockStmt block = parseInitializerBlock();
-            if (owner instanceof ClassDecl) {
+            if (owner instanceof ClassDecl)
+            {
                 ((ClassDecl) owner).addStaticInitializer(block);
             }
             return;
@@ -432,57 +572,75 @@ public class Parser {
         List<AnnotationExpr> annotations = new ArrayList<>();
         Set<Modifier> modifiers = EnumSet.noneOf(Modifier.class);
 
-        while (check(TokenType.AT) || current.isModifier() || isSealedContextual()) {
-            if (check(TokenType.AT)) {
+        while (check(TokenType.AT) || current.isModifier() || isSealedContextual())
+        {
+            if (check(TokenType.AT))
+            {
                 annotations.add(parseAnnotation());
-            } else if (isSealedContextual()) {
+            }
+            else if (isSealedContextual())
+            {
                 consumeSealedContextual();
-            } else {
+            }
+            else
+            {
                 modifiers.add(parseModifier());
             }
         }
 
-        if (isRecordDeclAhead()) {
+        if (isRecordDeclAhead())
+        {
             owner.getInnerTypes().add(parseRecord(modifiers, annotations));
             return;
         }
-        if (check(TokenType.CLASS)) {
+        if (check(TokenType.CLASS))
+        {
             TypeDecl inner = parseClass(modifiers, annotations);
             owner.getInnerTypes().add(inner);
             return;
         }
-        if (check(TokenType.INTERFACE)) {
+        if (check(TokenType.INTERFACE))
+        {
             TypeDecl inner = parseInterface(modifiers, annotations);
             owner.getInnerTypes().add(inner);
             return;
         }
-        if (check(TokenType.ENUM)) {
+        if (check(TokenType.ENUM))
+        {
             TypeDecl inner = parseEnum(modifiers, annotations);
             owner.getInnerTypes().add(inner);
             return;
         }
 
-        if (check(TokenType.IDENTIFIER) && current.getText().equals(owner.getName()) && checkNext(TokenType.LPAREN)) {
+        if (check(TokenType.IDENTIFIER) && current.getText().equals(owner.getName()) && checkNext(TokenType.LPAREN))
+        {
             ConstructorDecl ctor = parseConstructor(modifiers, annotations, owner.getName());
-            if (owner instanceof ClassDecl) {
+            if (owner instanceof ClassDecl)
+            {
                 ((ClassDecl) owner).addConstructor(ctor);
-            } else if (owner instanceof EnumDecl) {
+            }
+            else if (owner instanceof EnumDecl)
+            {
                 ((EnumDecl) owner).addConstructor(ctor);
             }
             return;
         }
 
-        if (check(TokenType.LT)) {
+        if (check(TokenType.LT))
+        {
             List<SourceType> typeParams = new ArrayList<>();
             advance();
             parseTypeParameters(typeParams);
 
-            if (check(TokenType.IDENTIFIER) && current.getText().equals(owner.getName()) && checkNext(TokenType.LPAREN)) {
+            if (check(TokenType.IDENTIFIER) && current.getText().equals(owner.getName()) && checkNext(TokenType.LPAREN))
+            {
                 ConstructorDecl ctor = parseConstructor(modifiers, annotations, owner.getName());
-                for (SourceType tp : typeParams) {
+                for (SourceType tp : typeParams)
+                {
                     ctor.addTypeParameter(tp);
                 }
-                if (owner instanceof ClassDecl) {
+                if (owner instanceof ClassDecl)
+                {
                     ((ClassDecl) owner).addConstructor(ctor);
                 }
                 return;
@@ -491,7 +649,8 @@ public class Parser {
             SourceType returnType = parseTypeReference();
             String name = consume(TokenType.IDENTIFIER, "Expected method name").getText();
             MethodDecl method = parseMethod(modifiers, annotations, returnType, name);
-            for (SourceType tp : typeParams) {
+            for (SourceType tp : typeParams)
+            {
                 method.addTypeParameter(tp);
             }
             owner.getMethods().add(method);
@@ -501,32 +660,39 @@ public class Parser {
         SourceType type = parseTypeReference();
         String name = consumeName("Expected member name").getText();
 
-        if (check(TokenType.LPAREN)) {
+        if (check(TokenType.LPAREN))
+        {
             MethodDecl method = parseMethod(modifiers, annotations, type, name);
             owner.getMethods().add(method);
-        } else {
+        }
+        else
+        {
             owner.getFields().addAll(parseField(modifiers, annotations, type, name));
         }
     }
 
-    private BlockStmt parseInitializerBlock() {
+    private BlockStmt parseInitializerBlock()
+    {
         return parseBlock();
     }
 
-    private MethodDecl parseMethod(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
-                                    SourceType returnType, String name) {
+    private MethodDecl parseMethod(Set<Modifier> modifiers, List<AnnotationExpr> annotations, SourceType returnType, String name)
+    {
         SourceLocation loc = currentLocation();
         MethodDecl method = new MethodDecl(name, returnType, loc);
         method.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             method.addAnnotation(ann);
         }
 
         pushScope();
 
         consume(TokenType.LPAREN, "Expected '(' after method name");
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 ParameterDecl param = parseParameter();
                 method.addParameter(param);
                 defineVariable(param.getName(), param.getType());
@@ -534,15 +700,20 @@ public class Parser {
         }
         consume(TokenType.RPAREN, "Expected ')' after parameters");
 
-        if (match(TokenType.THROWS)) {
-            do {
+        if (match(TokenType.THROWS))
+        {
+            do
+            {
                 method.addThrowsType(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             method.withBody(parseBlock());
-        } else {
+        }
+        else
+        {
             consume(TokenType.SEMICOLON, "Expected ';' or method body");
         }
 
@@ -550,21 +721,24 @@ public class Parser {
         return method;
     }
 
-    private ConstructorDecl parseConstructor(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
-                                              String name) {
+    private ConstructorDecl parseConstructor(Set<Modifier> modifiers, List<AnnotationExpr> annotations, String name)
+    {
         SourceLocation loc = currentLocation();
         advance();
         ConstructorDecl ctor = new ConstructorDecl(name, loc);
         ctor.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             ctor.addAnnotation(ann);
         }
 
         pushScope();
 
         consume(TokenType.LPAREN, "Expected '(' after constructor name");
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 ParameterDecl param = parseParameter();
                 ctor.addParameter(param);
                 defineVariable(param.getName(), param.getType());
@@ -572,8 +746,10 @@ public class Parser {
         }
         consume(TokenType.RPAREN, "Expected ')' after parameters");
 
-        if (match(TokenType.THROWS)) {
-            do {
+        if (match(TokenType.THROWS))
+        {
+            do
+            {
                 ctor.addThrowsType(parseTypeReference());
             } while (match(TokenType.COMMA));
         }
@@ -583,11 +759,12 @@ public class Parser {
         return ctor;
     }
 
-    private List<FieldDecl> parseField(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
-                                       SourceType type, String name) {
+    private List<FieldDecl> parseField(Set<Modifier> modifiers, List<AnnotationExpr> annotations, SourceType type, String name)
+    {
         List<FieldDecl> fields = new ArrayList<>();
         fields.add(parseFieldDeclarator(modifiers, annotations, type, name));
-        while (match(TokenType.COMMA)) {
+        while (match(TokenType.COMMA))
+        {
             String nextName = consumeName("Expected field name").getText();
             fields.add(parseFieldDeclarator(modifiers, annotations, type, nextName));
         }
@@ -599,11 +776,12 @@ public class Parser {
      * Builds a single field declarator (optional C-style {@code []} dimensions and initializer)
      * against a shared base type. The field name has already been consumed.
      */
-    private FieldDecl parseFieldDeclarator(Set<Modifier> modifiers, List<AnnotationExpr> annotations,
-                                           SourceType baseType, String name) {
+    private FieldDecl parseFieldDeclarator(Set<Modifier> modifiers, List<AnnotationExpr> annotations, SourceType baseType, String name)
+    {
         SourceLocation loc = currentLocation();
         SourceType type = baseType;
-        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET))
+        {
             advance();
             advance();
             type = new ArraySourceType(type);
@@ -611,24 +789,31 @@ public class Parser {
 
         FieldDecl field = new FieldDecl(name, type, loc);
         field.withModifiers(modifiers);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             field.addAnnotation(ann);
         }
-        if (match(TokenType.EQ)) {
+        if (match(TokenType.EQ))
+        {
             field.withInitializer(parseExpression());
         }
         return field;
     }
 
-    private ParameterDecl parseParameter() {
+    private ParameterDecl parseParameter()
+    {
         SourceLocation loc = currentLocation();
         List<AnnotationExpr> annotations = new ArrayList<>();
         boolean isFinal = false;
 
-        while (check(TokenType.AT) || check(TokenType.FINAL)) {
-            if (check(TokenType.AT)) {
+        while (check(TokenType.AT) || check(TokenType.FINAL))
+        {
+            if (check(TokenType.AT))
+            {
                 annotations.add(parseAnnotation());
-            } else {
+            }
+            else
+            {
                 advance();
                 isFinal = true;
             }
@@ -641,21 +826,26 @@ public class Parser {
         ParameterDecl param = new ParameterDecl(name, type, loc);
         param.withFinal(isFinal);
         param.withVarArgs(isVarArgs);
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             param.addAnnotation(ann);
         }
 
         return param;
     }
 
-    private void parseTypeParameters(List<SourceType> typeParams) {
-        do {
+    private void parseTypeParameters(List<SourceType> typeParams)
+    {
+        do
+        {
             String name = consume(TokenType.IDENTIFIER, "Expected type parameter name").getText();
             List<SourceType> bounds = new ArrayList<>();
 
-            if (match(TokenType.EXTENDS)) {
+            if (match(TokenType.EXTENDS))
+            {
                 bounds.add(parseTypeReference());
-                while (match(TokenType.AMP)) {
+                while (match(TokenType.AMP))
+                {
                     bounds.add(parseTypeReference());
                 }
             }
@@ -667,23 +857,30 @@ public class Parser {
         consumeTypeClose("Expected '>' after type parameters");
     }
 
-    private AnnotationExpr parseAnnotation() {
+    private AnnotationExpr parseAnnotation()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.AT, "Expected '@'");
 
         SourceType type = parseTypeReference();
         AnnotationExpr ann = new AnnotationExpr(type, loc);
 
-        if (match(TokenType.LPAREN)) {
-            if (!check(TokenType.RPAREN)) {
-                if (check(TokenType.IDENTIFIER) && checkNext(TokenType.EQ)) {
-                    do {
+        if (match(TokenType.LPAREN))
+        {
+            if (!check(TokenType.RPAREN))
+            {
+                if (check(TokenType.IDENTIFIER) && checkNext(TokenType.EQ))
+                {
+                    do
+                    {
                         String name = consume(TokenType.IDENTIFIER, "Expected attribute name").getText();
                         consume(TokenType.EQ, "Expected '='");
                         Expression value = parseAnnotationValue();
                         ann.addValue(name, value);
                     } while (match(TokenType.COMMA));
-                } else {
+                }
+                else
+                {
                     Expression value = parseAnnotationValue();
                     ann.addValue("value", value);
                 }
@@ -694,20 +891,25 @@ public class Parser {
         return ann;
     }
 
-    private Expression parseAnnotationValue() {
-        if (check(TokenType.AT)) {
+    private Expression parseAnnotationValue()
+    {
+        if (check(TokenType.AT))
+        {
             return parseAnnotation();
         }
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             return parseArrayInit(new ArraySourceType(ReferenceSourceType.OBJECT));
         }
         return parseExpression();
     }
 
-    private Modifier parseModifier() {
+    private Modifier parseModifier()
+    {
         Token token = current;
         advance();
-        switch (token.getType()) {
+        switch (token.getType())
+        {
             case PUBLIC: return Modifier.PUBLIC;
             case PROTECTED: return Modifier.PROTECTED;
             case PRIVATE: return Modifier.PRIVATE;
@@ -725,54 +927,73 @@ public class Parser {
         }
     }
 
-    /** True if the current token begins a contextual {@code sealed} or {@code non-sealed} modifier. */
-    private boolean isSealedContextual() {
-        if (checkIdentifier("sealed")) {
+    /**
+     * True if the current token begins a contextual {@code sealed} or {@code non-sealed} modifier.
+     */
+    private boolean isSealedContextual()
+    {
+        if (checkIdentifier("sealed"))
+        {
             return true;
         }
         return checkIdentifier("non") && checkNext(TokenType.MINUS);
     }
 
-    /** Consumes a {@code sealed} or {@code non-sealed} contextual modifier (tolerated, not modeled). */
-    private void consumeSealedContextual() {
-        if (checkIdentifier("sealed")) {
+    /**
+     * Consumes a {@code sealed} or {@code non-sealed} contextual modifier (tolerated, not modeled).
+     */
+    private void consumeSealedContextual()
+    {
+        if (checkIdentifier("sealed"))
+        {
             advance();
             return;
         }
         // non - sealed
         advance();
         advance();
-        if (checkIdentifier("sealed")) {
+        if (checkIdentifier("sealed"))
+        {
             advance();
         }
     }
 
-    /** Skips an optional {@code permits A, B, ...} clause on a sealed type declaration. */
-    private void skipPermitsClause() {
-        if (checkIdentifier("permits")) {
+    /**
+     * Skips an optional {@code permits A, B, ...} clause on a sealed type declaration.
+     */
+    private void skipPermitsClause()
+    {
+        if (checkIdentifier("permits"))
+        {
             advance();
-            do {
+            do
+            {
                 parseTypeReference();
             } while (match(TokenType.COMMA));
         }
     }
 
-    private boolean checkIdentifier(String text) {
+    private boolean checkIdentifier(String text)
+    {
         return current.getType() == TokenType.IDENTIFIER && text.equals(current.getText());
     }
 
-    private BlockStmt parseBlock() {
+    private BlockStmt parseBlock()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.LBRACE, "Expected '{'");
 
         List<Statement> statements = new ArrayList<>();
-        while (!check(TokenType.RBRACE) && !isAtEnd()) {
-            if (isLocalVariableDeclaration()) {
+        while (!check(TokenType.RBRACE) && !isAtEnd())
+        {
+            if (isLocalVariableDeclaration())
+            {
                 statements.addAll(parseLocalVariableDeclarations());
                 continue;
             }
             Statement stmt = parseBlockStatement();
-            if (stmt != null) {
+            if (stmt != null)
+            {
                 statements.add(stmt);
             }
         }
@@ -781,80 +1002,102 @@ public class Parser {
         return new BlockStmt(statements, loc);
     }
 
-    private Statement parseBlockStatement() {
-        if (check(TokenType.LBRACE)) {
+    private Statement parseBlockStatement()
+    {
+        if (check(TokenType.LBRACE))
+        {
             return parseBlock();
         }
-        if (check(TokenType.IF)) {
+        if (check(TokenType.IF))
+        {
             return parseIf();
         }
-        if (check(TokenType.WHILE)) {
+        if (check(TokenType.WHILE))
+        {
             return parseWhile();
         }
-        if (check(TokenType.DO)) {
+        if (check(TokenType.DO))
+        {
             return parseDoWhile();
         }
-        if (check(TokenType.FOR)) {
+        if (check(TokenType.FOR))
+        {
             return parseFor();
         }
-        if (check(TokenType.SWITCH)) {
+        if (check(TokenType.SWITCH))
+        {
             return parseSwitch();
         }
-        if (check(TokenType.TRY)) {
+        if (check(TokenType.TRY))
+        {
             return parseTry();
         }
-        if (check(TokenType.RETURN)) {
+        if (check(TokenType.RETURN))
+        {
             return parseReturn();
         }
-        if (check(TokenType.THROW)) {
+        if (check(TokenType.THROW))
+        {
             return parseThrow();
         }
-        if (check(TokenType.BREAK)) {
+        if (check(TokenType.BREAK))
+        {
             return parseBreak();
         }
-        if (check(TokenType.CONTINUE)) {
+        if (check(TokenType.CONTINUE))
+        {
             return parseContinue();
         }
-        if (check(TokenType.SYNCHRONIZED)) {
+        if (check(TokenType.SYNCHRONIZED))
+        {
             return parseSynchronized();
         }
-        if (check(TokenType.ASSERT)) {
+        if (check(TokenType.ASSERT))
+        {
             return parseAssert();
         }
-        if (check(TokenType.SEMICOLON)) {
+        if (check(TokenType.SEMICOLON))
+        {
             advance();
             return new BlockStmt(List.of(), currentLocation());
         }
 
-        if (check(TokenType.IDENTIFIER) && checkNext(TokenType.COLON)) {
+        if (check(TokenType.IDENTIFIER) && checkNext(TokenType.COLON))
+        {
             return parseLabeled();
         }
 
-        if (isLocalVariableDeclaration()) {
+        if (isLocalVariableDeclaration())
+        {
             return parseLocalVariable();
         }
 
         return parseExpressionStatement();
     }
 
-    private boolean isLocalVariableDeclaration() {
+    private boolean isLocalVariableDeclaration()
+    {
         if (check(TokenType.FINAL)) return true;
         // `var` opens a declaration only as a TYPE (`var x = ...`); `var.foo()`, `var = ...`, `var[i]`
         // are uses of a variable named var.
-        if (check(TokenType.VAR)) {
+        if (check(TokenType.VAR))
+        {
             return lexer.peek().getType() == TokenType.IDENTIFIER;
         }
         if (current.isPrimitiveType()) return true;
 
-        if (check(TokenType.IDENTIFIER)) {
+        if (check(TokenType.IDENTIFIER))
+        {
             return looksLikeTypeDeclaration();
         }
         return false;
     }
 
-    private boolean looksLikeTypeDeclaration() {
+    private boolean looksLikeTypeDeclaration()
+    {
         int offset = skipTypeTokens(0);
-        if (offset < 0) {
+        if (offset < 0)
+        {
             return false;
         }
         TokenType after = lexer.peekAhead(offset).getType();
@@ -866,20 +1109,25 @@ public class Parser {
      * Assuming {@code current} is the first identifier of a type, returns the peek-offset of the token
      * immediately after the (possibly qualified, generic, or array) type, or -1 on a malformed array.
      */
-    private int skipTypeTokens(int offset) {
-        if (lexer.peekAhead(offset).getType() == TokenType.DOT) {
+    private int skipTypeTokens(int offset)
+    {
+        if (lexer.peekAhead(offset).getType() == TokenType.DOT)
+        {
             offset++;
-            while (lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER) {
+            while (lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER)
+            {
                 offset++;
                 if (lexer.peekAhead(offset).getType() != TokenType.DOT) break;
                 offset++;
             }
         }
 
-        if (lexer.peekAhead(offset).getType() == TokenType.LT) {
+        if (lexer.peekAhead(offset).getType() == TokenType.LT)
+        {
             int depth = 1;
             offset++;
-            while (lexer.peekAhead(offset).getType() != TokenType.EOF) {
+            while (lexer.peekAhead(offset).getType() != TokenType.EOF)
+            {
                 TokenType t = lexer.peekAhead(offset).getType();
                 if (t == TokenType.LT) depth++;
                 else if (t == TokenType.GT) depth--;
@@ -890,11 +1138,15 @@ public class Parser {
             }
         }
 
-        while (lexer.peekAhead(offset).getType() == TokenType.LBRACKET) {
+        while (lexer.peekAhead(offset).getType() == TokenType.LBRACKET)
+        {
             offset++;
-            if (lexer.peekAhead(offset).getType() == TokenType.RBRACKET) {
+            if (lexer.peekAhead(offset).getType() == TokenType.RBRACKET)
+            {
                 offset++;
-            } else {
+            }
+            else
+            {
                 return -1;
             }
         }
@@ -902,21 +1154,28 @@ public class Parser {
         return offset;
     }
 
-    /** A switch case-label type pattern: {@code Type binding} ({@code current} is the type's first identifier). */
-    private boolean looksLikeTypePattern() {
+    /**
+     * A switch case-label type pattern: {@code Type binding} ({@code current} is the type's first identifier).
+     */
+    private boolean looksLikeTypePattern()
+    {
         if (!check(TokenType.IDENTIFIER)) return false;
         int offset = skipTypeTokens(0);
         return offset >= 0 && lexer.peekAhead(offset).getType() == TokenType.IDENTIFIER;
     }
 
-    /** A switch case-label record-deconstruction pattern: {@code Type(...)}. */
-    private boolean looksLikeRecordPattern() {
+    /**
+     * A switch case-label record-deconstruction pattern: {@code Type(...)}.
+     */
+    private boolean looksLikeRecordPattern()
+    {
         if (!check(TokenType.IDENTIFIER)) return false;
         int offset = skipTypeTokens(0);
         return offset >= 0 && lexer.peekAhead(offset).getType() == TokenType.LPAREN;
     }
 
-    private IfStmt parseIf() {
+    private IfStmt parseIf()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.IF, "Expected 'if'");
         consume(TokenType.LPAREN, "Expected '(' after 'if'");
@@ -925,14 +1184,16 @@ public class Parser {
 
         Statement thenBranch = parseBlockStatement();
         Statement elseBranch = null;
-        if (match(TokenType.ELSE)) {
+        if (match(TokenType.ELSE))
+        {
             elseBranch = parseBlockStatement();
         }
 
         return new IfStmt(condition, thenBranch, elseBranch, loc);
     }
 
-    private WhileStmt parseWhile() {
+    private WhileStmt parseWhile()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.WHILE, "Expected 'while'");
         consume(TokenType.LPAREN, "Expected '(' after 'while'");
@@ -943,7 +1204,8 @@ public class Parser {
         return new WhileStmt(condition, body, null, loc);
     }
 
-    private DoWhileStmt parseDoWhile() {
+    private DoWhileStmt parseDoWhile()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.DO, "Expected 'do'");
         Statement body = parseBlockStatement();
@@ -956,22 +1218,29 @@ public class Parser {
         return new DoWhileStmt(body, condition, null, loc);
     }
 
-    private Statement parseFor() {
+    private Statement parseFor()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.FOR, "Expected 'for'");
         consume(TokenType.LPAREN, "Expected '(' after 'for'");
 
-        if (isEnhancedFor()) {
+        if (isEnhancedFor())
+        {
             return parseForEach(loc);
         }
 
         List<Statement> init = new ArrayList<>();
-        if (!check(TokenType.SEMICOLON)) {
-            if (isLocalVariableDeclaration()) {
+        if (!check(TokenType.SEMICOLON))
+        {
+            if (isLocalVariableDeclaration())
+            {
                 init.addAll(parseLocalVariableDeclaratorsNoSemi());
-            } else {
+            }
+            else
+            {
                 init.add(new ExprStmt(parseExpression(), loc));
-                while (match(TokenType.COMMA)) {
+                while (match(TokenType.COMMA))
+                {
                     init.add(new ExprStmt(parseExpression(), loc));
                 }
             }
@@ -979,14 +1248,17 @@ public class Parser {
         consume(TokenType.SEMICOLON, "Expected ';' after for init");
 
         Expression condition = null;
-        if (!check(TokenType.SEMICOLON)) {
+        if (!check(TokenType.SEMICOLON))
+        {
             condition = parseExpression();
         }
         consume(TokenType.SEMICOLON, "Expected ';' after for condition");
 
         List<Expression> update = new ArrayList<>();
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 update.add(parseExpression());
             } while (match(TokenType.COMMA));
         }
@@ -996,18 +1268,22 @@ public class Parser {
         return new ForStmt(init, condition, update, body, null, loc);
     }
 
-    private boolean isEnhancedFor() {
+    private boolean isEnhancedFor()
+    {
         int depth = 0;
         Lexer tempLexer = new Lexer(source.substring(lexer.currentPosition().getOffset() - current.getText().length()));
         Token t = tempLexer.nextToken();
 
-        while (t.getType() != TokenType.EOF && t.getType() != TokenType.SEMICOLON) {
+        while (t.getType() != TokenType.EOF && t.getType() != TokenType.SEMICOLON)
+        {
             if (t.getType() == TokenType.LPAREN) depth++;
-            if (t.getType() == TokenType.RPAREN) {
+            if (t.getType() == TokenType.RPAREN)
+            {
                 depth--;
                 if (depth < 0) break;
             }
-            if (t.getType() == TokenType.COLON && depth == 0) {
+            if (t.getType() == TokenType.COLON && depth == 0)
+            {
                 return true;
             }
             t = tempLexer.nextToken();
@@ -1015,7 +1291,8 @@ public class Parser {
         return false;
     }
 
-    private ForEachStmt parseForEach(SourceLocation loc) {
+    private ForEachStmt parseForEach(SourceLocation loc)
+    {
         boolean isFinal = match(TokenType.FINAL);
         SourceType type = parseTypeReference();
         String varName = consumeName("Expected variable name").getText();
@@ -1029,7 +1306,8 @@ public class Parser {
         return new ForEachStmt(varDecl, iterable, body, null, loc);
     }
 
-    private SwitchStmt parseSwitch() {
+    private SwitchStmt parseSwitch()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.SWITCH, "Expected 'switch'");
         consume(TokenType.LPAREN, "Expected '(' after 'switch'");
@@ -1038,7 +1316,8 @@ public class Parser {
         consume(TokenType.LBRACE, "Expected '{' before switch body");
 
         List<SwitchCase> cases = new ArrayList<>();
-        while (!check(TokenType.RBRACE) && !isAtEnd()) {
+        while (!check(TokenType.RBRACE) && !isAtEnd())
+        {
             cases.add(parseSwitchCase());
         }
 
@@ -1050,7 +1329,8 @@ public class Parser {
      * Parses a switch expression (Java 14) in arrow form:
      * {@code switch (sel) { case L1, L2 -> expr; default -> expr; }}.
      */
-    private SwitchExpr parseSwitchExpr() {
+    private SwitchExpr parseSwitchExpr()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.SWITCH, "Expected 'switch'");
         consume(TokenType.LPAREN, "Expected '(' after 'switch'");
@@ -1060,10 +1340,12 @@ public class Parser {
 
         List<SwitchExpr.Arm> arms = new ArrayList<>();
         SourceType type = null;
-        while (!check(TokenType.RBRACE) && !isAtEnd()) {
+        while (!check(TokenType.RBRACE) && !isAtEnd())
+        {
             SwitchExpr.Arm arm = parseSwitchExprArm();
             arms.add(arm);
-            if (type == null && arm.getResult() != null && arm.getResult().getType() != null) {
+            if (type == null && arm.getResult() != null && arm.getResult().getType() != null)
+            {
                 type = arm.getResult().getType();
             }
         }
@@ -1076,7 +1358,8 @@ public class Parser {
      * {@code case T b [when g] -> e}, a record-deconstruction arm {@code case T(C0 b0, ...) [when g] -> e},
      * or {@code default -> e} (Java 21 pattern switch).
      */
-    private SwitchExpr.Arm parseSwitchExprArm() {
+    private SwitchExpr.Arm parseSwitchExprArm()
+    {
         List<Expression> labels = new ArrayList<>();
         SourceType patternType = null;
         String patternBinding = null;
@@ -1084,25 +1367,37 @@ public class Parser {
         Expression guard = null;
         boolean isDefault = false;
 
-        if (match(TokenType.CASE)) {
-            if (looksLikeRecordPattern()) {
+        if (match(TokenType.CASE))
+        {
+            if (looksLikeRecordPattern())
+            {
                 patternType = parseType();
                 components = parseDeconstructionComponents();
-            } else if (looksLikeTypePattern()) {
+            }
+            else if (looksLikeTypePattern())
+            {
                 patternType = parseType();
                 patternBinding = consume(TokenType.IDENTIFIER, "Expected pattern binding name").getText();
-            } else {
-                do {
+            }
+            else
+            {
+                do
+                {
                     labels.add(parseExpression());
                 } while (match(TokenType.COMMA));
             }
-            if (patternType != null && checkIdentifier("when")) {
+            if (patternType != null && checkIdentifier("when"))
+            {
                 advance();
                 guard = parseExpression();
             }
-        } else if (match(TokenType.DEFAULT)) {
+        }
+        else if (match(TokenType.DEFAULT))
+        {
             isDefault = true;
-        } else {
+        }
+        else
+        {
             throw error("Expected 'case' or 'default' in switch expression");
         }
 
@@ -1110,19 +1405,24 @@ public class Parser {
         Expression result = parseExpression();
         consume(TokenType.SEMICOLON, "Expected ';' after switch expression arm");
 
-        if (patternType != null) {
-            return new SwitchExpr.Arm(
-                    new ArrayList<>(), false, patternType, patternBinding, components, guard, result);
+        if (patternType != null)
+        {
+            return new SwitchExpr.Arm(new ArrayList<>(), false, patternType, patternBinding, components, guard, result);
         }
         return new SwitchExpr.Arm(labels, isDefault, result);
     }
 
-    /** Parses {@code (C0 b0, C1 b1, ...)} of a record-deconstruction pattern (flat components). */
-    private List<SwitchExpr.Component> parseDeconstructionComponents() {
+    /**
+     * Parses {@code (C0 b0, C1 b1, ...)} of a record-deconstruction pattern (flat components).
+     */
+    private List<SwitchExpr.Component> parseDeconstructionComponents()
+    {
         consume(TokenType.LPAREN, "Expected '(' in record-deconstruction pattern");
         List<SwitchExpr.Component> components = new ArrayList<>();
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 SourceType compType = parseType();
                 String compBinding = consume(TokenType.IDENTIFIER, "Expected component binding name").getText();
                 components.add(new SwitchExpr.Component(compType, compBinding));
@@ -1132,54 +1432,72 @@ public class Parser {
         return components;
     }
 
-    private SwitchCase parseSwitchCase() {
+    private SwitchCase parseSwitchCase()
+    {
         List<Expression> labels = new ArrayList<>();
         boolean isDefault = false;
 
-        if (match(TokenType.CASE)) {
-            do {
+        if (match(TokenType.CASE))
+        {
+            do
+            {
                 labels.add(parseExpression());
             } while (match(TokenType.COMMA));
-        } else if (match(TokenType.DEFAULT)) {
+        }
+        else if (match(TokenType.DEFAULT))
+        {
             isDefault = true;
-        } else {
+        }
+        else
+        {
             throw error("Expected 'case' or 'default'");
         }
 
         consume(TokenType.COLON, "Expected ':' after case label");
 
         List<Statement> statements = new ArrayList<>();
-        while (!check(TokenType.CASE) && !check(TokenType.DEFAULT) && !check(TokenType.RBRACE) && !isAtEnd()) {
-            if (isLocalVariableDeclaration()) {
+        while (!check(TokenType.CASE) && !check(TokenType.DEFAULT) && !check(TokenType.RBRACE) && !isAtEnd())
+        {
+            if (isLocalVariableDeclaration())
+            {
                 statements.addAll(parseLocalVariableDeclarations());
                 continue;
             }
             Statement stmt = parseBlockStatement();
-            if (stmt != null) {
+            if (stmt != null)
+            {
                 statements.add(stmt);
             }
         }
 
-        if (isDefault) {
+        if (isDefault)
+        {
             return SwitchCase.defaultCase(statements);
         }
         return SwitchCase.ofExpressions(labels, statements);
     }
 
-    private TryCatchStmt parseTry() {
+    private TryCatchStmt parseTry()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.TRY, "Expected 'try'");
 
         List<Expression> resources = new ArrayList<>();
-        if (match(TokenType.LPAREN)) {
-            do {
+        if (match(TokenType.LPAREN))
+        {
+            do
+            {
                 if (check(TokenType.RPAREN)) break;
-                if (check(TokenType.FINAL) || (check(TokenType.IDENTIFIER) && looksLikeTypeDeclaration())) {
+                if (check(TokenType.FINAL) || (check(TokenType.IDENTIFIER) && looksLikeTypeDeclaration()))
+                {
                     VarDeclStmt decl = parseResource();
-                    if (decl.getInitializer() != null) {
+                    if (decl.getInitializer() != null)
+                    {
                         resources.add(decl.getInitializer());
                     }
-                } else {
+                }
+                else
+                {
                     // A concise (Java 9+) resource: an existing effectively-final variable or field access used
                     // directly as the resource, e.g. `try (in)`, rather than a declaration `try (Type in = init)`.
                     resources.add(parseExpression());
@@ -1191,19 +1509,22 @@ public class Parser {
         BlockStmt tryBlock = parseBlock();
 
         List<CatchClause> catchClauses = new ArrayList<>();
-        while (check(TokenType.CATCH)) {
+        while (check(TokenType.CATCH))
+        {
             catchClauses.add(parseCatch());
         }
 
         BlockStmt finallyBlock = null;
-        if (match(TokenType.FINALLY)) {
+        if (match(TokenType.FINALLY))
+        {
             finallyBlock = parseBlock();
         }
 
         return new TryCatchStmt(tryBlock, catchClauses, finallyBlock, resources, loc);
     }
 
-    private VarDeclStmt parseResource() {
+    private VarDeclStmt parseResource()
+    {
         SourceLocation loc = currentLocation();
         boolean isFinal = match(TokenType.FINAL);
         SourceType type = parseTypeReference();
@@ -1215,14 +1536,16 @@ public class Parser {
         return new VarDeclStmt(type, name, init, false, isFinal, loc);
     }
 
-    private CatchClause parseCatch() {
+    private CatchClause parseCatch()
+    {
         consume(TokenType.CATCH, "Expected 'catch'");
         consume(TokenType.LPAREN, "Expected '(' after 'catch'");
 
         match(TokenType.FINAL);
         List<SourceType> exceptionTypes = new ArrayList<>();
         exceptionTypes.add(parseTypeReference());
-        while (match(TokenType.PIPE)) {
+        while (match(TokenType.PIPE))
+        {
             exceptionTypes.add(parseTypeReference());
         }
 
@@ -1233,18 +1556,21 @@ public class Parser {
         return new CatchClause(exceptionTypes, varName, body);
     }
 
-    private ReturnStmt parseReturn() {
+    private ReturnStmt parseReturn()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.RETURN, "Expected 'return'");
         Expression value = null;
-        if (!check(TokenType.SEMICOLON)) {
+        if (!check(TokenType.SEMICOLON))
+        {
             value = parseExpression();
         }
         consume(TokenType.SEMICOLON, "Expected ';' after return");
         return new ReturnStmt(value, loc);
     }
 
-    private ThrowStmt parseThrow() {
+    private ThrowStmt parseThrow()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.THROW, "Expected 'throw'");
         Expression value = parseExpression();
@@ -1252,29 +1578,34 @@ public class Parser {
         return new ThrowStmt(value, loc);
     }
 
-    private BreakStmt parseBreak() {
+    private BreakStmt parseBreak()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.BREAK, "Expected 'break'");
         String label = null;
-        if (check(TokenType.IDENTIFIER)) {
+        if (check(TokenType.IDENTIFIER))
+        {
             label = advance().getText();
         }
         consume(TokenType.SEMICOLON, "Expected ';' after break");
         return new BreakStmt(label, loc);
     }
 
-    private ContinueStmt parseContinue() {
+    private ContinueStmt parseContinue()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.CONTINUE, "Expected 'continue'");
         String label = null;
-        if (check(TokenType.IDENTIFIER)) {
+        if (check(TokenType.IDENTIFIER))
+        {
             label = advance().getText();
         }
         consume(TokenType.SEMICOLON, "Expected ';' after continue");
         return new ContinueStmt(label, loc);
     }
 
-    private SynchronizedStmt parseSynchronized() {
+    private SynchronizedStmt parseSynchronized()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.SYNCHRONIZED, "Expected 'synchronized'");
         consume(TokenType.LPAREN, "Expected '(' after 'synchronized'");
@@ -1284,7 +1615,8 @@ public class Parser {
         return new SynchronizedStmt(lock, body, loc);
     }
 
-    private Statement parseAssert() {
+    private Statement parseAssert()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.ASSERT, "Expected 'assert'");
         Expression condition = parseExpression();
@@ -1293,7 +1625,8 @@ public class Parser {
         return new ExprStmt(condition, loc);
     }
 
-    private LabeledStmt parseLabeled() {
+    private LabeledStmt parseLabeled()
+    {
         SourceLocation loc = currentLocation();
         String label = consume(TokenType.IDENTIFIER, "Expected label").getText();
         consume(TokenType.COLON, "Expected ':'");
@@ -1301,13 +1634,15 @@ public class Parser {
         return new LabeledStmt(label, body, loc);
     }
 
-    private VarDeclStmt parseLocalVariable() {
+    private VarDeclStmt parseLocalVariable()
+    {
         VarDeclStmt decl = parseLocalVariableNoSemi();
         consume(TokenType.SEMICOLON, "Expected ';' after variable declaration");
         return decl;
     }
 
-    private VarDeclStmt parseLocalVariableNoSemi() {
+    private VarDeclStmt parseLocalVariableNoSemi()
+    {
         boolean isFinal = match(TokenType.FINAL);
         TypePrefix prefix = parseVarTypePrefix();
         return parseDeclarator(prefix.type, prefix.useVar, isFinal);
@@ -1318,7 +1653,8 @@ public class Parser {
      * the base type (e.g. {@code int a = 0, b = 1;}), consuming the trailing semicolon, and
      * returns one VarDeclStmt per declarator.
      */
-    private List<VarDeclStmt> parseLocalVariableDeclarations() {
+    private List<VarDeclStmt> parseLocalVariableDeclarations()
+    {
         List<VarDeclStmt> decls = parseLocalVariableDeclaratorsNoSemi();
         consume(TokenType.SEMICOLON, "Expected ';' after variable declaration");
         return decls;
@@ -1328,18 +1664,22 @@ public class Parser {
      * Parses comma-separated declarators of a local variable declaration without the trailing
      * semicolon (used by for-loop initializers, e.g. {@code for (int i = 0, j = n; ...)}).
      */
-    private List<VarDeclStmt> parseLocalVariableDeclaratorsNoSemi() {
+    private List<VarDeclStmt> parseLocalVariableDeclaratorsNoSemi()
+    {
         boolean isFinal = match(TokenType.FINAL);
         TypePrefix prefix = parseVarTypePrefix();
         List<VarDeclStmt> decls = new ArrayList<>();
-        do {
+        do
+        {
             decls.add(parseDeclarator(prefix.type, prefix.useVar, isFinal));
         } while (match(TokenType.COMMA));
         return decls;
     }
 
-    private TypePrefix parseVarTypePrefix() {
-        if (match(TokenType.VAR)) {
+    private TypePrefix parseVarTypePrefix()
+    {
+        if (match(TokenType.VAR))
+        {
             return new TypePrefix(ReferenceSourceType.OBJECT, true);
         }
         return new TypePrefix(parseTypeReference(), false);
@@ -1349,51 +1689,61 @@ public class Parser {
      * Parses a single declarator (name, optional C-style {@code []} dimensions, optional
      * initializer) against a shared base type, and registers the variable.
      */
-    private VarDeclStmt parseDeclarator(SourceType baseType, boolean useVar, boolean isFinal) {
+    private VarDeclStmt parseDeclarator(SourceType baseType, boolean useVar, boolean isFinal)
+    {
         SourceLocation loc = currentLocation();
         String name = consumeName("Expected variable name").getText();
 
         SourceType type = baseType;
-        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET))
+        {
             advance();
             advance();
             type = new ArraySourceType(type);
         }
 
         Expression init = null;
-        if (match(TokenType.EQ)) {
+        if (match(TokenType.EQ))
+        {
             init = parseExpression();
         }
-        if (useVar && init != null) {
+        if (useVar && init != null)
+        {
             type = init.getType();
         }
         defineVariable(name, type);
         return new VarDeclStmt(type, name, init, false, isFinal, loc);
     }
 
-    private static final class TypePrefix {
+    private static final class TypePrefix
+    {
         final SourceType type;
         final boolean useVar;
 
-        TypePrefix(SourceType type, boolean useVar) {
+        TypePrefix(SourceType type, boolean useVar)
+        {
             this.type = type;
             this.useVar = useVar;
         }
     }
 
-    private ExprStmt parseExpressionStatement() {
+    private ExprStmt parseExpressionStatement()
+    {
         SourceLocation loc = currentLocation();
         Expression expr = parseExpression();
         consume(TokenType.SEMICOLON, "Expected ';' after expression");
         return new ExprStmt(expr, loc);
     }
 
-    private Expression parseExpressionWithPrecedence(int minPrecedence) {
+    private Expression parseExpressionWithPrecedence(int minPrecedence)
+    {
         Expression left = parsePrefixExpression();
 
-        while (!isAtEnd()) {
+        while (!isAtEnd())
+        {
             Precedence prec = Precedence.of(current.getType());
-            if (prec.getLevel() < minPrecedence) {
+            if (prec.getLevel() < minPrecedence)
+            {
                 break;
             }
 
@@ -1404,73 +1754,90 @@ public class Parser {
         return left;
     }
 
-    private Expression parsePrefixExpression() {
+    private Expression parsePrefixExpression()
+    {
         SourceLocation loc = currentLocation();
 
-        if (match(TokenType.BANG)) {
+        if (match(TokenType.BANG))
+        {
             Expression operand = parsePrefixExpression();
             return new UnaryExpr(UnaryOperator.NOT, operand, PrimitiveSourceType.BOOLEAN, loc);
         }
-        if (match(TokenType.TILDE)) {
+        if (match(TokenType.TILDE))
+        {
             Expression operand = parsePrefixExpression();
             return new UnaryExpr(UnaryOperator.BNOT, operand, PrimitiveSourceType.INT, loc);
         }
-        if (match(TokenType.MINUS)) {
+        if (match(TokenType.MINUS))
+        {
             Expression operand = parsePrefixExpression();
-            if (operand instanceof LiteralExpr) {
+            if (operand instanceof LiteralExpr)
+            {
                 LiteralExpr lit = (LiteralExpr) operand;
                 Object val = lit.getValue();
-                if (val instanceof Long) {
+                if (val instanceof Long)
+                {
                     long lval = (Long) val;
                     // An explicit `long` literal (an `L` suffix, so type LONG) stays long, whatever its
                     // magnitude: `-1L` is long -1, not int -1. Only a decimal INT literal whose positive
                     // form overflowed int (e.g. 2147483648, lexed as a Long with INT type) narrows back to
                     // int on negation - its value is then in int range (down to Integer.MIN_VALUE).
-                    if (lit.getType() == PrimitiveSourceType.LONG) {
+                    if (lit.getType() == PrimitiveSourceType.LONG)
+                    {
                         return new LiteralExpr(-lval, PrimitiveSourceType.LONG, loc);
                     }
-                    if (lval == 2147483648L) {
+                    if (lval == 2147483648L)
+                    {
                         return new LiteralExpr(Integer.MIN_VALUE, PrimitiveSourceType.INT, loc);
                     }
                     long negated = -lval;
-                    if (negated >= Integer.MIN_VALUE && negated <= Integer.MAX_VALUE) {
+                    if (negated >= Integer.MIN_VALUE && negated <= Integer.MAX_VALUE)
+                    {
                         return new LiteralExpr((int) negated, PrimitiveSourceType.INT, loc);
                     }
                     return new LiteralExpr(negated, PrimitiveSourceType.LONG, loc);
                 }
-                if (val instanceof Integer) {
+                if (val instanceof Integer)
+                {
                     return new LiteralExpr(-((Integer) val), PrimitiveSourceType.INT, loc);
                 }
-                if (val instanceof Double) {
+                if (val instanceof Double)
+                {
                     return new LiteralExpr(-((Double) val), PrimitiveSourceType.DOUBLE, loc);
                 }
-                if (val instanceof Float) {
+                if (val instanceof Float)
+                {
                     return new LiteralExpr(-((Float) val), PrimitiveSourceType.FLOAT, loc);
                 }
             }
             return new UnaryExpr(UnaryOperator.NEG, operand, operand.getType(), loc);
         }
-        if (match(TokenType.PLUS)) {
+        if (match(TokenType.PLUS))
+        {
             Expression operand = parsePrefixExpression();
             return new UnaryExpr(UnaryOperator.POS, operand, operand.getType(), loc);
         }
-        if (match(TokenType.PLUS_PLUS)) {
+        if (match(TokenType.PLUS_PLUS))
+        {
             Expression operand = parsePrefixExpression();
             return new UnaryExpr(UnaryOperator.PRE_INC, operand, operand.getType(), loc);
         }
-        if (match(TokenType.MINUS_MINUS)) {
+        if (match(TokenType.MINUS_MINUS))
+        {
             Expression operand = parsePrefixExpression();
             return new UnaryExpr(UnaryOperator.PRE_DEC, operand, operand.getType(), loc);
         }
 
-        if (check(TokenType.LPAREN) && isCastExpression()) {
+        if (check(TokenType.LPAREN) && isCastExpression())
+        {
             return parseCast();
         }
 
         return parsePostfixExpression();
     }
 
-    private boolean isCastExpression() {
+    private boolean isCastExpression()
+    {
         if (!check(TokenType.LPAREN)) return false;
 
         Lexer tempLexer = new Lexer(source.substring(lexer.currentPosition().getOffset() - current.getText().length()));
@@ -1478,13 +1845,15 @@ public class Parser {
         if (t.getType() != TokenType.LPAREN) return false;
 
         t = tempLexer.nextToken();
-        if (!t.isPrimitiveType() && t.getType() != TokenType.IDENTIFIER) {
+        if (!t.isPrimitiveType() && t.getType() != TokenType.IDENTIFIER)
+        {
             return false;
         }
         boolean primitive = t.isPrimitiveType();
 
         int depth = 1;
-        while (depth > 0 && t.getType() != TokenType.EOF) {
+        while (depth > 0 && t.getType() != TokenType.EOF)
+        {
             t = tempLexer.nextToken();
             if (t.getType() == TokenType.LPAREN) depth++;
             if (t.getType() == TokenType.RPAREN) depth--;
@@ -1495,7 +1864,8 @@ public class Parser {
         t = tempLexer.nextToken();
         // `(double) -x` is a cast beyond doubt - a parenthesized PRIMITIVE cannot be an operand - while
         // `(a) - b` is a subtraction, so the sign tokens continue a cast only after a primitive type.
-        if (primitive && (t.getType() == TokenType.MINUS || t.getType() == TokenType.PLUS)) {
+        if (primitive && (t.getType() == TokenType.MINUS || t.getType() == TokenType.PLUS))
+        {
             return true;
         }
         return t.getType() == TokenType.IDENTIFIER ||
@@ -1510,7 +1880,8 @@ public class Parser {
                t.getType() == TokenType.MINUS_MINUS;
     }
 
-    private CastExpr parseCast() {
+    private CastExpr parseCast()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.LPAREN, "Expected '('");
         SourceType type = parseTypeReference();
@@ -1519,55 +1890,83 @@ public class Parser {
         return new CastExpr(type, operand, loc);
     }
 
-    private Expression parsePostfixExpression() {
+    private Expression parsePostfixExpression()
+    {
         Expression expr = parsePrimaryExpression();
 
-        while (true) {
+        while (true)
+        {
             SourceLocation loc = currentLocation();
 
-            if (match(TokenType.DOT)) {
-                if (check(TokenType.CLASS)) {
+            if (match(TokenType.DOT))
+            {
+                if (check(TokenType.CLASS))
+                {
                     advance();
                     SourceType classType = getTypeFromExpression(expr);
                     expr = new ClassExpr(classType, loc);
-                } else if (check(TokenType.THIS)) {
+                }
+                else if (check(TokenType.THIS))
+                {
                     advance();
                     SourceType qualType = getTypeFromExpression(expr);
                     expr = new ThisExpr(qualType, loc);
-                } else if (check(TokenType.SUPER)) {
+                }
+                else if (check(TokenType.SUPER))
+                {
                     advance();
                     SourceType qualType = getTypeFromExpression(expr);
                     expr = new SuperExpr(qualType, loc);
-                } else if (check(TokenType.NEW)) {
+                }
+                else if (check(TokenType.NEW))
+                {
                     advance();
                     expr = parseInnerClassCreation(expr, loc);
-                } else {
+                }
+                else
+                {
                     String name = consumeName("Expected field or method name").getText();
-                    if (check(TokenType.LPAREN)) {
+                    if (check(TokenType.LPAREN))
+                    {
                         expr = parseMethodCall(expr, name, loc);
-                    } else {
+                    }
+                    else
+                    {
                         String ownerClass = deriveOwnerClass(expr);
                         expr = new FieldAccessExpr(expr, name, ownerClass, false, ReferenceSourceType.OBJECT, loc);
                     }
                 }
-            } else if (match(TokenType.LBRACKET)) {
+            }
+            else if (match(TokenType.LBRACKET))
+            {
                 Expression index = parseExpression();
                 consume(TokenType.RBRACKET, "Expected ']'");
                 SourceType elementType = ReferenceSourceType.OBJECT;
                 SourceType arrayType = expr.getType();
-                if (arrayType instanceof ArraySourceType) {
+                if (arrayType instanceof ArraySourceType)
+                {
                     elementType = ((ArraySourceType) arrayType).getElementType();
                 }
                 expr = new ArrayAccessExpr(expr, index, elementType, loc);
-            } else if (match(TokenType.PLUS_PLUS)) {
+            }
+            else if (match(TokenType.PLUS_PLUS))
+            {
                 expr = new UnaryExpr(UnaryOperator.POST_INC, expr, expr.getType(), loc);
-            } else if (match(TokenType.MINUS_MINUS)) {
+            }
+            else if (match(TokenType.MINUS_MINUS))
+            {
                 expr = new UnaryExpr(UnaryOperator.POST_DEC, expr, expr.getType(), loc);
-            } else if (match(TokenType.DOUBLE_COLON)) {
+            }
+            else if (match(TokenType.DOUBLE_COLON))
+            {
                 expr = parseMethodReference(expr, loc);
-            } else if (check(TokenType.LPAREN) && (expr instanceof SuperExpr || expr instanceof ThisExpr)) {
+            }
+            else if (check(TokenType.LPAREN) && (expr instanceof SuperExpr || expr instanceof ThisExpr))
+            {
                 expr = parseMethodCall(expr, "<init>", loc);
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
@@ -1575,83 +1974,106 @@ public class Parser {
         return expr;
     }
 
-    private SourceType getTypeFromExpression(Expression expr) {
-        if (expr instanceof VarRefExpr) {
+    private SourceType getTypeFromExpression(Expression expr)
+    {
+        if (expr instanceof VarRefExpr)
+        {
             return new ReferenceSourceType(((VarRefExpr) expr).getName());
         }
-        if (expr instanceof FieldAccessExpr) {
+        if (expr instanceof FieldAccessExpr)
+        {
             return new ReferenceSourceType(((FieldAccessExpr) expr).getFieldName());
         }
         return ReferenceSourceType.OBJECT;
     }
 
-    private String deriveOwnerClass(Expression expr) {
-        if (expr == null) {
+    private String deriveOwnerClass(Expression expr)
+    {
+        if (expr == null)
+        {
             return "java/lang/Object";
         }
         SourceType type = expr.getType();
-        if (type instanceof ReferenceSourceType) {
+        if (type instanceof ReferenceSourceType)
+        {
             return ((ReferenceSourceType) type).getInternalName();
         }
-        if (type instanceof GenericSourceType) {
+        if (type instanceof GenericSourceType)
+        {
             return ((GenericSourceType) type).getRawType().getInternalName();
         }
         return "java/lang/Object";
     }
 
-    private Expression parsePrimaryExpression() {
+    private Expression parsePrimaryExpression()
+    {
         SourceLocation loc = currentLocation();
 
-        if (check(TokenType.SWITCH)) {
+        if (check(TokenType.SWITCH))
+        {
             return parseSwitchExpr();
         }
-        if (match(TokenType.TRUE)) {
+        if (match(TokenType.TRUE))
+        {
             return LiteralExpr.ofBoolean(true);
         }
-        if (match(TokenType.FALSE)) {
+        if (match(TokenType.FALSE))
+        {
             return LiteralExpr.ofBoolean(false);
         }
-        if (match(TokenType.NULL)) {
+        if (match(TokenType.NULL))
+        {
             return LiteralExpr.ofNull();
         }
-        if (check(TokenType.INTEGER_LITERAL)) {
+        if (check(TokenType.INTEGER_LITERAL))
+        {
             Token t = advance();
             return new LiteralExpr(t.getValue(), PrimitiveSourceType.INT, loc);
         }
-        if (check(TokenType.LONG_LITERAL)) {
+        if (check(TokenType.LONG_LITERAL))
+        {
             Token t = advance();
             return new LiteralExpr(t.getValue(), PrimitiveSourceType.LONG, loc);
         }
-        if (check(TokenType.FLOAT_LITERAL)) {
+        if (check(TokenType.FLOAT_LITERAL))
+        {
             Token t = advance();
             return new LiteralExpr(t.getValue(), PrimitiveSourceType.FLOAT, loc);
         }
-        if (check(TokenType.DOUBLE_LITERAL)) {
+        if (check(TokenType.DOUBLE_LITERAL))
+        {
             Token t = advance();
             return new LiteralExpr(t.getValue(), PrimitiveSourceType.DOUBLE, loc);
         }
-        if (check(TokenType.CHAR_LITERAL)) {
+        if (check(TokenType.CHAR_LITERAL))
+        {
             Token t = advance();
             return new LiteralExpr(t.getValue(), PrimitiveSourceType.CHAR, loc);
         }
-        if (check(TokenType.STRING_LITERAL)) {
+        if (check(TokenType.STRING_LITERAL))
+        {
             Token t = advance();
             return new LiteralExpr(t.getValue(), ReferenceSourceType.STRING, loc);
         }
 
-        if (match(TokenType.THIS)) {
+        if (match(TokenType.THIS))
+        {
             return new ThisExpr(ReferenceSourceType.OBJECT, loc);
         }
-        if (match(TokenType.SUPER)) {
+        if (match(TokenType.SUPER))
+        {
             return new SuperExpr(ReferenceSourceType.OBJECT, loc);
         }
 
-        if (check(TokenType.NEW)) {
+        if (check(TokenType.NEW))
+        {
             return parseNewExpression();
         }
 
-        if (check(TokenType.LPAREN)) {
-            if (isLambdaExpression()) {
+        if (check(TokenType.LPAREN))
+        {
+            if (isLambdaExpression())
+            {
                 return parseLambda();
             }
             advance();
@@ -1660,14 +2082,17 @@ public class Parser {
             return expr;
         }
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             return parseArrayInit(new ArraySourceType(ReferenceSourceType.OBJECT));
         }
 
-        if (current.isPrimitiveType()) {
+        if (current.isPrimitiveType())
+        {
             SourceType type = parsePrimitiveType();
             type = withArrayClassLiteralDims(type);
-            if (match(TokenType.DOT)) {
+            if (match(TokenType.DOT))
+            {
                 consume(TokenType.CLASS, "Expected 'class'");
                 return new ClassExpr(type, loc);
             }
@@ -1675,25 +2100,30 @@ public class Parser {
         }
 
         // `var` in EXPRESSION position is a variable named var - the reservation applies to types only.
-        if (check(TokenType.IDENTIFIER) || check(TokenType.VAR)) {
+        if (check(TokenType.IDENTIFIER) || check(TokenType.VAR))
+        {
             String name = advance().getText();
 
-            if (check(TokenType.ARROW)) {
+            if (check(TokenType.ARROW))
+            {
                 return parseLambdaWithSingleParam(name, loc);
             }
 
-            if (check(TokenType.LPAREN)) {
+            if (check(TokenType.LPAREN))
+            {
                 return parseMethodCall(null, name, loc);
             }
 
-            if (check(TokenType.DOUBLE_COLON)) {
+            if (check(TokenType.DOUBLE_COLON))
+            {
                 advance();
                 return parseMethodReferenceFromType(name, loc);
             }
 
             // `Type[].class` / `Type[][].class`: empty bracket pairs before `.class` are array
             // dimensions of a class literal, not an index (an index has an expression inside).
-            if (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+            if (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET))
+            {
                 SourceType arrayType = withArrayClassLiteralDims(new ReferenceSourceType(name));
                 consume(TokenType.DOT, "Expected '.' after array type");
                 consume(TokenType.CLASS, "Expected 'class'");
@@ -1706,10 +2136,14 @@ public class Parser {
         throw error("Expected expression");
     }
 
-    /** Consumes trailing empty bracket pairs, wrapping {@code type} in one array dimension per pair. */
-    private SourceType withArrayClassLiteralDims(SourceType type) {
+    /**
+     * Consumes trailing empty bracket pairs, wrapping {@code type} in one array dimension per pair.
+     */
+    private SourceType withArrayClassLiteralDims(SourceType type)
+    {
         int dims = 0;
-        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET))
+        {
             advance();
             advance();
             dims++;
@@ -1717,14 +2151,16 @@ public class Parser {
         return dims > 0 ? new ArraySourceType(type, dims) : type;
     }
 
-    private boolean isLambdaExpression() {
+    private boolean isLambdaExpression()
+    {
         if (!check(TokenType.LPAREN)) return false;
 
         Lexer tempLexer = new Lexer(source.substring(lexer.currentPosition().getOffset() - current.getText().length()));
         Token t = tempLexer.nextToken();
 
         int depth = 1;
-        while (depth > 0 && t.getType() != TokenType.EOF) {
+        while (depth > 0 && t.getType() != TokenType.EOF)
+        {
             t = tempLexer.nextToken();
             if (t.getType() == TokenType.LPAREN) depth++;
             if (t.getType() == TokenType.RPAREN) depth--;
@@ -1734,20 +2170,26 @@ public class Parser {
         return t.getType() == TokenType.ARROW;
     }
 
-    private Expression parseLambda() {
+    private Expression parseLambda()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.LPAREN, "Expected '('");
 
         List<LambdaParameter> params = new ArrayList<>();
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 SourceType type;
                 String name;
 
-                if (check(TokenType.IDENTIFIER) && (checkNext(TokenType.COMMA) || checkNext(TokenType.RPAREN))) {
+                if (check(TokenType.IDENTIFIER) && (checkNext(TokenType.COMMA) || checkNext(TokenType.RPAREN)))
+                {
                     name = advance().getText();
                     params.add(LambdaParameter.implicit(name, ReferenceSourceType.OBJECT));
-                } else {
+                }
+                else
+                {
                     type = parseTypeReference();
                     name = consumeName("Expected parameter name").getText();
                     params.add(LambdaParameter.explicit(type, name));
@@ -1757,38 +2199,50 @@ public class Parser {
         consume(TokenType.RPAREN, "Expected ')'");
         consume(TokenType.ARROW, "Expected '->'");
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             BlockStmt body = parseBlock();
             return new LambdaExpr(params, body, ReferenceSourceType.OBJECT, loc);
-        } else {
+        }
+        else
+        {
             Expression body = parseExpression();
             return new LambdaExpr(params, body, ReferenceSourceType.OBJECT, loc);
         }
     }
 
-    private Expression parseLambdaWithSingleParam(String paramName, SourceLocation loc) {
+    private Expression parseLambdaWithSingleParam(String paramName, SourceLocation loc)
+    {
         consume(TokenType.ARROW, "Expected '->'");
         List<LambdaParameter> params = List.of(LambdaParameter.implicit(paramName, ReferenceSourceType.OBJECT));
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             BlockStmt body = parseBlock();
             return new LambdaExpr(params, body, ReferenceSourceType.OBJECT, loc);
-        } else {
+        }
+        else
+        {
             Expression body = parseExpression();
             return new LambdaExpr(params, body, ReferenceSourceType.OBJECT, loc);
         }
     }
 
-    private Expression parseMethodReference(Expression qualifier, SourceLocation loc) {
+    private Expression parseMethodReference(Expression qualifier, SourceLocation loc)
+    {
         String methodName;
-        if (match(TokenType.NEW)) {
+        if (match(TokenType.NEW))
+        {
             methodName = "new";
-        } else {
+        }
+        else
+        {
             methodName = consume(TokenType.IDENTIFIER, "Expected method name").getText();
         }
 
         String ownerClass = "java/lang/Object";
-        if (qualifier instanceof VarRefExpr) {
+        if (qualifier instanceof VarRefExpr)
+        {
             ownerClass = ((VarRefExpr) qualifier).getName();
         }
 
@@ -1796,11 +2250,15 @@ public class Parser {
         return new MethodRefExpr(qualifier, methodName, ownerClass, kind, ReferenceSourceType.OBJECT, loc);
     }
 
-    private Expression parseMethodReferenceFromType(String typeName, SourceLocation loc) {
+    private Expression parseMethodReferenceFromType(String typeName, SourceLocation loc)
+    {
         String methodName;
-        if (match(TokenType.NEW)) {
+        if (match(TokenType.NEW))
+        {
             methodName = "new";
-        } else {
+        }
+        else
+        {
             methodName = consume(TokenType.IDENTIFIER, "Expected method name").getText();
         }
 
@@ -1808,17 +2266,20 @@ public class Parser {
         return new MethodRefExpr(null, methodName, typeName, kind, ReferenceSourceType.OBJECT, loc);
     }
 
-    private Expression parseNewExpression() {
+    private Expression parseNewExpression()
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.NEW, "Expected 'new'");
 
         SourceType type = parseNewType();
 
-        if (check(TokenType.LBRACKET)) {
+        if (check(TokenType.LBRACKET))
+        {
             return parseNewArray(type, loc);
         }
 
-        if (type instanceof ArraySourceType && check(TokenType.LBRACE)) {
+        if (type instanceof ArraySourceType && check(TokenType.LBRACE))
+        {
             ArraySourceType arrayType = (ArraySourceType) type;
             ArrayInitExpr initializer = parseArrayInit(arrayType);
             // Pass the array type as written. Left to infer it from the element type and an empty dimension
@@ -1829,8 +2290,10 @@ public class Parser {
 
         consume(TokenType.LPAREN, "Expected '(' after type");
         List<Expression> args = new ArrayList<>();
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 args.add(parseExpression());
             } while (match(TokenType.COMMA));
         }
@@ -1838,22 +2301,28 @@ public class Parser {
 
         String className = typeToClassName(type);
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             parseAnonymousClassBody();
         }
 
         return new NewExpr(className, args, type, loc);
     }
 
-    private SourceType parseNewType() {
+    private SourceType parseNewType()
+    {
         SourceType type;
-        if (current.isPrimitiveType()) {
+        if (current.isPrimitiveType())
+        {
             type = parsePrimitiveType();
-        } else {
+        }
+        else
+        {
             type = parseReferenceType();
         }
 
-        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET))
+        {
             advance();
             advance();
             type = new ArraySourceType(type);
@@ -1862,25 +2331,33 @@ public class Parser {
         return type;
     }
 
-    private String typeToClassName(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private String typeToClassName(SourceType type)
+    {
+        if (type instanceof ReferenceSourceType)
+        {
             return ((ReferenceSourceType) type).getInternalName();
         }
-        if (type instanceof GenericSourceType) {
+        if (type instanceof GenericSourceType)
+        {
             return ((GenericSourceType) type).getRawType().getInternalName();
         }
         return type.toJavaSource();
     }
 
-    private Expression parseNewArray(SourceType elementType, SourceLocation loc) {
+    private Expression parseNewArray(SourceType elementType, SourceLocation loc)
+    {
         List<Expression> dimensions = new ArrayList<>();
         int emptyDims = 0;
 
-        while (match(TokenType.LBRACKET)) {
-            if (check(TokenType.RBRACKET)) {
+        while (match(TokenType.LBRACKET))
+        {
+            if (check(TokenType.RBRACKET))
+            {
                 advance();
                 emptyDims++;
-            } else {
+            }
+            else
+            {
                 dimensions.add(parseExpression());
                 consume(TokenType.RBRACKET, "Expected ']'");
             }
@@ -1890,19 +2367,22 @@ public class Parser {
         // ELEMENT type by one array level. Folding it here matches the recovery's representation
         // (element type carries the empty levels, dimensions holds only the sized counts) so lowering,
         // emission, and every visitor see one consistent shape with no null dimension entries.
-        for (int i = 0; i < emptyDims; i++) {
+        for (int i = 0; i < emptyDims; i++)
+        {
             elementType = new ArraySourceType(elementType);
         }
 
         ArrayInitExpr initializer = null;
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             initializer = parseArrayInit(new ArraySourceType(elementType));
         }
 
         return new NewArrayExpr(elementType, dimensions, initializer, null, loc);
     }
 
-    private ArrayInitExpr parseArrayInit(SourceType arrayType) {
+    private ArrayInitExpr parseArrayInit(SourceType arrayType)
+    {
         SourceLocation loc = currentLocation();
         consume(TokenType.LBRACE, "Expected '{'");
 
@@ -1911,12 +2391,17 @@ public class Parser {
             : ReferenceSourceType.OBJECT;
 
         List<Expression> elements = new ArrayList<>();
-        if (!check(TokenType.RBRACE)) {
-            do {
+        if (!check(TokenType.RBRACE))
+        {
+            do
+            {
                 if (check(TokenType.RBRACE)) break;
-                if (check(TokenType.LBRACE)) {
+                if (check(TokenType.LBRACE))
+                {
                     elements.add(parseArrayInit(elementType instanceof ArraySourceType ? elementType : new ArraySourceType(elementType)));
-                } else {
+                }
+                else
+                {
                     elements.add(parseExpression());
                 }
             } while (match(TokenType.COMMA));
@@ -1926,22 +2411,27 @@ public class Parser {
         return new ArrayInitExpr(elements, arrayType, loc);
     }
 
-    private void parseAnonymousClassBody() {
+    private void parseAnonymousClassBody()
+    {
         consume(TokenType.LBRACE, "Expected '{'");
         int depth = 1;
-        while (!isAtEnd() && depth > 0) {
+        while (!isAtEnd() && depth > 0)
+        {
             if (check(TokenType.LBRACE)) depth++;
             if (check(TokenType.RBRACE)) depth--;
             advance();
         }
     }
 
-    private Expression parseInnerClassCreation(Expression outer, SourceLocation loc) {
+    private Expression parseInnerClassCreation(Expression outer, SourceLocation loc)
+    {
         SourceType type = parseTypeReference();
         consume(TokenType.LPAREN, "Expected '('");
         List<Expression> args = new ArrayList<>();
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 args.add(parseExpression());
             } while (match(TokenType.COMMA));
         }
@@ -1949,18 +2439,22 @@ public class Parser {
 
         String className = typeToClassName(type);
 
-        if (check(TokenType.LBRACE)) {
+        if (check(TokenType.LBRACE))
+        {
             parseAnonymousClassBody();
         }
 
         return new NewExpr(outer, className, args, type, loc);
     }
 
-    private MethodCallExpr parseMethodCall(Expression receiver, String name, SourceLocation loc) {
+    private MethodCallExpr parseMethodCall(Expression receiver, String name, SourceLocation loc)
+    {
         consume(TokenType.LPAREN, "Expected '('");
         List<Expression> args = new ArrayList<>();
-        if (!check(TokenType.RPAREN)) {
-            do {
+        if (!check(TokenType.RPAREN))
+        {
+            do
+            {
                 args.add(parseExpression());
             } while (match(TokenType.COMMA));
         }
@@ -1968,11 +2462,13 @@ public class Parser {
         return new MethodCallExpr(receiver, name, "", args, false, ReferenceSourceType.OBJECT, loc);
     }
 
-    private Expression parseInfixExpression(Expression left, int nextMinPrec) {
+    private Expression parseInfixExpression(Expression left, int nextMinPrec)
+    {
         SourceLocation loc = currentLocation();
         Token op = advance();
 
-        if (op.getType() == TokenType.QUESTION) {
+        if (op.getType() == TokenType.QUESTION)
+        {
             Expression thenExpr = parseExpressionWithPrecedence(Precedence.ASSIGNMENT.getLevel());
             consume(TokenType.COLON, "Expected ':' in ternary");
             Expression elseExpr = parseExpressionWithPrecedence(Precedence.TERNARY.getLevel());
@@ -1980,12 +2476,14 @@ public class Parser {
             return new TernaryExpr(left, thenExpr, elseExpr, resultType, loc);
         }
 
-        if (op.getType() == TokenType.INSTANCEOF) {
+        if (op.getType() == TokenType.INSTANCEOF)
+        {
             SourceType type = parseTypeReference();
             // Optional Java 16 pattern binding: `x instanceof T t`. Register the binding in scope so
             // later references resolve to T (flow scoping is approximated as method scope here).
             String binding = null;
-            if (check(TokenType.IDENTIFIER)) {
+            if (check(TokenType.IDENTIFIER))
+            {
                 binding = consume(TokenType.IDENTIFIER, "Expected pattern variable name").getText();
                 defineVariable(binding, type);
             }
@@ -1995,7 +2493,8 @@ public class Parser {
         Expression right = parseExpressionWithPrecedence(nextMinPrec);
         BinaryOperator binaryOp = tokenToBinaryOperator(op.getType());
 
-        if (binaryOp != null) {
+        if (binaryOp != null)
+        {
             SourceType resultType = inferBinaryResultType(binaryOp, left, right);
             return new BinaryExpr(binaryOp, left, right, resultType, loc);
         }
@@ -2003,8 +2502,10 @@ public class Parser {
         throw error("Unknown binary operator: " + op.getText());
     }
 
-    private BinaryOperator tokenToBinaryOperator(TokenType type) {
-        switch (type) {
+    private BinaryOperator tokenToBinaryOperator(TokenType type)
+    {
+        switch (type)
+        {
             case PLUS: return BinaryOperator.ADD;
             case MINUS: return BinaryOperator.SUB;
             case STAR: return BinaryOperator.MUL;
@@ -2040,73 +2541,94 @@ public class Parser {
         }
     }
 
-    private SourceType inferBinaryResultType(BinaryOperator op, Expression left, Expression right) {
-        if (op.isComparison() || op == BinaryOperator.AND || op == BinaryOperator.OR) {
+    private SourceType inferBinaryResultType(BinaryOperator op, Expression left, Expression right)
+    {
+        if (op.isComparison() || op == BinaryOperator.AND || op == BinaryOperator.OR)
+        {
             return PrimitiveSourceType.BOOLEAN;
         }
-        if (op.isAssignment()) {
+        if (op.isAssignment())
+        {
             return left.getType();
         }
         SourceType leftType = left.getType();
         SourceType rightType = right.getType();
-        if (op == BinaryOperator.ADD) {
-            if (isString(leftType) || isString(rightType)) {
+        if (op == BinaryOperator.ADD)
+        {
+            if (isString(leftType) || isString(rightType))
+            {
                 return ReferenceSourceType.STRING;
             }
         }
-        if (leftType instanceof PrimitiveSourceType && rightType instanceof PrimitiveSourceType) {
+        if (leftType instanceof PrimitiveSourceType && rightType instanceof PrimitiveSourceType)
+        {
             PrimitiveSourceType lp = (PrimitiveSourceType) leftType;
             PrimitiveSourceType rp = (PrimitiveSourceType) rightType;
             return promoteNumericTypes(lp, rp);
         }
-        if (leftType instanceof PrimitiveSourceType) {
+        if (leftType instanceof PrimitiveSourceType)
+        {
             return leftType;
         }
-        if (rightType instanceof PrimitiveSourceType) {
+        if (rightType instanceof PrimitiveSourceType)
+        {
             return rightType;
         }
         return leftType;
     }
 
-    private SourceType inferTernaryResultType(Expression thenExpr, Expression elseExpr) {
+    private SourceType inferTernaryResultType(Expression thenExpr, Expression elseExpr)
+    {
         SourceType thenType = thenExpr.getType();
         SourceType elseType = elseExpr.getType();
-        if (thenType == null) {
+        if (thenType == null)
+        {
             return elseType != null ? elseType : ReferenceSourceType.OBJECT;
         }
-        if (elseType == null) {
+        if (elseType == null)
+        {
             return thenType;
         }
-        if (thenType.equals(elseType)) {
+        if (thenType.equals(elseType))
+        {
             return thenType;
         }
-        if (thenType instanceof PrimitiveSourceType && elseType instanceof PrimitiveSourceType) {
+        if (thenType instanceof PrimitiveSourceType && elseType instanceof PrimitiveSourceType)
+        {
             return promoteNumericTypes((PrimitiveSourceType) thenType, (PrimitiveSourceType) elseType);
         }
-        if (thenType instanceof PrimitiveSourceType) {
+        if (thenType instanceof PrimitiveSourceType)
+        {
             return thenType;
         }
-        if (elseType instanceof PrimitiveSourceType) {
+        if (elseType instanceof PrimitiveSourceType)
+        {
             return elseType;
         }
         return thenType;
     }
 
-    private PrimitiveSourceType promoteNumericTypes(PrimitiveSourceType left, PrimitiveSourceType right) {
-        if (left == PrimitiveSourceType.DOUBLE || right == PrimitiveSourceType.DOUBLE) {
+    private PrimitiveSourceType promoteNumericTypes(PrimitiveSourceType left, PrimitiveSourceType right)
+    {
+        if (left == PrimitiveSourceType.DOUBLE || right == PrimitiveSourceType.DOUBLE)
+        {
             return PrimitiveSourceType.DOUBLE;
         }
-        if (left == PrimitiveSourceType.FLOAT || right == PrimitiveSourceType.FLOAT) {
+        if (left == PrimitiveSourceType.FLOAT || right == PrimitiveSourceType.FLOAT)
+        {
             return PrimitiveSourceType.FLOAT;
         }
-        if (left == PrimitiveSourceType.LONG || right == PrimitiveSourceType.LONG) {
+        if (left == PrimitiveSourceType.LONG || right == PrimitiveSourceType.LONG)
+        {
             return PrimitiveSourceType.LONG;
         }
         return PrimitiveSourceType.INT;
     }
 
-    private boolean isString(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private boolean isString(SourceType type)
+    {
+        if (type instanceof ReferenceSourceType)
+        {
             ReferenceSourceType ref = (ReferenceSourceType) type;
             String name = ref.getInternalName();
             return "java/lang/String".equals(name) || "String".equals(name) || "java.lang.String".equals(name);
@@ -2114,19 +2636,26 @@ public class Parser {
         return false;
     }
 
-    private SourceType parseTypeReference() {
+    private SourceType parseTypeReference()
+    {
         SourceType type;
 
-        if (current.isPrimitiveType()) {
+        if (current.isPrimitiveType())
+        {
             type = parsePrimitiveType();
-        } else if (check(TokenType.VOID)) {
+        }
+        else if (check(TokenType.VOID))
+        {
             advance();
             type = VoidSourceType.INSTANCE;
-        } else {
+        }
+        else
+        {
             type = parseReferenceType();
         }
 
-        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET)) {
+        while (check(TokenType.LBRACKET) && checkNext(TokenType.RBRACKET))
+        {
             advance();
             advance();
             type = new ArraySourceType(type);
@@ -2135,9 +2664,11 @@ public class Parser {
         return type;
     }
 
-    private SourceType parsePrimitiveType() {
+    private SourceType parsePrimitiveType()
+    {
         Token t = advance();
-        switch (t.getType()) {
+        switch (t.getType())
+        {
             case BOOLEAN: return PrimitiveSourceType.BOOLEAN;
             case BYTE: return PrimitiveSourceType.BYTE;
             case CHAR: return PrimitiveSourceType.CHAR;
@@ -2152,25 +2683,30 @@ public class Parser {
         }
     }
 
-    private SourceType parseReferenceType() {
+    private SourceType parseReferenceType()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append(consume(TokenType.IDENTIFIER, "Expected type name").getText());
 
-        while (check(TokenType.DOT) && checkNext(TokenType.IDENTIFIER)) {
+        while (check(TokenType.DOT) && checkNext(TokenType.IDENTIFIER))
+        {
             advance();
             sb.append("/").append(advance().getText());
         }
 
         String name = sb.toString();
 
-        if (!name.contains("/")) {
+        if (!name.contains("/"))
+        {
             String resolved = JAVA_LANG_TYPES.get(name);
-            if (resolved != null) {
+            if (resolved != null)
+            {
                 name = resolved;
             }
         }
 
-        if (match(TokenType.LT)) {
+        if (match(TokenType.LT))
+        {
             List<SourceType> typeArgs = parseTypeArguments();
             return new GenericSourceType(name, typeArgs);
         }
@@ -2178,27 +2714,38 @@ public class Parser {
         return new ReferenceSourceType(name);
     }
 
-    private List<SourceType> parseTypeArguments() {
+    private List<SourceType> parseTypeArguments()
+    {
         List<SourceType> typeArgs = new ArrayList<>();
 
-        if (check(TokenType.GT)) {
+        if (check(TokenType.GT))
+        {
             advance();
             return typeArgs;
         }
 
-        do {
-            if (check(TokenType.QUESTION)) {
+        do
+        {
+            if (check(TokenType.QUESTION))
+            {
                 advance();
-                if (match(TokenType.EXTENDS)) {
+                if (match(TokenType.EXTENDS))
+                {
                     SourceType bound = parseTypeReference();
                     typeArgs.add(WildcardSourceType.extendsType(bound));
-                } else if (match(TokenType.SUPER)) {
+                }
+                else if (match(TokenType.SUPER))
+                {
                     SourceType bound = parseTypeReference();
                     typeArgs.add(WildcardSourceType.superType(bound));
-                } else {
+                }
+                else
+                {
                     typeArgs.add(WildcardSourceType.unbounded());
                 }
-            } else {
+            }
+            else
+            {
                 typeArgs.add(parseTypeReference());
             }
         } while (match(TokenType.COMMA));
@@ -2207,10 +2754,12 @@ public class Parser {
         return typeArgs;
     }
 
-    private String parseQualifiedName() {
+    private String parseQualifiedName()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append(consume(TokenType.IDENTIFIER, "Expected identifier").getText());
-        while (check(TokenType.DOT) && checkNext(TokenType.IDENTIFIER)) {
+        while (check(TokenType.DOT) && checkNext(TokenType.IDENTIFIER))
+        {
             advance();
             sb.append(".").append(consume(TokenType.IDENTIFIER, "Expected identifier").getText());
         }
@@ -2222,23 +2771,28 @@ public class Parser {
      * {@code >>} (or {@code >>>}), which the lexer reads as a shift operator - one token. Splitting it here
      * consumes a single angle and leaves the remainder as the current token for the enclosing list to close.
      */
-    private void consumeTypeClose(String message) {
-        if (check(TokenType.GT)) {
+    private void consumeTypeClose(String message)
+    {
+        if (check(TokenType.GT))
+        {
             advance();
             return;
         }
-        if (check(TokenType.GT_GT)) {
+        if (check(TokenType.GT_GT))
+        {
             current = new Token(TokenType.GT, ">", null, current.getPosition());
             return;
         }
-        if (check(TokenType.GT_GT_GT)) {
+        if (check(TokenType.GT_GT_GT))
+        {
             current = new Token(TokenType.GT_GT, ">>", null, current.getPosition());
             return;
         }
         throw error(message + " (got " + current.getType() + ")");
     }
 
-    private Token advance() {
+    private Token advance()
+    {
         Token previous = current;
         current = lexer.nextToken();
         return previous;
@@ -2248,45 +2802,56 @@ public class Parser {
      * Consumes a NAME: an identifier, or {@code var} - a reserved TYPE name only, legal as a variable,
      * field, parameter, or member name (`ShaderNodeVariable var = ...` is real source).
      */
-    private Token consumeName(String message) {
-        if (check(TokenType.IDENTIFIER) || check(TokenType.VAR)) {
+    private Token consumeName(String message)
+    {
+        if (check(TokenType.IDENTIFIER) || check(TokenType.VAR))
+        {
             return advance();
         }
         throw error(message + " (got " + current.getType() + ")");
     }
 
-    private Token consume(TokenType expected, String message) {
-        if (check(expected)) {
+    private Token consume(TokenType expected, String message)
+    {
+        if (check(expected))
+        {
             return advance();
         }
         throw error(message + " (got " + current.getType() + ")");
     }
 
-    private boolean check(TokenType type) {
+    private boolean check(TokenType type)
+    {
         return current.getType() == type;
     }
 
-    private boolean checkNext(TokenType type) {
+    private boolean checkNext(TokenType type)
+    {
         return lexer.peek().getType() == type;
     }
 
-    private boolean match(TokenType type) {
-        if (check(type)) {
+    private boolean match(TokenType type)
+    {
+        if (check(type))
+        {
             advance();
             return true;
         }
         return false;
     }
 
-    private boolean isAtEnd() {
+    private boolean isAtEnd()
+    {
         return current.getType() == TokenType.EOF;
     }
 
-    private SourceLocation currentLocation() {
+    private SourceLocation currentLocation()
+    {
         return SourceLocation.fromLine(current.getLine());
     }
 
-    private ParseException error(String message) {
+    private ParseException error(String message)
+    {
         ParseException ex = new ParseException(message, current, source);
         errorListener.onError(ex);
         return ex;

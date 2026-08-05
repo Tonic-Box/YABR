@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * signature line alike - output that must not depend on whether a jar carries debug info can ask for it, and
  * get the same names either way.
  */
-class NameRecoveryStrategyTest {
+class NameRecoveryStrategyTest
+{
 
     private static final String SOURCE = String.join("\n",
             "public class NamedLocals {",
@@ -36,7 +37,8 @@ class NameRecoveryStrategyTest {
             "}",
             "");
 
-    private static ClassFile compiled() throws Exception {
+    private static ClassFile compiled() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("name-strategy");
@@ -48,23 +50,28 @@ class NameRecoveryStrategyTest {
         return pool.loadClass(Files.readAllBytes(dir.resolve("NamedLocals.class")));
     }
 
-    private static String decompileWith(NameRecoveryStrategy strategy) throws Exception {
+    private static String decompileWith(NameRecoveryStrategy strategy) throws Exception
+    {
         DecompilerConfig config = DecompilerConfig.builder().nameRecoveryStrategy(strategy).build();
         return new ClassDecompiler(compiled(), config).decompile();
     }
 
     @Test
-    void theDefaultRecoversEveryRecordedName() throws Exception {
+    void theDefaultRecoversEveryRecordedName() throws Exception
+    {
         String source = decompileWith(NameRecoveryStrategy.PREFER_DEBUG_INFO);
-        for (String name : new String[]{"count", "step", "running", "index"}) {
+        for (String name : new String[]{"count", "step", "running", "index"})
+        {
             assertTrue(source.contains(name), name + " must be recovered from the debug info:\n" + source);
         }
     }
 
     @Test
-    void alwaysSyntheticIgnoresRecordedNamesEverywhere() throws Exception {
+    void alwaysSyntheticIgnoresRecordedNamesEverywhere() throws Exception
+    {
         String source = decompileWith(NameRecoveryStrategy.ALWAYS_SYNTHETIC);
-        for (String name : new String[]{"count", "step", "running", "index"}) {
+        for (String name : new String[]{"count", "step", "running", "index"})
+        {
             assertFalse(source.contains(name),
                     name + " came from debug info and must not appear under ALWAYS_SYNTHETIC:\n" + source);
         }
@@ -73,11 +80,13 @@ class NameRecoveryStrategyTest {
     }
 
     @Test
-    void parametersOnlyKeepsParameterNamesAndDropsLocalOnes() throws Exception {
+    void parametersOnlyKeepsParameterNamesAndDropsLocalOnes() throws Exception
+    {
         String source = decompileWith(NameRecoveryStrategy.PARAMETERS_ONLY);
         assertTrue(source.contains("count") && source.contains("step"),
                 "parameter names must still be recovered:\n" + source);
-        for (String name : new String[]{"running", "index"}) {
+        for (String name : new String[]{"running", "index"})
+        {
             assertFalse(source.contains(name),
                     name + " is a body local and must be synthetic under PARAMETERS_ONLY:\n" + source);
         }
@@ -88,11 +97,14 @@ class NameRecoveryStrategyTest {
      * {@code running} a body local, so one fixture distinguishes all three modes.
      */
     @Test
-    void theGateDecidesPerSlotAtTheAccessors() throws Exception {
+    void theGateDecidesPerSlotAtTheAccessors() throws Exception
+    {
         ClassFile cf = compiled();
         MethodEntry total = null;
-        for (MethodEntry m : cf.getMethods()) {
-            if ("total".equals(m.getName())) {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if ("total".equals(m.getName()))
+            {
                 total = m;
             }
         }
@@ -113,16 +125,19 @@ class NameRecoveryStrategyTest {
         assertEquals("running",
                 new NameRecoverer(ir, total, NameRecoveryStrategy.PREFER_DEBUG_INFO)
                         .unambiguousDebugName(localSlot));
-        assertNull(new NameRecoverer(ir, total, NameRecoveryStrategy.PARAMETERS_ONLY)
-                .unambiguousDebugName(localSlot));
+        assertNull(new NameRecoverer(ir, total, NameRecoveryStrategy.PARAMETERS_ONLY) .unambiguousDebugName(localSlot));
         assertNull(new NameRecoverer(ir, total, NameRecoveryStrategy.ALWAYS_SYNTHETIC)
                 .unambiguousDebugName(localSlot));
     }
 
-    /** Whichever strategy is in force, the output must still be the source of a class that compiles back. */
+    /**
+     * Whichever strategy is in force, the output must still be the source of a class that compiles back.
+     */
     @Test
-    void everyStrategyStillProducesRecompilableSource() throws Exception {
-        for (NameRecoveryStrategy strategy : NameRecoveryStrategy.values()) {
+    void everyStrategyStillProducesRecompilableSource() throws Exception
+    {
+        for (NameRecoveryStrategy strategy : NameRecoveryStrategy.values())
+        {
             ClassPool pool = new ClassPool();
             ClassFile cf = compiled();
             pool.getClasses().add(cf);

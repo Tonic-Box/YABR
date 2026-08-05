@@ -9,31 +9,36 @@ import java.util.*;
 
 /**
  * Conditional Constant Propagation (CCP) optimization transform.
- *
  * Propagates constants through conditional branches, eliminating unreachable code:
- * - if (true) { A } else { B } -> A (remove else branch)
- * - if (false) { A } else { B } -> B (remove if branch)
+ * - if (true) { A } else { B } -&gt; A (remove else branch)
+ * - if (false) { A } else { B } -&gt; B (remove if branch)
  * - Evaluates constant comparisons at compile time
  */
-public class ConditionalConstantPropagation implements IRTransform {
+public class ConditionalConstantPropagation implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "ConditionalConstantPropagation";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRInstruction terminator = block.getTerminator();
 
-            if (terminator instanceof BranchInstruction) {
+            if (terminator instanceof BranchInstruction)
+            {
                 BranchInstruction branch = (BranchInstruction) terminator;
                 Boolean constantResult = evaluateBranchCondition(branch);
 
-                if (constantResult != null) {
+                if (constantResult != null)
+                {
                     IRBlock targetBlock = constantResult ? branch.getTrueTarget() : branch.getFalseTarget();
                     IRBlock deadBlock = constantResult ? branch.getFalseTarget() : branch.getTrueTarget();
 
@@ -57,7 +62,8 @@ public class ConditionalConstantPropagation implements IRTransform {
         return changed;
     }
 
-    private Boolean evaluateBranchCondition(BranchInstruction branch) {
+    private Boolean evaluateBranchCondition(BranchInstruction branch)
+    {
         CompareOp cond = branch.getCondition();
         Value left = branch.getLeft();
         Value right = branch.getRight();
@@ -65,10 +71,12 @@ public class ConditionalConstantPropagation implements IRTransform {
         Constant leftConst = resolveConstant(left);
         Constant rightConst = (right != null) ? resolveConstant(right) : null;
 
-        if (right == null && leftConst instanceof IntConstant) {
+        if (right == null && leftConst instanceof IntConstant)
+        {
             IntConstant ic = (IntConstant) leftConst;
             int value = ic.getValue();
-            switch (cond) {
+            switch (cond)
+            {
                 case IFEQ: return value == 0;
                 case IFNE: return value != 0;
                 case IFLT: return value < 0;
@@ -79,12 +87,14 @@ public class ConditionalConstantPropagation implements IRTransform {
             }
         }
 
-        if (leftConst instanceof IntConstant && rightConst instanceof IntConstant) {
+        if (leftConst instanceof IntConstant && rightConst instanceof IntConstant)
+        {
             IntConstant lc = (IntConstant) leftConst;
             IntConstant rc = (IntConstant) rightConst;
             int l = lc.getValue();
             int r = rc.getValue();
-            switch (cond) {
+            switch (cond)
+            {
                 case EQ: return l == r;
                 case NE: return l != r;
                 case LT: return l < r;
@@ -95,22 +105,32 @@ public class ConditionalConstantPropagation implements IRTransform {
             }
         }
 
-        if (cond == CompareOp.IFNULL) {
-            if (leftConst instanceof NullConstant) {
+        if (cond == CompareOp.IFNULL)
+        {
+            if (leftConst instanceof NullConstant)
+            {
                 return true;
             }
-        } else if (cond == CompareOp.IFNONNULL) {
-            if (leftConst instanceof NullConstant) {
+        }
+        else if (cond == CompareOp.IFNONNULL)
+        {
+            if (leftConst instanceof NullConstant)
+            {
                 return false;
             }
         }
 
-        if (cond == CompareOp.ACMPEQ) {
-            if (leftConst instanceof NullConstant && rightConst instanceof NullConstant) {
+        if (cond == CompareOp.ACMPEQ)
+        {
+            if (leftConst instanceof NullConstant && rightConst instanceof NullConstant)
+            {
                 return true;
             }
-        } else if (cond == CompareOp.ACMPNE) {
-            if (leftConst instanceof NullConstant && rightConst instanceof NullConstant) {
+        }
+        else if (cond == CompareOp.ACMPNE)
+        {
+            if (leftConst instanceof NullConstant && rightConst instanceof NullConstant)
+            {
                 return false;
             }
         }
@@ -118,14 +138,18 @@ public class ConditionalConstantPropagation implements IRTransform {
         return null;
     }
 
-    private Constant resolveConstant(Value value) {
-        if (value instanceof Constant) {
+    private Constant resolveConstant(Value value)
+    {
+        if (value instanceof Constant)
+        {
             return (Constant) value;
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 ConstantInstruction ci = (ConstantInstruction) def;
                 return ci.getConstant();
             }
@@ -133,9 +157,12 @@ public class ConditionalConstantPropagation implements IRTransform {
         return null;
     }
 
-    private void removePhiEntriesFromBlock(IRBlock block, IRBlock deadPredecessor) {
-        for (IRBlock succ : deadPredecessor.getSuccessors()) {
-            for (PhiInstruction phi : succ.getPhiInstructions()) {
+    private void removePhiEntriesFromBlock(IRBlock block, IRBlock deadPredecessor)
+    {
+        for (IRBlock succ : deadPredecessor.getSuccessors())
+        {
+            for (PhiInstruction phi : succ.getPhiInstructions())
+            {
                 phi.removeIncoming(deadPredecessor);
             }
         }

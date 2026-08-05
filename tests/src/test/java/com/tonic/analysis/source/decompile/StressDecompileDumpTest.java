@@ -12,11 +12,15 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Decompiles every stress-test class; a thrown exception is itself a decompiler bug. */
-public class StressDecompileDumpTest {
+/**
+ * Decompiles every stress-test class; a thrown exception is itself a decompiler bug.
+ */
+public class StressDecompileDumpTest
+{
 
     @Test
-    public void dumpAll() throws Exception {
+    public void dumpAll() throws Exception
+    {
         Path classesDir = Paths.get("stress-test/classes");
         Path outDir = Paths.get("stress-test/decompiled");
         Files.createDirectories(outDir);
@@ -25,23 +29,27 @@ public class StressDecompileDumpTest {
         Files.walk(classesDir).filter(p -> p.toString().endsWith(".class")).forEach(classes::add);
 
         int crashes = 0;
-        for (Path p : classes) {
+        for (Path p : classes)
+        {
             String fileName = p.getFileName().toString();
             String className = fileName.substring(0, fileName.length() - ".class".length());
-            try {
+            try
+            {
                 byte[] bytes = Files.readAllBytes(p);
                 String src = new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
                 Files.write(outDir.resolve(className + ".dec.txt"), src.getBytes());
-                if (!className.contains("$")) {
+                if (!className.contains("$"))
+                {
                     Files.write(outDir.resolve(className + ".java"), src.getBytes());
                 }
-            } catch (Throwable t) {
+            }
+            catch (Throwable t)
+            {
                 crashes++;
                 System.out.println("DECOMPILE CRASH: " + className + " -> " + t);
                 StringWriter sw = new StringWriter();
                 t.printStackTrace(new PrintWriter(sw));
-                Files.write(outDir.resolve(className + ".CRASH.txt"),
-                        (className + "\n" + sw).getBytes());
+                Files.write(outDir.resolve(className + ".CRASH.txt"), (className + "\n" + sw).getBytes());
             }
         }
         System.out.println("STRESS: decompiled " + classes.size() + " classes, " + crashes + " crashes -> "

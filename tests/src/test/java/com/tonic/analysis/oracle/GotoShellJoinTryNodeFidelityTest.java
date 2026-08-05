@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * now resolves each continuation candidate through goto shells before comparing, so both paths name the
  * same join and the node decodes.
  */
-class GotoShellJoinTryNodeFidelityTest {
+class GotoShellJoinTryNodeFidelityTest
+{
 
     private static final String SOURCE =
             "public class ShellJoin {\n"
@@ -52,14 +53,14 @@ class GotoShellJoinTryNodeFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("shell-join");
         Path src = dir.resolve("ShellJoin.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("ShellJoin.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -69,7 +70,8 @@ class GotoShellJoinTryNodeFidelityTest {
     }
 
     @Test
-    void joinIsSharedNotDuplicated() {
+    void joinIsSharedNotDuplicated()
+    {
         int first = d1.indexOf("result + 10");
         int last = d1.lastIndexOf("result + 10");
         assertTrue(first >= 0, "the shared join statement must be present:\n" + d1);
@@ -77,7 +79,8 @@ class GotoShellJoinTryNodeFidelityTest {
     }
 
     @Test
-    void allPathsComputeTheRightValue() throws Exception {
+    void allPathsComputeTheRightValue() throws Exception
+    {
         assertEquals(11, recompiledClass.getMethod("run", boolean.class, boolean.class)
                 .invoke(null, true, false), "the fall-through path reaches the join through the shell");
         assertEquals(12, recompiledClass.getMethod("run", boolean.class, boolean.class)

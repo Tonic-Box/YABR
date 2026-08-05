@@ -14,10 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * resolve to its fully-qualified internal name. Pre-fix the wildcard branch only consulted {@code classPool.get},
  * so {@code Frame} stayed unqualified and the recompiled descriptor became {@code LFrame;} -> ClassNotFoundException.
  */
-public class WildcardImportResolutionTest {
+public class WildcardImportResolutionTest
+{
 
     @Test
-    void wildcardImportedJdkTypeResolvesToFqn() throws Exception {
+    void wildcardImportedJdkTypeResolvesToFqn() throws Exception
+    {
         ClassPool pool = new ClassPool();
         CompilationUnit cu = JavaParser.create().parse(
             "package test;\nimport javax.swing.*;\nimport java.awt.*;\n"

@@ -37,8 +37,10 @@ new Execution(method)
     .run();
 
 // Inspect one instruction's operands
-for (InsnContext ctx : contexts) {
-    for (StackCtx pop : ctx.getPops()) {
+for (InsnContext ctx : contexts)
+{
+    for (StackCtx pop : ctx.getPops())
+    {
         Instruction producer = pop.getPushed().getInstruction();
         // producer pushed a value that ctx.getInstruction() popped
     }

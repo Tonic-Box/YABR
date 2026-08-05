@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * released twice throws), and a spill local from the re-emitted copy leaked in undeclared, so the output
  * did not even compile.
  */
-class FinallyInCatchJoinFidelityTest {
+class FinallyInCatchJoinFidelityTest
+{
 
     private static final String SOURCE =
             "import java.util.concurrent.locks.ReentrantLock;\n"
@@ -58,14 +59,14 @@ class FinallyInCatchJoinFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("catch-fin");
         Path src = dir.resolve("CatchFin.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("CatchFin.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -75,20 +76,20 @@ class FinallyInCatchJoinFidelityTest {
     }
 
     @Test
-    void finallyRunsOnceOnTheExceptionPath() throws Exception {
+    void finallyRunsOnceOnTheExceptionPath() throws Exception
+    {
         recompiledClass.getMethod("run", boolean.class).invoke(null, true);
         java.lang.reflect.Field unlocks = recompiledClass.getDeclaredField("unlocks");
         unlocks.setAccessible(true);
-        assertEquals(1, unlocks.getInt(null),
-                "the finally body must run exactly once on the caught path:\n" + d1);
+        assertEquals(1, unlocks.getInt(null), "the finally body must run exactly once on the caught path:\n" + d1);
         java.lang.reflect.Field state = recompiledClass.getDeclaredField("state");
         state.setAccessible(true);
-        assertEquals(13, state.getInt(null),
-                "the shared continuation must run after the catch:\n" + d1);
+        assertEquals(13, state.getInt(null), "the shared continuation must run after the catch:\n" + d1);
     }
 
     @Test
-    void normalPathIsUntouched() throws Exception {
+    void normalPathIsUntouched() throws Exception
+    {
         java.lang.reflect.Field state = recompiledClass.getDeclaredField("state");
         state.setAccessible(true);
         java.lang.reflect.Field unlocks = recompiledClass.getDeclaredField("unlocks");

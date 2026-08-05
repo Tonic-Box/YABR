@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the method) stay inside the body rather than truncating it as stop blocks, and no dead statement is
  * appended after the infinite loop.
  */
-class TryWrapsLoopWithNestedTryFidelityTest {
+class TryWrapsLoopWithNestedTryFidelityTest
+{
 
     private static final String SOURCE =
             "public class TryLoop2 {\n"
@@ -66,14 +67,14 @@ class TryWrapsLoopWithNestedTryFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("try-loop2");
         Path src = dir.resolve("TryLoop2.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("TryLoop2.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -83,11 +84,10 @@ class TryWrapsLoopWithNestedTryFidelityTest {
     }
 
     @Test
-    void loopFormsWithBothExitsAndTheRetryArm() {
-        assertTrue(d1.contains("while (true)"),
-                "the retry loop must be recovered as a loop:\n" + d1);
-        assertTrue(d1.contains("continue;"),
-                "the grow-and-retry arm must continue the loop:\n" + d1);
+    void loopFormsWithBothExitsAndTheRetryArm()
+    {
+        assertTrue(d1.contains("while (true)"), "the retry loop must be recovered as a loop:\n" + d1);
+        assertTrue(d1.contains("continue;"), "the grow-and-retry arm must continue the loop:\n" + d1);
         int firstReturn = d1.indexOf("return null;");
         int lastReturn = d1.lastIndexOf("return");
         assertTrue(firstReturn >= 0 && lastReturn > firstReturn,
@@ -99,7 +99,8 @@ class TryWrapsLoopWithNestedTryFidelityTest {
     }
 
     @Test
-    void executesTheRetryToCompletion() throws Exception {
+    void executesTheRetryToCompletion() throws Exception
+    {
         assertEquals("len5", recompiledClass.getMethod("get").invoke(null),
                 "the loop must grow the buffer until fill succeeds and return the result");
         java.lang.reflect.Field frees = recompiledClass.getDeclaredField("frees");

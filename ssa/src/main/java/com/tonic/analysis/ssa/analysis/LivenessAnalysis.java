@@ -9,43 +9,67 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Computes liveness information for SSA values.
+ * Per-block live-in and live-out sets for SSA values.
  */
-public class LivenessAnalysis {
+public class LivenessAnalysis
+{
 
     private final IRMethod method;
     private final Map<IRBlock, Set<SSAValue>> liveIn;
     private final Map<IRBlock, Set<SSAValue>> liveOut;
     private final Map<SSAValue, Set<IRBlock>> liveBlocks;
 
-    public LivenessAnalysis(IRMethod method) {
+    /**
+     * Creates an empty analysis for the given method.
+     * @param method the method to analyze
+     */
+    public LivenessAnalysis(IRMethod method)
+    {
         this.method = method;
         this.liveIn = new HashMap<>();
         this.liveOut = new HashMap<>();
         this.liveBlocks = new HashMap<>();
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public Map<IRBlock, Set<SSAValue>> getLiveIn() {
+    /**
+     * @return the live in
+     */
+    public Map<IRBlock, Set<SSAValue>> getLiveIn()
+    {
         return liveIn;
     }
 
-    public Map<IRBlock, Set<SSAValue>> getLiveOut() {
+    /**
+     * @return the live out
+     */
+    public Map<IRBlock, Set<SSAValue>> getLiveOut()
+    {
         return liveOut;
     }
 
-    public Map<SSAValue, Set<IRBlock>> getLiveBlocks() {
+    /**
+     * @return the live blocks
+     */
+    public Map<SSAValue, Set<IRBlock>> getLiveBlocks()
+    {
         return liveBlocks;
     }
 
     /**
      * Computes liveness information for all blocks.
      */
-    public void compute() {
-        for (IRBlock block : method.getBlocks()) {
+    public void compute()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             liveIn.put(block, new HashSet<>());
             liveOut.put(block, new HashSet<>());
         }
@@ -53,12 +77,15 @@ public class LivenessAnalysis {
         List<IRBlock> postOrder = method.getPostOrder();
 
         boolean changed = true;
-        while (changed) {
+        while (changed)
+        {
             changed = false;
 
-            for (IRBlock block : postOrder) {
+            for (IRBlock block : postOrder)
+            {
                 Set<SSAValue> newLiveOut = new HashSet<>();
-                for (IRBlock succ : block.getSuccessors()) {
+                for (IRBlock succ : block.getSuccessors())
+                {
                     newLiveOut.addAll(liveIn.get(succ));
                 }
 
@@ -67,7 +94,8 @@ public class LivenessAnalysis {
                 newLiveIn.removeAll(defs);
                 newLiveIn.addAll(getUses(block));
 
-                if (!newLiveIn.equals(liveIn.get(block)) || !newLiveOut.equals(liveOut.get(block))) {
+                if (!newLiveIn.equals(liveIn.get(block)) || !newLiveOut.equals(liveOut.get(block)))
+                {
                     liveIn.put(block, newLiveIn);
                     liveOut.put(block, newLiveOut);
                     changed = true;
@@ -78,34 +106,46 @@ public class LivenessAnalysis {
         computeLiveBlocks();
     }
 
-    private Set<SSAValue> getDefinitions(IRBlock block) {
+    private Set<SSAValue> getDefinitions(IRBlock block)
+    {
         Set<SSAValue> defs = new HashSet<>();
-        for (PhiInstruction phi : block.getPhiInstructions()) {
-            if (phi.getResult() != null) {
+        for (PhiInstruction phi : block.getPhiInstructions())
+        {
+            if (phi.getResult() != null)
+            {
                 defs.add(phi.getResult());
             }
         }
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr.getResult() != null) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr.getResult() != null)
+            {
                 defs.add(instr.getResult());
             }
         }
         return defs;
     }
 
-    private Set<SSAValue> getUses(IRBlock block) {
+    private Set<SSAValue> getUses(IRBlock block)
+    {
         Set<SSAValue> uses = new HashSet<>();
-        for (PhiInstruction phi : block.getPhiInstructions()) {
-            for (Value v : phi.getOperands()) {
-                if (v instanceof SSAValue) {
+        for (PhiInstruction phi : block.getPhiInstructions())
+        {
+            for (Value v : phi.getOperands())
+            {
+                if (v instanceof SSAValue)
+                {
                     SSAValue ssa = (SSAValue) v;
                     uses.add(ssa);
                 }
             }
         }
-        for (IRInstruction instr : block.getInstructions()) {
-            for (Value v : instr.getOperands()) {
-                if (v instanceof SSAValue) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            for (Value v : instr.getOperands())
+            {
+                if (v instanceof SSAValue)
+                {
                     SSAValue ssa = (SSAValue) v;
                     uses.add(ssa);
                 }
@@ -114,12 +154,16 @@ public class LivenessAnalysis {
         return uses;
     }
 
-    private void computeLiveBlocks() {
-        for (IRBlock block : method.getBlocks()) {
-            for (SSAValue val : liveIn.get(block)) {
+    private void computeLiveBlocks()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (SSAValue val : liveIn.get(block))
+            {
                 liveBlocks.computeIfAbsent(val, k -> new HashSet<>()).add(block);
             }
-            for (SSAValue val : liveOut.get(block)) {
+            for (SSAValue val : liveOut.get(block))
+            {
                 liveBlocks.computeIfAbsent(val, k -> new HashSet<>()).add(block);
             }
         }
@@ -127,43 +171,43 @@ public class LivenessAnalysis {
 
     /**
      * Gets the set of values live at the entry of the specified block.
-     *
      * @param block the block to query
      * @return the set of live-in values
      */
-    public Set<SSAValue> getLiveIn(IRBlock block) {
+    public Set<SSAValue> getLiveIn(IRBlock block)
+    {
         return liveIn.getOrDefault(block, Collections.emptySet());
     }
 
     /**
      * Gets the set of values live at the exit of the specified block.
-     *
      * @param block the block to query
      * @return the set of live-out values
      */
-    public Set<SSAValue> getLiveOut(IRBlock block) {
+    public Set<SSAValue> getLiveOut(IRBlock block)
+    {
         return liveOut.getOrDefault(block, Collections.emptySet());
     }
 
     /**
      * Checks if a value is live at the specified block.
-     *
      * @param value the value to check
      * @param block the block to query
      * @return true if the value is live at the block
      */
-    public boolean isLiveAt(SSAValue value, IRBlock block) {
+    public boolean isLiveAt(SSAValue value, IRBlock block)
+    {
         return liveIn.getOrDefault(block, Collections.emptySet()).contains(value) ||
                liveOut.getOrDefault(block, Collections.emptySet()).contains(value);
     }
 
     /**
      * Gets the set of blocks where the specified value is live.
-     *
      * @param value the value to query
      * @return the set of blocks where the value is live
      */
-    public Set<IRBlock> getLiveBlocks(SSAValue value) {
+    public Set<IRBlock> getLiveBlocks(SSAValue value)
+    {
         return liveBlocks.getOrDefault(value, Collections.emptySet());
     }
 }

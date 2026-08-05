@@ -18,12 +18,14 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherObjectTest {
+class OpcodeDispatcherObjectTest
+{
     private BytecodeContext context;
     private SimpleHeapManager heapManager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heapManager = new SimpleHeapManager();
         context = new BytecodeContext.Builder()
             .heapManager(heapManager)
@@ -32,13 +34,17 @@ class OpcodeDispatcherObjectTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -46,9 +52,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class AALoadTests {
+    class AALoadTests
+    {
         @Test
-        void testAALoadNull() throws IOException {
+        void testAALoadNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestAALoad")
                     .publicStaticMethod("test", "([Ljava/lang/Object;I)Ljava/lang/Object;")
                         .aload(0)
@@ -64,7 +72,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testAALoadWithValue() throws IOException {
+        void testAALoadWithValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestAALoad2")
                     .publicStaticMethod("test", "([Ljava/lang/Object;I)Ljava/lang/Object;")
                         .aload(0)
@@ -83,9 +92,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class AAStoreTests {
+    class AAStoreTests
+    {
         @Test
-        void testAAStoreNull() throws IOException {
+        void testAAStoreNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestAAStore")
                     .publicStaticMethod("test", "([Ljava/lang/Object;ILjava/lang/Object;)V")
                         .aload(0)
@@ -102,7 +113,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testAAStoreWithObject() throws IOException {
+        void testAAStoreWithObject() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestAAStore2")
                     .publicStaticMethod("test", "([Ljava/lang/Object;ILjava/lang/Object;)V")
                         .aload(0)
@@ -123,9 +135,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class ANewArrayTests {
+    class ANewArrayTests
+    {
         @Test
-        void testANewArrayObject() throws IOException {
+        void testANewArrayObject() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestANewArray")
                     .publicStaticMethod("test", "(I)[Ljava/lang/Object;")
                         .iload(0)
@@ -138,7 +152,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testANewArrayString() throws IOException {
+        void testANewArrayString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestANewArray2")
                     .publicStaticMethod("test", "(I)[Ljava/lang/String;")
                         .iload(0)
@@ -152,9 +167,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class InstanceOfTests {
+    class InstanceOfTests
+    {
         @Test
-        void testInstanceOfNull() throws IOException {
+        void testInstanceOfNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestInstanceOf")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)I")
                         .aload(0)
@@ -167,7 +184,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testInstanceOfTrue() throws IOException {
+        void testInstanceOfTrue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestInstanceOf2")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)I")
                         .aload(0)
@@ -183,9 +201,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class CheckCastTests {
+    class CheckCastTests
+    {
         @Test
-        void testCheckCastNull() throws IOException {
+        void testCheckCastNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestCheckCast")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)Ljava/lang/String;")
                         .aload(0)
@@ -198,7 +218,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testCheckCastSameType() throws IOException {
+        void testCheckCastSameType() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestCheckCast2")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)Ljava/lang/Object;")
                         .aload(0)
@@ -214,9 +235,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class ArrayLengthTests {
+    class ArrayLengthTests
+    {
         @Test
-        void testArrayLengthObjectArray() throws IOException {
+        void testArrayLengthObjectArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestArrayLen")
                     .publicStaticMethod("test", "([Ljava/lang/Object;)I")
                         .aload(0)
@@ -231,7 +254,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testArrayLengthIntArray() throws IOException {
+        void testArrayLengthIntArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestArrayLen2")
                     .publicStaticMethod("test", "([I)I")
                         .aload(0)
@@ -247,9 +271,11 @@ class OpcodeDispatcherObjectTest {
     }
 
     @Nested
-    class CombinedArrayObjectTests {
+    class CombinedArrayObjectTests
+    {
         @Test
-        void testCreateAndStoreInObjectArray() throws IOException {
+        void testCreateAndStoreInObjectArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestCombined")
                     .publicStaticMethod("test", "()I")
                         .iconst(3)
@@ -263,7 +289,8 @@ class OpcodeDispatcherObjectTest {
         }
 
         @Test
-        void testLoadStoreRoundTrip() throws IOException {
+        void testLoadStoreRoundTrip() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestRoundTrip")
                     .publicStaticMethod("test", "([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                         .aload(0)

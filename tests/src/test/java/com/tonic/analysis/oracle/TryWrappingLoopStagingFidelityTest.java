@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * ({@code for (; i < n; i++)} referencing an undeclared {@code i}), which fails to recompile. Asserts a
  * round-trip fixed point and correct execution on the normal and exceptional paths.
  */
-class TryWrappingLoopStagingFidelityTest {
+class TryWrappingLoopStagingFidelityTest
+{
 
     private static final String SOURCE =
             "public class TryWrapLoop {\n"
@@ -52,14 +53,14 @@ class TryWrappingLoopStagingFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("try-wrap-loop");
         Path src = dir.resolve("TryWrapLoop.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("TryWrapLoop.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -71,23 +72,23 @@ class TryWrappingLoopStagingFidelityTest {
     }
 
     @Test
-    void counterIsDeclaredAndRoundTripsFixed() {
+    void counterIsDeclaredAndRoundTripsFixed()
+    {
         assertTrue(d1.contains("try"), "the try/catch must be preserved:\n" + d1);
         // The counter's init lives in a pre-header outside the staged try-body region; it must still be
         // realized so the for-counter is declared. The trailing `return` after the try/catch must stay a
         // continuation, not be pulled into the try body when the recompiler lays it out between the split
         // protected ranges. Together these make the shape a round-trip fixed point.
-        assertTrue(d1.contains("for (int i = 0"),
-                "the loop counter must be declared in the for-init:\n" + d1);
+        assertTrue(d1.contains("for (int i = 0"), "the loop counter must be declared in the for-init:\n" + d1);
         assertEquals(d1, d2, "a try wrapping a counted loop, with a trailing continuation, must be a round-trip fixed point");
     }
 
     @Test
-    void bothPathsExecuteEquivalently() throws Exception {
+    void bothPathsExecuteEquivalently() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         // sum 0..4 = 10, no i == 7 reached
-        assertEquals(10, recompiledClass.getMethod("run", int.class).invoke(inst, 5),
-                "the normal path sums 0..4");
+        assertEquals(10, recompiledClass.getMethod("run", int.class).invoke(inst, 5), "the normal path sums 0..4");
         // i reaches 7 -> throws -> catch sets sum to -1
         assertEquals(-1, recompiledClass.getMethod("run", int.class).invoke(inst, 20),
                 "the loop throws at i == 7 and the catch sets sum to -1");

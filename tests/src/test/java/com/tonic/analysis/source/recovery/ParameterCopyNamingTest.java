@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * then read as an identity store and its declaration was dropped, leaving every {@code c1} in the method
  * referencing a variable that does not exist.
  */
-class ParameterCopyNamingTest {
+class ParameterCopyNamingTest
+{
 
     private static final String[] LINES = {
             "public class ParamCopy {",
@@ -37,14 +38,14 @@ class ParameterCopyNamingTest {
     };
 
     @Test
-    void aParameterCopyKeepsBothVariablesResolvable() throws Exception {
+    void aParameterCopyKeepsBothVariablesResolvable() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("param-copy");
         Path src = dir.resolve("ParamCopy.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("ParamCopy.class")));

@@ -1,20 +1,20 @@
 package com.tonic.demo;
 
 /**
- * A showcase class designed to demonstrate SSA IR transformations.
- * Each method targets specific optimization opportunities.
+ * Sample methods, one per SSA IR optimization opportunity.
  */
-public class SSAShowcase {
+public class SSAShowcase
+{
 
-    // ========================================
     // Constant Folding Examples
-    // ========================================
 
     /**
-     * Demonstrates constant folding - all arithmetic can be computed at compile time.
-     * Expected: Constants folded to final value, dead stores eliminated.
+     * Folds a chain of integer constants down to one value.
+     *
+     * @return 50
      */
-    public int constantFolding() {
+    public int constantFolding()
+    {
         int a = 10;
         int b = 20;
         int c = a + b;        // Should fold to 30
@@ -24,25 +24,29 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates partial constant folding with a parameter.
-     * Expected: Constants folded where possible, parameter operations preserved.
+     * Mixes foldable constant arithmetic with an add that depends on a parameter.
+     *
+     * @param x addend that blocks folding
+     * @return x plus 20
      */
-    public int partialConstantFolding(int x) {
+    public int partialConstantFolding(int x)
+    {
         int a = 5 + 5;        // Folds to 10
         int b = a * 2;        // Folds to 20
         int c = x + b;        // Cannot fold - depends on x
         return c;
     }
 
-    // ========================================
     // Copy Propagation Examples
-    // ========================================
 
     /**
-     * Demonstrates copy propagation - intermediate copies should be eliminated.
-     * Expected: Direct use of original values, copy assignments removed.
+     * Chains three copies ahead of the only real computation.
+     *
+     * @param input value copied through each intermediate local
+     * @return input plus 1
      */
-    public int copyPropagation(int input) {
+    public int copyPropagation(int input)
+    {
         int a = input;
         int b = a;            // Copy of a
         int c = b;            // Copy of b (transitively a)
@@ -51,24 +55,30 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates copy propagation with multiple uses.
+     * Reads one copy twice so propagation has to handle multiple uses.
+     *
+     * @param x value copied into the reused local
+     * @param y addend
+     * @return x + y + x * 2
      */
-    public int multiUseCopyPropagation(int x, int y) {
+    public int multiUseCopyPropagation(int x, int y)
+    {
         int temp = x;
         int result = temp + y;
         int doubled = temp * 2;
         return result + doubled;
     }
 
-    // ========================================
     // Dead Code Elimination Examples
-    // ========================================
 
     /**
-     * Demonstrates dead code elimination - unused computations removed.
-     * Expected: Only the return value computation should remain.
+     * Surrounds one live computation with three unused ones.
+     *
+     * @param x source of both the live and the dead values
+     * @return x plus 1
      */
-    public int deadCodeElimination(int x) {
+    public int deadCodeElimination(int x)
+    {
         int unused1 = x * 100;     // Dead - never used
         int unused2 = unused1 + 5; // Dead - never used
         int used = x + 1;          // Live - returned
@@ -77,87 +87,118 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates dead store elimination.
+     * Overwrites a local twice before the store that survives.
+     *
+     * @param x addend of the live store
+     * @return x plus 5
      */
-    public int deadStoreElimination(int x) {
+    public int deadStoreElimination(int x)
+    {
         int a = 10;           // Dead store - overwritten
         a = 20;               // Dead store - overwritten
         a = x + 5;            // Live - used in return
         return a;
     }
 
-    // ========================================
     // Control Flow Examples
-    // ========================================
 
     /**
-     * Simple if-else demonstrating basic block structure.
+     * Assigns the result from both arms of an if-else.
+     *
+     * @param x value tested against zero and scaled
+     * @return x doubled when positive, otherwise x negated
      */
-    public int simpleConditional(int x) {
+    public int simpleConditional(int x)
+    {
         int result;
-        if (x > 0) {
+        if (x > 0)
+        {
             result = x * 2;
-        } else {
+        }
+        else
+        {
             result = x * -1;
         }
         return result;
     }
 
     /**
-     * Nested conditionals demonstrating complex CFG.
+     * Nests an if-else inside an if-else to widen the control flow graph.
+     *
+     * @param x outer test value
+     * @param y inner test value
+     * @return x + y, x - y or y depending on the two signs
      */
-    public int nestedConditional(int x, int y) {
+    public int nestedConditional(int x, int y)
+    {
         int result = 0;
-        if (x > 0) {
-            if (y > 0) {
+        if (x > 0)
+        {
+            if (y > 0)
+            {
                 result = x + y;
-            } else {
+            }
+            else
+            {
                 result = x - y;
             }
-        } else {
+        }
+        else
+        {
             result = y;
         }
         return result;
     }
 
-    // ========================================
     // Loop Examples
-    // ========================================
 
     /**
-     * Simple counted loop demonstrating phi functions and loop analysis.
+     * Sums the counter of a counted for loop.
+     *
+     * @param n exclusive upper bound
+     * @return sum of 0 through n - 1
      */
-    public int simpleLoop(int n) {
+    public int simpleLoop(int n)
+    {
         int sum = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             sum = sum + i;
         }
         return sum;
     }
 
     /**
-     * While loop with early exit.
+     * Counts down a value in a while loop that also breaks after 100 iterations.
+     *
+     * @param x starting count
+     * @return the number of iterations run, at most 101
      */
-    public int whileLoopWithBreak(int x) {
+    public int whileLoopWithBreak(int x)
+    {
         int count = 0;
-        while (x > 0) {
+        while (x > 0)
+        {
             count++;
             x = x - 1;
-            if (count > 100) {
+            if (count > 100)
+            {
                 break;
             }
         }
         return count;
     }
 
-    // ========================================
     // Method Invocation Examples
-    // ========================================
 
     /**
-     * Virtual method calls.
+     * Chains virtual calls on a string receiver.
+     *
+     * @param s receiver of length, toUpperCase and trim
+     * @return s uppercased and trimmed
      */
-    public String virtualCalls(String s) {
+    public String virtualCalls(String s)
+    {
         int len = s.length();
         String upper = s.toUpperCase();
         String trimmed = upper.trim();
@@ -165,26 +206,31 @@ public class SSAShowcase {
     }
 
     /**
-     * Static method calls with primitive operations.
+     * Chains static Math calls over a primitive.
+     *
+     * @param x value passed to Math.abs
+     * @return the magnitude of x clamped to the range 10 to 100
      */
-    public int staticCalls(int x) {
+    public int staticCalls(int x)
+    {
         int abs = Math.abs(x);
         int max = Math.max(abs, 10);
         int min = Math.min(max, 100);
         return min;
     }
 
-    // ========================================
     // Field Access Examples
-    // ========================================
 
     private int instanceField = 42;
     private static int staticField = 100;
 
     /**
-     * Instance field access.
+     * Reads an instance field, updates it, then reads it back.
+     *
+     * @return the field value after adding 10
      */
-    public int fieldAccess() {
+    public int fieldAccess()
+    {
         int a = this.instanceField;
         int b = a + 10;
         this.instanceField = b;
@@ -192,23 +238,28 @@ public class SSAShowcase {
     }
 
     /**
-     * Static field access.
+     * Reads a static field, updates it, then reads it back.
+     *
+     * @return the field value after doubling
      */
-    public static int staticFieldAccess() {
+    public static int staticFieldAccess()
+    {
         int a = staticField;
         int b = a * 2;
         staticField = b;
         return staticField;
     }
 
-    // ========================================
     // Array Examples
-    // ========================================
 
     /**
-     * Array operations.
+     * Loads two array elements and stores their sum back into the array.
+     *
+     * @param arr array read at indexes 0 and 1 and written at index 2
+     * @return the stored sum
      */
-    public int arrayOperations(int[] arr) {
+    public int arrayOperations(int[] arr)
+    {
         int first = arr[0];
         int second = arr[1];
         arr[2] = first + second;
@@ -216,24 +267,29 @@ public class SSAShowcase {
     }
 
     /**
-     * Array creation and initialization.
+     * Allocates an int array and seeds its first two slots.
+     *
+     * @param size length of the new array
+     * @return the array holding 1 and 2 at indexes 0 and 1
      */
-    public int[] createArray(int size) {
+    public int[] createArray(int size)
+    {
         int[] result = new int[size];
         result[0] = 1;
         result[1] = 2;
         return result;
     }
 
-    // ========================================
     // Combined Optimization Example
-    // ========================================
 
     /**
-     * A method combining multiple optimization opportunities.
-     * This should showcase constant folding, copy propagation, and dead code elimination together.
+     * Combines constant folding, copy propagation and dead code in one body.
+     *
+     * @param input value copied twice and added to the folded constant
+     * @return input plus 30
      */
-    public int combinedOptimizations(int input) {
+    public int combinedOptimizations(int input)
+    {
         // Constant folding opportunity
         int constant = 10 + 20;       // Folds to 30
 
@@ -253,43 +309,46 @@ public class SSAShowcase {
         return result;
     }
 
-    // ========================================
     // Object Creation Example
-    // ========================================
 
     /**
-     * Object instantiation and constructor calls.
+     * Allocates a second showcase instance.
+     *
+     * @return the newly constructed instance
      */
-    public SSAShowcase createInstance() {
+    public SSAShowcase createInstance()
+    {
         SSAShowcase obj = new SSAShowcase();
         return obj;
     }
 
-    // ========================================
     // Simple Arithmetic Example
-    // ========================================
 
     /**
-     * Basic arithmetic operations for clean SSA demonstration.
+     * Multiplies the sum of two operands by their difference.
+     *
+     * @param a left operand
+     * @param b right operand
+     * @return (a + b) * (a - b)
      */
-    public int arithmetic(int a, int b) {
+    public int arithmetic(int a, int b)
+    {
         int sum = a + b;
         int diff = a - b;
         int product = sum * diff;
         return product;
     }
 
-    // ========================================
     // Strength Reduction Examples
-    // ========================================
 
     /**
-     * Demonstrates strength reduction for multiplication by powers of 2.
-     * x * 2 -> x << 1
-     * x * 4 -> x << 2
-     * x * 8 -> x << 3
+     * Multiplies by 2, 4 and 8 so each product can become a left shift.
+     *
+     * @param x multiplicand
+     * @return x times 14
      */
-    public int strengthReductionMul(int x) {
+    public int strengthReductionMul(int x)
+    {
         int a = x * 2;    // Should become x << 1
         int b = x * 4;    // Should become x << 2
         int c = x * 8;    // Should become x << 3
@@ -297,60 +356,68 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates strength reduction for division by powers of 2.
-     * x / 2 -> x >> 1
-     * x / 4 -> x >> 2
+     * Divides by 2 and 4 so each quotient can become a right shift.
+     *
+     * @param x dividend
+     * @return x / 2 + x / 4
      */
-    public int strengthReductionDiv(int x) {
+    public int strengthReductionDiv(int x)
+    {
         int a = x / 2;    // Should become x >> 1
         int b = x / 4;    // Should become x >> 2
         return a + b;
     }
 
     /**
-     * Demonstrates strength reduction for modulo by powers of 2.
-     * x % 2 -> x & 1
-     * x % 8 -> x & 7
+     * Takes the remainder by 2 and 8 so each can become a bitwise and.
+     *
+     * @param x dividend
+     * @return x % 2 + x % 8
      */
-    public int strengthReductionMod(int x) {
+    public int strengthReductionMod(int x)
+    {
         int a = x % 2;    // Should become x & 1
         int b = x % 8;    // Should become x & 7
         return a + b;
     }
 
-    // ========================================
     // Algebraic Simplification Examples
-    // ========================================
 
     /**
-     * Demonstrates algebraic simplification with addition/subtraction.
-     * x + 0 -> x
-     * x - 0 -> x
+     * Adds then subtracts zero so both operations can be dropped.
+     *
+     * @param x value passed through unchanged
+     * @return x
      */
-    public int algebraicAddSub(int x) {
+    public int algebraicAddSub(int x)
+    {
         int a = x + 0;    // Should become x
         int b = a - 0;    // Should become a (which is x)
         return b;
     }
 
     /**
-     * Demonstrates algebraic simplification with multiplication.
-     * x * 1 -> x
-     * x * 0 -> 0
+     * Multiplies by one and by zero so both products fold away.
+     *
+     * @param x multiplied by 1
+     * @param y multiplied by 0
+     * @return x
      */
-    public int algebraicMul(int x, int y) {
+    public int algebraicMul(int x, int y)
+    {
         int a = x * 1;    // Should become x
         int b = y * 0;    // Should become 0
         return a + b;     // Should simplify to just x
     }
 
     /**
-     * Demonstrates algebraic simplification with bitwise operations.
-     * x & 0 -> 0
-     * x | 0 -> x
-     * x ^ 0 -> x
+     * Ands, ors and xors against zero so two of the three collapse to x.
+     *
+     * @param x operand of every bitwise operation
+     * @return x doubled
      */
-    public int algebraicBitwise(int x) {
+    public int algebraicBitwise(int x)
+    {
         int a = x & 0;    // Should become 0
         int b = x | 0;    // Should become x
         int c = x ^ 0;    // Should become x
@@ -358,13 +425,13 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates algebraic simplification with self-operations.
-     * x - x -> 0
-     * x ^ x -> 0
-     * x & x -> x
-     * x | x -> x
+     * Subtracts, xors, ands and ors a value against itself.
+     *
+     * @param x both operands of every operation
+     * @return x doubled
      */
-    public int algebraicSelfOps(int x) {
+    public int algebraicSelfOps(int x)
+    {
         int a = x - x;    // Should become 0
         int b = x ^ x;    // Should become 0
         int c = x & x;    // Should become x
@@ -373,9 +440,13 @@ public class SSAShowcase {
     }
 
     /**
-     * Combined strength reduction and algebraic simplification.
+     * Chains strength reduction and algebraic identities in one body.
+     *
+     * @param x value shifted up, run through the identities, then halved
+     * @return x times 4
      */
-    public int combinedNewOptimizations(int x) {
+    public int combinedNewOptimizations(int x)
+    {
         int a = x * 8;      // Strength reduction: x << 3
         int b = a + 0;      // Algebraic: a
         int c = b * 1;      // Algebraic: b
@@ -384,48 +455,55 @@ public class SSAShowcase {
         return d + e;       // Should be (x << 3) >> 1 + 0 = x * 4
     }
 
-    // ========================================
     // Phi Constant Propagation Tests
-    // ========================================
 
     /**
-     * Demonstrates phi constant propagation.
-     * When all branches assign the same value, phi can be simplified.
+     * Assigns the same constant on both arms so the merge phi collapses.
+     *
+     * @param x operand of the branch condition
+     * @return 42
      */
-    public int phiConstantProp(int x) {
+    public int phiConstantProp(int x)
+    {
         int result;
-        if (x > 0) {
+        if (x > 0)
+        {
             result = 42;
-        } else {
+        }
+        else
+        {
             result = 42;  // Same value as true branch
         }
         // phi(42, 42) -> 42
         return result;
     }
 
-    // ========================================
     // Peephole Optimization Tests
-    // ========================================
 
     /**
-     * Demonstrates peephole optimizations.
-     * Double negation and shift normalization.
+     * Pairs a double negation with a shift whose count masks to zero.
+     *
+     * @param x operand of both patterns
+     * @return x doubled
      */
-    public int peepholeOpt(int x) {
+    public int peepholeOpt(int x)
+    {
         int a = -(-x);        // Double negation -> x
         int b = x << 32;      // Shift by 32 -> x (masked to 0)
         return a + b;         // Should be x + x = 2*x
     }
 
-    // ========================================
     // Common Subexpression Elimination Tests
-    // ========================================
 
     /**
-     * Demonstrates common subexpression elimination.
-     * Identical expressions are computed only once.
+     * Repeats an add and a multiply so each pair can share one computation.
+     *
+     * @param x left operand of both expressions
+     * @param y right operand of both expressions
+     * @return 2 * (x + y) + 2 * (x * y)
      */
-    public int commonSubexpr(int x, int y) {
+    public int commonSubexpr(int x, int y)
+    {
         int a = x + y;
         int b = x + y;        // Same as 'a' - reuse
         int c = x * y;
@@ -433,16 +511,16 @@ public class SSAShowcase {
         return a + b + c + d; // = 2*(x+y) + 2*(x*y)
     }
 
-    // ========================================
     // Null Check Elimination Tests
-    // ========================================
 
     /**
-     * Demonstrates null check elimination concept using integer comparison.
-     * Uses pattern similar to null check but with primitives for lifter compatibility.
-     * Tests redundant check elimination after confirmed state.
+     * Nests a redundant always-true guard inside an identical outer guard.
+     *
+     * @param flag value incremented on the guarded path
+     * @return flag plus 1
      */
-    public int nullCheckTest(int flag) {
+    public int nullCheckTest(int flag)
+    {
         int isValid = 1;      // Simulate "not null" state
         if (isValid != 0) {   // Check that's always true
             if (isValid != 0) { // Redundant check - can be eliminated
@@ -452,102 +530,119 @@ public class SSAShowcase {
         return 0;             // Dead code - never reached
     }
 
-    // ========================================
     // Conditional Constant Propagation Tests
-    // ========================================
 
     /**
-     * Demonstrates conditional constant propagation.
-     * When condition is known constant, branch can be eliminated.
+     * Branches on a comparison between two equal constants.
+     *
+     * @param x value adjusted on the taken arm
+     * @return x plus 1
      */
-    public int conditionalConst(int x) {
+    public int conditionalConst(int x)
+    {
         int a = 5;
         int b = 5;
         if (a == b) {         // Always true (5 == 5)
             return x + 1;
-        } else {
+        }
+        else
+        {
             return x - 1;     // Dead code
         }
     }
 
-    // ========================================
     // Loop-Invariant Code Motion Tests
-    // ========================================
 
     /**
-     * Demonstrates loop-invariant concept using simple addition.
-     * This pattern works correctly through lift/lower.
+     * Accumulates a loop-invariant constant on every iteration.
+     *
+     * @param n iteration count
+     * @return n times 12, or 0 when n is not positive
      */
-    public int loopInvariant(int n) {
+    public int loopInvariant(int n)
+    {
         int sum = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             sum += 12;        // Constant addition per iteration
         }
         return sum;           // = n * 12
     }
 
-    // ========================================
     // Induction Variable Tests
-    // ========================================
 
     /**
-     * Demonstrates induction variable simplification.
-     * Multiplication by constant in loop can be strength-reduced.
+     * Accumulates a constant multiple of the loop counter each iteration.
+     *
+     * @param n exclusive upper bound
+     * @return 4 times the sum of 0 through n - 1
      */
-    public int inductionVar(int n) {
+    public int inductionVar(int n)
+    {
         int sum = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             sum += i * 4;     // i*4 can be optimized with accumulator
         }
         return sum;           // = 4 * (0 + 1 + 2 + ... + (n-1)) = 4 * n*(n-1)/2
     }
 
-    // ========================================
     // Reassociation Tests
-    // ========================================
 
     /**
-     * Demonstrates reassociation for constant grouping.
-     * (x + 5) + 10 should reassociate to x + (5 + 10) = x + 15
+     * Adds two constants in separate steps so they can be regrouped.
+     *
+     * @param x base operand
+     * @return x plus 15
      */
-    public int reassociateConstants(int x) {
+    public int reassociateConstants(int x)
+    {
         int a = x + 5;
         int b = a + 10;       // Should become x + 15 after reassociate + fold
         return b;
     }
 
     /**
-     * Demonstrates reassociation with multiplication.
-     * (x * 2) * 4 should reassociate to x * (2 * 4) = x * 8
+     * Multiplies by two constants in separate steps so they can be regrouped.
+     *
+     * @param x base operand
+     * @return x times 8
      */
-    public int reassociateMul(int x) {
+    public int reassociateMul(int x)
+    {
         int a = x * 2;
         int b = a * 4;        // Should become x * 8 after reassociate + fold
         return b;
     }
 
     /**
-     * Demonstrates reassociation with multiple variables.
-     * Groups constants together: (x + 3) + y + 7 -> x + y + 10
+     * Separates two constant addends with a variable addend.
+     *
+     * @param x base operand
+     * @param y addend sitting between the two constants
+     * @return x + y + 10
      */
-    public int reassociateMultiVar(int x, int y) {
+    public int reassociateMultiVar(int x, int y)
+    {
         int a = x + 3;
         int b = a + y;
         int c = b + 7;        // Constants 3 and 7 should group to 10
         return c;
     }
 
-    // ========================================
     // Loop Predication Tests
-    // ========================================
 
     /**
-     * Demonstrates loop predication with constant limit.
-     * Guard i < 100 is always true when n <= 100.
+     * Guards the loop body with a comparison against a constant limit.
+     *
+     * @param n exclusive loop bound
+     * @return sum of the counter values below 100
      */
-    public int loopPredicationSimple(int n) {
+    public int loopPredicationSimple(int n)
+    {
         int sum = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             if (i < 100) {    // Guard: can be predicated if n <= 100
                 sum += i;
             }
@@ -556,12 +651,16 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates loop predication with redundant guard.
-     * Guard i < len is always true when loop bound is i < len.
+     * Guards the loop body with the loop bound itself, so the guard always holds.
+     *
+     * @param n exclusive loop bound and guard limit
+     * @return twice the sum of 0 through n - 1
      */
-    public int loopPredicationRedundant(int n) {
+    public int loopPredicationRedundant(int n)
+    {
         int sum = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             if (i < n) {      // Redundant guard - always true
                 sum += i * 2;
             }
@@ -570,12 +669,17 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates loop predication with separate limit.
-     * Guard can be predicated when n <= limit.
+     * Guards the loop body with a limit independent of the loop bound.
+     *
+     * @param n exclusive loop bound
+     * @param limit guard threshold on the counter
+     * @return sum of the counter values below limit
      */
-    public int loopPredicationLimit(int n, int limit) {
+    public int loopPredicationLimit(int n, int limit)
+    {
         int sum = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             if (i < limit) {  // Can predicate if n <= limit
                 sum += i;
             }
@@ -583,57 +687,70 @@ public class SSAShowcase {
         return sum;
     }
 
-    // ========================================
     // Bit-Tracking DCE Tests
-    // ========================================
 
     /**
-     * Demonstrates BDCE with mask making high bits dead.
-     * Only low 8 bits of result are used.
+     * Masks a full-width multiply down to its low byte.
+     *
+     * @param a multiplicand
+     * @return the low 8 bits of a * 1000
      */
-    public int bdceMaskDead(int a) {
+    public int bdceMaskDead(int a)
+    {
         int x = a * 1000;      // Full 32-bit multiply
         return x & 0xFF;       // Only low 8 bits used
     }
 
     /**
-     * Demonstrates BDCE with shift-mask pattern.
-     * Classic pattern where shifts become unnecessary.
+     * Shifts left and back with sign extension before masking to a byte.
+     *
+     * @param a value shifted
+     * @return the low 8 bits of a
      */
-    public int bdceShiftMask(int a) {
+    public int bdceShiftMask(int a)
+    {
         int x = a << 24;       // Shift to high bits
         int y = x >> 24;       // Shift back (sign extend)
         return y & 0xFF;       // Mask to byte - only low 8 bits matter
     }
 
     /**
-     * Demonstrates BDCE with cascading dead bits.
-     * High bits contribution from b is dead.
+     * Ors in a high-shifted operand that the trailing mask discards.
+     *
+     * @param a operand kept by the mask
+     * @param b operand shifted entirely above the mask
+     * @return the low 16 bits of a
      */
-    public int bdceCascade(int a, int b) {
+    public int bdceCascade(int a, int b)
+    {
         int x = a | (b << 16); // Combine values
         return x & 0xFFFF;     // Only low 16 bits used - b's contribution dead
     }
 
     /**
-     * Demonstrates case where all bits are live.
-     * No BDCE optimization possible.
+     * Returns a doubled value with every bit still live.
+     *
+     * @param a multiplicand
+     * @return a times 2
      */
-    public int bdceAllLive(int a) {
+    public int bdceAllLive(int a)
+    {
         int x = a * 2;
         return x;              // All bits returned - nothing dead
     }
 
-    // ========================================
     // Correlated Value Propagation Tests
-    // ========================================
 
     /**
-     * Demonstrates CVP with redundant comparison after first check.
-     * After if (x < 10), x is in range [MIN, 9], so x < 20 is always true.
+     * Nests a comparison that the enclosing range check already proves true.
+     *
+     * @param x tested against 10 and then against 20
+     * @return x plus 1 below 10, otherwise x
      */
-    public int cvpRedundantCheck(int x) {
-        if (x < 10) {
+    public int cvpRedundantCheck(int x)
+    {
+        if (x < 10)
+        {
             if (x < 20) {     // Always true - x is [MIN, 9]
                 return x + 1;
             }
@@ -643,11 +760,15 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates CVP with impossible comparison after first check.
-     * After if (x >= 10), x is in range [10, MAX], so x < 5 is always false.
+     * Nests a comparison that the enclosing range check rules out.
+     *
+     * @param x tested against 10 and then against 5
+     * @return x doubled from 10 up, otherwise x
      */
-    public int cvpImpossibleCheck(int x) {
-        if (x >= 10) {
+    public int cvpImpossibleCheck(int x)
+    {
+        if (x >= 10)
+        {
             if (x < 5) {      // Always false - x is [10, MAX]
                 return 0;     // Dead code
             }
@@ -657,11 +778,13 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates CVP with nested range narrowing.
-     * After x > 0, x is [1, MAX]. After x < 100, x is [1, 99].
-     * Then x >= 1 is always true.
+     * Narrows a range over two checks so the third one is already implied.
+     *
+     * @param x tested against 0, then 100, then 1
+     * @return x when it falls between 1 and 99, otherwise 0
      */
-    public int cvpNestedRange(int x) {
+    public int cvpNestedRange(int x)
+    {
         if (x > 0) {          // x is [1, MAX]
             if (x < 100) {    // x is [1, 99]
                 if (x >= 1) { // Always true - x is [1, 99]
@@ -673,11 +796,15 @@ public class SSAShowcase {
     }
 
     /**
-     * Demonstrates case where CVP cannot optimize.
-     * After x < 50, x is [MIN, 49]. x < 25 could be true or false.
+     * Nests a comparison that the enclosing range check leaves undecided.
+     *
+     * @param x tested against 50 and then against 25
+     * @return 1 below 25, 2 from 25 through 49, otherwise 0
      */
-    public int cvpNoOptimization(int x) {
-        if (x < 50) {
+    public int cvpNoOptimization(int x)
+    {
+        if (x < 50)
+        {
             if (x < 25) {     // Cannot prove - x is [MIN, 49]
                 return 1;
             }
@@ -686,11 +813,14 @@ public class SSAShowcase {
         return 0;
     }
 
-    // ========================================
     // Main Method for Testing
-    // ========================================
 
-    public static void main(String[] args) {
+    /**
+     * Runs every showcase method and prints its result next to the expected value.
+     * @param args unused
+     */
+    public static void main(String[] args)
+    {
         SSAShowcase showcase = new SSAShowcase();
 
         System.out.println("=== SSAShowcase Test Results ===");

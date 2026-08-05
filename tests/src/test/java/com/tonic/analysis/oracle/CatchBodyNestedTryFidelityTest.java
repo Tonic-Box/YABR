@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * catch. Asserts the exception variable stays in scope (the class recompiles and runs), the finally body
  * appears exactly once (no inlined copy or hoisted duplicate leaked out), and both paths execute.
  */
-class CatchBodyNestedTryFidelityTest {
+class CatchBodyNestedTryFidelityTest
+{
 
     private static final String SOURCE =
             "import java.util.concurrent.locks.ReentrantLock;\n"
@@ -66,14 +67,14 @@ class CatchBodyNestedTryFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("catch-nested");
         Path src = dir.resolve("CatchNest.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("CatchNest.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -84,7 +85,8 @@ class CatchBodyNestedTryFidelityTest {
     }
 
     @Test
-    void nestedTryStaysInsideTheCatch() {
+    void nestedTryStaysInsideTheCatch()
+    {
         int catchIdx = d1.indexOf("catch (NumberFormatException");
         assertTrue(catchIdx >= 0, "the catch must be recovered:\n" + d1);
         int catchClose = d1.indexOf("\n\t\t}", catchIdx);
@@ -93,12 +95,12 @@ class CatchBodyNestedTryFidelityTest {
                 "the finally must be recovered inside the catch, not hoisted out:\n" + d1);
         assertTrue(catchBody.contains("e.getClass()"),
                 "the caught exception variable must be used inside the catch, in scope:\n" + d1);
-        assertEquals(1, countOccurrences(d1, "unlock"),
-                "the unlock (finally body) must appear exactly once:\n" + d1);
+        assertEquals(1, countOccurrences(d1, "unlock"), "the unlock (finally body) must appear exactly once:\n" + d1);
     }
 
     @Test
-    void nestedTryCatchInCatchIsRecovered() {
+    void nestedTryCatchInCatchIsRecovered()
+    {
         assertTrue(d1.contains("int nested"), "the nested-try method must decompile (not crash):\n" + d1);
         int start = d1.indexOf("int nested");
         String body = d1.substring(start, Math.min(d1.length(), start + 600));
@@ -108,7 +110,8 @@ class CatchBodyNestedTryFidelityTest {
     }
 
     @Test
-    void bothPathsExecute() throws Exception {
+    void bothPathsExecute() throws Exception
+    {
         Object o = recompiledClass.getDeclaredConstructor().newInstance();
         assertEquals(42, recompiledClass.getDeclaredMethod("run", String.class).invoke(o, "42"),
                 "the normal path returns the parsed value");
@@ -122,16 +125,19 @@ class CatchBodyNestedTryFidelityTest {
                 "the inner catch path runs with both exception variables in scope");
     }
 
-    private static String getLog(Object o) throws Exception {
+    private static String getLog(Object o) throws Exception
+    {
         recompiledClass.getDeclaredMethod("run", String.class).invoke(o, "x");
         java.lang.reflect.Field f = recompiledClass.getDeclaredField("log");
         f.setAccessible(true);
         return (String) f.get(o);
     }
 
-    private static int countOccurrences(String text, String needle) {
+    private static int countOccurrences(String text, String needle)
+    {
         int count = 0;
-        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1)) {
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1))
+        {
             count++;
         }
         return count;

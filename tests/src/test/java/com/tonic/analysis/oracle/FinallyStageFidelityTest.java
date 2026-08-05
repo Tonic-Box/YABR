@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * and a finally that writes NO local (a plain {@code unlock()}; the return stays inside the try, matching
  * the natural layout and avoiding an escaped-local spill). Asserts a round-trip fixed point and execution.
  */
-class FinallyStageFidelityTest {
+class FinallyStageFidelityTest
+{
 
     private static final String SOURCE =
             "import java.util.concurrent.locks.ReentrantLock;\n"
@@ -60,14 +61,14 @@ class FinallyStageFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRoundTrip() throws Exception {
+    static void compileAndRoundTrip() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("finally-stage");
         Path src = dir.resolve("FinStage.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("FinStage.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -82,7 +83,8 @@ class FinallyStageFidelityTest {
     }
 
     @Test
-    void bothBoundaryPlacementsAreRecovered() {
+    void bothBoundaryPlacementsAreRecovered()
+    {
         assertEquals(1, countOccurrences(d1, "pre + 10"),
                 "the finally's local write must appear exactly once (no surviving inlined copy):\n" + d1);
         assertTrue(d1.contains("return a + \":\" + a.length();"),
@@ -90,13 +92,15 @@ class FinallyStageFidelityTest {
     }
 
     @Test
-    void roundTripIsAFixedPoint() {
+    void roundTripIsAFixedPoint()
+    {
         assertEquals(d1, d2, "the staged finally recovery must be layout-independent (javac vs recompiled)");
         assertEquals(d2, d3, "and stable on its own output");
     }
 
     @Test
-    void behaviorSurvivesTheRoundTrip() throws Exception {
+    void behaviorSurvivesTheRoundTrip() throws Exception
+    {
         Object o = recompiledClass.getDeclaredConstructor().newInstance();
         assertEquals("13:126", recompiledClass.getDeclaredMethod("writesLocal", String.class, boolean.class)
                 .invoke(o, "123", false), "finally-writes-local, normal path: pre 3 + 10, val 123 + 3");
@@ -106,9 +110,11 @@ class FinallyStageFidelityTest {
                 .invoke(o, "hi"), "return-in-try must compute through the finally");
     }
 
-    private static int countOccurrences(String text, String needle) {
+    private static int countOccurrences(String text, String needle)
+    {
         int count = 0;
-        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1)) {
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1))
+        {
             count++;
         }
         return count;

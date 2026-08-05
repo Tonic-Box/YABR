@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * tail to be exclusively the construct's, strictly bare, or an inlined copy of the finally
  * template - a shared chain carrying foreign calls is a genuine join and declines the node.
  */
-class SentinelTwrSharedTailFidelityTest {
+class SentinelTwrSharedTailFidelityTest
+{
 
     private static final String SOURCE =
             "import java.io.IOException;\n"
@@ -82,38 +83,40 @@ class SentinelTwrSharedTailFidelityTest {
     private static String d1;
 
     @BeforeAll
-    static void compileAndDecompile() throws Exception {
+    static void compileAndDecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("sentinel-twr");
         Path src = dir.resolve("SentinelTwr.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("SentinelTwr.class")));
         d1 = ClassDecompiler.decompile(cf);
     }
 
     @Test
-    void comparisonSurvivesDecompilation() {
-        assertTrue(d1.contains("crc(source)"),
-                "the crc comparison must not be gutted from the construct:\n" + d1);
+    void comparisonSurvivesDecompilation()
+    {
+        assertTrue(d1.contains("crc(source)"), "the crc comparison must not be gutted from the construct:\n" + d1);
     }
 
     @Test
-    void sharedContinuationSurvivesOutsideTheConstruct() {
+    void sharedContinuationSurvivesOutsideTheConstruct()
+    {
         String afterConstruct = d1.substring(d1.lastIndexOf("finally"));
-        assertTrue(d1.contains("extractStep"),
-                "the shared continuation must survive:\n" + d1);
+        assertTrue(d1.contains("extractStep"), "the shared continuation must survive:\n" + d1);
         assertTrue(afterConstruct.contains("extractStep") || countOccurrences(d1, "extractStep(") >= 2,
                 "the shared continuation must be reachable from the fall-through path, not absorbed "
                 + "exclusively into one arm of the construct:\n" + d1);
     }
 
-    private static int countOccurrences(String s, String needle) {
+    private static int countOccurrences(String s, String needle)
+    {
         int n = 0;
-        for (int i = s.indexOf(needle); i >= 0; i = s.indexOf(needle, i + 1)) {
+        for (int i = s.indexOf(needle); i >= 0; i = s.indexOf(needle, i + 1))
+        {
             n++;
         }
         return n;

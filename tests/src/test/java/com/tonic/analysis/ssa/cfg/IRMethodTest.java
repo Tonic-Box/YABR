@@ -24,13 +24,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for IRMethod - the SSA-form method representation.
  * Covers block management, traversal, and method properties.
  */
-class IRMethodTest {
+class IRMethodTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/IRMethodTestClass", access);
@@ -38,28 +40,32 @@ class IRMethodTest {
         IRBlock.resetIdCounter();
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void constructorSetsOwnerClass() {
+    void constructorSetsOwnerClass()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertEquals("com/test/Test", method.getOwnerClass());
     }
 
     @Test
-    void constructorSetsName() {
+    void constructorSetsName()
+    {
         IRMethod method = new IRMethod("com/test/Test", "myMethod", "()V", true);
         assertEquals("myMethod", method.getName());
     }
 
     @Test
-    void constructorSetsDescriptor() {
+    void constructorSetsDescriptor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(II)I", true);
         assertEquals("(II)I", method.getDescriptor());
     }
 
     @Test
-    void constructorSetsIsStatic() {
+    void constructorSetsIsStatic()
+    {
         IRMethod staticMethod = new IRMethod("com/test/Test", "foo", "()V", true);
         IRMethod instanceMethod = new IRMethod("com/test/Test", "foo", "()V", false);
 
@@ -68,27 +74,31 @@ class IRMethodTest {
     }
 
     @Test
-    void newMethodHasNoBlocks() {
+    void newMethodHasNoBlocks()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertTrue(method.getBlocks().isEmpty());
     }
 
     @Test
-    void newMethodHasNoParameters() {
+    void newMethodHasNoParameters()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertTrue(method.getParameters().isEmpty());
     }
 
     @Test
-    void newMethodHasNoExceptionHandlers() {
+    void newMethodHasNoExceptionHandlers()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertTrue(method.getExceptionHandlers().isEmpty());
     }
 
-    // ========== Parameter Tests ==========
+    // Parameter Tests
 
     @Test
-    void addParameterAddsToList() {
+    void addParameterAddsToList()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)V", true);
         SSAValue param = new SSAValue(PrimitiveType.INT, "p0");
 
@@ -99,7 +109,8 @@ class IRMethodTest {
     }
 
     @Test
-    void addMultipleParameters() {
+    void addMultipleParameters()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(II)V", true);
         SSAValue param1 = new SSAValue(PrimitiveType.INT, "p0");
         SSAValue param2 = new SSAValue(PrimitiveType.INT, "p1");
@@ -110,10 +121,11 @@ class IRMethodTest {
         assertEquals(2, method.getParameters().size());
     }
 
-    // ========== Block Management Tests ==========
+    // Block Management Tests
 
     @Test
-    void addBlockIncrementsBlockCount() {
+    void addBlockIncrementsBlockCount()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
 
@@ -123,7 +135,8 @@ class IRMethodTest {
     }
 
     @Test
-    void addBlockSetsMethodReference() {
+    void addBlockSetsMethodReference()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
 
@@ -133,7 +146,8 @@ class IRMethodTest {
     }
 
     @Test
-    void removeBlockDecrementsBlockCount() {
+    void removeBlockDecrementsBlockCount()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
         method.addBlock(block);
@@ -144,7 +158,8 @@ class IRMethodTest {
     }
 
     @Test
-    void setEntryBlockSetsIt() {
+    void setEntryBlockSetsIt()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
         method.addBlock(block);
@@ -154,10 +169,11 @@ class IRMethodTest {
         assertEquals(block, method.getEntryBlock());
     }
 
-    // ========== Exception Handler Tests ==========
+    // Exception Handler Tests
 
     @Test
-    void addExceptionHandlerAddsToList() {
+    void addExceptionHandlerAddsToList()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock tryStart = new IRBlock("tryStart");
         IRBlock tryEnd = new IRBlock("tryEnd");
@@ -170,10 +186,11 @@ class IRMethodTest {
     }
 
     @Test
-    void removeBlockShrinksProtectedRegionAndKeepsHandlerUntilEmpty() {
+    void removeBlockShrinksProtectedRegionAndKeepsHandlerUntilEmpty()
+    {
         // Regression: removing a block from a try region must shrink tryBlocks (not leave a stale ref that
         // the lowerer silently drops, collapsing the range), and must NOT delete the handler while the region
-        // still has protected blocks — only when the catch target is gone or the region is empty.
+        // still has protected blocks - only when the catch target is gone or the region is empty.
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
@@ -198,7 +215,8 @@ class IRMethodTest {
     }
 
     @Test
-    void removeHandlerBlockDropsHandler() {
+    void removeHandlerBlockDropsHandler()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock body = new IRBlock("body");
         IRBlock handler = new IRBlock("handler");
@@ -214,10 +232,11 @@ class IRMethodTest {
         assertFalse(method.getExceptionHandlers().contains(eh), "handler dropped when its catch target is removed");
     }
 
-    // ========== Block Traversal Tests ==========
+    // Block Traversal Tests
 
     @Test
-    void getBlocksInOrderReturnsBlocksFromEntry() {
+    void getBlocksInOrderReturnsBlocksFromEntry()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -238,7 +257,8 @@ class IRMethodTest {
     }
 
     @Test
-    void getBlocksInOrderWithNullEntry() {
+    void getBlocksInOrderWithNullEntry()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock b1 = new IRBlock("b1");
         method.addBlock(b1);
@@ -250,7 +270,8 @@ class IRMethodTest {
     }
 
     @Test
-    void getPostOrderReturnsPostOrder() {
+    void getPostOrderReturnsPostOrder()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -269,7 +290,8 @@ class IRMethodTest {
     }
 
     @Test
-    void getReversePostOrderReturnsRPO() {
+    void getReversePostOrderReturnsRPO()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -288,7 +310,8 @@ class IRMethodTest {
     }
 
     @Test
-    void getPostOrderWithNullEntryReturnsEmpty() {
+    void getPostOrderWithNullEntryReturnsEmpty()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock b1 = new IRBlock("b1");
         method.addBlock(b1);
@@ -299,16 +322,18 @@ class IRMethodTest {
         assertTrue(postOrder.isEmpty());
     }
 
-    // ========== Instruction Count Tests ==========
+    // Instruction Count Tests
 
     @Test
-    void getInstructionCountReturnsZeroForEmptyMethod() {
+    void getInstructionCountReturnsZeroForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertEquals(0, method.getInstructionCount());
     }
 
     @Test
-    void getInstructionCountIncludesPhis() {
+    void getInstructionCountIncludesPhis()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
         method.addBlock(block);
@@ -321,7 +346,8 @@ class IRMethodTest {
     }
 
     @Test
-    void getInstructionCountIncludesRegularInstructions() {
+    void getInstructionCountIncludesRegularInstructions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
         method.addBlock(block);
@@ -331,20 +357,22 @@ class IRMethodTest {
         assertEquals(1, method.getInstructionCount());
     }
 
-    // ========== Return Type Tests ==========
+    // Return Type Tests
 
     @Test
-    void setReturnTypeSetsIt() {
+    void setReturnTypeSetsIt()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         method.setReturnType(PrimitiveType.INT);
 
         assertEquals(PrimitiveType.INT, method.getReturnType());
     }
 
-    // ========== Max Stack/Locals Tests ==========
+    // Max Stack/Locals Tests
 
     @Test
-    void setMaxLocalsSetsIt() {
+    void setMaxLocalsSetsIt()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         method.setMaxLocals(10);
 
@@ -352,17 +380,19 @@ class IRMethodTest {
     }
 
     @Test
-    void setMaxStackSetsIt() {
+    void setMaxStackSetsIt()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         method.setMaxStack(5);
 
         assertEquals(5, method.getMaxStack());
     }
 
-    // ========== Source Method Tests ==========
+    // Source Method Tests
 
     @Test
-    void setSourceMethodSetsIt() throws IOException {
+    void setSourceMethodSetsIt() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry sourceMethod = classFile.createNewMethod(access, "source", "V");
 
@@ -372,36 +402,41 @@ class IRMethodTest {
         assertEquals(sourceMethod, method.getSourceMethod());
     }
 
-    // ========== toString Tests ==========
+    // toString Tests
 
     @Test
-    void toStringContainsMethodName() {
+    void toStringContainsMethodName()
+    {
         IRMethod method = new IRMethod("com/test/Test", "myMethod", "()V", true);
         assertTrue(method.toString().contains("myMethod"));
     }
 
     @Test
-    void toStringContainsOwnerClass() {
+    void toStringContainsOwnerClass()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertTrue(method.toString().contains("com/test/Test"));
     }
 
     @Test
-    void toStringContainsDescriptor() {
+    void toStringContainsDescriptor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(II)I", true);
         assertTrue(method.toString().contains("(II)I"));
     }
 
     @Test
-    void toStringContainsStaticKeyword() {
+    void toStringContainsStaticKeyword()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         assertTrue(method.toString().contains("static"));
     }
 
-    // ========== Lifting Integration Tests ==========
+    // Lifting Integration Tests
 
     @Test
-    void liftedMethodHasEntryBlock() throws IOException {
+    void liftedMethodHasEntryBlock() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "withEntry", "V");
 

@@ -32,32 +32,39 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Control flow (blocks, terminators)
  * - Phi node insertion
  */
-class BytecodeLifterTest {
+class BytecodeLifterTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     /**
-     * Helper to find method by name in ClassFile.
+     * * Helper to find method by name in ClassFile.
      */
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException("Method not found: " + name);
     }
 
-    // ========== Phi Type Refinement Tests ==========
+    // Phi Type Refinement Tests
 
     @Nested
-    class PhiTypeRefinementTests {
+    class PhiTypeRefinementTests
+    {
 
         @Test
-        void retypesUniformPrimitivePhiMistypedAsReference() {
+        void retypesUniformPrimitivePhiMistypedAsReference()
+        {
             IRMethod m = new IRMethod("com/test/T", "f", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock p1 = new IRBlock("p1");
@@ -86,7 +93,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void leavesMixedPrimitiveReferencePhiUntouched() {
+        void leavesMixedPrimitiveReferencePhiUntouched()
+        {
             IRMethod m = new IRMethod("com/test/T", "g", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock p1 = new IRBlock("p1");
@@ -115,10 +123,11 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void propagatesLongTypeAroundPhiCycleSeededByLongConstant() {
+        void propagatesLongTypeAroundPhiCycleSeededByLongConstant()
+        {
             // A loop-carried long (e.g. `long x = -1L;` updated each iteration) lifts to a phi cycle. If the
             // phis default to int, the only concrete seed (a long constant) must still propagate around the
-            // cycle so the value is typed long — otherwise it lowers to an int load and underflows lcmp.
+            // cycle so the value is typed long - otherwise it lowers to an int load and underflows lcmp.
             // The cyclic back-edges must not deadlock the refinement. (Gamepack regression: qk.fq.)
             IRMethod m = new IRMethod("com/test/T", "h", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -154,13 +163,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Simple Method Lifting Tests ==========
+    // Simple Method Lifting Tests
 
     @Nested
-    class SimpleMethodLiftingTests {
+    class SimpleMethodLiftingTests
+    {
 
         @Test
-        void liftEmptyVoidMethod() throws IOException {
+        void liftEmptyVoidMethod() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Simple")
                 .publicStaticMethod("empty", "()V")
                     .vreturn()
@@ -178,7 +189,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftReturnConstantInt() throws IOException {
+        void liftReturnConstantInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Const")
                 .publicStaticMethod("getFortyTwo", "()I")
                     .iconst(42)
@@ -200,7 +212,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftReturnConstantLong() throws IOException {
+        void liftReturnConstantLong() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Long")
                 .publicStaticMethod("getLong", "()J")
                     .lconst(100L)
@@ -215,7 +228,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftVoidReturnType() throws IOException {
+        void liftVoidReturnType() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Void")
                 .publicStaticMethod("doNothing", "()V")
                     .vreturn()
@@ -228,13 +242,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Parameter Handling Tests ==========
+    // Parameter Handling Tests
 
     @Nested
-    class ParameterHandlingTests {
+    class ParameterHandlingTests
+    {
 
         @Test
-        void liftStaticMethodWithIntParams() throws IOException {
+        void liftStaticMethodWithIntParams() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Params")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -253,7 +269,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftStaticMethodWithLongParam() throws IOException {
+        void liftStaticMethodWithLongParam() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/LongParam")
                 .publicStaticMethod("identity", "(J)J")
                     .lload(0)
@@ -269,7 +286,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftStaticMethodWithMixedParams() throws IOException {
+        void liftStaticMethodWithMixedParams() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Mixed")
                 .publicStaticMethod("compute", "(IJI)J")
                     .iload(0)
@@ -290,7 +308,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftMethodWithObjectParam() throws IOException {
+        void liftMethodWithObjectParam() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ObjParam")
                 .publicStaticMethod("check", "(Ljava/lang/String;)I")
                     .aload(0)
@@ -312,7 +331,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftMethodWithArrayParam() throws IOException {
+        void liftMethodWithArrayParam() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayParam")
                 .publicStaticMethod("length", "([I)I")
                     .aload(0)
@@ -328,13 +348,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Arithmetic Instruction Tests ==========
+    // Arithmetic Instruction Tests
 
     @Nested
-    class ArithmeticInstructionTests {
+    class ArithmeticInstructionTests
+    {
 
         @Test
-        void liftIntegerAddition() throws IOException {
+        void liftIntegerAddition() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Add")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -349,12 +371,14 @@ class BytecodeLifterTest {
             assertNotNull(ir);
             assertNotNull(ir.getEntryBlock());
 
-            // Should contain BinaryOpInstruction for add
             boolean foundBinaryOp = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.ADD) {
+                    if (binOp.getOp() == BinaryOp.ADD)
+                    {
                         foundBinaryOp = true;
                         break;
                     }
@@ -364,7 +388,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftIntegerSubtraction() throws IOException {
+        void liftIntegerSubtraction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Sub")
                 .publicStaticMethod("sub", "(II)I")
                     .iload(0)
@@ -377,10 +402,13 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             boolean foundSub = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.SUB) {
+                    if (binOp.getOp() == BinaryOp.SUB)
+                    {
                         foundSub = true;
                         break;
                     }
@@ -390,7 +418,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftIntegerMultiplication() throws IOException {
+        void liftIntegerMultiplication() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Mul")
                 .publicStaticMethod("mul", "(II)I")
                     .iload(0)
@@ -403,10 +432,13 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             boolean foundMul = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.MUL) {
+                    if (binOp.getOp() == BinaryOp.MUL)
+                    {
                         foundMul = true;
                         break;
                     }
@@ -416,7 +448,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftIntegerDivision() throws IOException {
+        void liftIntegerDivision() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Div")
                 .publicStaticMethod("div", "(II)I")
                     .iload(0)
@@ -429,10 +462,13 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             boolean foundDiv = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.DIV) {
+                    if (binOp.getOp() == BinaryOp.DIV)
+                    {
                         foundDiv = true;
                         break;
                     }
@@ -442,7 +478,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftIntegerNegation() throws IOException {
+        void liftIntegerNegation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Neg")
                 .publicStaticMethod("negate", "(I)I")
                     .iload(0)
@@ -454,11 +491,11 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             assertNotNull(ir);
-            // Should contain UnaryOpInstruction for negation
         }
 
         @Test
-        void liftComplexArithmetic() throws IOException {
+        void liftComplexArithmetic() throws IOException
+        {
             // (a + b) * (a - b)
             ClassFile cf = BytecodeBuilder.forClass("com/test/Complex")
                 .publicStaticMethod("compute", "(II)I")
@@ -478,8 +515,10 @@ class BytecodeLifterTest {
             assertNotNull(ir);
             // Count binary operations
             int binOpCount = 0;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     binOpCount++;
                 }
             }
@@ -487,13 +526,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Bitwise Instruction Tests ==========
+    // Bitwise Instruction Tests
 
     @Nested
-    class BitwiseInstructionTests {
+    class BitwiseInstructionTests
+    {
 
         @Test
-        void liftBitwiseAnd() throws IOException {
+        void liftBitwiseAnd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/And")
                 .publicStaticMethod("and", "(II)I")
                     .iload(0)
@@ -506,10 +547,13 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             boolean foundAnd = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.AND) {
+                    if (binOp.getOp() == BinaryOp.AND)
+                    {
                         foundAnd = true;
                         break;
                     }
@@ -519,7 +563,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftBitwiseOr() throws IOException {
+        void liftBitwiseOr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Or")
                 .publicStaticMethod("or", "(II)I")
                     .iload(0)
@@ -532,10 +577,13 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             boolean foundOr = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.OR) {
+                    if (binOp.getOp() == BinaryOp.OR)
+                    {
                         foundOr = true;
                         break;
                     }
@@ -545,7 +593,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftBitwiseXor() throws IOException {
+        void liftBitwiseXor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Xor")
                 .publicStaticMethod("xor", "(II)I")
                     .iload(0)
@@ -558,10 +607,13 @@ class BytecodeLifterTest {
             IRMethod ir = TestUtils.liftMethod(method);
 
             boolean foundXor = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.XOR) {
+                    if (binOp.getOp() == BinaryOp.XOR)
+                    {
                         foundXor = true;
                         break;
                     }
@@ -571,7 +623,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftShiftLeft() throws IOException {
+        void liftShiftLeft() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Shl")
                 .publicStaticMethod("shl", "(II)I")
                     .iload(0)
@@ -587,7 +640,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftShiftRight() throws IOException {
+        void liftShiftRight() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Shr")
                 .publicStaticMethod("shr", "(II)I")
                     .iload(0)
@@ -603,13 +657,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Type Conversion Tests ==========
+    // Type Conversion Tests
 
     @Nested
-    class TypeConversionTests {
+    class TypeConversionTests
+    {
 
         @Test
-        void liftIntToLong() throws IOException {
+        void liftIntToLong() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/I2L")
                 .publicStaticMethod("toLong", "(I)J")
                     .iload(0)
@@ -625,7 +681,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftLongToInt() throws IOException {
+        void liftLongToInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/L2I")
                 .publicStaticMethod("toInt", "(J)I")
                     .lload(0)
@@ -641,7 +698,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftNarrowingConversions() throws IOException {
+        void liftNarrowingConversions() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Narrow")
                 .publicStaticMethod("toByte", "(I)I")
                     .iload(0)
@@ -656,13 +714,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Stack Operation Tests ==========
+    // Stack Operation Tests
 
     @Nested
-    class StackOperationTests {
+    class StackOperationTests
+    {
 
         @Test
-        void liftDup() throws IOException {
+        void liftDup() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Dup")
                 .publicStaticMethod("twice", "(I)I")
                     .iload(0)
@@ -678,7 +738,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftPop() throws IOException {
+        void liftPop() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Pop")
                 .publicStaticMethod("first", "(II)I")
                     .iload(0)
@@ -694,7 +755,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftSwap() throws IOException {
+        void liftSwap() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Swap")
                 .publicStaticMethod("swapSub", "(II)I")
                     .iload(0)
@@ -711,7 +773,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftDupX2Form1_ThreeCategoryOneValues() throws Exception {
+        void liftDupX2Form1_ThreeCategoryOneValues() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/DupX2Form1")
                 .publicStaticMethod("compute", "(III)I")
                     .iload(0)
@@ -739,7 +802,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftDupX2Form2_CategoryOneOverCategoryTwo() throws Exception {
+        void liftDupX2Form2_CategoryOneOverCategoryTwo() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/DupX2Form2")
                 .publicStaticMethod("compute", "(JI)I")
                     .lload(0)
@@ -765,7 +829,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftDupX2Form2_DoubleAndInt() throws Exception {
+        void liftDupX2Form2_DoubleAndInt() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/DupX2Double")
                 .publicStaticMethod("compute", "(DI)I")
                     .dload(0)
@@ -791,7 +856,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftDup2X1Form1_TwoCategoryOneOverOne() throws Exception {
+        void liftDup2X1Form1_TwoCategoryOneOverOne() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Dup2X1")
                 .publicStaticMethod("compute", "(III)I")
                     .iload(0)
@@ -820,7 +886,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftDup2X1Form2_CategoryTwoOverOne() throws Exception {
+        void liftDup2X1Form2_CategoryTwoOverOne() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Dup2X1Long")
                 .publicStaticMethod("compute", "(IJ)J")
                     .iload(0)
@@ -848,7 +915,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftDup2X2Form1_FourCategoryOneValues() throws Exception {
+        void liftDup2X2Form1_FourCategoryOneValues() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Dup2X2")
                 .publicStaticMethod("compute", "(IIII)I")
                     .iload(0)
@@ -879,13 +947,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Local Variable Tests ==========
+    // Local Variable Tests
 
     @Nested
-    class LocalVariableTests {
+    class LocalVariableTests
+    {
 
         @Test
-        void liftLocalStore() throws IOException {
+        void liftLocalStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Store")
                 .publicStaticMethod("storeAndReturn", "(I)I")
                     .iload(0)
@@ -903,7 +973,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftMultipleLocals() throws IOException {
+        void liftMultipleLocals() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/MultiLocal")
                 .publicStaticMethod("useLocals", "(I)I")
                     .iload(0)
@@ -924,13 +995,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Array Access Tests ==========
+    // Array Access Tests
 
     @Nested
-    class ArrayAccessTests {
+    class ArrayAccessTests
+    {
 
         @Test
-        void liftArrayLength() throws IOException {
+        void liftArrayLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ArrLen")
                 .publicStaticMethod("len", "([I)I")
                     .aload(0)
@@ -945,7 +1018,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftNewArray() throws IOException {
+        void liftNewArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NewArr")
                 .publicStaticMethod("createIntArray", "(I)[I")
                     .iload(0)
@@ -960,13 +1034,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Method Invocation Tests ==========
+    // Method Invocation Tests
 
     @Nested
-    class MethodInvocationTests {
+    class MethodInvocationTests
+    {
 
         @Test
-        void liftInvokeStatic() throws IOException {
+        void liftInvokeStatic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Invoke")
                 .publicStaticMethod("callStatic", "()I")
                     .iconst(5)
@@ -980,8 +1056,10 @@ class BytecodeLifterTest {
             assertNotNull(ir);
 
             boolean foundInvoke = false;
-            for (IRInstruction instr : ir.getEntryBlock().getInstructions()) {
-                if (instr instanceof InvokeInstruction) {
+            for (IRInstruction instr : ir.getEntryBlock().getInstructions())
+            {
+                if (instr instanceof InvokeInstruction)
+                {
                     foundInvoke = true;
                     break;
                 }
@@ -990,13 +1068,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Block Structure Tests ==========
+    // Block Structure Tests
 
     @Nested
-    class BlockStructureTests {
+    class BlockStructureTests
+    {
 
         @Test
-        void linearMethodHasSingleBlock() throws IOException {
+        void linearMethodHasSingleBlock() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Linear")
                 .publicStaticMethod("linear", "(I)I")
                     .iload(0)
@@ -1012,7 +1092,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void entryBlockIsSet() throws IOException {
+        void entryBlockIsSet() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Entry")
                 .publicStaticMethod("entry", "()V")
                     .vreturn()
@@ -1026,7 +1107,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void terminatorIsAtEndOfBlock() throws IOException {
+        void terminatorIsAtEndOfBlock() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Term")
                 .publicStaticMethod("terminate", "()I")
                     .iconst(42)
@@ -1044,13 +1126,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== BytecodeLifter Direct Tests ==========
+    // BytecodeLifter Direct Tests
 
     @Nested
-    class BytecodeLifterDirectTests {
+    class BytecodeLifterDirectTests
+    {
 
         @Test
-        void lifterCreation() throws IOException {
+        void lifterCreation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Direct")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1061,7 +1145,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftMethodWithNoCode() throws IOException {
+        void liftMethodWithNoCode() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoCode")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1075,13 +1160,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== InstructionTranslator Tests ==========
+    // InstructionTranslator Tests
 
     @Nested
-    class InstructionTranslatorTests {
+    class InstructionTranslatorTests
+    {
 
         @Test
-        void translatorCreation() throws IOException {
+        void translatorCreation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Trans")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1092,7 +1179,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void translatorBlockRegistration() throws IOException {
+        void translatorBlockRegistration() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Block")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1106,19 +1194,22 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== AbstractState Tests ==========
+    // AbstractState Tests
 
     @Nested
-    class AbstractStateTests {
+    class AbstractStateTests
+    {
 
         @Test
-        void abstractStateCreation() {
+        void abstractStateCreation()
+        {
             AbstractState state = new AbstractState();
             assertNotNull(state);
         }
 
         @Test
-        void abstractStatePushPop() {
+        void abstractStatePushPop()
+        {
             AbstractState state = new AbstractState();
             SSAValue value = new SSAValue(PrimitiveType.INT, "test");
 
@@ -1130,7 +1221,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateLocalVariables() {
+        void abstractStateLocalVariables()
+        {
             AbstractState state = new AbstractState();
             SSAValue value = new SSAValue(PrimitiveType.INT, "local");
 
@@ -1139,7 +1231,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateCopy() {
+        void abstractStateCopy()
+        {
             AbstractState original = new AbstractState();
             SSAValue value = new SSAValue(PrimitiveType.INT, "test");
             original.push(value);
@@ -1152,7 +1245,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStatePeek() {
+        void abstractStatePeek()
+        {
             AbstractState state = new AbstractState();
             SSAValue value = new SSAValue(PrimitiveType.INT, "test");
 
@@ -1163,7 +1257,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateIsEmpty() {
+        void abstractStateIsEmpty()
+        {
             AbstractState state = new AbstractState();
             assertTrue(state.isStackEmpty());
 
@@ -1172,7 +1267,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateHasLocal() {
+        void abstractStateHasLocal()
+        {
             AbstractState state = new AbstractState();
             assertFalse(state.hasLocal(0));
 
@@ -1181,7 +1277,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateClearStack() {
+        void abstractStateClearStack()
+        {
             AbstractState state = new AbstractState();
             state.push(new SSAValue(PrimitiveType.INT, "v1"));
             state.push(new SSAValue(PrimitiveType.INT, "v2"));
@@ -1191,7 +1288,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateGetStackValues() {
+        void abstractStateGetStackValues()
+        {
             AbstractState state = new AbstractState();
             SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
             SSAValue v2 = new SSAValue(PrimitiveType.INT, "v2");
@@ -1204,7 +1302,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void abstractStateGetLocalIndices() {
+        void abstractStateGetLocalIndices()
+        {
             AbstractState state = new AbstractState();
             state.setLocal(0, new SSAValue(PrimitiveType.INT, "v0"));
             state.setLocal(2, new SSAValue(PrimitiveType.INT, "v2"));
@@ -1216,13 +1315,15 @@ class BytecodeLifterTest {
         }
     }
 
-    // ========== Round-Trip Tests ==========
+    // Round-Trip Tests
 
     @Nested
-    class RoundTripTests {
+    class RoundTripTests
+    {
 
         @Test
-        void liftLowerRoundTrip() throws Exception {
+        void liftLowerRoundTrip() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RoundTrip")
                 .publicStaticMethod("compute", "(II)I")
                     .iload(0)
@@ -1233,26 +1334,23 @@ class BytecodeLifterTest {
 
             MethodEntry method = findMethod(cf, "compute");
 
-            // Lift
             SSA ssa = new SSA(cf.getConstPool());
             IRMethod ir = ssa.lift(method);
             assertNotNull(ir);
 
-            // Lower
             ssa.lower(ir, method);
 
-            // Verify class can be loaded
             Class<?> clazz = TestUtils.loadAndVerify(cf);
             assertNotNull(clazz);
 
-            // Execute and verify result
             java.lang.reflect.Method m = clazz.getMethod("compute", int.class, int.class);
             int result = (int) m.invoke(null, 3, 5);
             assertEquals(8, result);
         }
 
         @Test
-        void liftLowerWithMultiplication() throws Exception {
+        void liftLowerWithMultiplication() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Multiply")
                 .publicStaticMethod("mul", "(II)I")
                     .iload(0)
@@ -1274,7 +1372,8 @@ class BytecodeLifterTest {
         }
 
         @Test
-        void liftLowerWithConstant() throws Exception {
+        void liftLowerWithConstant() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Constant")
                 .publicStaticMethod("get42", "()I")
                     .iconst(42)

@@ -1,13 +1,25 @@
 package com.tonic.analysis.execution.heap;
 
-public class ArrayInstance extends ObjectInstance {
+/**
+ * A heap-allocated array with typed primitive or reference backing storage.
+ */
+public class ArrayInstance extends ObjectInstance
+{
 
     private final String componentType;
     private final int length;
     private final Object storage;
     private final boolean isPrimitiveArray;
 
-    public ArrayInstance(int id, String componentType, int length) {
+    /**
+     * Allocates an array with zeroed storage matching the component type.
+     * @param id the heap object id
+     * @param componentType descriptor of the element type
+     * @param length the number of elements
+     * @throws HeapException if the length is negative
+     */
+    public ArrayInstance(int id, String componentType, int length)
+    {
         super(id, getArrayClassName(componentType));
         this.componentType = componentType;
         this.length = length;
@@ -15,12 +27,15 @@ public class ArrayInstance extends ObjectInstance {
         this.storage = createStorage(componentType, length);
     }
 
-    private static String getArrayClassName(String componentType) {
+    private static String getArrayClassName(String componentType)
+    {
         return "[" + componentType;
     }
 
-    private static boolean isPrimitive(String componentType) {
-        if (componentType.length() != 1) {
+    private static boolean isPrimitive(String componentType)
+    {
+        if (componentType.length() != 1)
+        {
             return false;
         }
         char c = componentType.charAt(0);
@@ -28,13 +43,17 @@ public class ArrayInstance extends ObjectInstance {
                c == 'I' || c == 'J' || c == 'F' || c == 'D';
     }
 
-    private static Object createStorage(String componentType, int length) {
-        if (length < 0) {
+    private static Object createStorage(String componentType, int length)
+    {
+        if (length < 0)
+        {
             throw new HeapException("Negative array length: " + length);
         }
 
-        if (componentType.length() == 1) {
-            switch (componentType.charAt(0)) {
+        if (componentType.length() == 1)
+        {
+            switch (componentType.charAt(0))
+            {
                 case 'Z': return new boolean[length];
                 case 'B': return new byte[length];
                 case 'C': return new char[length];
@@ -48,202 +67,393 @@ public class ArrayInstance extends ObjectInstance {
         return new ObjectInstance[length];
     }
 
-    public int getLength() {
+    /**
+     * @return the length
+     */
+    public int getLength()
+    {
         return length;
     }
 
-    public String getComponentType() {
+    /**
+     * @return the component type
+     */
+    public String getComponentType()
+    {
         return componentType;
     }
 
-    public boolean isPrimitiveArray() {
+    /**
+     * @return whether primitive array
+     */
+    public boolean isPrimitiveArray()
+    {
         return isPrimitiveArray;
     }
 
-    private void checkBounds(int index) {
-        if (index < 0 || index >= length) {
+    private void checkBounds(int index)
+    {
+        if (index < 0 || index >= length)
+        {
             throw new HeapException("Array index out of bounds: " + index + " (length: " + length + ")");
         }
     }
 
-    public Object get(int index) {
+    /**
+     * Reads an element as a boxed value or reference.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if the index is out of bounds
+     */
+    public Object get(int index)
+    {
         checkBounds(index);
 
-        if (storage instanceof boolean[]) {
+        if (storage instanceof boolean[])
+        {
             return ((boolean[]) storage)[index];
-        } else if (storage instanceof byte[]) {
+        }
+        else if (storage instanceof byte[])
+        {
             return ((byte[]) storage)[index];
-        } else if (storage instanceof char[]) {
+        }
+        else if (storage instanceof char[])
+        {
             return ((char[]) storage)[index];
-        } else if (storage instanceof short[]) {
+        }
+        else if (storage instanceof short[])
+        {
             return ((short[]) storage)[index];
-        } else if (storage instanceof int[]) {
+        }
+        else if (storage instanceof int[])
+        {
             return ((int[]) storage)[index];
-        } else if (storage instanceof long[]) {
+        }
+        else if (storage instanceof long[])
+        {
             return ((long[]) storage)[index];
-        } else if (storage instanceof float[]) {
+        }
+        else if (storage instanceof float[])
+        {
             return ((float[]) storage)[index];
-        } else if (storage instanceof double[]) {
+        }
+        else if (storage instanceof double[])
+        {
             return ((double[]) storage)[index];
-        } else {
+        }
+        else
+        {
             return ((ObjectInstance[]) storage)[index];
         }
     }
 
-    public void set(int index, Object value) {
+    /**
+     * Writes an element, unboxing to the storage type as needed.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if the index is out of bounds
+     */
+    public void set(int index, Object value)
+    {
         checkBounds(index);
 
-        if (storage instanceof boolean[]) {
+        if (storage instanceof boolean[])
+        {
             ((boolean[]) storage)[index] = (Boolean) value;
-        } else if (storage instanceof byte[]) {
+        }
+        else if (storage instanceof byte[])
+        {
             ((byte[]) storage)[index] = ((Number) value).byteValue();
-        } else if (storage instanceof char[]) {
+        }
+        else if (storage instanceof char[])
+        {
             ((char[]) storage)[index] = (Character) value;
-        } else if (storage instanceof short[]) {
+        }
+        else if (storage instanceof short[])
+        {
             ((short[]) storage)[index] = ((Number) value).shortValue();
-        } else if (storage instanceof int[]) {
+        }
+        else if (storage instanceof int[])
+        {
             ((int[]) storage)[index] = ((Number) value).intValue();
-        } else if (storage instanceof long[]) {
+        }
+        else if (storage instanceof long[])
+        {
             ((long[]) storage)[index] = ((Number) value).longValue();
-        } else if (storage instanceof float[]) {
+        }
+        else if (storage instanceof float[])
+        {
             ((float[]) storage)[index] = ((Number) value).floatValue();
-        } else if (storage instanceof double[]) {
+        }
+        else if (storage instanceof double[])
+        {
             ((double[]) storage)[index] = ((Number) value).doubleValue();
-        } else {
+        }
+        else
+        {
             ((ObjectInstance[]) storage)[index] = (ObjectInstance) value;
         }
     }
 
-    public int getInt(int index) {
+    /**
+     * Reads an int element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not int[]
+     */
+    public int getInt(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof int[])) {
+        if (!(storage instanceof int[]))
+        {
             throw new HeapException("Array is not int[]");
         }
         return ((int[]) storage)[index];
     }
 
-    public void setInt(int index, int value) {
+    /**
+     * Writes an int element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not int[]
+     */
+    public void setInt(int index, int value)
+    {
         checkBounds(index);
-        if (!(storage instanceof int[])) {
+        if (!(storage instanceof int[]))
+        {
             throw new HeapException("Array is not int[]");
         }
         ((int[]) storage)[index] = value;
     }
 
-    public long getLong(int index) {
+    /**
+     * Reads a long element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not long[]
+     */
+    public long getLong(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof long[])) {
+        if (!(storage instanceof long[]))
+        {
             throw new HeapException("Array is not long[]");
         }
         return ((long[]) storage)[index];
     }
 
-    public void setLong(int index, long value) {
+    /**
+     * Writes a long element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not long[]
+     */
+    public void setLong(int index, long value)
+    {
         checkBounds(index);
-        if (!(storage instanceof long[])) {
+        if (!(storage instanceof long[]))
+        {
             throw new HeapException("Array is not long[]");
         }
         ((long[]) storage)[index] = value;
     }
 
-    public boolean getBoolean(int index) {
+    /**
+     * Reads a boolean element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not boolean[]
+     */
+    public boolean getBoolean(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof boolean[])) {
+        if (!(storage instanceof boolean[]))
+        {
             throw new HeapException("Array is not boolean[]");
         }
         return ((boolean[]) storage)[index];
     }
 
-    public void setBoolean(int index, boolean value) {
+    /**
+     * Writes a boolean element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not boolean[]
+     */
+    public void setBoolean(int index, boolean value)
+    {
         checkBounds(index);
-        if (!(storage instanceof boolean[])) {
+        if (!(storage instanceof boolean[]))
+        {
             throw new HeapException("Array is not boolean[]");
         }
         ((boolean[]) storage)[index] = value;
     }
 
-    public byte getByte(int index) {
+    /**
+     * Reads a byte element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not byte[]
+     */
+    public byte getByte(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof byte[])) {
+        if (!(storage instanceof byte[]))
+        {
             throw new HeapException("Array is not byte[]");
         }
         return ((byte[]) storage)[index];
     }
 
-    public void setByte(int index, byte value) {
+    /**
+     * Writes a byte element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not byte[]
+     */
+    public void setByte(int index, byte value)
+    {
         checkBounds(index);
-        if (!(storage instanceof byte[])) {
+        if (!(storage instanceof byte[]))
+        {
             throw new HeapException("Array is not byte[]");
         }
         ((byte[]) storage)[index] = value;
     }
 
-    public char getChar(int index) {
+    /**
+     * Reads a char element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not char[]
+     */
+    public char getChar(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof char[])) {
+        if (!(storage instanceof char[]))
+        {
             throw new HeapException("Array is not char[]");
         }
         return ((char[]) storage)[index];
     }
 
-    public void setChar(int index, char value) {
+    /**
+     * Writes a char element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not char[]
+     */
+    public void setChar(int index, char value)
+    {
         checkBounds(index);
-        if (!(storage instanceof char[])) {
+        if (!(storage instanceof char[]))
+        {
             throw new HeapException("Array is not char[]");
         }
         ((char[]) storage)[index] = value;
     }
 
-    public short getShort(int index) {
+    /**
+     * Reads a short element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not short[]
+     */
+    public short getShort(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof short[])) {
+        if (!(storage instanceof short[]))
+        {
             throw new HeapException("Array is not short[]");
         }
         return ((short[]) storage)[index];
     }
 
-    public void setShort(int index, short value) {
+    /**
+     * Writes a short element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not short[]
+     */
+    public void setShort(int index, short value)
+    {
         checkBounds(index);
-        if (!(storage instanceof short[])) {
+        if (!(storage instanceof short[]))
+        {
             throw new HeapException("Array is not short[]");
         }
         ((short[]) storage)[index] = value;
     }
 
-    public float getFloat(int index) {
+    /**
+     * Reads a float element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not float[]
+     */
+    public float getFloat(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof float[])) {
+        if (!(storage instanceof float[]))
+        {
             throw new HeapException("Array is not float[]");
         }
         return ((float[]) storage)[index];
     }
 
-    public void setFloat(int index, float value) {
+    /**
+     * Writes a float element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not float[]
+     */
+    public void setFloat(int index, float value)
+    {
         checkBounds(index);
-        if (!(storage instanceof float[])) {
+        if (!(storage instanceof float[]))
+        {
             throw new HeapException("Array is not float[]");
         }
         ((float[]) storage)[index] = value;
     }
 
-    public double getDouble(int index) {
+    /**
+     * Reads a double element.
+     * @param index the element index
+     * @return the element value
+     * @throws HeapException if out of bounds or the storage is not double[]
+     */
+    public double getDouble(int index)
+    {
         checkBounds(index);
-        if (!(storage instanceof double[])) {
+        if (!(storage instanceof double[]))
+        {
             throw new HeapException("Array is not double[]");
         }
         return ((double[]) storage)[index];
     }
 
-    public void setDouble(int index, double value) {
+    /**
+     * Writes a double element.
+     * @param index the element index
+     * @param value the value to store
+     * @throws HeapException if out of bounds or the storage is not double[]
+     */
+    public void setDouble(int index, double value)
+    {
         checkBounds(index);
-        if (!(storage instanceof double[])) {
+        if (!(storage instanceof double[]))
+        {
             throw new HeapException("Array is not double[]");
         }
         ((double[]) storage)[index] = value;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return getClassName() + "@" + Integer.toHexString(getId()) + "[" + length + "]";
     }
 }

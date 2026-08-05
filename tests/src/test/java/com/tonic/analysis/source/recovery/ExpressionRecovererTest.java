@@ -26,21 +26,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ExpressionRecoverer - converting IR instructions to AST expressions.
  * Comprehensive coverage of expression recovery operations.
  */
-class ExpressionRecovererTest {
+class ExpressionRecovererTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Constant Recovery Tests ==========
+    // Constant Recovery Tests
 
     @Nested
-    class ConstantRecoveryTests {
+    class ConstantRecoveryTests
+    {
 
         @Test
-        void recoverIntConstant() throws IOException {
+        void recoverIntConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getInt", "()I")
                     .iconst(42)
@@ -65,7 +69,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntConstantAsBooleanTrue() throws IOException {
+        void recoverIntConstantAsBooleanTrue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getTrue", "()Z")
                     .iconst(1)
@@ -90,7 +95,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntConstantAsBooleanFalse() throws IOException {
+        void recoverIntConstantAsBooleanFalse() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getFalse", "()Z")
                     .iconst(0)
@@ -115,7 +121,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntConstantAsChar() throws IOException {
+        void recoverIntConstantAsChar() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getChar", "()C")
                     .iconst(65)  // 'A'
@@ -140,7 +147,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongConstant() throws IOException {
+        void recoverLongConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getLong", "()J")
                     .lconst(12345678901L)
@@ -165,7 +173,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverFloatConstant() throws IOException {
+        void recoverFloatConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getFloat", "()F")
                     .fconst(3.14f)
@@ -190,7 +199,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverDoubleConstant() throws IOException {
+        void recoverDoubleConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getDouble", "()D")
                     .dconst(2.71828)
@@ -215,7 +225,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverStringConstant() throws IOException {
+        void recoverStringConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getString", "()Ljava/lang/String;")
                     .ldc("Hello, World!")
@@ -240,7 +251,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverNullConstant() throws IOException {
+        void recoverNullConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getNull", "()Ljava/lang/Object;")
                     .aconst_null()
@@ -265,7 +277,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverClassConstantDirect() throws IOException {
+        void recoverClassConstantDirect() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -289,13 +302,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Binary Operations Tests ==========
+    // Binary Operations Tests
 
     @Nested
-    class BinaryOperationsTests {
+    class BinaryOperationsTests
+    {
 
         @Test
-        void recoverIntAddition() throws IOException {
+        void recoverIntAddition() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -312,9 +327,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -327,7 +345,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntSubtraction() throws IOException {
+        void recoverIntSubtraction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("sub", "(II)I")
                     .iload(0)
@@ -344,9 +363,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -359,7 +381,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntMultiplication() throws IOException {
+        void recoverIntMultiplication() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("mul", "(II)I")
                     .iload(0)
@@ -376,9 +399,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -391,7 +417,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntDivision() throws IOException {
+        void recoverIntDivision() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("div", "(II)I")
                     .iload(0)
@@ -408,9 +435,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -423,7 +453,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntRemainder() throws IOException {
+        void recoverIntRemainder() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("rem", "(II)I")
                     .iload(0)
@@ -440,9 +471,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -455,7 +489,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLeftShift() throws IOException {
+        void recoverLeftShift() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("shl", "(II)I")
                     .iload(0)
@@ -472,9 +507,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -487,7 +525,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverRightShift() throws IOException {
+        void recoverRightShift() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("shr", "(II)I")
                     .iload(0)
@@ -504,9 +543,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -519,7 +561,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverUnsignedRightShift() throws IOException {
+        void recoverUnsignedRightShift() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("ushr", "(II)I")
                     .iload(0)
@@ -536,9 +579,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -551,7 +597,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongAddition() throws IOException {
+        void recoverLongAddition() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("add", "(JJ)J")
                     .lload(0)
@@ -568,9 +615,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -583,7 +633,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongSubtraction() throws IOException {
+        void recoverLongSubtraction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("sub", "(JJ)J")
                     .lload(0)
@@ -600,9 +651,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -615,7 +669,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongMultiplication() throws IOException {
+        void recoverLongMultiplication() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("mul", "(JJ)J")
                     .lload(0)
@@ -632,9 +687,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -647,7 +705,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongDivision() throws IOException {
+        void recoverLongDivision() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("div", "(JJ)J")
                     .lload(0)
@@ -664,9 +723,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -679,7 +741,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongComparison() throws IOException {
+        void recoverLongComparison() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("compare", "(JJ)I")
                     .lload(0)
@@ -696,9 +759,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -709,7 +775,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverFloatComparisonLess() throws IOException {
+        void recoverFloatComparisonLess() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("compare", "(FF)I")
                     .fload(0)
@@ -726,9 +793,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -739,7 +809,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverDoubleComparisonGreater() throws IOException {
+        void recoverDoubleComparisonGreater() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("compare", "(DD)I")
                     .dload(0)
@@ -756,9 +827,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof BinaryExpr);
@@ -769,7 +843,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverBooleanAnd() throws IOException {
+        void recoverBooleanAnd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("and", "(ZZ)Z")
                     .iload(0)
@@ -786,11 +861,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                        if (binOp.getOp() == BinaryOp.AND) {
+                        if (binOp.getOp() == BinaryOp.AND)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof BinaryExpr);
@@ -802,7 +881,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverBooleanOr() throws IOException {
+        void recoverBooleanOr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("or", "(ZZ)Z")
                     .iload(0)
@@ -819,11 +899,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                        if (binOp.getOp() == BinaryOp.OR) {
+                        if (binOp.getOp() == BinaryOp.OR)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof BinaryExpr);
@@ -835,7 +919,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverBooleanXor() throws IOException {
+        void recoverBooleanXor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("xor", "(ZZ)Z")
                     .iload(0)
@@ -852,11 +937,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                        if (binOp.getOp() == BinaryOp.XOR) {
+                        if (binOp.getOp() == BinaryOp.XOR)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof BinaryExpr);
@@ -868,13 +957,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Unary Operations Tests ==========
+    // Unary Operations Tests
 
     @Nested
-    class UnaryOperationsTests {
+    class UnaryOperationsTests
+    {
 
         @Test
-        void recoverIntNegation() throws IOException {
+        void recoverIntNegation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("negate", "(I)I")
                     .iload(0)
@@ -890,9 +981,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof UnaryExpr);
@@ -905,7 +999,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntToLongConversion() throws IOException {
+        void recoverIntToLongConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toLong", "(I)J")
                     .iload(0)
@@ -921,11 +1016,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.I2L) {
+                        if (unary.getOp() == UnaryOp.I2L)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -937,7 +1036,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverLongToIntConversion() throws IOException {
+        void recoverLongToIntConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toInt", "(J)I")
                     .lload(0)
@@ -953,11 +1053,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.L2I) {
+                        if (unary.getOp() == UnaryOp.L2I)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -969,7 +1073,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntToByteConversion() throws IOException {
+        void recoverIntToByteConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toByte", "(I)B")
                     .iload(0)
@@ -985,11 +1090,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.I2B) {
+                        if (unary.getOp() == UnaryOp.I2B)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -1001,7 +1110,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntToCharConversion() throws IOException {
+        void recoverIntToCharConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toChar", "(I)C")
                     .iload(0)
@@ -1017,11 +1127,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.I2C) {
+                        if (unary.getOp() == UnaryOp.I2C)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -1033,7 +1147,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntToShortConversion() throws IOException {
+        void recoverIntToShortConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toShort", "(I)S")
                     .iload(0)
@@ -1049,11 +1164,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.I2S) {
+                        if (unary.getOp() == UnaryOp.I2S)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -1065,7 +1184,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntToFloatConversion() throws IOException {
+        void recoverIntToFloatConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toFloat", "(I)F")
                     .iload(0)
@@ -1081,11 +1201,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.I2F) {
+                        if (unary.getOp() == UnaryOp.I2F)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -1097,7 +1221,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverIntToDoubleConversion() throws IOException {
+        void recoverIntToDoubleConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toDouble", "(I)D")
                     .iload(0)
@@ -1113,11 +1238,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof UnaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof UnaryOpInstruction)
+                    {
                         UnaryOpInstruction unary = (UnaryOpInstruction) instr;
-                        if (unary.getOp() == UnaryOp.I2D) {
+                        if (unary.getOp() == UnaryOp.I2D)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof CastExpr);
@@ -1129,13 +1258,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Array Operations Tests ==========
+    // Array Operations Tests
 
     @Nested
-    class ArrayOperationsTests {
+    class ArrayOperationsTests
+    {
 
         @Test
-        void recoverArrayLoadInt() throws IOException {
+        void recoverArrayLoadInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getElement", "([II)I")
                     .aload(0)
@@ -1152,9 +1283,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isLoad()) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isLoad())
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof ArrayAccessExpr);
@@ -1165,7 +1299,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverArrayLoadWithComputedIndex() throws IOException {
+        void recoverArrayLoadWithComputedIndex() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getElement", "([II)I")
                     .aload(0)
@@ -1184,9 +1319,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isLoad()) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isLoad())
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof ArrayAccessExpr);
@@ -1199,7 +1337,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverArrayLength() throws IOException {
+        void recoverArrayLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("len", "([I)I")
                     .aload(0)
@@ -1215,9 +1354,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.ARRAYLENGTH) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.ARRAYLENGTH)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof FieldAccessExpr);
@@ -1230,7 +1372,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverNewArrayInstruction() throws IOException {
+        void recoverNewArrayInstruction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("createArray", "(I)[I")
                     .iload(0)
@@ -1246,9 +1389,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof NewArrayInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof NewArrayInstruction)
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof NewArrayExpr);
@@ -1259,13 +1405,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Field Access Tests ==========
+    // Field Access Tests
 
     @Nested
-    class FieldAccessTests {
+    class FieldAccessTests
+    {
 
         @Test
-        void recoverGetFieldInstruction() throws IOException {
+        void recoverGetFieldInstruction() throws IOException
+        {
             int publicAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .field(publicAccess, "value", "I")
@@ -1283,9 +1431,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isLoad()) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isLoad())
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof FieldAccessExpr);
@@ -1298,7 +1449,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverGetStaticField() throws IOException {
+        void recoverGetStaticField() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getOut", "()Ljava/io/PrintStream;")
                     .getstatic("java/lang/System", "out", "Ljava/io/PrintStream;")
@@ -1313,11 +1465,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof FieldAccessInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof FieldAccessInstruction)
+                    {
                         FieldAccessInstruction getField = (FieldAccessInstruction) instr;
-                        if (getField.isStatic() && getField.isLoad()) {
+                        if (getField.isStatic() && getField.isLoad())
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof FieldAccessExpr);
@@ -1332,13 +1488,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Type Operations Tests ==========
+    // Type Operations Tests
 
     @Nested
-    class TypeOperationsTests {
+    class TypeOperationsTests
+    {
 
         @Test
-        void recoverCastInstruction() throws IOException {
+        void recoverCastInstruction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("cast", "(Ljava/lang/Object;)Ljava/lang/String;")
                     .aload(0)
@@ -1354,9 +1512,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof TypeCheckInstruction && ((TypeCheckInstruction) instr).isCast()) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof TypeCheckInstruction && ((TypeCheckInstruction) instr).isCast())
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof CastExpr);
@@ -1367,7 +1528,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverInstanceOfInstruction() throws IOException {
+        void recoverInstanceOfInstruction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("check", "(Ljava/lang/Object;)Z")
                     .aload(0)
@@ -1383,9 +1545,12 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof TypeCheckInstruction && ((TypeCheckInstruction) instr).isInstanceOf()) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof TypeCheckInstruction && ((TypeCheckInstruction) instr).isInstanceOf())
+                    {
                         Expression expr = recoverer.recover(instr);
                         assertNotNull(expr);
                         assertTrue(expr instanceof InstanceOfExpr);
@@ -1399,7 +1564,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverNewInstructionDirect() throws IOException {
+        void recoverNewInstructionDirect() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1424,13 +1590,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Method Invocation Tests ==========
+    // Method Invocation Tests
 
     @Nested
-    class MethodInvocationTests {
+    class MethodInvocationTests
+    {
 
         @Test
-        void recoverStaticMethodCall() throws IOException {
+        void recoverStaticMethodCall() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1459,7 +1627,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverVirtualMethodCall() throws IOException {
+        void recoverVirtualMethodCall() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1488,7 +1657,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverInterfaceMethodCall() throws IOException {
+        void recoverInterfaceMethodCall() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1517,7 +1687,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverConstructorCallDirect() throws IOException {
+        void recoverConstructorCallDirect() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1547,7 +1718,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverMethodCallWithMultipleArguments() throws IOException {
+        void recoverMethodCallWithMultipleArguments() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1578,13 +1750,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Load Local Tests ==========
+    // Load Local Tests
 
     @Nested
-    class LoadLocalTests {
+    class LoadLocalTests
+    {
 
         @Test
-        void recoverLoadLocalAsThis() throws IOException {
+        void recoverLoadLocalAsThis() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicMethod("getThis", "()Lcom/test/Test;")
                     .aload(0)
@@ -1599,11 +1773,15 @@ class ExpressionRecovererTest {
             RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof LoadLocalInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof LoadLocalInstruction)
+                    {
                         LoadLocalInstruction load = (LoadLocalInstruction) instr;
-                        if (load.getLocalIndex() == 0) {
+                        if (load.getLocalIndex() == 0)
+                        {
                             Expression expr = recoverer.recover(instr);
                             assertNotNull(expr);
                             assertTrue(expr instanceof ThisExpr);
@@ -1616,13 +1794,15 @@ class ExpressionRecovererTest {
 
     }
 
-    // ========== Context Caching Tests ==========
+    // Context Caching Tests
 
     @Nested
-    class ContextCachingTests {
+    class ContextCachingTests
+    {
 
         @Test
-        void expressionCachingWorks() throws IOException {
+        void expressionCachingWorks() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()I")
                     .iconst(42)
@@ -1646,7 +1826,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void pendingNewInstructionHandling() throws IOException {
+        void pendingNewInstructionHandling() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1668,13 +1849,15 @@ class ExpressionRecovererTest {
         }
     }
 
-    // ========== Edge Cases Tests ==========
+    // Edge Cases Tests
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void recoverOperandWithMaterializedValue() throws IOException {
+        void recoverOperandWithMaterializedValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I")
                     .iload(0)
@@ -1701,7 +1884,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverOperandWithThisReference() throws IOException {
+        void recoverOperandWithThisReference() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicMethod("test", "()V")
                     .vreturn()
@@ -1725,7 +1909,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverOperandWithConstantValue() throws IOException {
+        void recoverOperandWithConstantValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1748,7 +1933,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverDefaultValueForUnsupportedInstruction() throws IOException {
+        void recoverDefaultValueForUnsupportedInstruction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -1771,7 +1957,8 @@ class ExpressionRecovererTest {
         }
 
         @Test
-        void recoverNestedBinaryOperations() throws IOException {
+        void recoverNestedBinaryOperations() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("complex", "(III)I")
                     .iload(0)
@@ -1791,18 +1978,23 @@ class ExpressionRecovererTest {
             ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
             BinaryOpInstruction mulInstr = null;
-            for (IRBlock block : ir.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : ir.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                        if (binOp.getOp() == BinaryOp.MUL) {
+                        if (binOp.getOp() == BinaryOp.MUL)
+                        {
                             mulInstr = binOp;
                         }
                     }
                 }
             }
 
-            if (mulInstr != null) {
+            if (mulInstr != null)
+            {
                 Expression expr = recoverer.recover(mulInstr);
                 assertNotNull(expr);
                 assertTrue(expr instanceof BinaryExpr);

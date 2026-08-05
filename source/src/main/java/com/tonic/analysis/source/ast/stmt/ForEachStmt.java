@@ -8,9 +8,10 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.Objects;
 
 /**
- * Represents an enhanced for loop (foreach): for (Type var : iterable) body
+ * An enhanced for loop over an iterable or array, with an optional label.
  */
-public final class ForEachStmt implements Statement {
+public final class ForEachStmt implements Statement
+{
 
     private VarDeclStmt variable;
     private Expression iterable;
@@ -19,8 +20,17 @@ public final class ForEachStmt implements Statement {
     private SourceLocation location;
     private ASTNode parent;
 
-    public ForEachStmt(VarDeclStmt variable, Expression iterable, Statement body,
-                       String label, SourceLocation location) {
+    /**
+     * Creates an enhanced for loop and parents its children to it.
+     * @param variable declaration of the loop variable
+     * @param iterable the iterated expression
+     * @param body the loop body
+     * @param label loop label, or null for none
+     * @param location source location, or null for unknown
+     * @throws NullPointerException if variable, iterable, or body is null
+     */
+    public ForEachStmt(VarDeclStmt variable, Expression iterable, Statement body, String label, SourceLocation location)
+    {
         this.variable = Objects.requireNonNull(variable, "variable cannot be null");
         this.iterable = Objects.requireNonNull(iterable, "iterable cannot be null");
         this.body = Objects.requireNonNull(body, "body cannot be null");
@@ -32,88 +42,175 @@ public final class ForEachStmt implements Statement {
         body.setParent(this);
     }
 
-    public ForEachStmt(VarDeclStmt variable, Expression iterable, Statement body) {
+    /**
+     * Creates an unlabeled enhanced for loop with an unknown location.
+     * @param variable declaration of the loop variable
+     * @param iterable the iterated expression
+     * @param body the loop body
+     * @throws NullPointerException if variable, iterable, or body is null
+     */
+    public ForEachStmt(VarDeclStmt variable, Expression iterable, Statement body)
+    {
         this(variable, iterable, body, null, SourceLocation.UNKNOWN);
     }
 
-    public VarDeclStmt getVariable() {
+    /**
+     * @return the variable
+     */
+    public VarDeclStmt getVariable()
+    {
         return variable;
     }
 
-    public void setVariable(VarDeclStmt variable) {
+    /**
+     * Replaces the loop variable declaration, reparenting old and new nodes.
+     * @param variable the new loop variable declaration
+     */
+    public void setVariable(VarDeclStmt variable)
+    {
         withVariable(variable);
     }
 
-    public Expression getIterable() {
+    /**
+     * @return the iterable
+     */
+    public Expression getIterable()
+    {
         return iterable;
     }
 
-      public void setIterable(Expression iterable) {
+      /**
+       * Replaces the iterated expression, reparenting old and new nodes.
+       * @param iterable the new iterated expression
+       */
+      public void setIterable(Expression iterable)
+      {
         withIterable(iterable);
-    }    public Statement getBody() {
+    }
+
+    /**
+     * @return the loop body
+     */
+    public Statement getBody()
+    {
         return body;
     }
 
-        public void setBody(Statement body) {
+        /**
+         * Replaces the loop body, reparenting old and new nodes.
+         * @param body the new body
+         */
+        public void setBody(Statement body)
+        {
         withBody(body);
-    }  public void setLabel(String label) {
+    }
+
+    /**
+     * Sets the label used by labeled break and continue targeting this loop.
+     *
+     * @param label the label, or null to remove it
+     */
+    public void setLabel(String label)
+    {
         this.label = label;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     @Override
-    public String getLabel() {
+    public String getLabel()
+    {
         return label;
     }
 
-    public ForEachStmt withVariable(VarDeclStmt variable) {
+    /**
+     * Replaces the loop variable declaration, reparenting old and new nodes.
+     * @param variable the new loop variable declaration
+     * @return this statement
+     */
+    public ForEachStmt withVariable(VarDeclStmt variable)
+    {
         ASTNode previous = this.variable;
         this.variable = variable;
-        if (variable != null) {
+        if (variable != null)
+        {
             variable.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public ForEachStmt withIterable(Expression iterable) {
+    /**
+     * Replaces the iterated expression, reparenting old and new nodes.
+     * @param iterable the new iterated expression
+     * @return this statement
+     */
+    public ForEachStmt withIterable(Expression iterable)
+    {
         ASTNode previous = this.iterable;
         this.iterable = iterable;
-        if (iterable != null) {
+        if (iterable != null)
+        {
             iterable.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public ForEachStmt withBody(Statement body) {
+    /**
+     * Replaces the loop body, reparenting old and new nodes.
+     * @param body the new body
+     * @return this statement
+     */
+    public ForEachStmt withBody(Statement body)
+    {
         ASTNode previous = this.body;
         this.body = body;
-        if (body != null) {
+        if (body != null)
+        {
             body.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public ForEachStmt withLabel(String label) {
+    /**
+     * Sets the loop label.
+     * @param label the new label, or null for none
+     * @return this statement
+     */
+    public ForEachStmt withLabel(String label)
+    {
         this.label = label;
         return this;
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>();
         if (variable != null) children.add(variable);
         if (iterable != null) children.add(iterable);
@@ -122,19 +219,22 @@ public final class ForEachStmt implements Statement {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitForEach(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         String labelStr = label != null ? label + ": " : "";
         return labelStr + "for (" + variable.getType() + " " + variable.getName() +
                " : " + iterable + ") ...";
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

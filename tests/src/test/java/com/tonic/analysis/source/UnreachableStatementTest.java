@@ -32,21 +32,24 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Java rejects unreachable statements outright, so such output does not compile - a defect class
  * the recompile sweeps cannot see, because they re-lower through this project's own parser, which
  * does not enforce the rule.
- * <p>
+ *
  * The invariant is checked on the recovered AST rather than by shelling out to a compiler: it is
  * exact, needs no external classpath for the corpus under test, and states precisely what the
  * elimination pass guarantees.
  */
-class UnreachableStatementTest {
+class UnreachableStatementTest
+{
 
     private static final Path DIR =
             Paths.get("C:/Users/zacke/IdeaProjects/DemoApplication/build/classes/java/main");
 
     @Test
-    void decompiledCorpusHasNoUnreachableStatements() throws Exception {
+    void decompiledCorpusHasNoUnreachableStatements() throws Exception
+    {
         assumeTrue(Files.isDirectory(DIR), "demo classes not built at " + DIR);
         List<Path> classes;
-        try (Stream<Path> walk = Files.walk(DIR)) {
+        try (Stream<Path> walk = Files.walk(DIR))
+        {
             classes = walk.filter(p -> p.toString().endsWith(".class")).sorted().collect(java.util.stream.Collectors.toList());
         }
         assumeTrue(!classes.isEmpty(), "no classes found");
@@ -54,15 +57,18 @@ class UnreachableStatementTest {
         ClassPool pool = TestUtils.emptyPool();
         List<String> offenders = new ArrayList<>();
         int scanned = 0;
-        for (Path p : classes) {
+        for (Path p : classes)
+        {
             ClassFile cf = pool.loadClass(Files.readAllBytes(p));
             String source = ClassDecompiler.decompile(cf);
-            if (source.contains("@interface ")) {
+            if (source.contains("@interface "))
+            {
                 continue;
             }
             scanned++;
             List<String> found = unreachableIn(source);
-            if (!found.isEmpty()) {
+            if (!found.isEmpty())
+            {
                 offenders.add(p.getFileName() + " -> " + String.join(", ", found));
             }
         }
@@ -77,43 +83,56 @@ class UnreachableStatementTest {
      * message. A parse failure is reported rather than swallowed: silently returning "clean" would make
      * this whole check pass vacuously.
      */
-    private static List<String> unreachableIn(String source) {
+    private static List<String> unreachableIn(String source)
+    {
         List<String> out = new ArrayList<>();
         ASTNode root = JavaParser.create().parse(source);
         walk(root, out);
         return out;
     }
 
-    private static void walk(ASTNode node, List<String> out) {
-        if (node instanceof BlockStmt) {
+    private static void walk(ASTNode node, List<String> out)
+    {
+        if (node instanceof BlockStmt)
+        {
             check(((BlockStmt) node).getStatements(), out);
-        } else if (node instanceof SwitchStmt) {
-            for (SwitchCase c : ((SwitchStmt) node).getCases()) {
-                if (c.statements() != null) {
+        }
+        else if (node instanceof SwitchStmt)
+        {
+            for (SwitchCase c : ((SwitchStmt) node).getCases())
+            {
+                if (c.statements() != null)
+                {
                     check(c.statements(), out);
                 }
             }
         }
-        for (ASTNode child : node.getChildren()) {
+        for (ASTNode child : node.getChildren())
+        {
             walk(child, out);
         }
     }
 
-    private static void check(List<Statement> stmts, List<String> out) {
-        for (int i = 0; i < stmts.size() - 1; i++) {
-            if (isUnconditionalExit(stmts.get(i))) {
+    private static void check(List<Statement> stmts, List<String> out)
+    {
+        for (int i = 0; i < stmts.size() - 1; i++)
+        {
+            if (isUnconditionalExit(stmts.get(i)))
+            {
                 out.add(describe(stmts.get(i)) + " followed by " + describe(stmts.get(i + 1)));
                 return;
             }
         }
     }
 
-    private static boolean isUnconditionalExit(Statement stmt) {
+    private static boolean isUnconditionalExit(Statement stmt)
+    {
         return stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
                 || stmt instanceof BreakStmt || stmt instanceof ContinueStmt;
     }
 
-    private static String describe(Statement stmt) {
+    private static String describe(Statement stmt)
+    {
         return stmt.getClass().getSimpleName();
     }
 
@@ -123,7 +142,8 @@ class UnreachableStatementTest {
      * pipeline cannot handle at all is not this check's concern and is skipped.
      */
     @Test
-    void sweptJarHasNoUnreachableStatements() throws Exception {
+    void sweptJarHasNoUnreachableStatements() throws Exception
+    {
         String jarProp = System.getProperty("verify.sweep.jar");
         assumeTrue(jarProp != null, "set -Dverify.sweep.jar=<path-to-jar> to run the wider scan");
         Path jar = Paths.get(jarProp);
@@ -132,37 +152,50 @@ class UnreachableStatementTest {
         ClassPool pool = new ClassPool();
         List<String> offenders = new ArrayList<>();
         int scanned = 0;
-        try (java.util.jar.JarInputStream jis =
-                     new java.util.jar.JarInputStream(Files.newInputStream(jar))) {
+        try (java.util.jar.JarInputStream jis = new java.util.jar.JarInputStream(Files.newInputStream(jar)))
+        {
             java.util.jar.JarEntry e;
-            while ((e = jis.getNextJarEntry()) != null) {
+            while ((e = jis.getNextJarEntry()) != null)
+            {
                 String n = e.getName();
-                if (!n.endsWith(".class") || n.contains("module-info") || n.contains("package-info")) {
+                if (!n.endsWith(".class") || n.contains("module-info") || n.contains("package-info"))
+                {
                     continue;
                 }
                 ClassFile cf;
-                try {
+                try
+                {
                     cf = pool.loadClass(new ByteArrayInputStream(jis.readAllBytes()));
-                } catch (Throwable unparseable) {
+                }
+                catch (Throwable unparseable)
+                {
                     continue;
                 }
                 String source;
-                try {
+                try
+                {
                     source = ClassDecompiler.decompile(cf);
-                } catch (Throwable pipelineFailure) {
+                }
+                catch (Throwable pipelineFailure)
+                {
                     continue;
                 }
-                if (source.contains("@interface ")) {
+                if (source.contains("@interface "))
+                {
                     continue;
                 }
                 List<String> found;
-                try {
+                try
+                {
                     found = unreachableIn(source);
-                } catch (RuntimeException unparseableOutput) {
+                }
+                catch (RuntimeException unparseableOutput)
+                {
                     continue;
                 }
                 scanned++;
-                if (!found.isEmpty()) {
+                if (!found.isEmpty())
+                {
                     offenders.add(cf.getClassName() + " -> " + String.join(", ", found));
                 }
             }
@@ -178,7 +211,8 @@ class UnreachableStatementTest {
      * stays inside one case's statement list. This guards that the walk itself never flags that shape.
      */
     @Test
-    void switchCaseBreakIsNotFlagged() throws Exception {
+    void switchCaseBreakIsNotFlagged() throws Exception
+    {
         String source = "public class SwCase {\n"
                 + "    public static int pick(int n) {\n"
                 + "        int r = 0;\n"
@@ -199,7 +233,8 @@ class UnreachableStatementTest {
      * source string precisely because javac would refuse to compile it, which is the whole point.
      */
     @Test
-    void detectorReportsAStatementAfterAnExit() {
+    void detectorReportsAStatementAfterAnExit()
+    {
         String bad = "public class Dead {\n"
                 + "    public static void f() {\n"
                 + "        while (true) {\n"
@@ -215,9 +250,12 @@ class UnreachableStatementTest {
                 "the continue/return tail must be reported, got: " + found);
     }
 
-    /** A clean method must not be flagged, so the detector is not simply reporting everything. */
+    /**
+     * A clean method must not be flagged, so the detector is not simply reporting everything.
+     */
     @Test
-    void detectorAcceptsCleanMethods() {
+    void detectorAcceptsCleanMethods()
+    {
         String source = "public class Live {\n"
                 + "    public static int f() {\n"
                 + "        int r = 1;\n"

@@ -42,7 +42,8 @@ MethodReference caller = new MethodReference(
 );
 
 Set<MethodReference> callees = cg.getCallees(caller);
-for (MethodReference callee : callees) {
+for (MethodReference callee : callees)
+{
     System.out.println("  -> " + callee.getOwner() + "." + callee.getName());
 }
 ```

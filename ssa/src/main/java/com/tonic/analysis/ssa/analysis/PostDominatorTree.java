@@ -6,11 +6,10 @@ import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import java.util.*;
 
 /**
- * Computes post-dominator tree for a CFG.
- * A block B post-dominates block A if every path from A to exit must go through B.
- * This is computed by running dominator analysis on the reverse CFG.
+ * Post-dominator tree for a CFG, computed by dominator analysis on the reverse graph.
  */
-public class PostDominatorTree {
+public class PostDominatorTree
+{
 
     private final IRMethod method;
     private final Map<IRBlock, IRBlock> immediatePostDominator;
@@ -19,7 +18,12 @@ public class PostDominatorTree {
     private final Map<IRBlock, Integer> reversePostorder;
     private final Set<IRBlock> exitBlocks;
 
-    public PostDominatorTree(IRMethod method) {
+    /**
+     * Creates an empty tree for the given method.
+     * @param method the method to analyze
+     */
+    public PostDominatorTree(IRMethod method)
+    {
         this.method = method;
         this.immediatePostDominator = new HashMap<>();
         this.postDominatorTreeChildren = new HashMap<>();
@@ -28,47 +32,78 @@ public class PostDominatorTree {
         this.exitBlocks = new HashSet<>();
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public Map<IRBlock, IRBlock> getImmediatePostDominator() {
+    /**
+     * @return the immediate post dominator
+     */
+    public Map<IRBlock, IRBlock> getImmediatePostDominator()
+    {
         return immediatePostDominator;
     }
 
-    public Map<IRBlock, Set<IRBlock>> getPostDominatorTreeChildren() {
+    /**
+     * @return the post dominator tree children
+     */
+    public Map<IRBlock, Set<IRBlock>> getPostDominatorTreeChildren()
+    {
         return postDominatorTreeChildren;
     }
 
-    public Map<IRBlock, Integer> getReversePreorder() {
+    /**
+     * @return the reverse preorder
+     */
+    public Map<IRBlock, Integer> getReversePreorder()
+    {
         return reversePreorder;
     }
 
-    public Map<IRBlock, Integer> getReversePostorder() {
+    /**
+     * @return the reverse postorder
+     */
+    public Map<IRBlock, Integer> getReversePostorder()
+    {
         return reversePostorder;
     }
 
-    public Set<IRBlock> getExitBlocks() {
+    /**
+     * @return the exit blocks
+     */
+    public Set<IRBlock> getExitBlocks()
+    {
         return exitBlocks;
     }
 
     /**
      * Computes the post-dominator tree.
      */
-    public void compute() {
+    public void compute()
+    {
         if (method.getEntryBlock() == null) return;
 
         findExitBlocks();
-        if (exitBlocks.isEmpty()) {
-            for (IRBlock block : method.getBlocks()) {
-                if (isExitTerminator(block)) {
+        if (exitBlocks.isEmpty())
+        {
+            for (IRBlock block : method.getBlocks())
+            {
+                if (isExitTerminator(block))
+                {
                     exitBlocks.add(block);
                 }
             }
         }
-        if (exitBlocks.isEmpty()) {
-            for (IRBlock block : method.getBlocks()) {
-                if (block.getSuccessors().isEmpty()) {
+        if (exitBlocks.isEmpty())
+        {
+            for (IRBlock block : method.getBlocks())
+            {
+                if (block.getSuccessors().isEmpty())
+                {
                     exitBlocks.add(block);
                 }
             }
@@ -79,56 +114,70 @@ public class PostDominatorTree {
         buildPostDominatorTree();
     }
 
-    private boolean isExitTerminator(IRBlock block) {
+    private boolean isExitTerminator(IRBlock block)
+    {
         if (block == null || block.getInstructions().isEmpty()) return false;
         var terminator = block.getTerminator();
         if (terminator == null) return false;
         return terminator instanceof ReturnInstruction;
     }
 
-    private void findExitBlocks() {
-        for (IRBlock block : method.getBlocks()) {
-            if (isExitTerminator(block)) {
+    private void findExitBlocks()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (isExitTerminator(block))
+            {
                 exitBlocks.add(block);
             }
         }
     }
 
-    private void computeReversePostOrder() {
+    private void computeReversePostOrder()
+    {
         Set<IRBlock> visited = new HashSet<>();
         List<IRBlock> postorderList = new ArrayList<>();
 
-        for (IRBlock exit : exitBlocks) {
+        for (IRBlock exit : exitBlocks)
+        {
             dfsReversePostorder(exit, visited, postorderList);
         }
 
         int pre = 0;
         int post = 0;
-        for (int i = postorderList.size() - 1; i >= 0; i--) {
+        for (int i = postorderList.size() - 1; i >= 0; i--)
+        {
             reversePreorder.put(postorderList.get(i), pre++);
         }
-        for (IRBlock block : postorderList) {
+        for (IRBlock block : postorderList)
+        {
             reversePostorder.put(block, post++);
         }
     }
 
-    private void dfsReversePostorder(IRBlock block, Set<IRBlock> visited, List<IRBlock> result) {
+    private void dfsReversePostorder(IRBlock block, Set<IRBlock> visited, List<IRBlock> result)
+    {
         if (visited.contains(block)) return;
         visited.add(block);
-        for (IRBlock pred : block.getPredecessors()) {
+        for (IRBlock pred : block.getPredecessors())
+        {
             dfsReversePostorder(pred, visited, result);
         }
         result.add(block);
     }
 
-    private void computePostDominators() {
-        for (IRBlock exit : exitBlocks) {
+    private void computePostDominators()
+    {
+        for (IRBlock exit : exitBlocks)
+        {
             immediatePostDominator.put(exit, exit);
         }
 
         List<IRBlock> rpo = new ArrayList<>();
-        for (IRBlock block : method.getBlocks()) {
-            if (reversePreorder.containsKey(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (reversePreorder.containsKey(block))
+            {
                 rpo.add(block);
             }
         }
@@ -138,24 +187,32 @@ public class PostDominatorTree {
         int iterations = 0;
 
         boolean changed = true;
-        while (changed && iterations < maxIterations) {
+        while (changed && iterations < maxIterations)
+        {
             iterations++;
             changed = false;
-            for (IRBlock block : rpo) {
+            for (IRBlock block : rpo)
+            {
                 if (exitBlocks.contains(block)) continue;
 
                 IRBlock newIpdom = null;
-                for (IRBlock succ : block.getSuccessors()) {
-                    if (immediatePostDominator.containsKey(succ)) {
-                        if (newIpdom == null) {
+                for (IRBlock succ : block.getSuccessors())
+                {
+                    if (immediatePostDominator.containsKey(succ))
+                    {
+                        if (newIpdom == null)
+                        {
                             newIpdom = succ;
-                        } else {
+                        }
+                        else
+                        {
                             newIpdom = intersect(succ, newIpdom);
                         }
                     }
                 }
 
-                if (newIpdom != null && immediatePostDominator.get(block) != newIpdom) {
+                if (newIpdom != null && immediatePostDominator.get(block) != newIpdom)
+                {
                     immediatePostDominator.put(block, newIpdom);
                     changed = true;
                 }
@@ -163,7 +220,8 @@ public class PostDominatorTree {
         }
     }
 
-    private IRBlock intersect(IRBlock b1, IRBlock b2) {
+    private IRBlock intersect(IRBlock b1, IRBlock b2)
+    {
         if (b1 == null) return b2;
         if (b2 == null) return b1;
 
@@ -173,7 +231,8 @@ public class PostDominatorTree {
         int maxIterations = method.getBlocks().size() * 2;
         int iterations = 0;
 
-        while (finger1 != finger2 && iterations < maxIterations) {
+        while (finger1 != finger2 && iterations < maxIterations)
+        {
             iterations++;
 
             int order1 = getReversePostorder(finger1);
@@ -182,14 +241,16 @@ public class PostDominatorTree {
             if (order1 < 0) return b2;
             if (order2 < 0) return b1;
 
-            while (order1 < order2 && iterations < maxIterations) {
+            while (order1 < order2 && iterations < maxIterations)
+            {
                 iterations++;
                 finger1 = immediatePostDominator.get(finger1);
                 if (finger1 == null) return b2;
                 order1 = getReversePostorder(finger1);
                 if (order1 < 0) return b2;
             }
-            while (order2 < order1 && iterations < maxIterations) {
+            while (order2 < order1 && iterations < maxIterations)
+            {
                 iterations++;
                 finger2 = immediatePostDominator.get(finger2);
                 if (finger2 == null) return b1;
@@ -200,19 +261,24 @@ public class PostDominatorTree {
         return finger1;
     }
 
-    private int getReversePostorder(IRBlock block) {
+    private int getReversePostorder(IRBlock block)
+    {
         if (block == null) return -1;
         return reversePostorder.getOrDefault(block, -1);
     }
 
-    private void buildPostDominatorTree() {
-        for (IRBlock block : method.getBlocks()) {
+    private void buildPostDominatorTree()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             postDominatorTreeChildren.put(block, new HashSet<>());
         }
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock ipdom = immediatePostDominator.get(block);
-            if (ipdom != null && ipdom != block) {
+            if (ipdom != null && ipdom != block)
+            {
                 postDominatorTreeChildren.computeIfAbsent(ipdom, k -> new HashSet<>()).add(block);
             }
         }
@@ -220,36 +286,37 @@ public class PostDominatorTree {
 
     /**
      * Gets the immediate post-dominator of the specified block.
-     *
      * @param block the block to query
      * @return the immediate post-dominator, or null if none exists
      */
-    public IRBlock getImmediatePostDominator(IRBlock block) {
+    public IRBlock getImmediatePostDominator(IRBlock block)
+    {
         return immediatePostDominator.get(block);
     }
 
     /**
      * Gets the children of the specified block in the post-dominator tree.
-     *
      * @param block the block to query
      * @return the set of post-dominator tree children
      */
-    public Set<IRBlock> getPostDominatorTreeChildren(IRBlock block) {
+    public Set<IRBlock> getPostDominatorTreeChildren(IRBlock block)
+    {
         return postDominatorTreeChildren.getOrDefault(block, Collections.emptySet());
     }
 
     /**
      * Checks if block A post-dominates block B.
      * A post-dominates B if every path from B to exit must go through A.
-     *
      * @param a the potential post-dominator
      * @param b the block to test
      * @return true if a post-dominates b
      */
-    public boolean postDominates(IRBlock a, IRBlock b) {
+    public boolean postDominates(IRBlock a, IRBlock b)
+    {
         if (a == b) return true;
         IRBlock runner = b;
-        while (runner != null) {
+        while (runner != null)
+        {
             if (runner == a) return true;
             IRBlock ipdom = immediatePostDominator.get(runner);
             if (ipdom == runner) break;
@@ -260,23 +327,23 @@ public class PostDominatorTree {
 
     /**
      * Checks if block A strictly post-dominates block B.
-     *
      * @param a the potential post-dominator
      * @param b the block to test
      * @return true if a strictly post-dominates b
      */
-    public boolean strictlyPostDominates(IRBlock a, IRBlock b) {
+    public boolean strictlyPostDominates(IRBlock a, IRBlock b)
+    {
         return a != b && postDominates(a, b);
     }
 
     /**
      * Finds the merge point for an if-then-else by finding the immediate post-dominator
      * of the branch block. The merge point is the first block all paths must pass through.
-     *
      * @param branchBlock the block containing the conditional branch
      * @return the merge point block, or null if not found
      */
-    public IRBlock findMergePoint(IRBlock branchBlock) {
+    public IRBlock findMergePoint(IRBlock branchBlock)
+    {
         return getImmediatePostDominator(branchBlock);
     }
 }

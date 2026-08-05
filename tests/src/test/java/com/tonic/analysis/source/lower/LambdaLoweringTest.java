@@ -19,13 +19,15 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LambdaLoweringTest {
+class LambdaLoweringTest
+{
 
     private ASTLowerer lowerer;
     private JavaParser parser;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         ConstPool constPool = new ConstPool();
@@ -35,10 +37,12 @@ class LambdaLoweringTest {
     }
 
     @Nested
-    class SimpleLambdaTests {
+    class SimpleLambdaTests
+    {
 
         @Test
-        void testNoCaptureLambdaExpression() {
+        void testNoCaptureLambdaExpression()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Supplier;\n" +
                 "public class Test {\n" +
@@ -60,7 +64,8 @@ class LambdaLoweringTest {
         }
 
         @Test
-        void testSingleParamLambda() {
+        void testSingleParamLambda()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Function;\n" +
                 "public class Test {\n" +
@@ -82,7 +87,8 @@ class LambdaLoweringTest {
         }
 
         @Test
-        void testMultiParamLambda() {
+        void testMultiParamLambda()
+        {
             String source = "package test;\n" +
                 "import java.util.function.BiFunction;\n" +
                 "public class Test {\n" +
@@ -105,10 +111,12 @@ class LambdaLoweringTest {
     }
 
     @Nested
-    class BlockBodyLambdaTests {
+    class BlockBodyLambdaTests
+    {
 
         @Test
-        void testBlockBodyLambda() {
+        void testBlockBodyLambda()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Function;\n" +
                 "public class Test {\n" +
@@ -134,10 +142,12 @@ class LambdaLoweringTest {
     }
 
     @Nested
-    class CapturingLambdaTests {
+    class CapturingLambdaTests
+    {
 
         @Test
-        void testCapturingLocalVariable() {
+        void testCapturingLocalVariable()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Supplier;\n" +
                 "public class Test {\n" +
@@ -165,10 +175,12 @@ class LambdaLoweringTest {
     }
 
     @Nested
-    class MethodReferenceTests {
+    class MethodReferenceTests
+    {
 
         @Test
-        void testStaticMethodReference() {
+        void testStaticMethodReference()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Function;\n" +
                 "public class Test {\n" +
@@ -190,7 +202,8 @@ class LambdaLoweringTest {
         }
 
         @Test
-        void testInstanceMethodReference() {
+        void testInstanceMethodReference()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Function;\n" +
                 "public class Test {\n" +
@@ -212,7 +225,8 @@ class LambdaLoweringTest {
         }
 
         @Test
-        void testConstructorReference() {
+        void testConstructorReference()
+        {
             String source = "package test;\n" +
                 "import java.util.function.Supplier;\n" +
                 "import java.util.ArrayList;\n" +
@@ -235,16 +249,22 @@ class LambdaLoweringTest {
         }
     }
 
-    private boolean hasInvokeDynamic(IRMethod ir) {
+    private boolean hasInvokeDynamic(IRMethod ir)
+    {
         return findInvokeDynamic(ir) != null;
     }
 
-    private InvokeInstruction findInvokeDynamic(IRMethod ir) {
-        for (var block : ir.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof InvokeInstruction) {
+    private InvokeInstruction findInvokeDynamic(IRMethod ir)
+    {
+        for (var block : ir.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction invoke = (InvokeInstruction) instr;
-                    if (invoke.getInvokeType() == InvokeType.DYNAMIC) {
+                    if (invoke.getInvokeType() == InvokeType.DYNAMIC)
+                    {
                         return invoke;
                     }
                 }

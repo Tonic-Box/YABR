@@ -12,27 +12,32 @@ import java.io.ByteArrayInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassPoolTest {
+class ClassPoolTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
     @Test
-    void emptyPoolHasNoClasses() {
+    void emptyPoolHasNoClasses()
+    {
         assertTrue(pool.getClasses().isEmpty(), "Empty pool should have no classes");
     }
 
     @Test
-    void getNonexistentClassReturnsNull() {
+    void getNonexistentClassReturnsNull()
+    {
         assertNull(pool.get("com/nonexistent/Class"));
     }
 
     @Test
-    void createNewClassAddsToPool() throws IOException {
+    void createNewClassAddsToPool() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/NewClass", access);
 
@@ -42,7 +47,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void createNewClassSetsAccessFlags() throws IOException {
+    void createNewClassSetsAccessFlags() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setFinal().build();
         ClassFile cf = pool.createNewClass("com/test/FinalClass", access);
 
@@ -50,7 +56,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void createNewClassSetsSuperclass() throws IOException {
+    void createNewClassSetsSuperclass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Child", access);
 
@@ -58,7 +65,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void createNewClassAddsDefaultConstructor() throws IOException {
+    void createNewClassAddsDefaultConstructor() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = ClassFactory.createClass(pool, "com/test/WithInit", access);
 
@@ -68,7 +76,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void createNewClassAddsClassInitializer() throws IOException {
+    void createNewClassAddsClassInitializer() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = ClassFactory.createClass(pool, "com/test/WithClinit", access);
 
@@ -78,7 +87,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void createNewClassWithSlashSeparators() throws IOException {
+    void createNewClassWithSlashSeparators() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/deep/nested/package/TestClass", access);
 
@@ -86,37 +96,38 @@ class ClassPoolTest {
     }
 
     @Test
-    void createNewClassRejectsNullName() {
+    void createNewClassRejectsNullName()
+    {
         int access = new AccessBuilder().setPublic().build();
-        assertThrows(IllegalArgumentException.class, () ->
-                pool.createNewClass(null, access));
+        assertThrows(IllegalArgumentException.class, () -> pool.createNewClass(null, access));
     }
 
     @Test
-    void createNewClassRejectsEmptyName() {
+    void createNewClassRejectsEmptyName()
+    {
         int access = new AccessBuilder().setPublic().build();
-        assertThrows(IllegalArgumentException.class, () ->
-                pool.createNewClass("", access));
+        assertThrows(IllegalArgumentException.class, () -> pool.createNewClass("", access));
     }
 
     @Test
-    void createNewClassRejectsDotSeparators() {
+    void createNewClassRejectsDotSeparators()
+    {
         int access = new AccessBuilder().setPublic().build();
-        assertThrows(IllegalArgumentException.class, () ->
-                pool.createNewClass("com.test.DotClass", access));
+        assertThrows(IllegalArgumentException.class, () -> pool.createNewClass("com.test.DotClass", access));
     }
 
     @Test
-    void createNewClassRejectsDuplicateName() throws IOException {
+    void createNewClassRejectsDuplicateName() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Duplicate", access);
 
-        assertThrows(IllegalArgumentException.class, () ->
-                pool.createNewClass("com/test/Duplicate", access));
+        assertThrows(IllegalArgumentException.class, () -> pool.createNewClass("com/test/Duplicate", access));
     }
 
     @Test
-    void putAndGetClass() throws IOException {
+    void putAndGetClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/PutGet", access);
 
@@ -125,7 +136,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void putAddsClassToPool() throws IOException {
+    void putAddsClassToPool() throws IOException
+    {
         ClassPool otherPool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = otherPool.createNewClass("com/test/FromOther", access);
@@ -136,7 +148,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void loadClassFromBytes() throws IOException {
+    void loadClassFromBytes() throws IOException
+    {
         ClassPool sourcePool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile original = sourcePool.createNewClass("com/test/LoadFromBytes", access);
@@ -149,7 +162,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void loadClassAddsToPool() throws IOException {
+    void loadClassAddsToPool() throws IOException
+    {
         ClassPool sourcePool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile original = sourcePool.createNewClass("com/test/AddedByLoad", access);
@@ -161,7 +175,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void poolCanHoldMultipleClasses() throws IOException {
+    void poolCanHoldMultipleClasses() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -174,7 +189,8 @@ class ClassPoolTest {
     }
 
     @Test
-    void getClassesMaintainsInsertionOrder() throws IOException {
+    void getClassesMaintainsInsertionOrder() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/First", access);
         pool.createNewClass("com/test/Second", access);
@@ -186,9 +202,11 @@ class ClassPoolTest {
     }
 
     @Nested
-    class LoadingEdgeCases {
+    class LoadingEdgeCases
+    {
         @Test
-        void loadClassFromInputStream() throws IOException {
+        void loadClassFromInputStream() throws IOException
+        {
             ClassPool sourcePool = TestUtils.emptyPool();
             int access = new AccessBuilder().setPublic().build();
             ClassFile original = sourcePool.createNewClass("com/test/StreamClass", access);
@@ -202,7 +220,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void putMultipleClassesSeparately() throws IOException {
+        void putMultipleClassesSeparately() throws IOException
+        {
             ClassPool sourcePool = TestUtils.emptyPool();
             int access = new AccessBuilder().setPublic().build();
 
@@ -218,7 +237,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void getReturnsNullForPartialMatch() throws IOException {
+        void getReturnsNullForPartialMatch() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             pool.createNewClass("com/test/MyClass", access);
 
@@ -229,9 +249,11 @@ class ClassPoolTest {
     }
 
     @Nested
-    class ClassCreationVariations {
+    class ClassCreationVariations
+    {
         @Test
-        void createAbstractClass() throws IOException {
+        void createAbstractClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setAbstract().build();
             ClassFile cf = pool.createNewClass("com/test/AbstractClass", access);
 
@@ -239,7 +261,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void createFinalClass() throws IOException {
+        void createFinalClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setFinal().build();
             ClassFile cf = pool.createNewClass("com/test/FinalClass", access);
 
@@ -247,7 +270,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void createInterfaceClass() throws IOException {
+        void createInterfaceClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile cf = pool.createNewClass("com/test/MyInterface", access);
 
@@ -255,7 +279,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void createEnumClass() throws IOException {
+        void createEnumClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setEnum().setFinal().build();
             ClassFile cf = pool.createNewClass("com/test/MyEnum", access);
 
@@ -263,7 +288,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void createAnnotationClass() throws IOException {
+        void createAnnotationClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setAnnotation().setInterface().setAbstract().build();
             ClassFile cf = pool.createNewClass("com/test/MyAnnotation", access);
 
@@ -272,9 +298,11 @@ class ClassPoolTest {
     }
 
     @Nested
-    class NameValidationEdgeCases {
+    class NameValidationEdgeCases
+    {
         @Test
-        void createClassWithNestedPackageName() throws IOException {
+        void createClassWithNestedPackageName() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/company/product/module/feature/MyClass", access);
 
@@ -283,7 +311,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void createClassWithSinglePackage() throws IOException {
+        void createClassWithSinglePackage() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("test/SimpleClass", access);
 
@@ -292,7 +321,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void createClassWithNoPackage() throws IOException {
+        void createClassWithNoPackage() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("DefaultPackageClass", access);
 
@@ -302,9 +332,11 @@ class ClassPoolTest {
     }
 
     @Nested
-    class RoundTripTests {
+    class RoundTripTests
+    {
         @Test
-        void roundTripSimpleClass() throws IOException {
+        void roundTripSimpleClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile original = pool.createNewClass("com/test/SimpleClass", access);
             byte[] bytes = original.write();
@@ -318,7 +350,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void roundTripClassWithMethods() throws IOException {
+        void roundTripClassWithMethods() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile original = pool.createNewClass("com/test/WithMethods", access);
             original.createNewMethod(access, "testMethod1", "V");
@@ -332,7 +365,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void roundTripClassWithFields() throws IOException {
+        void roundTripClassWithFields() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile original = pool.createNewClass("com/test/WithFields", access);
             original.createNewField(new AccessBuilder().setPrivate().build(), "field1", "I", null);
@@ -346,7 +380,8 @@ class ClassPoolTest {
         }
 
         @Test
-        void roundTripClassWithInterfaces() throws IOException {
+        void roundTripClassWithInterfaces() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile original = pool.createNewClass("com/test/WithInterfaces", access);
             original.addInterface("java/io/Serializable");
@@ -361,19 +396,23 @@ class ClassPoolTest {
     }
 
     @Nested
-    class GetEdgeCases {
+    class GetEdgeCases
+    {
         @Test
-        void getWithNullReturnsNull() {
+        void getWithNullReturnsNull()
+        {
             assertNull(pool.get(null));
         }
 
         @Test
-        void getWithEmptyStringReturnsNull() {
+        void getWithEmptyStringReturnsNull()
+        {
             assertNull(pool.get(""));
         }
 
         @Test
-        void getAfterPuttingMultipleClasses() throws IOException {
+        void getAfterPuttingMultipleClasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf1 = pool.createNewClass("com/test/Alpha", access);
             ClassFile cf2 = pool.createNewClass("com/test/Beta", access);

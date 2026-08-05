@@ -17,13 +17,15 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SimilarityResultTest {
+class SimilarityResultTest
+{
 
     private MethodSignature method1;
     private MethodSignature method2;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/TestClass", access);
@@ -36,10 +38,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorSetsBasicProperties() {
+        void constructorSetsBasicProperties()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 1.0);
 
@@ -52,7 +56,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void constructorCreatesDefensiveCopyOfScores() {
+        void constructorCreatesDefensiveCopyOfScores()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.8);
 
@@ -65,10 +70,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class OverallScoreCalculationTests {
+    class OverallScoreCalculationTests
+    {
 
         @Test
-        void overallScoreUsessPrimaryMetricForNonCombined() {
+        void overallScoreUsessPrimaryMetricForNonCombined()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.75);
             scores.put(SimilarityMetric.OPCODE_SEQUENCE, 0.5);
@@ -79,7 +86,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void overallScoreCalculatesWeightedAverageForCombined() {
+        void overallScoreCalculatesWeightedAverageForCombined()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 1.0);
             scores.put(SimilarityMetric.OPCODE_SEQUENCE, 0.8);
@@ -92,7 +100,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void overallScoreReturnsZeroWhenPrimaryMetricMissing() {
+        void overallScoreReturnsZeroWhenPrimaryMetricMissing()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.OPCODE_SEQUENCE, 0.8);
 
@@ -102,7 +111,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void overallScoreHandlesEmptyScoresForCombined() {
+        void overallScoreHandlesEmptyScoresForCombined()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
 
             SimilarityResult result = new SimilarityResult(method1, method2, scores, SimilarityMetric.COMBINED);
@@ -111,7 +121,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void overallScoreHandlesNullValuesInScores() {
+        void overallScoreHandlesNullValuesInScores()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, null);
             scores.put(SimilarityMetric.OPCODE_SEQUENCE, 0.5);
@@ -122,7 +133,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void overallScoreIgnoresCombinedMetricInCalculation() {
+        void overallScoreIgnoresCombinedMetricInCalculation()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.COMBINED, 0.9);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.5);
@@ -134,10 +146,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class ScorePercentTests {
+    class ScorePercentTests
+    {
 
         @Test
-        void scorePercentRoundsCorrectly() {
+        void scorePercentRoundsCorrectly()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.754);
 
@@ -147,7 +161,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void scorePercentHandlesZero() {
+        void scorePercentHandlesZero()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.0);
 
@@ -157,7 +172,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void scorePercentHandlesOne() {
+        void scorePercentHandlesOne()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 1.0);
 
@@ -167,7 +183,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void scorePercentRoundsUpAtHalf() {
+        void scorePercentRoundsUpAtHalf()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.505);
 
@@ -178,10 +195,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class GetScoreTests {
+    class GetScoreTests
+    {
 
         @Test
-        void getScoreReturnsCorrectValue() {
+        void getScoreReturnsCorrectValue()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.85);
             scores.put(SimilarityMetric.OPCODE_SEQUENCE, 0.70);
@@ -193,7 +212,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getScoreReturnsZeroForMissingMetric() {
+        void getScoreReturnsZeroForMissingMetric()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.85);
 
@@ -203,7 +223,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getScoreReturnsZeroForNullValue() {
+        void getScoreReturnsZeroForNullValue()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, null);
 
@@ -214,10 +235,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class GetAllScoresTests {
+    class GetAllScoresTests
+    {
 
         @Test
-        void getAllScoresReturnsDefensiveCopy() {
+        void getAllScoresReturnsDefensiveCopy()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.8);
 
@@ -230,7 +253,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getAllScoresContainsAllMetrics() {
+        void getAllScoresContainsAllMetrics()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.8);
             scores.put(SimilarityMetric.OPCODE_SEQUENCE, 0.7);
@@ -246,10 +270,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class ThresholdTests {
+    class ThresholdTests
+    {
 
         @Test
-        void isPotentialDuplicateReturnsTrueForHighSimilarity() {
+        void isPotentialDuplicateReturnsTrueForHighSimilarity()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.96);
 
@@ -259,7 +285,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void isPotentialDuplicateReturnsTrueAtExactThreshold() {
+        void isPotentialDuplicateReturnsTrueAtExactThreshold()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.95);
 
@@ -269,7 +296,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void isPotentialDuplicateReturnsFalseBelowThreshold() {
+        void isPotentialDuplicateReturnsFalseBelowThreshold()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.94);
 
@@ -279,7 +307,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void isHighlySimilarReturnsTrueForHighSimilarity() {
+        void isHighlySimilarReturnsTrueForHighSimilarity()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.85);
 
@@ -289,7 +318,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void isHighlySimilarReturnsTrueAtExactThreshold() {
+        void isHighlySimilarReturnsTrueAtExactThreshold()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.80);
 
@@ -299,7 +329,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void isHighlySimilarReturnsFalseBelowThreshold() {
+        void isHighlySimilarReturnsFalseBelowThreshold()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.79);
 
@@ -310,10 +341,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class GetSummaryTests {
+    class GetSummaryTests
+    {
 
         @Test
-        void getSummaryReturnsExactDuplicateForVeryHighScore() {
+        void getSummaryReturnsExactDuplicateForVeryHighScore()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.98);
 
@@ -325,7 +358,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getSummaryReturnsHighlySimilarForHighScore() {
+        void getSummaryReturnsHighlySimilarForHighScore()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.85);
 
@@ -337,7 +371,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getSummaryReturnsModerateSimilarForMediumScore() {
+        void getSummaryReturnsModerateSimilarForMediumScore()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.65);
 
@@ -349,7 +384,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getSummaryReturnsLowSimilarityForLowScore() {
+        void getSummaryReturnsLowSimilarityForLowScore()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.30);
 
@@ -361,7 +397,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getSummaryHandlesBoundaryAt50Percent() {
+        void getSummaryHandlesBoundaryAt50Percent()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.50);
 
@@ -372,7 +409,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void getSummaryHandlesBoundaryJustBelow50Percent() {
+        void getSummaryHandlesBoundaryJustBelow50Percent()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.49);
 
@@ -384,10 +422,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class CompareToTests {
+    class CompareToTests
+    {
 
         @Test
-        void compareToSortsByDescendingScore() {
+        void compareToSortsByDescendingScore()
+        {
             Map<SimilarityMetric, Double> scores1 = new EnumMap<>(SimilarityMetric.class);
             scores1.put(SimilarityMetric.EXACT_BYTECODE, 0.8);
 
@@ -402,7 +442,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void compareToReturnsZeroForEqualScores() {
+        void compareToReturnsZeroForEqualScores()
+        {
             Map<SimilarityMetric, Double> scores1 = new EnumMap<>(SimilarityMetric.class);
             scores1.put(SimilarityMetric.EXACT_BYTECODE, 0.75);
 
@@ -417,10 +458,12 @@ class SimilarityResultTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsMethodNames() {
+        void toStringContainsMethodNames()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.75);
 
@@ -432,7 +475,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void toStringContainsScore() {
+        void toStringContainsScore()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.75);
 
@@ -443,7 +487,8 @@ class SimilarityResultTest {
         }
 
         @Test
-        void toStringContainsPrimaryMetric() {
+        void toStringContainsPrimaryMetric()
+        {
             Map<SimilarityMetric, Double> scores = new EnumMap<>(SimilarityMetric.class);
             scores.put(SimilarityMetric.EXACT_BYTECODE, 0.75);
 
@@ -454,7 +499,8 @@ class SimilarityResultTest {
         }
     }
 
-    private MethodEntry createSimpleMethod(ClassFile classFile, String name) throws IOException {
+    private MethodEntry createSimpleMethod(ClassFile classFile, String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "V");
         Bytecode bc = new Bytecode(method);

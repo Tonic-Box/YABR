@@ -11,15 +11,18 @@ import java.util.TreeMap;
  * and {@code lli}-runnable); a field whose owning class is among those defined in the module gets a
  * defined {@code zeroinitializer} global, otherwise an {@code external global}.
  *
- * <p>Keyed by mangled symbol (deduped); rendered in sorted order for deterministic module output.
+ *Keyed by mangled symbol (deduped); rendered in sorted order for deterministic module output.
  */
-final class GlobalCollector {
+final class GlobalCollector
+{
 
-    private static final class Entry {
+    private static final class Entry
+    {
         final LlvmType type;
         final String ownerClass;
 
-        Entry(LlvmType type, String ownerClass) {
+        Entry(LlvmType type, String ownerClass)
+        {
             this.type = type;
             this.ownerClass = ownerClass;
         }
@@ -27,7 +30,8 @@ final class GlobalCollector {
 
     private final TreeMap<String, Entry> globals = new TreeMap<>();
 
-    void note(String mangledSymbol, LlvmType type, String ownerClass) {
+    void note(String mangledSymbol, LlvmType type, String ownerClass)
+    {
         globals.putIfAbsent(mangledSymbol, new Entry(type, ownerClass));
     }
 
@@ -35,13 +39,18 @@ final class GlobalCollector {
      * Renders the global definitions. A field whose owner is in {@code definedOwnerClasses} is
      * defined here ({@code zeroinitializer}); anything else is declared {@code external}.
      */
-    List<String> renderGlobals(Set<String> definedOwnerClasses) {
+    List<String> renderGlobals(Set<String> definedOwnerClasses)
+    {
         List<String> out = new ArrayList<>();
-        for (var e : globals.entrySet()) {
+        for (var e : globals.entrySet())
+        {
             Entry entry = e.getValue();
-            if (definedOwnerClasses.contains(entry.ownerClass)) {
+            if (definedOwnerClasses.contains(entry.ownerClass))
+            {
                 out.add(e.getKey() + " = global " + entry.type.render() + " zeroinitializer");
-            } else {
+            }
+            else
+            {
                 out.add(e.getKey() + " = external global " + entry.type.render());
             }
         }

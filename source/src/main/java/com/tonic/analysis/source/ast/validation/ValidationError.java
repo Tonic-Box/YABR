@@ -6,21 +6,60 @@ import com.tonic.analysis.source.ast.SourceLocation;
 import java.util.Objects;
 
 /**
- * Represents a validation error found in an AST.
+ * A single issue reported by AST validation, with severity, category, and offending node.
  */
-public final class ValidationError {
+public final class ValidationError
+{
 
-    public enum Severity {
+    /**
+     * How serious a validation issue is.
+     */
+    public enum Severity
+    {
+        /**
+         * The tree is invalid and must not be used as it stands.
+         */
         ERROR,
+        /**
+         * The tree is questionable but still usable, so validation does not
+         * reject it.
+         */
         WARNING,
+        /**
+         * An observation worth reporting that implies nothing is wrong.
+         */
         INFO
     }
 
-    public enum Category {
+    /**
+     * The aspect of the AST a validation issue concerns.
+     */
+    public enum Category
+    {
+        /**
+         * The shape of the tree itself is wrong, independent of what the code
+         * means.
+         */
         STRUCTURAL,
+        /**
+         * The types an expression combines do not fit, such as comparing two
+         * operands that are not comparable.
+         */
         TYPE,
+        /**
+         * A child the node requires is missing, so something downstream would
+         * dereference null.
+         */
         NULL_CHECK,
+        /**
+         * The tree is well formed but the code it describes is not meaningful
+         * Java, such as a try with neither a catch nor a finally.
+         */
         SEMANTIC,
+        /**
+         * Two parts of the tree that should agree do not, such as a node's
+         * cached information contradicting its actual position.
+         */
         CONSISTENCY
     }
 
@@ -30,7 +69,16 @@ public final class ValidationError {
     private final ASTNode node;
     private final SourceLocation location;
 
-    public ValidationError(Severity severity, Category category, String message, ASTNode node) {
+    /**
+     * Creates an issue, taking its location from the node when one is given.
+     * @param severity how serious the issue is
+     * @param category what the issue concerns
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @throws NullPointerException if severity, category, or message is null
+     */
+    public ValidationError(Severity severity, Category category, String message, ASTNode node)
+    {
         this.severity = Objects.requireNonNull(severity, "severity cannot be null");
         this.category = Objects.requireNonNull(category, "category cannot be null");
         this.message = Objects.requireNonNull(message, "message cannot be null");
@@ -38,75 +86,152 @@ public final class ValidationError {
         this.location = node != null ? node.getLocation() : SourceLocation.UNKNOWN;
     }
 
-    public static ValidationError error(Category category, String message, ASTNode node) {
+    /**
+     * Creates an error-severity issue.
+     * @param category what the issue concerns
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @return the issue
+     */
+    public static ValidationError error(Category category, String message, ASTNode node)
+    {
         return new ValidationError(Severity.ERROR, category, message, node);
     }
 
-    public static ValidationError warning(Category category, String message, ASTNode node) {
+    /**
+     * Creates a warning-severity issue.
+     * @param category what the issue concerns
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @return the issue
+     */
+    public static ValidationError warning(Category category, String message, ASTNode node)
+    {
         return new ValidationError(Severity.WARNING, category, message, node);
     }
 
-    public static ValidationError info(Category category, String message, ASTNode node) {
+    /**
+     * Creates an info-severity issue.
+     * @param category what the issue concerns
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @return the issue
+     */
+    public static ValidationError info(Category category, String message, ASTNode node)
+    {
         return new ValidationError(Severity.INFO, category, message, node);
     }
 
-    public static ValidationError structural(String message, ASTNode node) {
+    /**
+     * Creates a STRUCTURAL error.
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @return the issue
+     */
+    public static ValidationError structural(String message, ASTNode node)
+    {
         return error(Category.STRUCTURAL, message, node);
     }
 
-    public static ValidationError typeError(String message, ASTNode node) {
+    /**
+     * Creates a TYPE error.
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @return the issue
+     */
+    public static ValidationError typeError(String message, ASTNode node)
+    {
         return error(Category.TYPE, message, node);
     }
 
-    public static ValidationError nullCheck(String message, ASTNode node) {
+    /**
+     * Creates a NULL_CHECK error.
+     * @param message the issue description
+     * @param node the offending node, may be null
+     * @return the issue
+     */
+    public static ValidationError nullCheck(String message, ASTNode node)
+    {
         return error(Category.NULL_CHECK, message, node);
     }
 
-    public Severity getSeverity() {
+    /**
+     * @return the severity
+     */
+    public Severity getSeverity()
+    {
         return severity;
     }
 
-    public Category getCategory() {
+    /**
+     * @return the category
+     */
+    public Category getCategory()
+    {
         return category;
     }
 
-    public String getMessage() {
+    /**
+     * @return the message
+     */
+    public String getMessage()
+    {
         return message;
     }
 
-    public ASTNode getNode() {
+    /**
+     * @return the node
+     */
+    public ASTNode getNode()
+    {
         return node;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public boolean isError() {
+    /**
+     * @return true if severity is ERROR
+     */
+    public boolean isError()
+    {
         return severity == Severity.ERROR;
     }
 
-    public boolean isWarning() {
+    /**
+     * @return true if severity is WARNING
+     */
+    public boolean isWarning()
+    {
         return severity == Severity.WARNING;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(severity).append("] ");
         sb.append(category).append(": ");
         sb.append(message);
-        if (location != null && location != SourceLocation.UNKNOWN) {
+        if (location != null && location != SourceLocation.UNKNOWN)
+        {
             sb.append(" at ").append(location);
         }
-        if (node != null) {
+        if (node != null)
+        {
             sb.append(" (").append(node.getClass().getSimpleName()).append(")");
         }
         return sb.toString();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ValidationError)) return false;
         ValidationError that = (ValidationError) o;
@@ -117,7 +242,8 @@ public final class ValidationError {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(severity, category, message, node);
     }
 }

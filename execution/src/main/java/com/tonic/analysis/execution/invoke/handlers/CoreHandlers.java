@@ -8,22 +8,29 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class CoreHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the java.lang core: Object identity and equality, Throwable
+ * construction and stack traces, and Class reflection stubs.
+ */
+public final class CoreHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerObjectHandlers(registry);
         registerExceptionHandlers(registry);
         registerClassHandlers(registry);
     }
 
-    private void registerObjectHandlers(NativeRegistry registry) {
-        registry.register("java/lang/Object", "<init>", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerObjectHandlers(NativeRegistry registry)
+    {
+        registry.register("java/lang/Object", "<init>", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Object", "hashCode", "()I",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     return ConcreteValue.intValue(0);
                 }
                 return ConcreteValue.intValue(receiver.getIdentityHashCode());
@@ -31,7 +38,8 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Object", "getClass", "()Ljava/lang/Class;",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "getClass on null");
                 }
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
@@ -42,7 +50,8 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Object", "equals", "(Ljava/lang/Object;)Z",
             (receiver, args, ctx) -> {
-                if (args == null || args.length == 0) {
+                if (args == null || args.length == 0)
+                {
                     return ConcreteValue.intValue(receiver == null ? 1 : 0);
                 }
                 ObjectInstance other = args[0].isNull() ? null : args[0].asReference();
@@ -50,7 +59,8 @@ public final class CoreHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerExceptionHandlers(NativeRegistry registry) {
+    private void registerExceptionHandlers(NativeRegistry registry)
+    {
         String[] exceptionClasses = {
             "java/lang/Throwable",
             "java/lang/Exception",
@@ -68,13 +78,14 @@ public final class CoreHandlers implements NativeHandlerProvider {
             "java/lang/NumberFormatException"
         };
 
-        for (String exClass : exceptionClasses) {
-            registry.register(exClass, "<init>", "()V",
-                (receiver, args, ctx) -> ConcreteValue.nullRef());
+        for (String exClass : exceptionClasses)
+        {
+            registry.register(exClass, "<init>", "()V", (receiver, args, ctx) -> ConcreteValue.nullRef());
 
             registry.register(exClass, "<init>", "(Ljava/lang/String;)V",
                 (receiver, args, ctx) -> {
-                    if (receiver != null && args != null && args.length > 0 && !args[0].isNull()) {
+                    if (receiver != null && args != null && args.length > 0 && !args[0].isNull())
+                    {
                         receiver.setField(exClass, "detailMessage", "Ljava/lang/String;", args[0].asReference());
                     }
                     return ConcreteValue.nullRef();
@@ -82,11 +93,14 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
             registry.register(exClass, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V",
                 (receiver, args, ctx) -> {
-                    if (receiver != null && args != null) {
-                        if (args.length > 0 && !args[0].isNull()) {
+                    if (receiver != null && args != null)
+                    {
+                        if (args.length > 0 && !args[0].isNull())
+                        {
                             receiver.setField(exClass, "detailMessage", "Ljava/lang/String;", args[0].asReference());
                         }
-                        if (args.length > 1 && !args[1].isNull()) {
+                        if (args.length > 1 && !args[1].isNull())
+                        {
                             receiver.setField(exClass, "cause", "Ljava/lang/Throwable;", args[1].asReference());
                         }
                     }
@@ -95,7 +109,8 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
             registry.register(exClass, "<init>", "(Ljava/lang/Throwable;)V",
                 (receiver, args, ctx) -> {
-                    if (receiver != null && args != null && args.length > 0 && !args[0].isNull()) {
+                    if (receiver != null && args != null && args.length > 0 && !args[0].isNull())
+                    {
                         receiver.setField(exClass, "cause", "Ljava/lang/Throwable;", args[0].asReference());
                     }
                     return ConcreteValue.nullRef();
@@ -103,11 +118,13 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
             registry.register(exClass, "getMessage", "()Ljava/lang/String;",
                 (receiver, args, ctx) -> {
-                    if (receiver == null) {
+                    if (receiver == null)
+                    {
                         return ConcreteValue.nullRef();
                     }
                     Object msg = receiver.getField(exClass, "detailMessage", "Ljava/lang/String;");
-                    if (msg instanceof ObjectInstance) {
+                    if (msg instanceof ObjectInstance)
+                    {
                         return ConcreteValue.reference((ObjectInstance) msg);
                     }
                     return ConcreteValue.nullRef();
@@ -115,11 +132,13 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
             registry.register(exClass, "getCause", "()Ljava/lang/Throwable;",
                 (receiver, args, ctx) -> {
-                    if (receiver == null) {
+                    if (receiver == null)
+                    {
                         return ConcreteValue.nullRef();
                     }
                     Object cause = receiver.getField(exClass, "cause", "Ljava/lang/Throwable;");
-                    if (cause instanceof ObjectInstance) {
+                    if (cause instanceof ObjectInstance)
+                    {
                         return ConcreteValue.reference((ObjectInstance) cause);
                     }
                     return ConcreteValue.nullRef();
@@ -127,14 +146,17 @@ public final class CoreHandlers implements NativeHandlerProvider {
         }
     }
 
-    private void registerClassHandlers(NativeRegistry registry) {
+    private void registerClassHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/Class", "isArray", "()Z",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "isArray on null");
                 }
                 Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
-                if (nameObj instanceof ObjectInstance) {
+                if (nameObj instanceof ObjectInstance)
+                {
                     String name = ctx.getHeapManager().extractString((ObjectInstance) nameObj);
                     return ConcreteValue.intValue(name != null && name.startsWith("[") ? 1 : 0);
                 }
@@ -143,11 +165,13 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Class", "isPrimitive", "()Z",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "isPrimitive on null");
                 }
                 Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
-                if (nameObj instanceof ObjectInstance) {
+                if (nameObj instanceof ObjectInstance)
+                {
                     String name = ctx.getHeapManager().extractString((ObjectInstance) nameObj);
                     if (name == null) return ConcreteValue.intValue(0);
                     boolean isPrim = name.equals("int") || name.equals("long") || name.equals("byte") ||
@@ -160,11 +184,13 @@ public final class CoreHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Class", "getName", "()Ljava/lang/String;",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "getName on null");
                 }
                 Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
-                if (nameObj instanceof ObjectInstance) {
+                if (nameObj instanceof ObjectInstance)
+                {
                     return ConcreteValue.reference((ObjectInstance) nameObj);
                 }
                 return ConcreteValue.nullRef();
@@ -206,11 +232,9 @@ public final class CoreHandlers implements NativeHandlerProvider {
         registry.register("java/lang/Class", "getSuperclass", "()Ljava/lang/Class;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
 
-        registry.register("java/lang/Class", "getModifiers", "()I",
-            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+        registry.register("java/lang/Class", "getModifiers", "()I", (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
-        registry.register("java/lang/Class", "isInterface", "()Z",
-            (receiver, args, ctx) -> ConcreteValue.intValue(0));
+        registry.register("java/lang/Class", "isInterface", "()Z", (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
         registry.register("java/lang/Class", "isInstance", "(Ljava/lang/Object;)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
@@ -221,8 +245,7 @@ public final class CoreHandlers implements NativeHandlerProvider {
         registry.register("java/lang/Class", "getSigners", "()[Ljava/lang/Object;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
 
-        registry.register("java/lang/Class", "setSigners", "([Ljava/lang/Object;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Class", "setSigners", "([Ljava/lang/Object;)V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Class", "getDeclaringClass0", "()Ljava/lang/Class;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
@@ -260,7 +283,8 @@ public final class CoreHandlers implements NativeHandlerProvider {
         registry.register("java/lang/Class", "getNestMembers0", "()[Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/Class;", 1);
-                if (receiver != null) {
+                if (receiver != null)
+                {
                     arr.set(0, ConcreteValue.reference(receiver));
                 }
                 return ConcreteValue.reference(arr);
@@ -270,7 +294,8 @@ public final class CoreHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> {
                 if (receiver == null) return ConcreteValue.nullRef();
                 Object nameObj = receiver.getField("java/lang/Class", "name", "Ljava/lang/String;");
-                if (nameObj instanceof ObjectInstance) {
+                if (nameObj instanceof ObjectInstance)
+                {
                     return ConcreteValue.reference((ObjectInstance) nameObj);
                 }
                 return ConcreteValue.reference(ctx.createString("Unknown"));

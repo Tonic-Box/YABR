@@ -10,10 +10,12 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassFileUtilTest {
+class ClassFileUtilTest
+{
 
     @Test
-    void saveClassFileCreatesFileInCorrectLocation(@TempDir Path tempDir) throws IOException {
+    void saveClassFileCreatesFileInCorrectLocation(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE};
         String className = "com.example.TestClass";
 
@@ -24,7 +26,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileWritesCorrectContent(@TempDir Path tempDir) throws IOException {
+    void saveClassFileWritesCorrectContent(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE, 0x01, 0x02};
         String className = "com.test.MyClass";
 
@@ -36,7 +39,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileCreatesNestedDirectories(@TempDir Path tempDir) throws IOException {
+    void saveClassFileCreatesNestedDirectories(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{0x00, 0x01};
         String className = "com.example.deep.package.structure.TestClass";
 
@@ -47,7 +51,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileThrowsExceptionForNullClassName(@TempDir Path tempDir) {
+    void saveClassFileThrowsExceptionForNullClassName(@TempDir Path tempDir)
+    {
         byte[] classBytes = new byte[]{0x00};
 
         IllegalArgumentException exception = assertThrows(
@@ -59,7 +64,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileThrowsExceptionForEmptyClassName(@TempDir Path tempDir) {
+    void saveClassFileThrowsExceptionForEmptyClassName(@TempDir Path tempDir)
+    {
         byte[] classBytes = new byte[]{0x00};
 
         IllegalArgumentException exception = assertThrows(
@@ -71,7 +77,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileThrowsExceptionForWhitespaceClassName(@TempDir Path tempDir) {
+    void saveClassFileThrowsExceptionForWhitespaceClassName(@TempDir Path tempDir)
+    {
         byte[] classBytes = new byte[]{0x00};
 
         IllegalArgumentException exception = assertThrows(
@@ -83,7 +90,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileHandlesSimpleClassName(@TempDir Path tempDir) throws IOException {
+    void saveClassFileHandlesSimpleClassName(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{0x01, 0x02, 0x03};
         String className = "SimpleClass";
 
@@ -94,7 +102,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileHandlesInnerClass(@TempDir Path tempDir) throws IOException {
+    void saveClassFileHandlesInnerClass(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{0x01, 0x02};
         String className = "com.example.Outer$Inner";
 
@@ -105,7 +114,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileOverwritesExistingFile(@TempDir Path tempDir) throws IOException {
+    void saveClassFileOverwritesExistingFile(@TempDir Path tempDir) throws IOException
+    {
         byte[] originalBytes = new byte[]{0x01, 0x02};
         byte[] newBytes = new byte[]{0x03, 0x04, 0x05};
         String className = "com.test.OverwriteTest";
@@ -119,7 +129,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileHandlesEmptyByteArray(@TempDir Path tempDir) throws IOException {
+    void saveClassFileHandlesEmptyByteArray(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{};
         String className = "com.test.EmptyClass";
 
@@ -131,9 +142,11 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileHandlesLargeByteArray(@TempDir Path tempDir) throws IOException {
+    void saveClassFileHandlesLargeByteArray(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[10000];
-        for (int i = 0; i < classBytes.length; i++) {
+        for (int i = 0; i < classBytes.length; i++)
+        {
             classBytes[i] = (byte) (i % 256);
         }
         String className = "com.test.LargeClass";
@@ -146,7 +159,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileHandlesDirectoryAlreadyExists(@TempDir Path tempDir) throws IOException {
+    void saveClassFileHandlesDirectoryAlreadyExists(@TempDir Path tempDir) throws IOException
+    {
         Files.createDirectories(tempDir.resolve("com/example"));
 
         byte[] classBytes = new byte[]{0x01, 0x02};
@@ -159,7 +173,8 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileHandlesClassNameWithNumbers(@TempDir Path tempDir) throws IOException {
+    void saveClassFileHandlesClassNameWithNumbers(@TempDir Path tempDir) throws IOException
+    {
         byte[] classBytes = new byte[]{0x01};
         String className = "com.test.Test123Class456";
 
@@ -170,13 +185,12 @@ class ClassFileUtilTest {
     }
 
     @Test
-    void saveClassFileThrowsIOExceptionForInvalidPath() {
+    void saveClassFileThrowsIOExceptionForInvalidPath()
+    {
         byte[] classBytes = new byte[]{0x01};
         String className = "com.test.Test";
         String invalidPath = "\0invalid";
 
-        assertThrows(Exception.class,
-            () -> ClassFileUtil.saveClassFile(classBytes, invalidPath, className)
-        );
+        assertThrows(Exception.class, () -> ClassFileUtil.saveClassFile(classBytes, invalidPath, className));
     }
 }

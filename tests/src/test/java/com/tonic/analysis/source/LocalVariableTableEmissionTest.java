@@ -22,27 +22,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that the lowering pipeline emits a well-formed LocalVariableTable carrying real source names,
- * types, slots, and scopes. Each case compiles source → bytecode (LVT on by default), forces JVM
+ * types, slots, and scopes. Each case compiles source -> bytecode (LVT on by default), forces JVM
  * verification, round-trips the class, and inspects the parsed-back entries. Body locals get an entry only
  * when the allocator gives them a slot (the straight-line path keeps simple locals on the operand stack), so
  * the body-local cases use loops/branches that force slot allocation.
  */
-class LocalVariableTableEmissionTest {
+class LocalVariableTableEmissionTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    /** One parsed-back LVT entry, names/descriptors resolved through the round-tripped constant pool. */
-    private static final class Row {
+    /**
+     * One parsed-back LVT entry, names/descriptors resolved through the round-tripped constant pool.
+     */
+    private static final class Row
+    {
         final String name;
         final String desc;
         final int slot;
         final int startPc;
         final int length;
 
-        Row(String name, String desc, int slot, int startPc, int length) {
+        Row(String name, String desc, int slot, int startPc, int length)
+        {
             this.name = name;
             this.desc = desc;
             this.slot = slot;
@@ -51,7 +57,8 @@ class LocalVariableTableEmissionTest {
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return name + ":" + desc + "@" + slot + "[" + startPc + "," + (startPc + length) + ")";
         }
     }
@@ -59,7 +66,8 @@ class LocalVariableTableEmissionTest {
     private byte[] lastCode;
     private ClassFile lastClass;
 
-    private List<Row> lvt(String internalName, String source, String methodName) throws Exception {
+    private List<Row> lvt(String internalName, String source, String methodName) throws Exception
+    {
         ClassFile cf = TestUtils.compileSource(source, internalName);
         TestUtils.linkAndVerify(cf);
         ClassFile rt = TestUtils.roundTrip(cf);
@@ -70,8 +78,10 @@ class LocalVariableTableEmissionTest {
         CodeAttribute code = method.getCodeAttribute();
         assertNotNull(code, "method has Code");
         LocalVariableTableAttribute table = null;
-        for (Attribute a : code.getAttributes()) {
-            if (a instanceof LocalVariableTableAttribute) {
+        for (Attribute a : code.getAttributes())
+        {
+            if (a instanceof LocalVariableTableAttribute)
+            {
                 table = (LocalVariableTableAttribute) a;
             }
         }
@@ -79,25 +89,31 @@ class LocalVariableTableEmissionTest {
         lastCode = code.getCode();
         int codeLength = code.getCode().length;
         int maxLocals = code.getMaxLocals();
-        if (table != null) {
-            for (LocalVariableTableEntry e : table.getLocalVariableTable()) {
+        if (table != null)
+        {
+            for (LocalVariableTableEntry e : table.getLocalVariableTable())
+            {
                 String name = utf8(rt, e.getNameIndex());
                 String desc = utf8(rt, e.getDescriptorIndex());
                 rows.add(new Row(name, desc, e.getIndex(), e.getStartPc(), e.getLengthPc()));
             }
         }
         // Structural invariants hold for every emitted entry (asserted centrally so every case is covered).
-        for (Row r : rows) {
+        for (Row r : rows)
+        {
             assertNotNull(r.name, "name resolves: " + rows);
             assertNotNull(r.desc, "descriptor resolves: " + rows);
             assertTrue(r.slot >= 0 && r.slot < maxLocals, "slot in range: " + r + " maxLocals=" + maxLocals);
             assertTrue(r.startPc >= 0 && r.startPc + r.length <= codeLength,
                     "scope in bounds: " + r + " codeLength=" + codeLength);
         }
-        for (int i = 0; i < rows.size(); i++) {
-            for (int j = i + 1; j < rows.size(); j++) {
+        for (int i = 0; i < rows.size(); i++)
+        {
+            for (int j = i + 1; j < rows.size(); j++)
+            {
                 Row a = rows.get(i), b = rows.get(j);
-                if (a.slot == b.slot) {
+                if (a.slot == b.slot)
+                {
                     boolean overlap = a.startPc < b.startPc + b.length && b.startPc < a.startPc + a.length;
                     assertFalse(overlap, "same-slot entries must not overlap: " + a + " vs " + b);
                 }
@@ -106,27 +122,32 @@ class LocalVariableTableEmissionTest {
         return rows;
     }
 
-    private static String utf8(ClassFile cf, int index) {
+    private static String utf8(ClassFile cf, int index)
+    {
         Object item = cf.getConstPool().getItem(index);
         return item instanceof Utf8Item ? ((Utf8Item) item).getValue() : null;
     }
 
-    private static Row byName(List<Row> rows, String name) {
+    private static Row byName(List<Row> rows, String name)
+    {
         return rows.stream().filter(r -> name.equals(r.name)).findFirst().orElse(null);
     }
 
-    private static List<String> names(List<Row> rows) {
+    private static List<String> names(List<Row> rows)
+    {
         List<String> n = new ArrayList<>();
-        for (Row r : rows) {
+        for (Row r : rows)
+        {
             n.add(r.name);
         }
         return n;
     }
 
-    // ---- cases -------------------------------------------------------------------------------------
+    // cases
 
     @Test
-    void parametersGetEntriesWithRealNamesAndDescriptors() throws Exception {
+    void parametersGetEntriesWithRealNamesAndDescriptors() throws Exception
+    {
         List<Row> rows = lvt("t/P", "package t; public class P {"
                 + " public static int f(int a, String s, int[] arr){ return a; } }", "f");
         assertEquals("I", byName(rows, "a").desc);
@@ -138,9 +159,9 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void instanceMethodHasThisAtSlotZero() throws Exception {
-        List<Row> rows = lvt("t/I", "package t; public class I {"
-                + " public int g(int p){ return p; } }", "g");
+    void instanceMethodHasThisAtSlotZero() throws Exception
+    {
+        List<Row> rows = lvt("t/I", "package t; public class I {" + " public int g(int p){ return p; } }", "g");
         Row self = byName(rows, "this");
         assertNotNull(self, "this entry present: " + rows);
         assertEquals(0, self.slot);
@@ -150,7 +171,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void staticMethodHasNoThisFirstParamAtSlotZero() throws Exception {
+    void staticMethodHasNoThisFirstParamAtSlotZero() throws Exception
+    {
         List<Row> rows = lvt("t/S", "package t; public class S {"
                 + " public static int f(int a, int b){ return a + b; } }", "f");
         assertFalse(names(rows).contains("this"), "no this for static: " + rows);
@@ -159,7 +181,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void longDoubleParamsUseLowSlotSingleEntry() throws Exception {
+    void longDoubleParamsUseLowSlotSingleEntry() throws Exception
+    {
         List<Row> rows = lvt("t/W", "package t; public class W {"
                 + " public static long f(long n, double d){ return n; } }", "f");
         assertEquals("J", byName(rows, "n").desc);
@@ -171,14 +194,16 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void unusedParameterStillGetsEntry() throws Exception {
+    void unusedParameterStillGetsEntry() throws Exception
+    {
         List<Row> rows = lvt("t/U", "package t; public class U {"
                 + " public static int f(int a, int unused){ return a; } }", "f");
         assertNotNull(byName(rows, "unused"), "unused param still has an entry: " + rows);
     }
 
     @Test
-    void loopBodyLocalsGetEntries() throws Exception {
+    void loopBodyLocalsGetEntries() throws Exception
+    {
         List<Row> rows = lvt("t/L", "package t; public class L {"
                 + " public static int f(int n){ int s = 0; for (int i = 0; i < n; i++) { s += i; } return s; } }", "f");
         assertNotNull(byName(rows, "n"), "param n: " + rows);
@@ -188,7 +213,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void reusedSlotAcrossDisjointBlocksGivesDisjointEntries() throws Exception {
+    void reusedSlotAcrossDisjointBlocksGivesDisjointEntries() throws Exception
+    {
         // Two locals in disjoint loop bodies; the allocator may reuse a slot -> entries must stay disjoint.
         List<Row> rows = lvt("t/R", "package t; public class R {"
                 + " public static int f(int n){ int t = 0;"
@@ -201,7 +227,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void shadowedNamesInDisjointBlocksAreDistinctEntries() throws Exception {
+    void shadowedNamesInDisjointBlocksAreDistinctEntries() throws Exception
+    {
         List<Row> rows = lvt("t/Sh", "package t; public class Sh {"
                 + " public static int f(int n){ int r = 0;"
                 + " for (int x = 0; x < n; x++) { r += x; }"
@@ -212,7 +239,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void catchExceptionVariableGetsEntry() throws Exception {
+    void catchExceptionVariableGetsEntry() throws Exception
+    {
         List<Row> rows = lvt("t/C", "package t; public class C {"
                 + " public static int f(int n){ try { return 100 / n; } catch (ArithmeticException e) { return -1; } } }", "f");
         assertNotNull(byName(rows, "e"), "catch variable e: " + rows);
@@ -220,7 +248,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void tempsOnlyMethodEmitsOnlyParamEntries() throws Exception {
+    void tempsOnlyMethodEmitsOnlyParamEntries() throws Exception
+    {
         List<Row> rows = lvt("t/T", "package t; public class T {"
                 + " public static int f(int a){ return a * a + 1; } }", "f");
         assertEquals(1, rows.size(), "only the parameter, no temp entries: " + rows);
@@ -228,7 +257,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void aStackResidentLocalHasNoPhantomEntry() throws Exception {
+    void aStackResidentLocalHasNoPhantomEntry() throws Exception
+    {
         // The single-use local stays on the operand stack - the emitted code never writes a body
         // slot, and a truthful table must not name one.
         List<Row> rows = lvt("t/Ph", "package t; public class Ph {"
@@ -238,7 +268,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void bodyLocalRangeOpensAfterItsInitializingStore() throws Exception {
+    void bodyLocalRangeOpensAfterItsInitializingStore() throws Exception
+    {
         List<Row> rows = lvt("t/Sp", "package t; public class Sp {"
                 + " public static int f(int n){ int s = 7; if (n > 0) { s = s + n; } return s; } }", "f");
         Row s = byName(rows, "s");
@@ -249,7 +280,8 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void anAliasBetweenNamedLocalsKeepsBothEntries() throws Exception {
+    void anAliasBetweenNamedLocalsKeepsBothEntries() throws Exception
+    {
         List<Row> rows = lvt("t/Al", "package t; public class Al {"
                 + " public static int f(int a, int n){ int b = a; if (n > 0) { b = b + 1; } return b; } }", "f");
         assertNotNull(byName(rows, "a"), "source variable a: " + rows);
@@ -257,39 +289,49 @@ class LocalVariableTableEmissionTest {
     }
 
     @Test
-    void aGenericLocalGetsASynthesizedTypeTableEntry() throws Exception {
+    void aGenericLocalGetsASynthesizedTypeTableEntry() throws Exception
+    {
         lvt("t/G", "package t; import java.util.List; import java.util.ArrayList; public class G {"
                 + " public static int f(int n){ List<String> xs = new ArrayList<String>();"
                 + " if (n > 0) { xs.add(\"x\"); } return xs.size(); } }", "f");
         MethodEntry method = lastClass.getMethods().stream()
                 .filter(m -> m.getName().equals("f")).findFirst().orElseThrow();
         LocalVariableTypeTableAttribute lvtt = null;
-        for (Attribute a : method.getCodeAttribute().getAttributes()) {
-            if (a instanceof LocalVariableTypeTableAttribute) {
+        for (Attribute a : method.getCodeAttribute().getAttributes())
+        {
+            if (a instanceof LocalVariableTypeTableAttribute)
+            {
                 lvtt = (LocalVariableTypeTableAttribute) a;
             }
         }
         assertNotNull(lvtt, "a generic declaration synthesizes a LocalVariableTypeTable");
         boolean found = false;
-        for (LocalVariableTypeTableEntry e : lvtt.getLocalVariableTypeTable()) {
+        for (LocalVariableTypeTableEntry e : lvtt.getLocalVariableTypeTable())
+        {
             if ("xs".equals(utf8(lastClass, e.getNameIndex()))
-                    && "Ljava/util/List<Ljava/lang/String;>;".equals(utf8(lastClass, e.getSignatureIndex()))) {
+                    && "Ljava/util/List<Ljava/lang/String;>;".equals(utf8(lastClass, e.getSignatureIndex())))
+            {
                 found = true;
             }
         }
         assertTrue(found, "xs carries its List<String> signature");
     }
 
-    /** Whether the code bytes immediately before {@code pc} are a store to {@code slot}. */
-    private static boolean endsWithStoreTo(byte[] code, int pc, int slot) {
-        if (pc >= 1 && slot <= 3) {
+    /**
+     * Whether the code bytes immediately before {@code pc} are a store to {@code slot}.
+     */
+    private static boolean endsWithStoreTo(byte[] code, int pc, int slot)
+    {
+        if (pc >= 1 && slot <= 3)
+        {
             int b = code[pc - 1] & 0xff;
-            if (b == 0x3b + slot || b == 0x4b + slot || b == 0x43 + slot
-                    || b == 0x3f + slot || b == 0x47 + slot) {
+            if (b == 0x3b + slot || b == 0x4b + slot || b == 0x43 + slot || b == 0x3f + slot || b == 0x47 + slot)
+            {
                 return true;
             }
         }
-        if (pc >= 2) {
+        if (pc >= 2)
+        {
             int op = code[pc - 2] & 0xff;
             int idx = code[pc - 1] & 0xff;
             return idx == slot && (op == 0x36 || op == 0x37 || op == 0x38 || op == 0x39 || op == 0x3a);

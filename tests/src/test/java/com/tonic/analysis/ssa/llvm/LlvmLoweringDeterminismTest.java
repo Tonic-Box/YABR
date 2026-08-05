@@ -16,9 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * The emitted LLVM IR must be byte-identical across runs (stable value/label naming + sorted
  * declares), so the backend output is reproducible.
  */
-class LlvmLoweringDeterminismTest {
+class LlvmLoweringDeterminismTest
+{
 
-    private String lowerSum() throws IOException {
+    private String lowerSum() throws IOException
+    {
         TestUtils.resetSSACounters();
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sum", "(I)I");
         Label head = mb.newLabel();
@@ -41,7 +43,8 @@ class LlvmLoweringDeterminismTest {
     }
 
     @Test
-    void outputIsDeterministic() throws IOException {
+    void outputIsDeterministic() throws IOException
+    {
         assertEquals(lowerSum(), lowerSum());
     }
 }

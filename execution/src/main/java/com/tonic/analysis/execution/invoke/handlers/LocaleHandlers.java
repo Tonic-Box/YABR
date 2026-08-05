@@ -8,10 +8,15 @@ import com.tonic.analysis.execution.state.ConcreteValue;
 
 import java.util.TimeZone;
 
-public final class LocaleHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the host environment natives - time zone, locale provider, DNS, proxy selection and Win32 error mode.
+ */
+public final class LocaleHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerTimeZoneHandlers(registry);
         registerHostLocaleProviderHandlers(registry);
         registerDnsResolverHandlers(registry);
@@ -19,7 +24,8 @@ public final class LocaleHandlers implements NativeHandlerProvider {
         registerWin32ErrorModeHandlers(registry);
     }
 
-    private void registerTimeZoneHandlers(NativeRegistry registry) {
+    private void registerTimeZoneHandlers(NativeRegistry registry)
+    {
         registry.register("java/util/TimeZone", "getSystemTimeZoneID", "(Ljava/lang/String;)Ljava/lang/String;",
             (receiver, args, ctx) -> {
                 String id = TimeZone.getDefault().getID();
@@ -30,11 +36,11 @@ public final class LocaleHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.reference(ctx.getHeapManager().internString("GMT")));
     }
 
-    private void registerHostLocaleProviderHandlers(NativeRegistry registry) {
+    private void registerHostLocaleProviderHandlers(NativeRegistry registry)
+    {
         String provider = "sun/util/locale/provider/HostLocaleProviderAdapterImpl";
 
-        registry.register(provider, "initialize", "()Z",
-            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+        registry.register(provider, "initialize", "()Z", (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
         registry.register(provider, "getDefaultLocale", "(I)Ljava/lang/String;",
             (receiver, args, ctx) -> ConcreteValue.reference(ctx.getHeapManager().internString("en_US")));
@@ -111,7 +117,8 @@ public final class LocaleHandlers implements NativeHandlerProvider {
                 String[] months = {"January", "February", "March", "April", "May", "June",
                     "July", "August", "September", "October", "November", "December", ""};
                 ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/String;", months.length);
-                for (int i = 0; i < months.length; i++) {
+                for (int i = 0; i < months.length; i++)
+                {
                     arr.set(i, ctx.getHeapManager().internString(months[i]));
                 }
                 return ConcreteValue.reference(arr);
@@ -122,7 +129,8 @@ public final class LocaleHandlers implements NativeHandlerProvider {
                 String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", ""};
                 ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/String;", months.length);
-                for (int i = 0; i < months.length; i++) {
+                for (int i = 0; i < months.length; i++)
+                {
                     arr.set(i, ctx.getHeapManager().internString(months[i]));
                 }
                 return ConcreteValue.reference(arr);
@@ -132,7 +140,8 @@ public final class LocaleHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> {
                 String[] days = {"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
                 ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/String;", days.length);
-                for (int i = 0; i < days.length; i++) {
+                for (int i = 0; i < days.length; i++)
+                {
                     arr.set(i, ctx.getHeapManager().internString(days[i]));
                 }
                 return ConcreteValue.reference(arr);
@@ -142,7 +151,8 @@ public final class LocaleHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> {
                 String[] days = {"", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
                 ArrayInstance arr = ctx.getHeapManager().newArray("[Ljava/lang/String;", days.length);
-                for (int i = 0; i < days.length; i++) {
+                for (int i = 0; i < days.length; i++)
+                {
                     arr.set(i, ctx.getHeapManager().internString(days[i]));
                 }
                 return ConcreteValue.reference(arr);
@@ -155,9 +165,9 @@ public final class LocaleHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerDnsResolverHandlers(NativeRegistry registry) {
-        registry.register("sun/net/dns/ResolverConfigurationImpl", "init0", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerDnsResolverHandlers(NativeRegistry registry)
+    {
+        registry.register("sun/net/dns/ResolverConfigurationImpl", "init0", "()V", (receiver, args, ctx) -> null);
 
         registry.register("sun/net/dns/ResolverConfigurationImpl", "loadDNSconfig0", "()V",
             (receiver, args, ctx) -> null);
@@ -168,11 +178,11 @@ public final class LocaleHandlers implements NativeHandlerProvider {
         registry.register("sun/net/sdp/SdpSupport", "create0", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
 
-        registry.register("sun/net/sdp/SdpSupport", "convert0", "(I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("sun/net/sdp/SdpSupport", "convert0", "(I)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerProxySelectorHandlers(NativeRegistry registry) {
+    private void registerProxySelectorHandlers(NativeRegistry registry)
+    {
         registry.register("sun/net/spi/DefaultProxySelector", "init", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
@@ -183,7 +193,8 @@ public final class LocaleHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerWin32ErrorModeHandlers(NativeRegistry registry) {
+    private void registerWin32ErrorModeHandlers(NativeRegistry registry)
+    {
         registry.register("sun/io/Win32ErrorMode", "setErrorMode", "(J)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
     }

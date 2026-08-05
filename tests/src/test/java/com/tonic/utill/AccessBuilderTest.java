@@ -9,140 +9,160 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for AccessBuilder functionality.
  * Covers building various access flag combinations and verifying correct flag values.
  */
-class AccessBuilderTest {
+class AccessBuilderTest
+{
 
     private AccessBuilder builder;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         builder = new AccessBuilder();
     }
 
-    // ========== Single Flag Tests ==========
+    // Single Flag Tests
 
     @Test
-    void setPublicBuildsCorrectFlag() {
+    void setPublicBuildsCorrectFlag()
+    {
         int access = builder.setPublic().build();
         assertTrue(Modifiers.isPublic(access));
         assertEquals(Modifiers.PUBLIC, access);
     }
 
     @Test
-    void setPrivateBuildsCorrectFlag() {
+    void setPrivateBuildsCorrectFlag()
+    {
         int access = builder.setPrivate().build();
         assertTrue(Modifiers.isPrivate(access));
         assertEquals(Modifiers.PRIVATE, access);
     }
 
     @Test
-    void setProtectedBuildsCorrectFlag() {
+    void setProtectedBuildsCorrectFlag()
+    {
         int access = builder.setProtected().build();
         assertTrue(Modifiers.isProtected(access));
         assertEquals(Modifiers.PROTECTED, access);
     }
 
     @Test
-    void setStaticBuildsCorrectFlag() {
+    void setStaticBuildsCorrectFlag()
+    {
         int access = builder.setStatic().build();
         assertTrue(Modifiers.isStatic(access));
         assertEquals(Modifiers.STATIC, access);
     }
 
     @Test
-    void setFinalBuildsCorrectFlag() {
+    void setFinalBuildsCorrectFlag()
+    {
         int access = builder.setFinal().build();
         assertTrue(Modifiers.isFinal(access));
         assertEquals(Modifiers.FINAL, access);
     }
 
     @Test
-    void setSynchronizedBuildsCorrectFlag() {
+    void setSynchronizedBuildsCorrectFlag()
+    {
         int access = builder.setSynchronized().build();
         assertTrue(Modifiers.isSynchronized(access));
         assertEquals(Modifiers.SYNCHRONIZED, access);
     }
 
     @Test
-    void setBridgeBuildsCorrectFlag() {
+    void setBridgeBuildsCorrectFlag()
+    {
         int access = builder.setBridge().build();
         assertTrue(Modifiers.isBridge(access));
         assertEquals(Modifiers.BRIDGE, access);
     }
 
     @Test
-    void setVarArgsBuildsCorrectFlag() {
+    void setVarArgsBuildsCorrectFlag()
+    {
         int access = builder.setVarArgs().build();
         assertTrue(Modifiers.isVarArgs(access));
         assertEquals(Modifiers.VARARGS, access);
     }
 
     @Test
-    void setNativeBuildsCorrectFlag() {
+    void setNativeBuildsCorrectFlag()
+    {
         int access = builder.setNative().build();
         assertTrue(Modifiers.isNative(access));
         assertEquals(Modifiers.NATIVE, access);
     }
 
     @Test
-    void setAbstractBuildsCorrectFlag() {
+    void setAbstractBuildsCorrectFlag()
+    {
         int access = builder.setAbstract().build();
         assertTrue(Modifiers.isAbstract(access));
         assertEquals(Modifiers.ABSTRACT, access);
     }
 
     @Test
-    void setStrictfpBuildsCorrectFlag() {
+    void setStrictfpBuildsCorrectFlag()
+    {
         int access = builder.setStrictfp().build();
         assertTrue(Modifiers.isStrict(access));
         assertEquals(Modifiers.STRICT, access);
     }
 
     @Test
-    void setSyntheticBuildsCorrectFlag() {
+    void setSyntheticBuildsCorrectFlag()
+    {
         int access = builder.setSynthetic().build();
         assertTrue(Modifiers.isSynthetic(access));
         assertEquals(Modifiers.SYNTHETIC, access);
     }
 
     @Test
-    void setAnnotationBuildsCorrectFlag() {
+    void setAnnotationBuildsCorrectFlag()
+    {
         int access = builder.setAnnotation().build();
         assertTrue(Modifiers.isAnnotation(access));
         assertEquals(Modifiers.ANNOTATION, access);
     }
 
     @Test
-    void setEnumBuildsCorrectFlag() {
+    void setEnumBuildsCorrectFlag()
+    {
         int access = builder.setEnum().build();
         assertTrue(Modifiers.isEnum(access));
         assertEquals(Modifiers.ENUM, access);
     }
 
     @Test
-    void setVolatileBuildsCorrectFlag() {
+    void setVolatileBuildsCorrectFlag()
+    {
         int access = builder.setVolatile().build();
         assertTrue(Modifiers.isVolatile(access));
         assertEquals(Modifiers.VOLATILE, access);
     }
 
     @Test
-    void setTransientBuildsCorrectFlag() {
+    void setTransientBuildsCorrectFlag()
+    {
         int access = builder.setTransient().build();
         assertTrue(Modifiers.isTransient(access));
         assertEquals(Modifiers.TRANSIENT, access);
     }
 
     @Test
-    void setInterfaceBuildsCorrectFlag() {
+    void setInterfaceBuildsCorrectFlag()
+    {
         int access = builder.setInterface().build();
         assertTrue(Modifiers.isInterface(access));
         assertEquals(Modifiers.INTERFACE, access);
     }
 
-    // ========== Visibility Modifier Exclusivity Tests ==========
+    // Visibility Modifier Exclusivity Tests
 
     @Test
-    void setPublicClearsPrivate() {
+    void setPublicClearsPrivate()
+    {
         int access = builder.setPrivate().setPublic().build();
         assertTrue(Modifiers.isPublic(access));
         assertFalse(Modifiers.isPrivate(access));
@@ -150,7 +170,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void setPublicClearsProtected() {
+    void setPublicClearsProtected()
+    {
         int access = builder.setProtected().setPublic().build();
         assertTrue(Modifiers.isPublic(access));
         assertFalse(Modifiers.isProtected(access));
@@ -158,7 +179,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void setPrivateClearsPublic() {
+    void setPrivateClearsPublic()
+    {
         int access = builder.setPublic().setPrivate().build();
         assertTrue(Modifiers.isPrivate(access));
         assertFalse(Modifiers.isPublic(access));
@@ -166,7 +188,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void setPrivateClearsProtected() {
+    void setPrivateClearsProtected()
+    {
         int access = builder.setProtected().setPrivate().build();
         assertTrue(Modifiers.isPrivate(access));
         assertFalse(Modifiers.isProtected(access));
@@ -174,7 +197,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void setProtectedClearsPublic() {
+    void setProtectedClearsPublic()
+    {
         int access = builder.setPublic().setProtected().build();
         assertTrue(Modifiers.isProtected(access));
         assertFalse(Modifiers.isPublic(access));
@@ -182,24 +206,27 @@ class AccessBuilderTest {
     }
 
     @Test
-    void setProtectedClearsPrivate() {
+    void setProtectedClearsPrivate()
+    {
         int access = builder.setPrivate().setProtected().build();
         assertTrue(Modifiers.isProtected(access));
         assertFalse(Modifiers.isPrivate(access));
         assertFalse(Modifiers.isPublic(access));
     }
 
-    // ========== Combined Flags Tests ==========
+    // Combined Flags Tests
 
     @Test
-    void combinePublicStatic() {
+    void combinePublicStatic()
+    {
         int access = builder.setPublic().setStatic().build();
         assertTrue(Modifiers.isPublic(access));
         assertTrue(Modifiers.isStatic(access));
     }
 
     @Test
-    void combinePublicStaticFinal() {
+    void combinePublicStaticFinal()
+    {
         int access = builder.setPublic().setStatic().setFinal().build();
         assertTrue(Modifiers.isPublic(access));
         assertTrue(Modifiers.isStatic(access));
@@ -207,7 +234,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void combinePrivateFinal() {
+    void combinePrivateFinal()
+    {
         int access = builder.setPrivate().setFinal().build();
         assertTrue(Modifiers.isPrivate(access));
         assertTrue(Modifiers.isFinal(access));
@@ -215,21 +243,24 @@ class AccessBuilderTest {
     }
 
     @Test
-    void combineProtectedAbstract() {
+    void combineProtectedAbstract()
+    {
         int access = builder.setProtected().setAbstract().build();
         assertTrue(Modifiers.isProtected(access));
         assertTrue(Modifiers.isAbstract(access));
     }
 
     @Test
-    void combinePublicSynchronized() {
+    void combinePublicSynchronized()
+    {
         int access = builder.setPublic().setSynchronized().build();
         assertTrue(Modifiers.isPublic(access));
         assertTrue(Modifiers.isSynchronized(access));
     }
 
     @Test
-    void combinePublicStaticFinalSynchronized() {
+    void combinePublicStaticFinalSynchronized()
+    {
         int access = builder
                 .setPublic()
                 .setStatic()
@@ -243,7 +274,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void combineFieldModifiers() {
+    void combineFieldModifiers()
+    {
         int access = builder
                 .setPrivate()
                 .setStatic()
@@ -259,7 +291,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void combineInterfaceAbstractPublic() {
+    void combineInterfaceAbstractPublic()
+    {
         int access = builder
                 .setPublic()
                 .setInterface()
@@ -271,7 +304,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void combineEnumPublicStaticFinal() {
+    void combineEnumPublicStaticFinal()
+    {
         int access = builder
                 .setPublic()
                 .setEnum()
@@ -285,7 +319,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void combineBridgeSynthetic() {
+    void combineBridgeSynthetic()
+    {
         int access = builder
                 .setPublic()
                 .setBridge()
@@ -296,16 +331,18 @@ class AccessBuilderTest {
         assertTrue(Modifiers.isSynthetic(access));
     }
 
-    // ========== Builder Chaining Tests ==========
+    // Builder Chaining Tests
 
     @Test
-    void builderChainingReturnsBuilderInstance() {
+    void builderChainingReturnsBuilderInstance()
+    {
         AccessBuilder result = builder.setPublic();
         assertSame(builder, result, "Builder methods should return this");
     }
 
     @Test
-    void multipleChainedCallsWork() {
+    void multipleChainedCallsWork()
+    {
         AccessBuilder result = builder
                 .setPublic()
                 .setStatic()
@@ -314,10 +351,11 @@ class AccessBuilderTest {
         assertSame(builder, result);
     }
 
-    // ========== Reset Tests ==========
+    // Reset Tests
 
     @Test
-    void resetClearsAllFlags() {
+    void resetClearsAllFlags()
+    {
         builder.setPublic().setStatic().setFinal().reset();
         int access = builder.build();
         assertEquals(0, access, "Reset should clear all flags");
@@ -325,13 +363,15 @@ class AccessBuilderTest {
     }
 
     @Test
-    void resetReturnsBuilder() {
+    void resetReturnsBuilder()
+    {
         AccessBuilder result = builder.setPublic().reset();
         assertSame(builder, result);
     }
 
     @Test
-    void resetAllowsReuse() {
+    void resetAllowsReuse()
+    {
         int firstAccess = builder.setPublic().setStatic().build();
         builder.reset();
         int secondAccess = builder.setPrivate().setFinal().build();
@@ -345,17 +385,19 @@ class AccessBuilderTest {
         assertFalse(Modifiers.isStatic(secondAccess));
     }
 
-    // ========== SetAccessFlags Tests ==========
+    // SetAccessFlags Tests
 
     @Test
-    void setAccessFlagsSetsExactValue() {
+    void setAccessFlagsSetsExactValue()
+    {
         int expectedFlags = Modifiers.PUBLIC | Modifiers.STATIC | Modifiers.FINAL;
         int access = builder.setAccessFlags(expectedFlags).build();
         assertEquals(expectedFlags, access);
     }
 
     @Test
-    void setAccessFlagsReplacesExistingFlags() {
+    void setAccessFlagsReplacesExistingFlags()
+    {
         builder.setPublic().setStatic();
         int newFlags = Modifiers.PRIVATE | Modifiers.FINAL;
         int access = builder.setAccessFlags(newFlags).build();
@@ -367,13 +409,15 @@ class AccessBuilderTest {
     }
 
     @Test
-    void setAccessFlagsReturnsBuilder() {
+    void setAccessFlagsReturnsBuilder()
+    {
         AccessBuilder result = builder.setAccessFlags(Modifiers.PUBLIC);
         assertSame(builder, result);
     }
 
     @Test
-    void setAccessFlagsCanBeChained() {
+    void setAccessFlagsCanBeChained()
+    {
         int access = builder
                 .setAccessFlags(Modifiers.PUBLIC)
                 .setStatic()
@@ -382,10 +426,11 @@ class AccessBuilderTest {
         assertTrue(Modifiers.isStatic(access));
     }
 
-    // ========== Build Multiple Times Tests ==========
+    // Build Multiple Times Tests
 
     @Test
-    void buildCanBeCalledMultipleTimes() {
+    void buildCanBeCalledMultipleTimes()
+    {
         builder.setPublic().setStatic();
         int access1 = builder.build();
         int access2 = builder.build();
@@ -393,7 +438,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void buildDoesNotClearFlags() {
+    void buildDoesNotClearFlags()
+    {
         builder.setPublic().setStatic();
         builder.build();
         int access = builder.build();
@@ -401,17 +447,19 @@ class AccessBuilderTest {
         assertTrue(Modifiers.isStatic(access));
     }
 
-    // ========== Empty Builder Tests ==========
+    // Empty Builder Tests
 
     @Test
-    void emptyBuilderProducesZero() {
+    void emptyBuilderProducesZero()
+    {
         int access = new AccessBuilder().build();
         assertEquals(0, access);
         assertTrue(Modifiers.isPackagePrivate(access));
     }
 
     @Test
-    void emptyBuilderHasNoFlags() {
+    void emptyBuilderHasNoFlags()
+    {
         int access = builder.build();
         assertFalse(Modifiers.isPublic(access));
         assertFalse(Modifiers.isPrivate(access));
@@ -420,10 +468,11 @@ class AccessBuilderTest {
         assertFalse(Modifiers.isFinal(access));
     }
 
-    // ========== Complex Scenarios Tests ==========
+    // Complex Scenarios Tests
 
     @Test
-    void publicStaticFinalMethodFlags() {
+    void publicStaticFinalMethodFlags()
+    {
         // Typical method: public static final
         int access = builder
                 .setPublic()
@@ -439,7 +488,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void privateVolatileTransientFieldFlags() {
+    void privateVolatileTransientFieldFlags()
+    {
         // Typical field: private volatile transient
         int access = builder
                 .setPrivate()
@@ -454,7 +504,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void publicAbstractInterfaceFlags() {
+    void publicAbstractInterfaceFlags()
+    {
         // Typical interface method: public abstract
         int access = builder
                 .setPublic()
@@ -468,7 +519,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void syntheticBridgeMethodFlags() {
+    void syntheticBridgeMethodFlags()
+    {
         // Compiler-generated bridge method: synthetic bridge
         int access = builder
                 .setSynthetic()
@@ -482,7 +534,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void nativeMethodFlags() {
+    void nativeMethodFlags()
+    {
         // Native method: public native
         int access = builder
                 .setPublic()
@@ -495,7 +548,8 @@ class AccessBuilderTest {
     }
 
     @Test
-    void varArgsMethodFlags() {
+    void varArgsMethodFlags()
+    {
         // Varargs method: public static varargs
         int access = builder
                 .setPublic()

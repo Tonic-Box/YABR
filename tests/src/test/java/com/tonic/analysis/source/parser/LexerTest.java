@@ -5,12 +5,15 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LexerTest {
+class LexerTest
+{
 
     @Nested
-    class KeywordTests {
+    class KeywordTests
+    {
         @Test
-        void recognizesClassKeyword() {
+        void recognizesClassKeyword()
+        {
             Lexer lexer = new Lexer("class");
             Token token = lexer.nextToken();
             assertEquals(TokenType.CLASS, token.getType());
@@ -18,7 +21,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesAllKeywords() {
+        void recognizesAllKeywords()
+        {
             String[] keywords = {
                 "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char",
                 "class", "const", "continue", "default", "do", "double", "else", "enum",
@@ -29,7 +33,8 @@ class LexerTest {
                 "transient", "try", "var", "void", "volatile", "while"
             };
 
-            for (String keyword : keywords) {
+            for (String keyword : keywords)
+            {
                 Lexer lexer = new Lexer(keyword);
                 Token token = lexer.nextToken();
                 assertTrue(token.isKeyword(), "Expected keyword: " + keyword);
@@ -38,9 +43,11 @@ class LexerTest {
     }
 
     @Nested
-    class OperatorTests {
+    class OperatorTests
+    {
         @Test
-        void recognizesSingleCharOperators() {
+        void recognizesSingleCharOperators()
+        {
             Lexer lexer = new Lexer("+ - * / % = < > ! & | ^ ~ ? :");
             assertEquals(TokenType.PLUS, lexer.nextToken().getType());
             assertEquals(TokenType.MINUS, lexer.nextToken().getType());
@@ -60,7 +67,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesDoubleCharOperators() {
+        void recognizesDoubleCharOperators()
+        {
             Lexer lexer = new Lexer("++ -- && || == != <= >= << >> -> ::");
             assertEquals(TokenType.PLUS_PLUS, lexer.nextToken().getType());
             assertEquals(TokenType.MINUS_MINUS, lexer.nextToken().getType());
@@ -77,7 +85,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesTripleCharOperators() {
+        void recognizesTripleCharOperators()
+        {
             Lexer lexer = new Lexer(">>> <<= >>= >>>= += -= *= /= %= &= |= ^=");
             assertEquals(TokenType.GT_GT_GT, lexer.nextToken().getType());
             assertEquals(TokenType.LT_LT_EQ, lexer.nextToken().getType());
@@ -95,9 +104,11 @@ class LexerTest {
     }
 
     @Nested
-    class LiteralTests {
+    class LiteralTests
+    {
         @Test
-        void recognizesIntegerLiterals() {
+        void recognizesIntegerLiterals()
+        {
             Lexer lexer = new Lexer("42 0 123456");
             assertEquals(42, lexer.nextToken().getValue());
             assertEquals(0, lexer.nextToken().getValue());
@@ -105,7 +116,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesHexLiterals() {
+        void recognizesHexLiterals()
+        {
             Lexer lexer = new Lexer("0xFF 0x10 0xCAFEBABE");
             assertEquals(0xFF, lexer.nextToken().getValue());
             assertEquals(0x10, lexer.nextToken().getValue());
@@ -113,28 +125,32 @@ class LexerTest {
         }
 
         @Test
-        void recognizesBinaryLiterals() {
+        void recognizesBinaryLiterals()
+        {
             Lexer lexer = new Lexer("0b1010 0B11111111");
             assertEquals(0b1010, lexer.nextToken().getValue());
             assertEquals(0B11111111, lexer.nextToken().getValue());
         }
 
         @Test
-        void recognizesOctalLiterals() {
+        void recognizesOctalLiterals()
+        {
             Lexer lexer = new Lexer("077 0755");
             assertEquals(63, lexer.nextToken().getValue());
             assertEquals(493, lexer.nextToken().getValue());
         }
 
         @Test
-        void recognizesUnderscoresInNumbers() {
+        void recognizesUnderscoresInNumbers()
+        {
             Lexer lexer = new Lexer("1_000_000 0xFF_FF");
             assertEquals(1_000_000, lexer.nextToken().getValue());
             assertEquals(0xFF_FF, lexer.nextToken().getValue());
         }
 
         @Test
-        void recognizesLongLiterals() {
+        void recognizesLongLiterals()
+        {
             Lexer lexer = new Lexer("42L 123456789012345L");
             Token t1 = lexer.nextToken();
             assertEquals(TokenType.LONG_LITERAL, t1.getType());
@@ -145,7 +161,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesFloatLiterals() {
+        void recognizesFloatLiterals()
+        {
             Lexer lexer = new Lexer("3.14f 2.5F .5f");
             Token t1 = lexer.nextToken();
             assertEquals(TokenType.FLOAT_LITERAL, t1.getType());
@@ -156,7 +173,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesDoubleLiterals() {
+        void recognizesDoubleLiterals()
+        {
             Lexer lexer = new Lexer("3.14 2.5d 1e10 1.5e-3");
             Token t1 = lexer.nextToken();
             assertEquals(TokenType.DOUBLE_LITERAL, t1.getType());
@@ -170,7 +188,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesStringLiterals() {
+        void recognizesStringLiterals()
+        {
             Lexer lexer = new Lexer("\"hello\" \"world\"");
             Token t1 = lexer.nextToken();
             assertEquals(TokenType.STRING_LITERAL, t1.getType());
@@ -181,14 +200,16 @@ class LexerTest {
         }
 
         @Test
-        void recognizesStringEscapes() {
+        void recognizesStringEscapes()
+        {
             Lexer lexer = new Lexer("\"hello\\nworld\" \"tab\\there\"");
             assertEquals("hello\nworld", lexer.nextToken().getValue());
             assertEquals("tab\there", lexer.nextToken().getValue());
         }
 
         @Test
-        void recognizesCharLiterals() {
+        void recognizesCharLiterals()
+        {
             Lexer lexer = new Lexer("'a' 'Z' '\\n' '\\t'");
             assertEquals('a', lexer.nextToken().getValue());
             assertEquals('Z', lexer.nextToken().getValue());
@@ -197,23 +218,27 @@ class LexerTest {
         }
 
         @Test
-        void recognizesBooleanLiterals() {
+        void recognizesBooleanLiterals()
+        {
             Lexer lexer = new Lexer("true false");
             assertEquals(TokenType.TRUE, lexer.nextToken().getType());
             assertEquals(TokenType.FALSE, lexer.nextToken().getType());
         }
 
         @Test
-        void recognizesNullLiteral() {
+        void recognizesNullLiteral()
+        {
             Lexer lexer = new Lexer("null");
             assertEquals(TokenType.NULL, lexer.nextToken().getType());
         }
     }
 
     @Nested
-    class IdentifierTests {
+    class IdentifierTests
+    {
         @Test
-        void recognizesSimpleIdentifiers() {
+        void recognizesSimpleIdentifiers()
+        {
             Lexer lexer = new Lexer("foo bar baz");
             assertEquals("foo", lexer.nextToken().getText());
             assertEquals("bar", lexer.nextToken().getText());
@@ -221,7 +246,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesIdentifiersWithNumbers() {
+        void recognizesIdentifiersWithNumbers()
+        {
             Lexer lexer = new Lexer("foo1 bar2 baz123");
             assertEquals("foo1", lexer.nextToken().getText());
             assertEquals("bar2", lexer.nextToken().getText());
@@ -229,7 +255,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesIdentifiersWithUnderscore() {
+        void recognizesIdentifiersWithUnderscore()
+        {
             Lexer lexer = new Lexer("_foo foo_bar __private");
             assertEquals("_foo", lexer.nextToken().getText());
             assertEquals("foo_bar", lexer.nextToken().getText());
@@ -237,7 +264,8 @@ class LexerTest {
         }
 
         @Test
-        void recognizesIdentifiersWithDollar() {
+        void recognizesIdentifiersWithDollar()
+        {
             Lexer lexer = new Lexer("$inner Outer$Inner");
             assertEquals("$inner", lexer.nextToken().getText());
             assertEquals("Outer$Inner", lexer.nextToken().getText());
@@ -245,9 +273,11 @@ class LexerTest {
     }
 
     @Nested
-    class DelimiterTests {
+    class DelimiterTests
+    {
         @Test
-        void recognizesDelimiters() {
+        void recognizesDelimiters()
+        {
             Lexer lexer = new Lexer("( ) { } [ ] ; , . @");
             assertEquals(TokenType.LPAREN, lexer.nextToken().getType());
             assertEquals(TokenType.RPAREN, lexer.nextToken().getType());
@@ -262,30 +292,35 @@ class LexerTest {
         }
 
         @Test
-        void recognizesEllipsis() {
+        void recognizesEllipsis()
+        {
             Lexer lexer = new Lexer("...");
             assertEquals(TokenType.ELLIPSIS, lexer.nextToken().getType());
         }
     }
 
     @Nested
-    class CommentTests {
+    class CommentTests
+    {
         @Test
-        void skipsLineComments() {
+        void skipsLineComments()
+        {
             Lexer lexer = new Lexer("foo // this is a comment\nbar");
             assertEquals("foo", lexer.nextToken().getText());
             assertEquals("bar", lexer.nextToken().getText());
         }
 
         @Test
-        void skipsBlockComments() {
+        void skipsBlockComments()
+        {
             Lexer lexer = new Lexer("foo /* block comment */ bar");
             assertEquals("foo", lexer.nextToken().getText());
             assertEquals("bar", lexer.nextToken().getText());
         }
 
         @Test
-        void skipsMultiLineBlockComments() {
+        void skipsMultiLineBlockComments()
+        {
             Lexer lexer = new Lexer("foo /* \n * block \n * comment \n */ bar");
             assertEquals("foo", lexer.nextToken().getText());
             assertEquals("bar", lexer.nextToken().getText());
@@ -293,9 +328,11 @@ class LexerTest {
     }
 
     @Nested
-    class PositionTrackingTests {
+    class PositionTrackingTests
+    {
         @Test
-        void tracksLineNumbers() {
+        void tracksLineNumbers()
+        {
             Lexer lexer = new Lexer("a\nb\nc");
             Token t1 = lexer.nextToken();
             assertEquals(1, t1.getLine());
@@ -306,7 +343,8 @@ class LexerTest {
         }
 
         @Test
-        void tracksColumnNumbers() {
+        void tracksColumnNumbers()
+        {
             Lexer lexer = new Lexer("a b c");
             Token t1 = lexer.nextToken();
             assertEquals(1, t1.getColumn());
@@ -318,9 +356,11 @@ class LexerTest {
     }
 
     @Nested
-    class PeekTests {
+    class PeekTests
+    {
         @Test
-        void peekDoesNotAdvance() {
+        void peekDoesNotAdvance()
+        {
             Lexer lexer = new Lexer("a b c");
             Token peeked = lexer.peek();
             Token next = lexer.nextToken();
@@ -328,7 +368,8 @@ class LexerTest {
         }
 
         @Test
-        void multiplePeeksReturnSameToken() {
+        void multiplePeeksReturnSameToken()
+        {
             Lexer lexer = new Lexer("a b");
             Token peek1 = lexer.peek();
             Token peek2 = lexer.peek();
@@ -337,22 +378,26 @@ class LexerTest {
     }
 
     @Nested
-    class EOFTests {
+    class EOFTests
+    {
         @Test
-        void returnsEOFAtEnd() {
+        void returnsEOFAtEnd()
+        {
             Lexer lexer = new Lexer("a");
             lexer.nextToken();
             assertEquals(TokenType.EOF, lexer.nextToken().getType());
         }
 
         @Test
-        void returnsEOFForEmptyInput() {
+        void returnsEOFForEmptyInput()
+        {
             Lexer lexer = new Lexer("");
             assertEquals(TokenType.EOF, lexer.nextToken().getType());
         }
 
         @Test
-        void returnsEOFRepeatedly() {
+        void returnsEOFRepeatedly()
+        {
             Lexer lexer = new Lexer("a");
             lexer.nextToken();
             assertEquals(TokenType.EOF, lexer.nextToken().getType());

@@ -31,7 +31,8 @@ import com.tonic.parser.ClassFile;
 ClassPool classPool = ClassPool.getDefault();
 
 // Load from resources
-try (InputStream is = getClass().getResourceAsStream("MyClass.class")) {
+try (InputStream is = getClass().getResourceAsStream("MyClass.class"))
+{
     ClassFile classFile = classPool.loadClass(is);
     System.out.println("Loaded: " + classFile.getClassName());
 }
@@ -156,7 +157,8 @@ Files.write(Path.of("RenamedClass.class"), modified);
 ```java
 classFile.accept(new AbstractClassVisitor() {
     @Override
-    public void visitMethod(MethodEntry method) {
+    public void visitMethod(MethodEntry method)
+    {
         System.out.println("Method: " + method.getName());
     }
 });

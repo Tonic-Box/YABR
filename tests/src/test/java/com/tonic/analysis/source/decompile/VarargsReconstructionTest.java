@@ -21,10 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * into individual arguments, and a method declared {@code ACC_VARARGS} must render its trailing
  * parameter as {@code T...} so the collapsed calls recompile.
  */
-class VarargsReconstructionTest {
+class VarargsReconstructionTest
+{
 
     @Test
-    void reflectionChainCollapsesWithoutOrphanArrays() throws Exception {
+    void reflectionChainCollapsesWithoutOrphanArrays() throws Exception
+    {
         String src =
             "public class Reflect {\n" +
             "  static Object m() throws Exception {\n" +
@@ -41,7 +43,8 @@ class VarargsReconstructionTest {
     }
 
     @Test
-    void jdkVarargsCollapse() throws Exception {
+    void jdkVarargsCollapse() throws Exception
+    {
         String src =
             "import java.util.*;\n" +
             "public class Jdk {\n" +
@@ -56,7 +59,8 @@ class VarargsReconstructionTest {
     }
 
     @Test
-    void userDefinedVarargsDeclarationAndCallRecompile() throws Exception {
+    void userDefinedVarargsDeclarationAndCallRecompile() throws Exception
+    {
         String src =
             "public class User {\n" +
             "  static int sum(int... xs) { int s = 0; for (int x : xs) s += x; return s; }\n" +
@@ -74,7 +78,8 @@ class VarargsReconstructionTest {
     }
 
     @Test
-    void emptyVarargsCollapses() throws Exception {
+    void emptyVarargsCollapses() throws Exception
+    {
         String src =
             "public class Empty {\n" +
             "  static String m() { return String.format(\"no-args\"); }\n" +
@@ -86,7 +91,8 @@ class VarargsReconstructionTest {
     }
 
     @Test
-    void sideEffectingElementsCollapseAndRecompile() throws Exception {
+    void sideEffectingElementsCollapseAndRecompile() throws Exception
+    {
         String src =
             "public class Fx {\n" +
             "  static int c;\n" +
@@ -101,7 +107,8 @@ class VarargsReconstructionTest {
     }
 
     @Test
-    void arrayOfArraysVarargsRecompiles() throws Exception {
+    void arrayOfArraysVarargsRecompiles() throws Exception
+    {
         String src =
             "public class Nested {\n" +
             "  static int f(int[]... xs) { int n = 0; for (int[] x : xs) n += x.length; return n; }\n" +
@@ -113,7 +120,8 @@ class VarargsReconstructionTest {
     }
 
     @Test
-    void nonVarargsArrayArgumentIsNotCollapsed() throws Exception {
+    void nonVarargsArrayArgumentIsNotCollapsed() throws Exception
+    {
         String src =
             "public class Plain {\n" +
             "  static int g(int[] a) { return a.length; }\n" +
@@ -125,52 +133,66 @@ class VarargsReconstructionTest {
         assertRecompiles("Plain", out);
     }
 
-    private int count(String text, String needle) {
+    private int count(String text, String needle)
+    {
         int n = 0;
-        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + needle.length())) {
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + needle.length()))
+        {
             n++;
         }
         return n;
     }
 
-    private String roundTrip(String className, String src) throws Exception {
+    private String roundTrip(String className, String src) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeCompiler(compiler);
         Path dir = Files.createTempDirectory("yabr-varargs");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, src);
             int rc = compiler.run(null, null, null, "-g", "-d", dir.toString(), srcFile.toString());
             assertEquals(0, rc, "javac of source fixture failed");
             byte[] bytes = Files.readAllBytes(dir.resolve(className + ".class"));
             return new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private void assertRecompiles(String className, String decompiled) throws Exception {
+    private void assertRecompiles(String className, String decompiled) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeCompiler(compiler);
         Path dir = Files.createTempDirectory("yabr-varargs-recompile");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, decompiled);
             int rc = compiler.run(null, null, null, "-d", dir.toString(), srcFile.toString());
             assertEquals(0, rc, "decompiled output did not recompile:\n" + decompiled);
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private void assumeCompiler(JavaCompiler compiler) {
-        if (compiler == null) {
+    private void assumeCompiler(JavaCompiler compiler)
+    {
+        if (compiler == null)
+        {
             throw new org.opentest4j.TestAbortedException("no system Java compiler available");
         }
     }
 
-    private void deleteTree(Path dir) throws Exception {
-        try (var paths = Files.walk(dir)) {
+    private void deleteTree(Path dir) throws Exception
+    {
+        try (var paths = Files.walk(dir))
+        {
             paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try { Files.deleteIfExists(p); } catch (Exception ignored) {}
             });

@@ -17,13 +17,15 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherInvokeFieldTest {
+class OpcodeDispatcherInvokeFieldTest
+{
     private BytecodeContext context;
     private SimpleHeapManager heapManager;
     private ClassPool classPool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heapManager = new SimpleHeapManager();
         classPool = new ClassPool(true);
         context = new BytecodeContext.Builder()
@@ -33,13 +35,17 @@ class OpcodeDispatcherInvokeFieldTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -47,9 +53,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class GetStaticTests {
+    class GetStaticTests
+    {
         @Test
-        void testGetStaticEncodesCorrectly() throws IOException {
+        void testGetStaticEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestGetStatic")
                     .publicStaticMethod("test", "()I")
                         .getstatic("java/lang/Integer", "MAX_VALUE", "I")
@@ -62,9 +70,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class PutStaticTests {
+    class PutStaticTests
+    {
         @Test
-        void testPutStaticEncodesCorrectly() throws IOException {
+        void testPutStaticEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestPutStatic")
                     .publicStaticMethod("test", "(I)V")
                         .iload(0)
@@ -78,9 +88,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class GetFieldTests {
+    class GetFieldTests
+    {
         @Test
-        void testGetFieldEncodesCorrectly() throws IOException {
+        void testGetFieldEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestGetField")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)I")
                         .aload(0)
@@ -96,9 +108,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class PutFieldTests {
+    class PutFieldTests
+    {
         @Test
-        void testPutFieldEncodesCorrectly() throws IOException {
+        void testPutFieldEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestPutField")
                     .publicStaticMethod("test", "(Ljava/lang/Object;I)V")
                         .aload(0)
@@ -115,9 +129,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class InvokeStaticTests {
+    class InvokeStaticTests
+    {
         @Test
-        void testInvokeStaticEncodesCorrectly() throws IOException {
+        void testInvokeStaticEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestInvokeStatic")
                     .publicStaticMethod("test", "(I)I")
                         .iload(0)
@@ -131,9 +147,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class InvokeVirtualTests {
+    class InvokeVirtualTests
+    {
         @Test
-        void testInvokeVirtualEncodesCorrectly() throws IOException {
+        void testInvokeVirtualEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestInvokeVirtual")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)I")
                         .aload(0)
@@ -149,9 +167,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class InvokeSpecialTests {
+    class InvokeSpecialTests
+    {
         @Test
-        void testInvokeSpecialEncodesCorrectly() throws IOException {
+        void testInvokeSpecialEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestInvokeSpecial")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)V")
                         .aload(0)
@@ -167,9 +187,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class InvokeInterfaceTests {
+    class InvokeInterfaceTests
+    {
         @Test
-        void testInvokeInterfaceEncodesCorrectly() throws IOException {
+        void testInvokeInterfaceEncodesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestInvokeInterface")
                     .publicStaticMethod("test", "(Ljava/util/List;)I")
                         .aload(0)
@@ -185,9 +207,11 @@ class OpcodeDispatcherInvokeFieldTest {
     }
 
     @Nested
-    class CombinedInvokeFieldTests {
+    class CombinedInvokeFieldTests
+    {
         @Test
-        void testMultipleFieldAccess() throws IOException {
+        void testMultipleFieldAccess() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMultiField")
                     .publicStaticMethod("test", "(I)V")
                         .iload(0)
@@ -202,7 +226,8 @@ class OpcodeDispatcherInvokeFieldTest {
         }
 
         @Test
-        void testFieldAndInvoke() throws IOException {
+        void testFieldAndInvoke() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestFieldInvoke")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)I")
                         .aload(0)

@@ -17,13 +17,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for DeadCodeElimination transform.
  * Verifies that unused definitions are removed from the IR.
  */
-class DeadCodeEliminationTest {
+class DeadCodeEliminationTest
+{
 
     private IRMethod method;
     private IRBlock block;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -34,15 +36,16 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void getNameReturnsDeadCodeElimination() {
+    void getNameReturnsDeadCodeElimination()
+    {
         DeadCodeElimination transform = new DeadCodeElimination();
         assertEquals("DeadCodeElimination", transform.getName());
     }
 
     @Test
-    void removesUnusedDefinitions() {
+    void removesUnusedDefinitions()
+    {
         // v0 = const 5 (unused)
-        // return
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         block.addInstruction(new ConstantInstruction(v0, IntConstant.of(5)));
         block.addInstruction(new ReturnInstruction());
@@ -56,10 +59,10 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void keepsUsedDefinitions() {
+    void keepsUsedDefinitions()
+    {
         // v0 = const 5
         // v1 = v0 + v0
-        // return v1
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
 
@@ -75,9 +78,9 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void keepsEssentialInstructions() {
+    void keepsEssentialInstructions()
+    {
         // v0 = invoke foo() (has side effects)
-        // return
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         InvokeInstruction invoke = new InvokeInstruction(v0, InvokeType.STATIC,
             "com/test/Test", "foo", "()I", List.of());
@@ -93,9 +96,9 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void keepsPutFieldInstructions() {
+    void keepsPutFieldInstructions()
+    {
         // putfield obj.field = v0 (has side effects)
-        // return
         SSAValue obj = new SSAValue(ReferenceType.OBJECT);
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
 
@@ -112,9 +115,9 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void returnsFalseWhenNoDeadCode() {
+    void returnsFalseWhenNoDeadCode()
+    {
         // v0 = const 5
-        // return v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
 
         block.addInstruction(new ConstantInstruction(v0, IntConstant.of(5)));
@@ -128,8 +131,8 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void removesDeadPhiInstructions() {
-        // Create two blocks with phi merge
+    void removesDeadPhiInstructions()
+    {
         IRBlock pred1 = new IRBlock("pred1");
         IRBlock pred2 = new IRBlock("pred2");
         IRBlock merge = new IRBlock("merge");
@@ -160,7 +163,8 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void keepsLoopIncrementFeedingPhi() {
+    void keepsLoopIncrementFeedingPhi()
+    {
         // entry: i0 = 0; goto header
         // header: i = phi(i0[entry], iNext[body]); if (i != 0) -> body else exit
         // body: use(i); iNext = i + 1; goto header
@@ -186,8 +190,7 @@ class DeadCodeEliminationTest {
         header.addPhi(phi);
         header.addInstruction(new BranchInstruction(CompareOp.IFNE, i, body, exit));
 
-        body.addInstruction(new InvokeInstruction(used, InvokeType.STATIC,
-            "com/test/Test", "use", "(I)I", List.of(i)));
+        body.addInstruction(new InvokeInstruction(used, InvokeType.STATIC, "com/test/Test", "use", "(I)I", List.of(i)));
         BinaryOpInstruction inc = new BinaryOpInstruction(iNext, BinaryOp.ADD, i, IntConstant.of(1));
         body.addInstruction(inc);
         body.addInstruction(SimpleInstruction.createGoto(header));
@@ -202,18 +205,16 @@ class DeadCodeEliminationTest {
         DeadCodeElimination transform = new DeadCodeElimination();
         transform.run(method);
 
-        assertTrue(body.getInstructions().contains(inc),
-            "loop increment feeding the phi must not be removed");
-        assertTrue(header.getPhiInstructions().contains(phi),
-            "live loop phi must not be removed");
+        assertTrue(body.getInstructions().contains(inc), "loop increment feeding the phi must not be removed");
+        assertTrue(header.getPhiInstructions().contains(phi), "live loop phi must not be removed");
     }
 
     @Test
-    void removesMultipleUnusedInstructions() {
+    void removesMultipleUnusedInstructions()
+    {
         // v0 = const 1 (unused)
         // v1 = const 2 (unused)
         // v2 = const 3 (unused)
-        // return
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
@@ -232,11 +233,11 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void keepsTransitivelyUsedValues() {
+    void keepsTransitivelyUsedValues()
+    {
         // v0 = const 5
         // v1 = v0 + v0
         // v2 = v1 * 2
-        // return v2
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
@@ -254,11 +255,11 @@ class DeadCodeEliminationTest {
     }
 
     @Test
-    void removesPartiallyDeadCode() {
+    void removesPartiallyDeadCode()
+    {
         // v0 = const 1 (used)
         // v1 = const 2 (unused)
         // v2 = v0 + 3
-        // return v2
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);

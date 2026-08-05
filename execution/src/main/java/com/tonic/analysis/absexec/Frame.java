@@ -16,7 +16,8 @@ import java.util.Map;
  * target ({@link #fork}); a per-method visited-edge guard ({@link Execution#hasJumped}) terminates loops.
  * Port of RuneLite's {@code Frame}, reduced (no value domain, no mapping/step executor).
  */
-public final class Frame {
+public final class Frame
+{
 
     private final Execution execution;
     final MethodEntry method;
@@ -30,8 +31,8 @@ public final class Frame {
     private boolean executing = true;
     boolean jumped; // set by the dispatcher when it redirected cur (so execute() doesn't auto-advance)
 
-    Frame(Execution execution, MethodEntry method, List<Instruction> insns,
-          Map<Instruction, Integer> indexOf) {
+    Frame(Execution execution, MethodEntry method, List<Instruction> insns, Map<Instruction, Integer> indexOf)
+    {
         this.execution = execution;
         this.method = method;
         this.insns = insns;
@@ -42,8 +43,11 @@ public final class Frame {
         this.exceptions = code.getExceptionTable();
     }
 
-    /** Copy-constructor for forking at a branch. */
-    private Frame(Frame other, Instruction startAt) {
+    /**
+     * Copy-constructor for forking at a branch.
+     */
+    private Frame(Frame other, Instruction startAt)
+    {
         this.execution = other.execution;
         this.method = other.method;
         this.insns = other.insns;
@@ -54,13 +58,18 @@ public final class Frame {
         this.cur = startAt;
     }
 
-    /** Seeds the LVT with the method's parameters (this + args), each a parameter {@link VarCtx}. */
-    void initializeEntry() {
+    /**
+     * Seeds the LVT with the method's parameters (this + args), each a parameter {@link VarCtx}.
+     */
+    void initializeEntry()
+    {
         int pos = 0;
-        if (!Modifiers.isStatic(method.getAccess())) {
+        if (!Modifiers.isStatic(method.getAccess()))
+        {
             variables.set(pos++, new VarCtx(false).markParameter());
         }
-        for (String param : DescriptorUtil.parseParameterDescriptors(method.getDesc())) {
+        for (String param : DescriptorUtil.parseParameterDescriptors(method.getDesc()))
+        {
             boolean wide = param.equals("J") || param.equals("D");
             variables.set(pos, new VarCtx(wide).markParameter());
             pos += wide ? 2 : 1;
@@ -68,8 +77,10 @@ public final class Frame {
         cur = insns.isEmpty() ? null : insns.get(0);
     }
 
-    void run() {
-        while (executing && cur != null) {
+    void run()
+    {
+        while (executing && cur != null)
+        {
             Instruction insn = cur;
             jumped = false;
             InsnContext ictx = new InsnContext(insn, this);
@@ -77,37 +88,47 @@ public final class Frame {
             execution.recordExecuted(insn);
             execution.accept(ictx);
             processExceptions(ictx);
-            if (!executing) {
+            if (!executing)
+            {
                 break;
             }
-            if (!jumped) {
+            if (!jumped)
+            {
                 advance();
             }
         }
     }
 
-    private void advance() {
+    private void advance()
+    {
         Integer idx = indexOf.get(cur);
-        if (idx == null || idx + 1 >= insns.size()) {
+        if (idx == null || idx + 1 >= insns.size())
+        {
             executing = false;
             return;
         }
         cur = insns.get(idx + 1);
     }
 
-    // --- navigation helpers the dispatcher uses ---
+    // navigation helpers the dispatcher uses
 
-    Stack stack() {
+    Stack stack()
+    {
         return stack;
     }
 
-    Variables variables() {
+    Variables variables()
+    {
         return variables;
     }
 
-    /** Unconditionally redirect this frame to {@code target} (goto). Guards against re-traversing an edge. */
-    void jumpTo(InsnContext from, Instruction target) {
-        if (target == null || execution.hasJumped(method, from.getInstruction(), target)) {
+    /**
+     * Unconditionally redirect this frame to {@code target} (goto). Guards against re-traversing an edge.
+     */
+    void jumpTo(InsnContext from, Instruction target)
+    {
+        if (target == null || execution.hasJumped(method, from.getInstruction(), target))
+        {
             executing = false;
             return;
         }
@@ -115,9 +136,13 @@ public final class Frame {
         jumped = true;
     }
 
-    /** Fork a new frame that begins executing at {@code target} (a conditional/switch branch). */
-    void fork(InsnContext from, Instruction target) {
-        if (target == null || execution.hasJumped(method, from.getInstruction(), target)) {
+    /**
+     * Fork a new frame that begins executing at {@code target} (a conditional/switch branch).
+     */
+    void fork(InsnContext from, Instruction target)
+    {
+        if (target == null || execution.hasJumped(method, from.getInstruction(), target))
+        {
             return;
         }
         Frame f = new Frame(this, target);
@@ -125,25 +150,31 @@ public final class Frame {
         execution.addFrame(f);
     }
 
-    void stop() {
+    void stop()
+    {
         executing = false;
     }
 
-    Instruction instructionAtOffset(int offset) {
+    Instruction instructionAtOffset(int offset)
+    {
         return execution.instructionAtOffset(method, offset);
     }
 
-    private void processExceptions(InsnContext ictx) {
-        // Fork the handler ONCE per try region — at its first covered instruction — not at every instruction
+    private void processExceptions(InsnContext ictx)
+    {
+        // Fork the handler ONCE per try region - at its first covered instruction - not at every instruction
         // in [startPc, endPc). (Forking per-instruction multiplies handler frames by the try-block length and
         // is the dominant cost.) This is enough to explore the handler's def-use, which is all we need.
         int off = ictx.getInstruction().getOffset();
-        for (ExceptionTableEntry ex : exceptions) {
-            if (off != ex.getStartPc()) {
+        for (ExceptionTableEntry ex : exceptions)
+        {
+            if (off != ex.getStartPc())
+            {
                 continue;
             }
             Instruction handler = instructionAtOffset(ex.getHandlerPc());
-            if (handler == null || execution.hasJumped(method, ictx.getInstruction(), handler)) {
+            if (handler == null || execution.hasJumped(method, ictx.getInstruction(), handler))
+            {
                 continue;
             }
             Frame f = new Frame(this, handler);

@@ -11,13 +11,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Regression: a pre-decrement countdown loop ({@code for (int i = n; --i >= 0;)}) compiles with the
  * induction update in the loop header, before the exit test. A top-tested while recovery drops the
  * header's stores, so the decrement vanished and the loop became {@code int i = n; while (i >= 0) {
- * arr[i] = null; }} — an infinite loop whose very first access reads {@code arr[n]} out of bounds.
+ * arr[i] = null; }} - an infinite loop whose very first access reads {@code arr[n]} out of bounds.
  * The header's store must survive as a leading body statement guarded by an early break.
  */
-public class PreDecrementLoopDecompileTest {
+public class PreDecrementLoopDecompileTest
+{
 
     @Test
-    public void headerResidentDecrementSurvives() throws Exception {
+    public void headerResidentDecrementSurvives() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("PreDecrementLoop");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");

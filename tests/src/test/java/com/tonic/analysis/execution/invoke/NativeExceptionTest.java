@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NativeExceptionTest {
+class NativeExceptionTest
+{
 
     @Test
-    void testConstruction() {
+    void testConstruction()
+    {
         NativeException ex = new NativeException("java/lang/RuntimeException", "Test message");
 
         assertEquals("java/lang/RuntimeException", ex.getExceptionClass());
@@ -15,7 +17,8 @@ class NativeExceptionTest {
     }
 
     @Test
-    void testConstructionWithNullMessage() {
+    void testConstructionWithNullMessage()
+    {
         NativeException ex = new NativeException("java/lang/Exception", null);
 
         assertEquals("java/lang/Exception", ex.getExceptionClass());
@@ -23,7 +26,8 @@ class NativeExceptionTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         NativeException ex = new NativeException("java/lang/IllegalStateException", "Bad state");
         String str = ex.toString();
 
@@ -32,13 +36,15 @@ class NativeExceptionTest {
     }
 
     @Test
-    void testExceptionClassAccessor() {
+    void testExceptionClassAccessor()
+    {
         NativeException ex = new NativeException("java/io/IOException", "IO error");
         assertEquals("java/io/IOException", ex.getExceptionClass());
     }
 
     @Test
-    void testMessageAccessor() {
+    void testMessageAccessor()
+    {
         NativeException ex = new NativeException("java/lang/Error", "Critical error");
         assertEquals("Critical error", ex.getMessage());
     }

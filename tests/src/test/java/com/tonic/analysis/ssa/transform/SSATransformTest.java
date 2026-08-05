@@ -21,17 +21,20 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SSATransformTest {
+class SSATransformTest
+{
 
     @Nested
-    class MethodInliningTests {
+    class MethodInliningTests
+    {
 
         private ClassPool pool;
         private ClassFile classFile;
         private SSA ssa;
 
         @BeforeEach
-        void setUp() throws IOException {
+        void setUp() throws IOException
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
 
@@ -42,7 +45,8 @@ class SSATransformTest {
         }
 
         @Test
-        void inlineSimplePrivateMethod() throws IOException {
+        void inlineSimplePrivateMethod() throws IOException
+        {
             int publicAccess = new AccessBuilder().setPublic().build();
             int privateAccess = new AccessBuilder().setPrivate().build();
 
@@ -80,7 +84,8 @@ class SSATransformTest {
         }
 
         @Test
-        void rejectsNativeMethods() throws IOException {
+        void rejectsNativeMethods() throws IOException
+        {
             int nativeAccess = new AccessBuilder().setPublic().setNative().build();
             MethodEntry nativeMethod = classFile.createNewMethod(nativeAccess, "nativeMethod", "()V");
 
@@ -91,7 +96,8 @@ class SSATransformTest {
         }
 
         @Test
-        void rejectsSynchronizedMethods() throws IOException {
+        void rejectsSynchronizedMethods() throws IOException
+        {
             int syncAccess = new AccessBuilder().setPublic().setSynchronized().build();
             MethodEntry syncMethod = classFile.createNewMethod(syncAccess, "syncMethod", "()V");
 
@@ -102,7 +108,8 @@ class SSATransformTest {
         }
 
         @Test
-        void rejectsAbstractMethods() throws IOException {
+        void rejectsAbstractMethods() throws IOException
+        {
             int abstractAccess = new AccessBuilder().setPublic().setAbstract().build();
             MethodEntry abstractMethod = classFile.createNewMethod(abstractAccess, "abstractMethod", "()V");
 
@@ -113,7 +120,8 @@ class SSATransformTest {
         }
 
         @Test
-        void acceptsFinalMethods() throws IOException {
+        void acceptsFinalMethods() throws IOException
+        {
             int finalAccess = new AccessBuilder().setPublic().setFinal().build();
             MethodEntry finalMethod = classFile.createNewMethod(finalAccess, "finalMethod", "()I");
 
@@ -124,7 +132,8 @@ class SSATransformTest {
         }
 
         @Test
-        void acceptsStaticMethods() throws IOException {
+        void acceptsStaticMethods() throws IOException
+        {
             int staticAccess = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry staticMethod = classFile.createNewMethod(staticAccess, "staticMethod", "()I");
 
@@ -135,7 +144,8 @@ class SSATransformTest {
         }
 
         @Test
-        void rejectsRecursiveCalls() throws IOException {
+        void rejectsRecursiveCalls() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().build();
             MethodEntry method = classFile.createNewMethod(access, "recursive", "()V");
 
@@ -158,7 +168,8 @@ class SSATransformTest {
         }
 
         @Test
-        void rejectsExternalClassMethods() throws IOException {
+        void rejectsExternalClassMethods() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry caller = classFile.createNewMethod(access, "caller", "()V");
 
@@ -181,7 +192,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesMethodWithMultipleReturns() throws IOException {
+        void handlesMethodWithMultipleReturns() throws IOException
+        {
             int privateAccess = new AccessBuilder().setPrivate().build();
             MethodEntry method = classFile.createNewMethod(privateAccess, "multiReturn", "(I)I");
 
@@ -214,7 +226,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesVoidReturnMethods() throws IOException {
+        void handlesVoidReturnMethods() throws IOException
+        {
             int privateAccess = new AccessBuilder().setPrivate().build();
             MethodEntry method = classFile.createNewMethod(privateAccess, "voidMethod", "()V");
 
@@ -233,7 +246,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesMethodWithParameters() throws IOException {
+        void handlesMethodWithParameters() throws IOException
+        {
             int privateAccess = new AccessBuilder().setPrivate().build();
             MethodEntry method = classFile.createNewMethod(privateAccess, "addTwo", "(I)I");
 
@@ -259,13 +273,15 @@ class SSATransformTest {
     }
 
     @Nested
-    class ConstantFoldingTests {
+    class ConstantFoldingTests
+    {
 
         private IRMethod method;
         private IRBlock block;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
 
@@ -276,7 +292,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntBitwiseAND() {
+        void foldIntBitwiseAND()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction and = new BinaryOpInstruction(result, BinaryOp.AND,
                 IntConstant.of(15), IntConstant.of(7));
@@ -294,10 +311,10 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntBitwiseOR() {
+        void foldIntBitwiseOR()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
-            BinaryOpInstruction or = new BinaryOpInstruction(result, BinaryOp.OR,
-                IntConstant.of(8), IntConstant.of(4));
+            BinaryOpInstruction or = new BinaryOpInstruction(result, BinaryOp.OR, IntConstant.of(8), IntConstant.of(4));
             block.addInstruction(or);
             block.addInstruction(new ReturnInstruction());
 
@@ -312,7 +329,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntBitwiseXOR() {
+        void foldIntBitwiseXOR()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction xor = new BinaryOpInstruction(result, BinaryOp.XOR,
                 IntConstant.of(15), IntConstant.of(7));
@@ -330,7 +348,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntShiftLeft() {
+        void foldIntShiftLeft()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction shl = new BinaryOpInstruction(result, BinaryOp.SHL,
                 IntConstant.of(3), IntConstant.of(2));
@@ -348,7 +367,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntShiftRight() {
+        void foldIntShiftRight()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction shr = new BinaryOpInstruction(result, BinaryOp.SHR,
                 IntConstant.of(16), IntConstant.of(2));
@@ -366,7 +386,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntUnsignedShiftRight() {
+        void foldIntUnsignedShiftRight()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction ushr = new BinaryOpInstruction(result, BinaryOp.USHR,
                 IntConstant.of(-16), IntConstant.of(2));
@@ -382,7 +403,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongAddition() {
+        void foldLongAddition()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             BinaryOpInstruction add = new BinaryOpInstruction(result, BinaryOp.ADD,
                 LongConstant.of(100L), LongConstant.of(50L));
@@ -400,7 +422,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongSubtraction() {
+        void foldLongSubtraction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             BinaryOpInstruction sub = new BinaryOpInstruction(result, BinaryOp.SUB,
                 LongConstant.of(100L), LongConstant.of(30L));
@@ -418,7 +441,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongMultiplication() {
+        void foldLongMultiplication()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL,
                 LongConstant.of(7L), LongConstant.of(8L));
@@ -436,7 +460,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongDivision() {
+        void foldLongDivision()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV,
                 LongConstant.of(100L), LongConstant.of(5L));
@@ -454,7 +479,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongComparison() {
+        void foldLongComparison()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(result, BinaryOp.LCMP,
                 LongConstant.of(100L), LongConstant.of(50L));
@@ -472,7 +498,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatAddition() {
+        void foldFloatAddition()
+        {
             SSAValue result = new SSAValue(PrimitiveType.FLOAT);
             BinaryOpInstruction add = new BinaryOpInstruction(result, BinaryOp.ADD,
                 FloatConstant.of(2.5f), FloatConstant.of(3.5f));
@@ -490,7 +517,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatMultiplication() {
+        void foldFloatMultiplication()
+        {
             SSAValue result = new SSAValue(PrimitiveType.FLOAT);
             BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL,
                 FloatConstant.of(2.0f), FloatConstant.of(3.0f));
@@ -508,7 +536,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatComparison() {
+        void foldFloatComparison()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction fcmpl = new BinaryOpInstruction(result, BinaryOp.FCMPL,
                 FloatConstant.of(5.0f), FloatConstant.of(3.0f));
@@ -526,7 +555,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldDoubleAddition() {
+        void foldDoubleAddition()
+        {
             SSAValue result = new SSAValue(PrimitiveType.DOUBLE);
             BinaryOpInstruction add = new BinaryOpInstruction(result, BinaryOp.ADD,
                 DoubleConstant.of(10.5), DoubleConstant.of(20.5));
@@ -544,7 +574,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldDoubleComparison() {
+        void foldDoubleComparison()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             BinaryOpInstruction dcmpl = new BinaryOpInstruction(result, BinaryOp.DCMPL,
                 DoubleConstant.of(3.0), DoubleConstant.of(5.0));
@@ -562,7 +593,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongToInt() {
+        void foldLongToInt()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             UnaryOpInstruction l2i = new UnaryOpInstruction(result, UnaryOp.L2I, LongConstant.of(42L));
             block.addInstruction(l2i);
@@ -579,7 +611,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongToFloat() {
+        void foldLongToFloat()
+        {
             SSAValue result = new SSAValue(PrimitiveType.FLOAT);
             UnaryOpInstruction l2f = new UnaryOpInstruction(result, UnaryOp.L2F, LongConstant.of(100L));
             block.addInstruction(l2f);
@@ -596,7 +629,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongToDouble() {
+        void foldLongToDouble()
+        {
             SSAValue result = new SSAValue(PrimitiveType.DOUBLE);
             UnaryOpInstruction l2d = new UnaryOpInstruction(result, UnaryOp.L2D, LongConstant.of(42L));
             block.addInstruction(l2d);
@@ -611,7 +645,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatToInt() {
+        void foldFloatToInt()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             UnaryOpInstruction f2i = new UnaryOpInstruction(result, UnaryOp.F2I, FloatConstant.of(42.7f));
             block.addInstruction(f2i);
@@ -628,7 +663,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatToLong() {
+        void foldFloatToLong()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             UnaryOpInstruction f2l = new UnaryOpInstruction(result, UnaryOp.F2L, FloatConstant.of(100.5f));
             block.addInstruction(f2l);
@@ -645,7 +681,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatToDouble() {
+        void foldFloatToDouble()
+        {
             SSAValue result = new SSAValue(PrimitiveType.DOUBLE);
             UnaryOpInstruction f2d = new UnaryOpInstruction(result, UnaryOp.F2D, FloatConstant.of(3.14f));
             block.addInstruction(f2d);
@@ -660,7 +697,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldDoubleToInt() {
+        void foldDoubleToInt()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             UnaryOpInstruction d2i = new UnaryOpInstruction(result, UnaryOp.D2I, DoubleConstant.of(99.9));
             block.addInstruction(d2i);
@@ -677,7 +715,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldDoubleToLong() {
+        void foldDoubleToLong()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             UnaryOpInstruction d2l = new UnaryOpInstruction(result, UnaryOp.D2L, DoubleConstant.of(1234.5));
             block.addInstruction(d2l);
@@ -694,7 +733,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldDoubleToFloat() {
+        void foldDoubleToFloat()
+        {
             SSAValue result = new SSAValue(PrimitiveType.FLOAT);
             UnaryOpInstruction d2f = new UnaryOpInstruction(result, UnaryOp.D2F, DoubleConstant.of(2.5));
             block.addInstruction(d2f);
@@ -711,7 +751,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntToByte() {
+        void foldIntToByte()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             UnaryOpInstruction i2b = new UnaryOpInstruction(result, UnaryOp.I2B, IntConstant.of(300));
             block.addInstruction(i2b);
@@ -726,7 +767,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntToChar() {
+        void foldIntToChar()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             UnaryOpInstruction i2c = new UnaryOpInstruction(result, UnaryOp.I2C, IntConstant.of(65));
             block.addInstruction(i2c);
@@ -743,7 +785,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldIntToShort() {
+        void foldIntToShort()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT);
             UnaryOpInstruction i2s = new UnaryOpInstruction(result, UnaryOp.I2S, IntConstant.of(70000));
             block.addInstruction(i2s);
@@ -758,7 +801,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldLongNegation() {
+        void foldLongNegation()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG);
             UnaryOpInstruction neg = new UnaryOpInstruction(result, UnaryOp.NEG, LongConstant.of(100L));
             block.addInstruction(neg);
@@ -775,7 +819,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldFloatNegation() {
+        void foldFloatNegation()
+        {
             SSAValue result = new SSAValue(PrimitiveType.FLOAT);
             UnaryOpInstruction neg = new UnaryOpInstruction(result, UnaryOp.NEG, FloatConstant.of(3.14f));
             block.addInstruction(neg);
@@ -792,7 +837,8 @@ class SSATransformTest {
         }
 
         @Test
-        void foldDoubleNegation() {
+        void foldDoubleNegation()
+        {
             SSAValue result = new SSAValue(PrimitiveType.DOUBLE);
             UnaryOpInstruction neg = new UnaryOpInstruction(result, UnaryOp.NEG, DoubleConstant.of(2.71));
             block.addInstruction(neg);
@@ -810,19 +856,22 @@ class SSATransformTest {
     }
 
     @Nested
-    class ControlFlowReducibilityTests {
+    class ControlFlowReducibilityTests
+    {
 
         private ControlFlowReducibility transform;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
             transform = new ControlFlowReducibility();
         }
 
         @Test
-        void handlesComplexLoop() {
+        void handlesComplexLoop()
+        {
             IRMethod method = new IRMethod("com/test/Test", "complexLoop", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock loopHeader = new IRBlock("loopHeader");
@@ -861,7 +910,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesNestedLoops() {
+        void handlesNestedLoops()
+        {
             IRMethod method = new IRMethod("com/test/Test", "nestedLoops", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock outerLoop = new IRBlock("outerLoop");
@@ -897,7 +947,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesMultipleExitLoops() {
+        void handlesMultipleExitLoops()
+        {
             IRMethod method = new IRMethod("com/test/Test", "multiExit", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock loop = new IRBlock("loop");
@@ -937,7 +988,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesBlocksWithPhiNodes() {
+        void handlesBlocksWithPhiNodes()
+        {
             IRMethod method = new IRMethod("com/test/Test", "withPhi", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock b1 = new IRBlock("b1");
@@ -979,7 +1031,8 @@ class SSATransformTest {
         }
 
         @Test
-        void preservesMethodStructure() {
+        void preservesMethodStructure()
+        {
             IRMethod method = new IRMethod("com/test/Test", "simple", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -997,13 +1050,15 @@ class SSATransformTest {
     }
 
     @Nested
-    class LoopPredicationTests {
+    class LoopPredicationTests
+    {
 
         private IRMethod method;
         private LoopPredication transform;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
             method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -1011,12 +1066,14 @@ class SSATransformTest {
         }
 
         @Test
-        void noChangesWhenNoEntryBlock() {
+        void noChangesWhenNoEntryBlock()
+        {
             assertFalse(transform.run(method));
         }
 
         @Test
-        void noChangesWhenNoLoops() {
+        void noChangesWhenNoLoops()
+        {
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
             method.setEntryBlock(entry);
@@ -1026,7 +1083,8 @@ class SSATransformTest {
         }
 
         @Test
-        void detectsBasicInductionVariable() {
+        void detectsBasicInductionVariable()
+        {
             IRBlock preheader = new IRBlock("preheader");
             IRBlock header = new IRBlock("header");
             IRBlock body = new IRBlock("body");
@@ -1062,7 +1120,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesLoopWithGuardCondition() {
+        void handlesLoopWithGuardCondition()
+        {
             IRBlock preheader = new IRBlock("preheader");
             IRBlock header = new IRBlock("header");
             IRBlock guardCheck = new IRBlock("guardCheck");
@@ -1114,7 +1173,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesNestedLoops() {
+        void handlesNestedLoops()
+        {
             IRBlock preheader = new IRBlock("preheader");
             IRBlock outerHeader = new IRBlock("outerHeader");
             IRBlock innerPreheader = new IRBlock("innerPreheader");
@@ -1178,7 +1238,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesLoopWithMultipleExits() {
+        void handlesLoopWithMultipleExits()
+        {
             IRBlock preheader = new IRBlock("preheader");
             IRBlock header = new IRBlock("header");
             IRBlock body = new IRBlock("body");
@@ -1223,7 +1284,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesLoopWithNonUnitStride() {
+        void handlesLoopWithNonUnitStride()
+        {
             IRBlock preheader = new IRBlock("preheader");
             IRBlock header = new IRBlock("header");
             IRBlock body = new IRBlock("body");
@@ -1259,7 +1321,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesComparisonFlipping() {
+        void handlesComparisonFlipping()
+        {
             IRBlock preheader = new IRBlock("preheader");
             IRBlock header = new IRBlock("header");
             IRBlock guardCheck = new IRBlock("guardCheck");
@@ -1307,13 +1370,15 @@ class SSATransformTest {
     }
 
     @Nested
-    class CorrelatedValuePropagationTests {
+    class CorrelatedValuePropagationTests
+    {
 
         private IRMethod method;
         private CorrelatedValuePropagation transform;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
             method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -1321,12 +1386,14 @@ class SSATransformTest {
         }
 
         @Test
-        void noChangesWhenNoEntryBlock() {
+        void noChangesWhenNoEntryBlock()
+        {
             assertFalse(transform.run(method));
         }
 
         @Test
-        void propagatesLessThanConstraint() {
+        void propagatesLessThanConstraint()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1350,7 +1417,8 @@ class SSATransformTest {
         }
 
         @Test
-        void propagatesGreaterThanConstraint() {
+        void propagatesGreaterThanConstraint()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1374,7 +1442,8 @@ class SSATransformTest {
         }
 
         @Test
-        void propagatesEqualityConstraint() {
+        void propagatesEqualityConstraint()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1398,7 +1467,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesUnaryBranches() {
+        void handlesUnaryBranches()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1422,7 +1492,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesIfEqUnaryBranch() {
+        void handlesIfEqUnaryBranch()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1446,7 +1517,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesIfNeUnaryBranch() {
+        void handlesIfNeUnaryBranch()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1470,7 +1542,8 @@ class SSATransformTest {
         }
 
         @Test
-        void optimizesBranchWithConstantRange() {
+        void optimizesBranchWithConstantRange()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock check = new IRBlock("check");
             IRBlock trueBlock = new IRBlock("true");
@@ -1500,7 +1573,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesRangeIntersection() {
+        void handlesRangeIntersection()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock check1 = new IRBlock("check1");
             IRBlock check2 = new IRBlock("check2");
@@ -1536,7 +1610,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesLongConstants() {
+        void handlesLongConstants()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock falseBlock = new IRBlock("false");
@@ -1560,7 +1635,8 @@ class SSATransformTest {
         }
 
         @Test
-        void handlesComplexDominatorTree() {
+        void handlesComplexDominatorTree()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock b1 = new IRBlock("b1");
             IRBlock b2 = new IRBlock("b2");
@@ -1604,13 +1680,15 @@ class SSATransformTest {
     }
 
     @Nested
-    class JumpThreadingTests {
+    class JumpThreadingTests
+    {
 
         private IRMethod method;
         private JumpThreading transform;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
             method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -1618,7 +1696,8 @@ class SSATransformTest {
         }
 
         @Test
-        void threadsSimpleGotoChain() {
+        void threadsSimpleGotoChain()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate = new IRBlock("intermediate");
             IRBlock target = new IRBlock("target");
@@ -1644,7 +1723,8 @@ class SSATransformTest {
         }
 
         @Test
-        void threadsBranchTrueTarget() {
+        void threadsBranchTrueTarget()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate = new IRBlock("intermediate");
             IRBlock target = new IRBlock("target");
@@ -1676,7 +1756,8 @@ class SSATransformTest {
         }
 
         @Test
-        void threadsBranchFalseTarget() {
+        void threadsBranchFalseTarget()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock trueBlock = new IRBlock("true");
             IRBlock intermediate = new IRBlock("intermediate");
@@ -1709,7 +1790,8 @@ class SSATransformTest {
         }
 
         @Test
-        void threadsSwitchDefaultTarget() {
+        void threadsSwitchDefaultTarget()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate = new IRBlock("intermediate");
             IRBlock target = new IRBlock("target");
@@ -1737,7 +1819,8 @@ class SSATransformTest {
         }
 
         @Test
-        void threadsSwitchCaseTargets() {
+        void threadsSwitchCaseTargets()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate1 = new IRBlock("intermediate1");
             IRBlock intermediate2 = new IRBlock("intermediate2");
@@ -1782,7 +1865,8 @@ class SSATransformTest {
         }
 
         @Test
-        void doesNotThreadBlocksWithPhis() {
+        void doesNotThreadBlocksWithPhis()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock b1 = new IRBlock("b1");
             IRBlock b2 = new IRBlock("b2");
@@ -1828,7 +1912,8 @@ class SSATransformTest {
         }
 
         @Test
-        void doesNotThreadBlocksWithInstructions() {
+        void doesNotThreadBlocksWithInstructions()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate = new IRBlock("intermediate");
             IRBlock target = new IRBlock("target");
@@ -1854,7 +1939,8 @@ class SSATransformTest {
         }
 
         @Test
-        void removesUnreachableBlocksAfterThreading() {
+        void removesUnreachableBlocksAfterThreading()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate = new IRBlock("intermediate");
             IRBlock reachable = new IRBlock("reachable");
@@ -1884,7 +1970,8 @@ class SSATransformTest {
         }
 
         @Test
-        void updatesPhisWhenThreading() {
+        void updatesPhisWhenThreading()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock intermediate = new IRBlock("intermediate");
             IRBlock target = new IRBlock("target");
@@ -1915,7 +2002,8 @@ class SSATransformTest {
         }
 
         @Test
-        void avoidsInfiniteLoopDetection() {
+        void avoidsInfiniteLoopDetection()
+        {
             IRBlock entry = new IRBlock("entry");
             IRBlock loop1 = new IRBlock("loop1");
             IRBlock loop2 = new IRBlock("loop2");
@@ -1941,14 +2029,16 @@ class SSATransformTest {
     }
 
     @Nested
-    class AlgebraicSimplificationTests {
+    class AlgebraicSimplificationTests
+    {
 
         private IRMethod method;
         private IRBlock block;
         private AlgebraicSimplification transform;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             IRBlock.resetIdCounter();
             SSAValue.resetIdCounter();
             method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -1959,7 +2049,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesAddZero() {
+        void simplifiesAddZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -1976,7 +2067,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesZeroAdd() {
+        void simplifiesZeroAdd()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -1991,7 +2083,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesSubZero() {
+        void simplifiesSubZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2006,7 +2099,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesSubSameOperand() {
+        void simplifiesSubSameOperand()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2023,7 +2117,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesMulZero() {
+        void simplifiesMulZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2040,7 +2135,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesZeroMul() {
+        void simplifiesZeroMul()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2055,7 +2151,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesMulOne() {
+        void simplifiesMulOne()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2070,7 +2167,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesOneMul() {
+        void simplifiesOneMul()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2085,7 +2183,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesDivOne() {
+        void simplifiesDivOne()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2100,7 +2199,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesRemOne() {
+        void simplifiesRemOne()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2117,7 +2217,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesAndZero() {
+        void simplifiesAndZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2134,7 +2235,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesAndAllOnes() {
+        void simplifiesAndAllOnes()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2149,7 +2251,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesAndSameOperand() {
+        void simplifiesAndSameOperand()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2164,7 +2267,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesOrZero() {
+        void simplifiesOrZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2179,7 +2283,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesOrAllOnes() {
+        void simplifiesOrAllOnes()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2196,7 +2301,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesOrSameOperand() {
+        void simplifiesOrSameOperand()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2211,7 +2317,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesXorZero() {
+        void simplifiesXorZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2226,7 +2333,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesXorSameOperand() {
+        void simplifiesXorSameOperand()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2243,7 +2351,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesShiftLeftZero() {
+        void simplifiesShiftLeftZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2258,7 +2367,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesShiftRightZero() {
+        void simplifiesShiftRightZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2273,7 +2383,8 @@ class SSATransformTest {
         }
 
         @Test
-        void simplifiesUnsignedShiftRightZero() {
+        void simplifiesUnsignedShiftRightZero()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(x, IntConstant.of(10)));
@@ -2288,7 +2399,8 @@ class SSATransformTest {
         }
 
         @Test
-        void noChangeForNonSimplifiableOperation() {
+        void noChangeForNonSimplifiableOperation()
+        {
             SSAValue x = new SSAValue(PrimitiveType.INT);
             SSAValue y = new SSAValue(PrimitiveType.INT);
             SSAValue result = new SSAValue(PrimitiveType.INT);

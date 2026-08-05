@@ -8,7 +8,8 @@ import java.util.regex.Pattern;
  * Filter by method name pattern.
  * Supports exact match or wildcard patterns using '*'.
  */
-public class MethodFilter implements InstrumentationFilter {
+public class MethodFilter implements InstrumentationFilter
+{
 
     private final String namePattern;
     private final String descriptorPattern;
@@ -18,79 +19,112 @@ public class MethodFilter implements InstrumentationFilter {
 
     /**
      * Creates a method filter matching by name.
-     *
      * @param namePattern the method name pattern (use '*' for wildcards)
      */
-    public MethodFilter(String namePattern) {
+    public MethodFilter(String namePattern)
+    {
         this(namePattern, null);
     }
 
     /**
      * Creates a method filter matching by name and descriptor.
-     *
      * @param namePattern the method name pattern
      * @param descriptorPattern the descriptor pattern (null to match any)
      */
-    public MethodFilter(String namePattern, String descriptorPattern) {
+    public MethodFilter(String namePattern, String descriptorPattern)
+    {
         this.namePattern = namePattern;
         this.descriptorPattern = descriptorPattern;
         this.isWildcard = namePattern.contains("*") ||
                           (descriptorPattern != null && descriptorPattern.contains("*"));
 
-        if (namePattern.contains("*")) {
+        if (namePattern.contains("*"))
+        {
             String regex = namePattern.replace("*", ".*");
             this.nameRegex = Pattern.compile("^" + regex + "$");
-        } else {
+        }
+        else
+        {
             this.nameRegex = null;
         }
 
-        if (descriptorPattern != null && descriptorPattern.contains("*")) {
+        if (descriptorPattern != null && descriptorPattern.contains("*"))
+        {
             String regex = descriptorPattern
                     .replace("(", "\\(")
                     .replace(")", "\\)")
                     .replace("[", "\\[")
                     .replace("*", ".*");
             this.descriptorRegex = Pattern.compile("^" + regex + "$");
-        } else {
+        }
+        else
+        {
             this.descriptorRegex = null;
         }
     }
 
-    public String getNamePattern() {
+    /**
+     * @return the name pattern
+     */
+    public String getNamePattern()
+    {
         return namePattern;
     }
 
-    public String getDescriptorPattern() {
+    /**
+     * @return the descriptor pattern
+     */
+    public String getDescriptorPattern()
+    {
         return descriptorPattern;
     }
 
-    public boolean isWildcard() {
+    /**
+     * @return whether wildcard
+     */
+    public boolean isWildcard()
+    {
         return isWildcard;
     }
 
-    public Pattern getNameRegex() {
+    /**
+     * @return the name regex
+     */
+    public Pattern getNameRegex()
+    {
         return nameRegex;
     }
 
-    public Pattern getDescriptorRegex() {
+    /**
+     * @return the descriptor regex
+     */
+    public Pattern getDescriptorRegex()
+    {
         return descriptorRegex;
     }
 
     @Override
-    public boolean matchesMethod(MethodEntry method) {
+    public boolean matchesMethod(MethodEntry method)
+    {
         String methodName = method.getName();
         String methodDesc = method.getDesc();
 
-        if (nameRegex != null) {
-            if (!nameRegex.matcher(methodName).matches()) {
+        if (nameRegex != null)
+        {
+            if (!nameRegex.matcher(methodName).matches())
+            {
                 return false;
             }
-        } else if (!methodName.equals(namePattern)) {
+        }
+        else if (!methodName.equals(namePattern))
+        {
             return false;
         }
 
-        if (descriptorPattern != null) {
-            if (descriptorRegex != null) {
+        if (descriptorPattern != null)
+        {
+            if (descriptorRegex != null)
+            {
                 return descriptorRegex.matcher(methodDesc).matches();
             }
             else return methodDesc.equals(descriptorPattern);
@@ -101,49 +135,76 @@ public class MethodFilter implements InstrumentationFilter {
 
     /**
      * Creates a filter matching an exact method name.
+     *
+     * @param name the method name to match
+     * @return the filter
      */
-    public static MethodFilter named(String name) {
+    public static MethodFilter named(String name)
+    {
         return new MethodFilter(name);
     }
 
     /**
      * Creates a filter matching methods starting with a prefix.
+     *
+     * @param prefix the required name prefix
+     * @return the filter
      */
-    public static MethodFilter startingWith(String prefix) {
+    public static MethodFilter startingWith(String prefix)
+    {
         return new MethodFilter(prefix + "*");
     }
 
     /**
      * Creates a filter matching methods ending with a suffix.
+     *
+     * @param suffix the required name suffix
+     * @return the filter
      */
-    public static MethodFilter endingWith(String suffix) {
+    public static MethodFilter endingWith(String suffix)
+    {
         return new MethodFilter("*" + suffix);
     }
 
     /**
      * Creates a filter matching methods containing a substring.
+     *
+     * @param substring the substring the name must contain
+     * @return the filter
      */
-    public static MethodFilter containing(String substring) {
+    public static MethodFilter containing(String substring)
+    {
         return new MethodFilter("*" + substring + "*");
     }
 
     /**
      * Creates a filter matching methods by pattern (wildcard support).
+     *
+     * @param pattern the name pattern, where {@code *} matches any run of characters
+     * @return the filter
      */
-    public static MethodFilter matching(String pattern) {
+    public static MethodFilter matching(String pattern)
+    {
         return new MethodFilter(pattern);
     }
 
     /**
      * Creates a filter matching a specific method signature.
+     *
+     * @param name the method name pattern
+     * @param descriptor the method descriptor pattern
+     * @return the filter
      */
-    public static MethodFilter signature(String name, String descriptor) {
+    public static MethodFilter signature(String name, String descriptor)
+    {
         return new MethodFilter(name, descriptor);
     }
 
     @Override
-    public String toString() {
-        if (descriptorPattern != null) {
+    public String toString()
+    {
+        if (descriptorPattern != null)
+        {
             return "MethodFilter{" + namePattern + descriptorPattern + "}";
         }
         return "MethodFilter{" + namePattern + "}";

@@ -32,16 +32,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * a classloader to force JVM link/verification. Reports each class that fails to recompile or verify - flushing out
  * decompile->recompile fidelity bugs in one pass instead of one-per-run.
  */
-public class DemoJarRecompileSweepTest {
+public class DemoJarRecompileSweepTest
+{
 
     private static final String CLASSES_DIR =
         "C:/Users/zacke/IdeaProjects/DemoApplication/build/classes/java/main";
 
     @Test
-    void sweepDemoApplication() throws Exception {
+    void sweepDemoApplication() throws Exception
+    {
         System.setProperty("java.awt.headless", "true");
         Path classesDir = Path.of(CLASSES_DIR);
-        if (!Files.isDirectory(classesDir)) {
+        if (!Files.isDirectory(classesDir))
+        {
             System.out.println("DemoApplication classes not found at " + CLASSES_DIR + " - skipping sweep");
             return;
         }
@@ -49,10 +52,12 @@ public class DemoJarRecompileSweepTest {
         ClassPool pool = new ClassPool();
         Map<String, byte[]> out = new LinkedHashMap<>();
         List<Path> classFiles;
-        try (var s = Files.walk(classesDir)) {
+        try (var s = Files.walk(classesDir))
+        {
             classFiles = s.filter(p -> p.toString().endsWith(".class")).collect(Collectors.toList());
         }
-        for (Path p : classFiles) {
+        for (Path p : classFiles)
+        {
             byte[] b = Files.readAllBytes(p);
             ClassFile cf = pool.loadClass(b);
             out.put(cf.getClassName(), b);
@@ -67,44 +72,60 @@ public class DemoJarRecompileSweepTest {
 
         Map<String, String> failures = new LinkedHashMap<>();
 
-        for (String name : topLevel) {
+        for (String name : topLevel)
+        {
             ClassFile cf = pool.get(name);
-            try {
+            try
+            {
                 String src = ClassDecompiler.decompile(cf);
                 Path srcFile = Path.of("build", "sweep-src", name + ".java");
                 Files.createDirectories(srcFile.getParent());
                 Files.writeString(srcFile, src);
                 byte[] recompiled = recompile(cf, pool, src, name, failures);
                 out.put(name, recompiled);
-            } catch (Throwable t) {
+            }
+            catch (Throwable t)
+            {
                 failures.put(name, "recompile threw: " + t);
             }
         }
 
         Path tmp = Path.of("build", "sweep-out");
-        if (Files.isDirectory(tmp)) {
-            try (var s = Files.walk(tmp)) {
+        if (Files.isDirectory(tmp))
+        {
+            try (var s = Files.walk(tmp))
+            {
                 s.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
             }
         }
         Files.createDirectories(tmp);
         System.out.println("recompiled output dir: " + tmp.toAbsolutePath());
-        for (var e : out.entrySet()) {
+        for (var e : out.entrySet())
+        {
             Path f = tmp.resolve(e.getKey() + ".class");
             Files.createDirectories(f.getParent());
             Files.write(f, e.getValue());
         }
-        try (URLClassLoader loader = new URLClassLoader(new URL[]{tmp.toUri().toURL()}, getClass().getClassLoader())) {
-            for (String name : topLevel) {
+        try (URLClassLoader loader = new URLClassLoader(new URL[]{tmp.toUri().toURL()}, getClass().getClassLoader()))
+        {
+            for (String name : topLevel)
+            {
                 String binary = name.replace('/', '.');
-                try {
+                try
+                {
                     Class.forName(binary, true, loader);
-                } catch (ExceptionInInitializerError ie) {
+                }
+                catch (ExceptionInInitializerError ie)
+                {
                     // class linked + verified OK; its static initializer threw (headless/env) - not a recompile bug
-                } catch (LinkageError le) {
+                }
+                catch (LinkageError le)
+                {
                     // VerifyError / NoClassDefFoundError / etc. at link-verify time = a recompile fidelity bug
                     failures.merge(name, "verify: " + le, (a, b) -> a);
-                } catch (Throwable t) {
+                }
+                catch (Throwable t)
+                {
                     // any other throwable here means it got past verification
                 }
             }
@@ -117,11 +138,14 @@ public class DemoJarRecompileSweepTest {
             failures.size() + " classes failed decompile->recompile->verify: " + failures.keySet());
     }
 
-    /** Mirrors SourceCompiler.lowerToClassFile: re-lower each method of the decompiled source into the class. */
-    private static byte[] recompile(ClassFile original, ClassPool pool, String source,
-                                    String name, Map<String, String> failures) throws Exception {
+    /**
+     * Mirrors SourceCompiler.lowerToClassFile: re-lower each method of the decompiled source into the class.
+     */
+    private static byte[] recompile(ClassFile original, ClassPool pool, String source, String name, Map<String, String> failures) throws Exception
+    {
         CompilationUnit cu = JavaParser.create().parse(source);
-        if (!(cu.getPrimaryType() instanceof ClassDecl)) {
+        if (!(cu.getPrimaryType() instanceof ClassDecl))
+        {
             return original.write();   // interfaces/enums/annotations: leave as-is
         }
         ClassDecl classDecl = (ClassDecl) cu.getPrimaryType();
@@ -136,19 +160,25 @@ public class DemoJarRecompileSweepTest {
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(original.getConstPool());
 
-        for (MethodDecl md : classDecl.getMethods()) {
-            if (md.getBody() == null) {
+        for (MethodDecl md : classDecl.getMethods())
+        {
+            if (md.getBody() == null)
+            {
                 continue;
             }
             String desc = descriptorOf(md, resolver);
             MethodEntry target = findMethod(original, md.getName(), desc);
-            if (target == null) {
+            if (target == null)
+            {
                 continue;   // a synthetic/new method we won't touch
             }
-            try {
+            try
+            {
                 IRMethod ir = lowerer.lower(md, ownerClass);
                 ssa.lower(ir, target);
-            } catch (Throwable t) {
+            }
+            catch (Throwable t)
+            {
                 failures.merge(name, "lower " + md.getName() + desc + ": " + t, (a, b) -> a + " | " + b);
             }
         }
@@ -157,18 +187,23 @@ public class DemoJarRecompileSweepTest {
         return original.write();
     }
 
-    private static String descriptorOf(MethodDecl md, TypeResolver resolver) {
+    private static String descriptorOf(MethodDecl md, TypeResolver resolver)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (ParameterDecl p : md.getParameters()) {
+        for (ParameterDecl p : md.getParameters())
+        {
             sb.append(resolver.descriptorOf(p));
         }
         sb.append(")").append(resolver.descriptorOf(md.getReturnType()));
         return sb.toString();
     }
 
-    private static MethodEntry findMethod(ClassFile cf, String methodName, String desc) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(methodName) && m.getDesc().equals(desc)) {
+    private static MethodEntry findMethod(ClassFile cf, String methodName, String desc)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(methodName) && m.getDesc().equals(desc))
+            {
                 return m;
             }
         }

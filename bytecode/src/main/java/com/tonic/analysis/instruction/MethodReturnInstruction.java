@@ -9,47 +9,51 @@ import java.io.IOException;
 /**
  * Represents the return instructions (IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN).
  */
-public class MethodReturnInstruction extends Instruction {
+public class MethodReturnInstruction extends Instruction
+{
     private final ReturnType type;
 
     /**
      * Constructs a MethodReturnInstruction.
-     *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
-    public MethodReturnInstruction(int opcode, int offset) {
+    public MethodReturnInstruction(int opcode, int offset)
+    {
         super(opcode, offset, 1);
         this.type = ReturnType.fromOpcode(opcode);
-        if (this.type == null) {
+        if (this.type == null)
+        {
             throw new IllegalArgumentException("Invalid Return opcode: " + opcode);
         }
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     /**
      * Writes the return opcode to the DataOutputStream.
-     *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
     }
 
     /**
      * Returns the change in stack size caused by this instruction.
-     *
      * @return The stack size change (pops the return value from the stack).
      */
     @Override
-    public int getStackChange() {
-        switch (type) {
+    public int getStackChange()
+    {
+        switch (type)
+        {
             case IRETURN:
             case FRETURN:
             case ARETURN:
@@ -66,30 +70,30 @@ public class MethodReturnInstruction extends Instruction {
 
     /**
      * Returns the change in local variables caused by this instruction.
-     *
      * @return The local variables size change (none).
      */
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     /**
      * Returns the type of return operation.
-     *
      * @return The ReturnType enum value.
      */
-    public ReturnType getType() {
+    public ReturnType getType()
+    {
         return type;
     }
 
     /**
      * Returns a string representation of the instruction.
-     *
      * @return The mnemonic of the return instruction.
      */
     @Override
-    public String toString() {
+    public String toString()
+    {
         return type.getMnemonic().toUpperCase();
     }
 }

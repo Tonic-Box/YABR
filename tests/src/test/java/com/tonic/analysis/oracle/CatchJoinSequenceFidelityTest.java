@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the try/catch for the clauses' fall-throughs to reach it. The engine now cuts the region at such a
  * join and structures each segment in order, instead of declining the whole region to the legacy walk.
  */
-class CatchJoinSequenceFidelityTest {
+class CatchJoinSequenceFidelityTest
+{
 
     private static final String SOURCE =
             "public class CatchJoin {\n"
@@ -64,14 +65,14 @@ class CatchJoinSequenceFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("catch-join");
         Path src = dir.resolve("CatchJoin.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("CatchJoin.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -80,7 +81,8 @@ class CatchJoinSequenceFidelityTest {
         recompiledClass = TestUtils.loadAndVerify(recovered);
     }
 
-    private static String run(int mode) throws Exception {
+    private static String run(int mode) throws Exception
+    {
         java.lang.reflect.Field log = recompiledClass.getField("log");
         ((StringBuilder) log.get(null)).setLength(0);
         Object r = recompiledClass.getMethod("run", int.class).invoke(null, mode);
@@ -88,25 +90,27 @@ class CatchJoinSequenceFidelityTest {
     }
 
     @Test
-    void normalPathRunsJoinAndPositiveArm() throws Exception {
+    void normalPathRunsJoinAndPositiveArm() throws Exception
+    {
         assertEquals("r10|try;join;pos;", run(0), d1);
     }
 
     @Test
-    void swallowedCatchFallsThroughToTheJoin() throws Exception {
+    void swallowedCatchFallsThroughToTheJoin() throws Exception
+    {
         assertEquals("r-1|ise;join;", run(1), d1);
         assertEquals("r-2|uoe;join;", run(3), d1);
     }
 
     @Test
-    void conditionalRethrowSkipsTheJoin() throws Exception {
+    void conditionalRethrowSkipsTheJoin() throws Exception
+    {
         java.lang.reflect.Field log = recompiledClass.getField("log");
         ((StringBuilder) log.get(null)).setLength(0);
         InvocationTargetException ex = assertThrows(InvocationTargetException.class,
                 () -> recompiledClass.getMethod("run", int.class).invoke(null, 2));
         assertEquals(IllegalStateException.class, ex.getCause().getClass());
         assertEquals("pass", ex.getCause().getMessage());
-        assertEquals("ise;", log.get(null).toString(),
-                "the rethrow path must not run the join:\n" + d1);
+        assertEquals("ise;", log.get(null).toString(), "the rethrow path must not run the join:\n" + d1);
     }
 }

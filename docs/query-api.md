@@ -28,10 +28,14 @@ QueryService.QueryResult result = service.execute(
         QueryService.QueryConfig.builder().timeBudgetMs(5000).build(),
         null);                                  // optional ProgressListener
 
-if (result.hasError()) {
+if (result.hasError())
+{
     System.err.println("query failed: " + result.error());
-} else {
-    for (QueryMatch match : result.results()) {
+}
+else
+{
+    for (QueryMatch match : result.results())
+    {
         System.out.println(match.getAttribute("class") + " :: " + match.getAttribute("method"));
     }
 }
@@ -122,7 +126,8 @@ boolean cancelled = batch.wasCancelled();
 `ProgressListener` reports the scan as it proceeds:
 
 ```java
-public interface ProgressListener {
+public interface ProgressListener
+{
     void onPhaseStart(String phase, int total);
     void onProgress(int current, int total, String message);
     void onComplete(int matchCount);
@@ -160,7 +165,8 @@ resolve a location (e.g. to navigate an IDE to the exact bytecode offset):
 
 ```java
 QueryTarget t = match.getTarget();
-if (t instanceof QueryTarget.PCTarget) {
+if (t instanceof QueryTarget.PCTarget)
+{
     QueryTarget.PCTarget pc = (QueryTarget.PCTarget) t;
     // pc.className(), pc.methodName(), pc.descriptor(), pc.pc()
 }

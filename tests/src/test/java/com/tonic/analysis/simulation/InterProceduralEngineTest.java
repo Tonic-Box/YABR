@@ -26,25 +26,29 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * Tests core simulation functionality, listener callbacks, and result building.
  */
-class InterProceduralEngineTest {
+class InterProceduralEngineTest
+{
 
     private ClassPool pool;
     private SimulationContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
         pool = TestUtils.emptyPool();
         context = SimulationContext.forPool(pool);
     }
 
-    // ========== Engine Setup Tests ==========
+    // Engine Setup Tests
 
     @Nested
-    class EngineSetupTests {
+    class EngineSetupTests
+    {
 
         @Test
-        void engineCreation() {
+        void engineCreation()
+        {
             InterProceduralEngine engine = new InterProceduralEngine(context);
             assertNotNull(engine);
             assertNotNull(engine.getContext());
@@ -52,7 +56,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void engineAddListener() {
+        void engineAddListener()
+        {
             InterProceduralEngine engine = new InterProceduralEngine(context);
             AllocationListener listener = new AllocationListener();
 
@@ -61,7 +66,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void engineAddMultipleListeners() {
+        void engineAddMultipleListeners()
+        {
             InterProceduralEngine engine = new InterProceduralEngine(context);
             AllocationListener alloc = new AllocationListener();
             MethodCallListener call = new MethodCallListener();
@@ -71,37 +77,43 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void engineCallStackInitiallyEmpty() {
+        void engineCallStackInitiallyEmpty()
+        {
             InterProceduralEngine engine = new InterProceduralEngine(context);
             assertNotNull(engine.getCallStack());
         }
 
         @Test
-        void engineMethodsSimulatedInitiallyZero() {
+        void engineMethodsSimulatedInitiallyZero()
+        {
             InterProceduralEngine engine = new InterProceduralEngine(context);
             assertEquals(0, engine.getMethodsSimulated());
         }
     }
 
-    // ========== SimulationContext Tests ==========
+    // SimulationContext Tests
 
     @Nested
-    class SimulationContextTests {
+    class SimulationContextTests
+    {
 
         @Test
-        void contextForPool() {
+        void contextForPool()
+        {
             SimulationContext ctx = SimulationContext.forPool(pool);
             assertNotNull(ctx);
         }
 
         @Test
-        void contextDefaults() {
+        void contextDefaults()
+        {
             SimulationContext ctx = SimulationContext.defaults();
             assertNotNull(ctx);
         }
 
         @Test
-        void contextForMethod() throws IOException {
+        void contextForMethod() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Ctx")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -113,7 +125,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void contextForClass() throws IOException {
+        void contextForClass() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/CtxClass")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -124,31 +137,36 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== AllocationListener Tests ==========
+    // AllocationListener Tests
 
     @Nested
-    class AllocationListenerTests {
+    class AllocationListenerTests
+    {
 
         @Test
-        void allocationListenerCreation() {
+        void allocationListenerCreation()
+        {
             AllocationListener listener = new AllocationListener();
             assertNotNull(listener);
         }
 
         @Test
-        void allocationListenerWithSiteTracking() {
+        void allocationListenerWithSiteTracking()
+        {
             AllocationListener listener = new AllocationListener(true);
             assertNotNull(listener);
         }
 
         @Test
-        void allocationListenerWithoutSiteTracking() {
+        void allocationListenerWithoutSiteTracking()
+        {
             AllocationListener listener = new AllocationListener(false);
             assertNotNull(listener);
         }
 
         @Test
-        void allocationListenerInitialCounts() {
+        void allocationListenerInitialCounts()
+        {
             AllocationListener listener = new AllocationListener();
             // Trigger reset via onSimulationStart
             listener.onSimulationStart(null);
@@ -159,7 +177,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void allocationListenerGetDistinctTypeCount() {
+        void allocationListenerGetDistinctTypeCount()
+        {
             AllocationListener listener = new AllocationListener();
             listener.onSimulationStart(null);
 
@@ -167,7 +186,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void allocationListenerGetAllocationsByType() {
+        void allocationListenerGetAllocationsByType()
+        {
             AllocationListener listener = new AllocationListener();
             listener.onSimulationStart(null);
 
@@ -176,7 +196,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void allocationListenerGetCountForType() {
+        void allocationListenerGetCountForType()
+        {
             AllocationListener listener = new AllocationListener();
             listener.onSimulationStart(null);
 
@@ -184,7 +205,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void allocationListenerGetAllocationSites() {
+        void allocationListenerGetAllocationSites()
+        {
             AllocationListener listener = new AllocationListener();
             listener.onSimulationStart(null);
 
@@ -193,7 +215,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void allocationListenerGetAllocationsOf() {
+        void allocationListenerGetAllocationsOf()
+        {
             AllocationListener listener = new AllocationListener();
             listener.onSimulationStart(null);
 
@@ -203,19 +226,22 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== FieldAccessListener Tests ==========
+    // FieldAccessListener Tests
 
     @Nested
-    class FieldAccessListenerTests {
+    class FieldAccessListenerTests
+    {
 
         @Test
-        void fieldAccessListenerCreation() {
+        void fieldAccessListenerCreation()
+        {
             FieldAccessListener listener = new FieldAccessListener();
             assertNotNull(listener);
         }
 
         @Test
-        void fieldAccessListenerInitialCounts() {
+        void fieldAccessListenerInitialCounts()
+        {
             FieldAccessListener listener = new FieldAccessListener();
             listener.onSimulationStart(null);
 
@@ -224,19 +250,22 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== MethodCallListener Tests ==========
+    // MethodCallListener Tests
 
     @Nested
-    class MethodCallListenerTests {
+    class MethodCallListenerTests
+    {
 
         @Test
-        void methodCallListenerCreation() {
+        void methodCallListenerCreation()
+        {
             MethodCallListener listener = new MethodCallListener();
             assertNotNull(listener);
         }
 
         @Test
-        void methodCallListenerInitialCounts() {
+        void methodCallListenerInitialCounts()
+        {
             MethodCallListener listener = new MethodCallListener();
             listener.onSimulationStart(null);
 
@@ -244,7 +273,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void methodCallListenerDistinctMethods() {
+        void methodCallListenerDistinctMethods()
+        {
             MethodCallListener listener = new MethodCallListener();
             listener.onSimulationStart(null);
 
@@ -252,31 +282,36 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== StackOperationListener Tests ==========
+    // StackOperationListener Tests
 
     @Nested
-    class StackOperationListenerTests {
+    class StackOperationListenerTests
+    {
 
         @Test
-        void stackOperationListenerCreation() {
+        void stackOperationListenerCreation()
+        {
             StackOperationListener listener = new StackOperationListener();
             assertNotNull(listener);
         }
     }
 
-    // ========== ControlFlowListener Tests ==========
+    // ControlFlowListener Tests
 
     @Nested
-    class ControlFlowListenerTests {
+    class ControlFlowListenerTests
+    {
 
         @Test
-        void controlFlowListenerCreation() {
+        void controlFlowListenerCreation()
+        {
             ControlFlowListener listener = new ControlFlowListener();
             assertNotNull(listener);
         }
 
         @Test
-        void controlFlowListenerInitialCounts() {
+        void controlFlowListenerInitialCounts()
+        {
             ControlFlowListener listener = new ControlFlowListener();
             listener.onSimulationStart(null);
 
@@ -284,13 +319,15 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== SimulationResult Tests ==========
+    // SimulationResult Tests
 
     @Nested
-    class SimulationResultTests {
+    class SimulationResultTests
+    {
 
         @Test
-        void simulationResultBuilder() {
+        void simulationResultBuilder()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             SimulationResult.Builder builder = SimulationResult.builder()
                 .method(method)
@@ -306,7 +343,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void simulationResultGetAllStates() {
+        void simulationResultGetAllStates()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             SimulationResult result = SimulationResult.builder()
                 .method(method)
@@ -316,7 +354,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void simulationResultGetStateAtInvalid() {
+        void simulationResultGetStateAtInvalid()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             SimulationResult result = SimulationResult.builder()
                 .method(method)
@@ -327,43 +366,50 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== SimulationState Tests ==========
+    // SimulationState Tests
 
     @Nested
-    class SimulationStateTests {
+    class SimulationStateTests
+    {
 
         @Test
-        void simulationStateEmpty() {
+        void simulationStateEmpty()
+        {
             SimulationState state = SimulationState.empty();
             assertNotNull(state);
         }
 
         @Test
-        void simulationStateStackDepth() {
+        void simulationStateStackDepth()
+        {
             SimulationState state = SimulationState.empty();
             assertTrue(state.stackDepth() >= 0);
         }
 
         @Test
-        void simulationStateMaxStackDepth() {
+        void simulationStateMaxStackDepth()
+        {
             SimulationState state = SimulationState.empty();
             assertTrue(state.maxStackDepth() >= 0);
         }
     }
 
-    // ========== CompositeListener Tests ==========
+    // CompositeListener Tests
 
     @Nested
-    class CompositeListenerTests {
+    class CompositeListenerTests
+    {
 
         @Test
-        void compositeListenerCreation() {
+        void compositeListenerCreation()
+        {
             CompositeListener listener = new CompositeListener();
             assertNotNull(listener);
         }
 
         @Test
-        void compositeListenerAdd() {
+        void compositeListenerAdd()
+        {
             CompositeListener composite = new CompositeListener();
             AllocationListener alloc = new AllocationListener();
 
@@ -372,7 +418,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void compositeListenerOnSimulationStart() {
+        void compositeListenerOnSimulationStart()
+        {
             CompositeListener composite = new CompositeListener();
             AllocationListener alloc = new AllocationListener();
             composite.add(alloc);
@@ -382,13 +429,15 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== Basic Simulation Tests ==========
+    // Basic Simulation Tests
 
     @Nested
-    class BasicSimulationTests {
+    class BasicSimulationTests
+    {
 
         @Test
-        void simulateEmptyMethod() {
+        void simulateEmptyMethod()
+        {
             IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -403,7 +452,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void simulateMethodWithListener() {
+        void simulateMethodWithListener()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -421,7 +471,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void simulateIncrementsMethodsSimulated() {
+        void simulateIncrementsMethodsSimulated()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -438,13 +489,15 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== AllocationSite Tests ==========
+    // AllocationSite Tests
 
     @Nested
-    class AllocationSiteTests {
+    class AllocationSiteTests
+    {
 
         @Test
-        void allocationSiteConstruction() {
+        void allocationSiteConstruction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "arr");
             SSAValue length = new SSAValue(PrimitiveType.INT, "len");
             NewArrayInstruction instr = new NewArrayInstruction(result, PrimitiveType.INT, length);
@@ -458,13 +511,15 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== Integration Tests ==========
+    // Integration Tests
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void simulateWithAllListeners() {
+        void simulateWithAllListeners()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -472,11 +527,7 @@ class InterProceduralEngineTest {
             entry.addInstruction(new ReturnInstruction(null));
 
             InterProceduralEngine engine = new InterProceduralEngine(context);
-            engine.addListeners(
-                new AllocationListener(),
-                new MethodCallListener(),
-                new ControlFlowListener()
-            );
+            engine.addListeners(new AllocationListener(), new MethodCallListener(), new ControlFlowListener());
 
             SimulationResult result = engine.simulate(method);
 
@@ -485,12 +536,14 @@ class InterProceduralEngineTest {
         }
     }
 
-    // ========== Inter-Procedural Following Tests ==========
+    // Inter-Procedural Following Tests
 
     @Nested
-    class FollowCallTests {
+    class FollowCallTests
+    {
 
-        private void registerCallee(String className, String name, String desc) throws IOException {
+        private void registerCallee(String className, String name, String desc) throws IOException
+        {
             ClassFile callee = BytecodeBuilder.forClass(className)
                 .publicStaticMethod(name, desc)
                     .vreturn()
@@ -498,7 +551,8 @@ class InterProceduralEngineTest {
             pool.put(callee);
         }
 
-        private IRMethod callerInvoking(String owner, String name, String desc) {
+        private IRMethod callerInvoking(String owner, String name, String desc)
+        {
             IRMethod caller = new IRMethod("com/test/Caller", "run", "()V", true);
             IRBlock entry = new IRBlock("entry");
             caller.addBlock(entry);
@@ -509,7 +563,8 @@ class InterProceduralEngineTest {
         }
 
         @Test
-        void followsResolvableCallWhenInterProcedural() throws IOException {
+        void followsResolvableCallWhenInterProcedural() throws IOException
+        {
             registerCallee("com/test/Callee", "foo", "()V");
             IRMethod caller = callerInvoking("com/test/Callee", "foo", "()V");
 
@@ -517,12 +572,12 @@ class InterProceduralEngineTest {
                 SimulationContext.forPool(pool).withMaxCallDepth(3));
             engine.simulate(caller);
 
-            assertEquals(2, engine.getMethodsSimulated(),
-                "engine follows into the resolved callee (caller + callee)");
+            assertEquals(2, engine.getMethodsSimulated(), "engine follows into the resolved callee (caller + callee)");
         }
 
         @Test
-        void doesNotFollowCallWhenIntraProcedural() throws IOException {
+        void doesNotFollowCallWhenIntraProcedural() throws IOException
+        {
             registerCallee("com/test/Callee", "foo", "()V");
             IRMethod caller = callerInvoking("com/test/Callee", "foo", "()V");
 
@@ -530,12 +585,12 @@ class InterProceduralEngineTest {
             InterProceduralEngine engine = new InterProceduralEngine(SimulationContext.forPool(pool));
             engine.simulate(caller);
 
-            assertEquals(1, engine.getMethodsSimulated(),
-                "without inter-procedural depth the call is not followed");
+            assertEquals(1, engine.getMethodsSimulated(), "without inter-procedural depth the call is not followed");
         }
 
         @Test
-        void doesNotFollowUnresolvableCall() {
+        void doesNotFollowUnresolvableCall()
+        {
             // No callee registered: resolveMethod returns null, so the call is not followed.
             IRMethod caller = callerInvoking("com/test/Missing", "foo", "()V");
 
@@ -543,14 +598,14 @@ class InterProceduralEngineTest {
                 SimulationContext.forPool(pool).withMaxCallDepth(3));
             engine.simulate(caller);
 
-            assertEquals(1, engine.getMethodsSimulated(),
-                "an unresolvable call is not followed");
+            assertEquals(1, engine.getMethodsSimulated(), "an unresolvable call is not followed");
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private IRMethod liftToIR(MethodEntry method) throws IOException {
+    private IRMethod liftToIR(MethodEntry method) throws IOException
+    {
         return TestUtils.liftMethod(method);
     }
 }

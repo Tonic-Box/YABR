@@ -17,20 +17,23 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CodeWriterTest {
+class CodeWriterTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/CodeWriterTestClass", access);
     }
 
     @Test
-    void codeWriterFromMethodWithCode() throws IOException {
+    void codeWriterFromMethodWithCode() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "hasCode", "V");
 
@@ -41,7 +44,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void codeWriterForAbstractMethodThrowsException() {
+    void codeWriterForAbstractMethodThrowsException()
+    {
         int access = new AccessBuilder().setPublic().setAbstract().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
 
@@ -50,7 +54,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void getInstructionsReturnsIterable() throws IOException {
+    void getInstructionsReturnsIterable() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testParse", "V");
 
@@ -61,7 +66,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void getInstructionCountReturnsPositive() throws IOException {
+    void getInstructionCountReturnsPositive() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testCount", "V");
 
@@ -72,7 +78,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void getBytecodeSizeForNewMethod() throws IOException {
+    void getBytecodeSizeForNewMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testSize", "V");
 
@@ -83,7 +90,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertILoad() throws IOException {
+    void insertILoad() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testILoad", "I", "I");
 
@@ -96,7 +104,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertIStore() throws IOException {
+    void insertIStore() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testIStore", "V", "I");
 
@@ -109,7 +118,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertALoad() throws IOException {
+    void insertALoad() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testALoad", "Ljava/lang/Object;", "Ljava/lang/Object;");
 
@@ -121,7 +131,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertAStore() throws IOException {
+    void insertAStore() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testAStore", "V", "Ljava/lang/Object;");
 
@@ -133,7 +144,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertGetStatic() throws IOException {
+    void insertGetStatic() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testGetStatic", "Ljava/io/PrintStream;");
 
@@ -148,7 +160,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertGetField() throws IOException {
+    void insertGetField() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testGetField", "I");
 
@@ -166,7 +179,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertPutStatic() throws IOException {
+    void insertPutStatic() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testPutStatic", "V");
 
@@ -184,7 +198,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertPutField() throws IOException {
+    void insertPutField() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testPutField", "V", "I");
 
@@ -202,7 +217,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertInvokeStatic() throws IOException {
+    void insertInvokeStatic() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testInvokeStatic", "J");
 
@@ -217,7 +233,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertInvokeVirtual() throws IOException {
+    void insertInvokeVirtual() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testInvokeVirtual", "I", "Ljava/lang/String;");
 
@@ -232,7 +249,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertInvokeSpecial() throws IOException {
+    void insertInvokeSpecial() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testInvokeSpecial", "V");
 
@@ -247,7 +265,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertGoto() throws IOException {
+    void insertGoto() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testGoto", "V");
 
@@ -260,7 +279,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertGotoW() throws IOException {
+    void insertGotoW() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testGotoW", "V");
 
@@ -273,12 +293,12 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertLDC() throws IOException {
+    void insertLDC() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testLDC", "Ljava/lang/String;");
 
-        int stringRefIndex = classFile.getConstPool().getIndexOf(
-                classFile.getConstPool().findOrAddString("test"));
+        int stringRefIndex = classFile.getConstPool().getIndexOf(classFile.getConstPool().findOrAddString("test"));
 
         CodeWriter cw = new CodeWriter(method);
         int offset = cw.getBytecodeSize();
@@ -289,12 +309,12 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertLDCW() throws IOException {
+    void insertLDCW() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testLDCW", "Ljava/lang/String;");
 
-        int stringRefIndex = classFile.getConstPool().getIndexOf(
-                classFile.getConstPool().findOrAddString("test wide"));
+        int stringRefIndex = classFile.getConstPool().getIndexOf(classFile.getConstPool().findOrAddString("test wide"));
 
         CodeWriter cw = new CodeWriter(method);
         int offset = cw.getBytecodeSize();
@@ -305,7 +325,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertNew() throws IOException {
+    void insertNew() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testNew", "Ljava/lang/StringBuilder;");
 
@@ -320,7 +341,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void insertIInc() throws IOException {
+    void insertIInc() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testIInc", "I", "I");
 
@@ -332,7 +354,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void appendInstruction() throws IOException {
+    void appendInstruction() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testAppend", "V");
 
@@ -346,7 +369,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void writeUpdatesBytecode() throws IOException {
+    void writeUpdatesBytecode() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testWrite", "V");
 
@@ -359,7 +383,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void endsWithReturnFalseForEmptyMethod() throws IOException {
+    void endsWithReturnFalseForEmptyMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testEndsReturn", "V");
 
@@ -368,7 +393,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void hasValidStackMapTableForNewMethod() throws IOException {
+    void hasValidStackMapTableForNewMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testSMT", "V");
 
@@ -377,7 +403,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void computeFrames() throws IOException {
+    void computeFrames() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testComputeFrames", "V");
 
@@ -388,7 +415,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void forceComputeFrames() throws IOException {
+    void forceComputeFrames() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testForceComputeFrames", "V");
 
@@ -399,7 +427,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void toSSA() throws IOException {
+    void toSSA() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testToSSA", "V");
 
@@ -410,7 +439,8 @@ class CodeWriterTest {
     }
 
     @Test
-    void fromSSA() throws IOException {
+    void fromSSA() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testFromSSA", "V");
 
@@ -422,10 +452,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryConstantPoolTests {
+    class InstructionFactoryConstantPoolTests
+    {
 
         @Test
-        void createAllConstInstructions() throws IOException {
+        void createAllConstInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testConst", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -441,7 +473,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createBipushAndSipushInstructions() throws IOException {
+        void createBipushAndSipushInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testPush", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -453,14 +486,13 @@ class CodeWriterTest {
         }
 
         @Test
-        void createLdcInstructions() throws IOException {
+        void createLdcInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testLdc", "V");
 
-            int stringIdx = classFile.getConstPool().getIndexOf(
-                    classFile.getConstPool().findOrAddString("test"));
-            int longIdx = classFile.getConstPool().getIndexOf(
-                    classFile.getConstPool().findOrAddLong(1234567890L));
+            int stringIdx = classFile.getConstPool().getIndexOf(classFile.getConstPool().findOrAddString("test"));
+            int longIdx = classFile.getConstPool().getIndexOf(classFile.getConstPool().findOrAddLong(1234567890L));
 
             CodeWriter cw = new CodeWriter(method);
             cw.insertLDC(0, stringIdx);
@@ -471,10 +503,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryLoadStoreTests {
+    class InstructionFactoryLoadStoreTests
+    {
 
         @Test
-        void createAllLoadInstructions() throws IOException {
+        void createAllLoadInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testLoads", "V", "I", "J", "F", "D", "Ljava/lang/Object;");
             CodeWriter cw = new CodeWriter(method);
@@ -489,7 +523,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createAllStoreInstructions() throws IOException {
+        void createAllStoreInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testStores", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -504,7 +539,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createArrayLoadInstructions() throws IOException {
+        void createArrayLoadInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testArrayLoad", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -522,7 +558,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createArrayStoreInstructions() throws IOException {
+        void createArrayStoreInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testArrayStore", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -541,10 +578,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryStackTests {
+    class InstructionFactoryStackTests
+    {
 
         @Test
-        void createStackManipulationInstructions() throws IOException {
+        void createStackManipulationInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testStack", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -559,10 +598,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryArithmeticTests {
+    class InstructionFactoryArithmeticTests
+    {
 
         @Test
-        void createArithmeticInstructions() throws IOException {
+        void createArithmeticInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testArithmetic", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -576,7 +617,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createNegationInstructions() throws IOException {
+        void createNegationInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testNeg", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -590,7 +632,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createShiftInstructions() throws IOException {
+        void createShiftInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testShift", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -603,7 +646,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createBitwiseInstructions() throws IOException {
+        void createBitwiseInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testBitwise", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -617,10 +661,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryConversionTests {
+    class InstructionFactoryConversionTests
+    {
 
         @Test
-        void createConversionInstructions() throws IOException {
+        void createConversionInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testConversion", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -635,7 +681,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createCompareInstructions() throws IOException {
+        void createCompareInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testCompare", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -649,10 +696,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryBranchTests {
+    class InstructionFactoryBranchTests
+    {
 
         @Test
-        void createConditionalBranchInstructions() throws IOException {
+        void createConditionalBranchInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testBranch", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -666,7 +715,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createGotoInstructions() throws IOException {
+        void createGotoInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testGotoInstr", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -678,7 +728,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createJsrInstructions() throws IOException {
+        void createJsrInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testJsr", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -691,10 +742,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryInvokeTests {
+    class InstructionFactoryInvokeTests
+    {
 
         @Test
-        void createInvokeInterface() throws IOException {
+        void createInvokeInterface() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInvokeInterface", "V");
 
@@ -708,7 +761,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createInvokeDynamic() throws IOException {
+        void createInvokeDynamic() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInvokeDynamic", "V");
 
@@ -719,10 +773,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryObjectTests {
+    class InstructionFactoryObjectTests
+    {
 
         @Test
-        void createNewArrayInstruction() throws IOException {
+        void createNewArrayInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testNewArray", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -733,7 +789,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createANewArrayInstruction() throws IOException {
+        void createANewArrayInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testANewArray", "V");
 
@@ -747,12 +804,12 @@ class CodeWriterTest {
         }
 
         @Test
-        void createMultiANewArrayInstruction() throws IOException {
+        void createMultiANewArrayInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testMultiArray", "V");
 
-            int classIdx = classFile.getConstPool().getIndexOf(
-                    classFile.getConstPool().findOrAddClass("[[I"));
+            int classIdx = classFile.getConstPool().getIndexOf(classFile.getConstPool().findOrAddClass("[[I"));
 
             CodeWriter cw = new CodeWriter(method);
             cw.appendInstruction(new MultiANewArrayInstruction(classFile.getConstPool(), 0xC5, 0, classIdx, 2));
@@ -761,7 +818,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createArrayLengthInstruction() throws IOException {
+        void createArrayLengthInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testArrayLength", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -772,7 +830,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createCheckCastInstruction() throws IOException {
+        void createCheckCastInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testCheckCast", "V");
 
@@ -786,7 +845,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createInstanceOfInstruction() throws IOException {
+        void createInstanceOfInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInstanceOf", "V");
 
@@ -800,7 +860,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createMonitorInstructions() throws IOException {
+        void createMonitorInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testMonitor", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -812,7 +873,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createAThrowInstruction() throws IOException {
+        void createAThrowInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testThrow", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -824,10 +886,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactorySwitchTests {
+    class InstructionFactorySwitchTests
+    {
 
         @Test
-        void createTableSwitchInstruction() throws IOException {
+        void createTableSwitchInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testTableSwitch", "V");
 
@@ -843,7 +907,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createLookupSwitchInstruction() throws IOException {
+        void createLookupSwitchInstruction() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testLookupSwitch", "V");
 
@@ -860,10 +925,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class InstructionFactoryReturnTests {
+    class InstructionFactoryReturnTests
+    {
 
         @Test
-        void createReturnInstructions() throws IOException {
+        void createReturnInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testReturn", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -874,7 +941,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void createAllReturnTypes() throws IOException {
+        void createAllReturnTypes() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
 
             MethodEntry method1 = classFile.createNewMethod(access, "retInt", "I");
@@ -903,10 +971,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class CodeWriterIndexTests {
+    class CodeWriterIndexTests
+    {
 
         @Test
-        void getInstructionIndex() throws IOException {
+        void getInstructionIndex() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testIndex", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -919,7 +989,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void getInstructionAt() throws IOException {
+        void getInstructionAt() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testAt", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -932,7 +1003,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void getOffsetAt() throws IOException {
+        void getOffsetAt() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testOffset", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -944,7 +1016,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void findInstructionIndexForOffset() throws IOException {
+        void findInstructionIndexForOffset() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testFindIndex", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -957,7 +1030,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void getInstructionIndexInvalidOffset() throws IOException {
+        void getInstructionIndexInvalidOffset() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInvalidIndex", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -967,7 +1041,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void getInstructionAtOutOfBounds() throws IOException {
+        void getInstructionAtOutOfBounds() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testOutOfBounds", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -977,7 +1052,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void getOffsetAtInvalidIndex() throws IOException {
+        void getOffsetAtInvalidIndex() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInvalidOffset", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -988,10 +1064,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class CodeWriterAnalysisTests {
+    class CodeWriterAnalysisTests
+    {
 
         @Test
-        void analyzeUpdatesMaxStack() throws IOException {
+        void analyzeUpdatesMaxStack() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testAnalyze", "I");
             CodeWriter cw = new CodeWriter(method);
@@ -1006,7 +1084,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void analyzeUpdatesMaxLocals() throws IOException {
+        void analyzeUpdatesMaxLocals() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testAnalyzeLocals", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -1020,10 +1099,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class CodeWriterInsertionEdgeCasesTests {
+    class CodeWriterInsertionEdgeCasesTests
+    {
 
         @Test
-        void insertInstructionAtInvalidOffset() throws IOException {
+        void insertInstructionAtInvalidOffset() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInvalidInsert", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -1034,7 +1115,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void insertInstructionAtZeroIntoEmpty() throws IOException {
+        void insertInstructionAtZeroIntoEmpty() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testInsertEmpty", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -1044,7 +1126,8 @@ class CodeWriterTest {
         }
 
         @Test
-        void insertMultipleInstructionsSequentially() throws IOException {
+        void insertMultipleInstructionsSequentially() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testMultiInsert", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -1057,10 +1140,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class CodeWriterOptimizationTests {
+    class CodeWriterOptimizationTests
+    {
 
         @Test
-        void optimizeSSA() throws IOException {
+        void optimizeSSA() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testOptimize", "I");
             CodeWriter cw = new CodeWriter(method);
@@ -1074,10 +1159,12 @@ class CodeWriterTest {
     }
 
     @Nested
-    class BytecodeVisitorTests {
+    class BytecodeVisitorTests
+    {
 
         @Test
-        void acceptVisitor() throws IOException {
+        void acceptVisitor() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testVisitor", "V");
             CodeWriter cw = new CodeWriter(method);
@@ -1088,11 +1175,13 @@ class CodeWriterTest {
             final int[] visitCount = {0};
             cw.accept(new AbstractBytecodeVisitor() {
                 @Override
-                public void visit(NopInstruction instr) {
+                public void visit(NopInstruction instr)
+                {
                     visitCount[0]++;
                 }
                 @Override
-                public void visit(MethodReturnInstruction instr) {
+                public void visit(MethodReturnInstruction instr)
+                {
                     visitCount[0]++;
                 }
             });

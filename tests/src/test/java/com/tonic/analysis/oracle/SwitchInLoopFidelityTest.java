@@ -21,19 +21,21 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * branch-coverage signal, so the fuzzer can miss it. Each fixture reproduces javac's exact control-flow
  * (verified against javac 11).
  *
- * <p>{@code breakOuter} exercises the current miscompile: a labeled break out of the loop from inside a case
+ *{@code breakOuter} exercises the current miscompile: a labeled break out of the loop from inside a case
  * is mis-structured into a fall-through plus an unconditional post-switch break, so the loop runs a single
  * iteration. {@code contFromCase} is a passing regression guard for the working shapes.
  */
-class SwitchInLoopFidelityTest {
+class SwitchInLoopFidelityTest
+{
 
     private static final int[] INPUTS = {0, 1, 2, 3, 5, 10};
 
     /**
-     * {@code outer: for (i=0;i<n;i++) switch(i){ case 0: sum+=1; break; case 2: break outer; default: sum+=100; }}
+     * * {@code outer: for (i=0;i<n;i++) switch(i){ case 0: sum+=1; break; case 2: break outer; default: sum+=100; }}
      */
     @Test
-    void breakOuterFromCaseIsFaithful() throws Exception {
+    void breakOuterFromCaseIsFaithful() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchInLoopBreakOuter")
                 .publicStaticMethod("breakOuter", "(I)I");
         Label loopStart = mb.newLabel();
@@ -58,10 +60,11 @@ class SwitchInLoopFidelityTest {
     }
 
     /**
-     * {@code for (i=0;i<n;i++){ switch(i){ case 0: continue; case 1: sum+=10; break; default: sum+=100; } sum+=1; }}
+     * * {@code for (i=0;i<n;i++){ switch(i){ case 0: continue; case 1: sum+=10; break; default: sum+=100; } sum+=1; }}
      */
     @Test
-    void continueFromCaseIsFaithful() throws Exception {
+    void continueFromCaseIsFaithful() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchInLoopContinue")
                 .publicStaticMethod("contFromCase", "(I)I");
         Label loopStart = mb.newLabel();
@@ -87,7 +90,8 @@ class SwitchInLoopFidelityTest {
         assertBehaviourPreserved(mb.build(), "contFromCase");
     }
 
-    private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception {
+    private static void assertBehaviourPreserved(ClassFile built, String name) throws Exception
+    {
         byte[] bytes = built.write();
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -98,7 +102,8 @@ class SwitchInLoopFidelityTest {
         Method original = TestUtils.loadAndVerify(cf).getDeclaredMethod(name, int.class);
         Method recompiled = TestUtils.loadAndVerify(recovered).getDeclaredMethod(name, int.class);
 
-        for (int n : INPUTS) {
+        for (int n : INPUTS)
+        {
             Object expected = original.invoke(null, n);
             Object actual = recompiled.invoke(null, n);
             assertEquals(expected, actual, name + "(" + n + ") diverged after decompile+recompile");

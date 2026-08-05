@@ -7,13 +7,41 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public final class BytecodeResult {
+/**
+ * Immutable outcome of a bytecode execution: terminal status, return value or exception, and
+ * optional statistics.
+ */
+public final class BytecodeResult
+{
 
-    public enum Status {
+    /**
+     * Terminal condition of an execution.
+     */
+    public enum Status
+    {
+        /**
+         * The method returned normally; the return value is the only payload.
+         */
         COMPLETED,
+        /**
+         * An exception escaped the method unhandled, and is carried along with
+         * a stack trace.
+         */
         EXCEPTION,
+        /**
+         * The run was stopped by an interrupt request rather than by the code
+         * itself.
+         */
         INTERRUPTED,
+        /**
+         * The run exhausted its instruction budget; the executed count is
+         * carried.
+         */
         INSTRUCTION_LIMIT,
+        /**
+         * The run exceeded the maximum call depth, meaning recursion or
+         * nesting ran away.
+         */
         DEPTH_LIMIT
     }
 
@@ -24,8 +52,8 @@ public final class BytecodeResult {
     private final long executionTimeNanos;
     private final List<String> stackTrace;
 
-    private BytecodeResult(Status status, ConcreteValue returnValue, ObjectInstance exception,
-                           long instructionsExecuted, long executionTimeNanos, List<String> stackTrace) {
+    private BytecodeResult(Status status, ConcreteValue returnValue, ObjectInstance exception, long instructionsExecuted, long executionTimeNanos, List<String> stackTrace)
+    {
         this.status = status;
         this.returnValue = returnValue;
         this.exception = exception;
@@ -34,84 +62,160 @@ public final class BytecodeResult {
         this.stackTrace = stackTrace == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(stackTrace));
     }
 
-    public static BytecodeResult completed(ConcreteValue value) {
+    /**
+     * Creates a result for an execution that completed normally.
+     * @param value the return value
+     * @return the completed result
+     */
+    public static BytecodeResult completed(ConcreteValue value)
+    {
         return new BytecodeResult(Status.COMPLETED, value, null, 0, 0, null);
     }
 
-    public static BytecodeResult exception(ObjectInstance ex, List<String> trace) {
-        if (ex == null) {
+    /**
+     * Creates a result for an execution that ended with an unhandled exception.
+     * @param ex the thrown exception object
+     * @param trace stack trace lines, may be null
+     * @return the exception result
+     * @throws IllegalArgumentException if ex is null
+     */
+    public static BytecodeResult exception(ObjectInstance ex, List<String> trace)
+    {
+        if (ex == null)
+        {
             throw new IllegalArgumentException("Exception cannot be null");
         }
         return new BytecodeResult(Status.EXCEPTION, null, ex, 0, 0, trace);
     }
 
-    public static BytecodeResult interrupted() {
+    /**
+     * Creates a result for an execution stopped by an interrupt request.
+     * @return the interrupted result
+     */
+    public static BytecodeResult interrupted()
+    {
         return new BytecodeResult(Status.INTERRUPTED, null, null, 0, 0, null);
     }
 
-    public static BytecodeResult instructionLimit(long count) {
+    /**
+     * Creates a result for an execution aborted by the instruction budget.
+     * @param count the number of instructions executed
+     * @return the instruction-limit result
+     */
+    public static BytecodeResult instructionLimit(long count)
+    {
         return new BytecodeResult(Status.INSTRUCTION_LIMIT, null, null, count, 0, null);
     }
 
-    public static BytecodeResult depthLimit(int depth) {
+    /**
+     * Creates a result for an execution aborted by the call depth limit.
+     * @param depth the depth at which execution stopped
+     * @return the depth-limit result
+     */
+    public static BytecodeResult depthLimit(int depth)
+    {
         List<String> trace = Collections.singletonList("Maximum call depth exceeded: " + depth);
         return new BytecodeResult(Status.DEPTH_LIMIT, null, null, 0, 0, trace);
     }
 
-    public BytecodeResult withStatistics(long instructions, long nanos) {
+    /**
+     * Copies this result with execution statistics attached.
+     * @param instructions number of instructions executed
+     * @param nanos elapsed execution time in nanoseconds
+     * @return a new result carrying the statistics
+     */
+    public BytecodeResult withStatistics(long instructions, long nanos)
+    {
         return new BytecodeResult(status, returnValue, exception, instructions, nanos, stackTrace);
     }
 
-    public boolean isSuccess() {
+    /**
+     * @return true if the status is COMPLETED
+     */
+    public boolean isSuccess()
+    {
         return status == Status.COMPLETED;
     }
 
-    public boolean hasException() {
+    /**
+     * @return true if an exception was recorded
+     */
+    public boolean hasException()
+    {
         return exception != null;
     }
 
-    public Status getStatus() {
+    /**
+     * @return the status
+     */
+    public Status getStatus()
+    {
         return status;
     }
 
-    public ConcreteValue getReturnValue() {
+    /**
+     * @return the return value
+     */
+    public ConcreteValue getReturnValue()
+    {
         return returnValue;
     }
 
-    public ObjectInstance getException() {
+    /**
+     * @return the exception
+     */
+    public ObjectInstance getException()
+    {
         return exception;
     }
 
-    public long getInstructionsExecuted() {
+    /**
+     * @return the instructions executed
+     */
+    public long getInstructionsExecuted()
+    {
         return instructionsExecuted;
     }
 
-    public long getExecutionTimeNanos() {
+    /**
+     * @return the execution time nanos
+     */
+    public long getExecutionTimeNanos()
+    {
         return executionTimeNanos;
     }
 
-    public List<String> getStackTrace() {
+    /**
+     * @return the stack trace
+     */
+    public List<String> getStackTrace()
+    {
         return stackTrace;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("BytecodeResult{");
         sb.append("status=").append(status);
 
-        if (returnValue != null) {
+        if (returnValue != null)
+        {
             sb.append(", returnValue=").append(returnValue);
         }
 
-        if (exception != null) {
+        if (exception != null)
+        {
             sb.append(", exception=").append(exception);
         }
 
-        if (instructionsExecuted > 0) {
+        if (instructionsExecuted > 0)
+        {
             sb.append(", instructions=").append(instructionsExecuted);
         }
 
-        if (executionTimeNanos > 0) {
+        if (executionTimeNanos > 0)
+        {
             sb.append(", time=").append(executionTimeNanos).append("ns");
         }
 

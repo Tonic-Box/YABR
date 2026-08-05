@@ -50,7 +50,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.tonic.util.Opcode.*;
 
-public final class BytecodeEngine {
+/**
+ * Interpreter that executes JVM bytecode over an explicit call stack, dispatching each instruction
+ * and modeling invocation, field, heap, and exception semantics.
+ */
+public final class BytecodeEngine
+{
 
     private final BytecodeContext context;
     private final CallStack callStack;
@@ -70,8 +75,15 @@ public final class BytecodeEngine {
     private static final boolean LOOP_DEBUG = false;
     private static final boolean TRACE_INSTRUCTIONS = false;
 
-    public BytecodeEngine(BytecodeContext context) {
-        if (context == null) {
+    /**
+     * Creates an engine configured by the given context, choosing the invocation handler by mode.
+     * @param context the execution configuration
+     * @throws IllegalArgumentException if context is null
+     */
+    public BytecodeEngine(BytecodeContext context)
+    {
+        if (context == null)
+        {
             throw new IllegalArgumentException("Context cannot be null");
         }
         this.context = context;
@@ -83,32 +95,55 @@ public final class BytecodeEngine {
         this.interrupted = false;
         this.instructionCount = 0;
 
-        if (context.getInvocationHandler() != null) {
+        if (context.getInvocationHandler() != null)
+        {
             this.invocationHandler = context.getInvocationHandler();
-        } else if (context.getMode() == ExecutionMode.RECURSIVE) {
-            this.invocationHandler = new RecursiveHandler(
-                context.getClassResolver(),
-                context.getNativeRegistry()
-            );
-        } else {
+        }
+        else if (context.getMode() == ExecutionMode.RECURSIVE)
+        {
+            this.invocationHandler = new RecursiveHandler(context.getClassResolver(), context.getNativeRegistry());
+        }
+        else
+        {
             this.invocationHandler = null;
         }
     }
 
-    public CallStack getCallStack() {
+    /**
+     * @return the call stack
+     */
+    public CallStack getCallStack()
+    {
         return callStack;
     }
 
-    public long getInstructionCount() {
+    /**
+     * @return the instruction count
+     */
+    public long getInstructionCount()
+    {
         return instructionCount;
     }
 
-    public ConcreteValue getLastReturnValue() {
+    /**
+     * @return the last return value
+     */
+    public ConcreteValue getLastReturnValue()
+    {
         return lastReturnValue;
     }
 
-    public BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
-        if ("<clinit>".equals(method.getName())) {
+    /**
+     * Runs the given method to completion, honoring the instruction budget, depth limit, and
+     * interrupt requests.
+     * @param method the method to execute
+     * @param args argument values for the initial frame
+     * @return the execution outcome with statistics
+     */
+    public BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
+        if ("<clinit>".equals(method.getName()))
+        {
             String className = method.getClassFile().getClassName();
             initializedClasses.add(className);
         }
@@ -116,7 +151,8 @@ public final class BytecodeEngine {
         boolean wasInterrupted = interrupted;
         reset();
 
-        if (wasInterrupted) {
+        if (wasInterrupted)
+        {
             BytecodeResult result = BytecodeResult.interrupted().withStatistics(0, 0);
             notifyExecutionEnd(result);
             return result;
@@ -125,41 +161,49 @@ public final class BytecodeEngine {
         long startTime = System.nanoTime();
         notifyExecutionStart(method);
 
-        try {
+        try
+        {
             StackFrame frame = new StackFrame(method, args);
             callStack.push(frame);
             notifyFramePush(frame);
 
-            while (!callStack.isEmpty() && !interrupted) {
-                if (instructionCount >= context.getMaxInstructions()) {
+            while (!callStack.isEmpty() && !interrupted)
+            {
+                if (instructionCount >= context.getMaxInstructions())
+                {
                     long elapsed = System.nanoTime() - startTime;
                     BytecodeResult result = BytecodeResult.instructionLimit(instructionCount).withStatistics(instructionCount, elapsed);
                     notifyExecutionEnd(result);
                     return result;
                 }
 
-                if (LOOP_DEBUG && instructionCount > 0 && instructionCount % 100 == 0) {
+                if (LOOP_DEBUG && instructionCount > 0 && instructionCount % 100 == 0)
+                {
                     System.out.println("[LOOP-DEBUG] Progress: " + instructionCount + " instructions, depth=" + callStack.depth());
                     StackFrame top = callStack.peek();
-                    if (top != null) {
+                    if (top != null)
+                    {
                         System.out.println("[LOOP-DEBUG] Current: " + top.getMethodSignature() + " pc=" + top.getPC());
                     }
                 }
 
                 StackFrame current = callStack.peek();
 
-                if (current.isCompleted()) {
+                if (current.isCompleted())
+                {
                     handleFrameCompletion();
                     continue;
                 }
 
                 Instruction instr = current.getCurrentInstruction();
-                if (instr == null) {
+                if (instr == null)
+                {
                     current.complete(ConcreteValue.nullRef());
                     continue;
                 }
 
-                if (TRACE_INSTRUCTIONS) {
+                if (TRACE_INSTRUCTIONS)
+                {
                     System.out.println("[TRACE] #" + instructionCount + " " +
                         current.getMethodSignature() + " pc=" + current.getPC() +
                         " op=" + instr.getOpcode() + " (" + instr.getClass().getSimpleName() + ")");
@@ -167,7 +211,8 @@ public final class BytecodeEngine {
 
                 notifyBeforeInstruction(current, instr);
 
-                try {
+                try
+                {
                     EngineDispatchContext dispatchContext = new EngineDispatchContext(current);
                     DispatchResult result = dispatcher.dispatch(current, dispatchContext);
                     instructionCount++;
@@ -175,19 +220,24 @@ public final class BytecodeEngine {
                     handleDispatchResult(result, current, dispatchContext);
                     notifyAfterInstruction(current, instr);
 
-                } catch (Exception e) {
-                    if (TRACE_INSTRUCTIONS) {
+                }
+                catch (Exception e)
+                {
+                    if (TRACE_INSTRUCTIONS)
+                    {
                         System.out.println("[TRACE] JAVA EXCEPTION: " + e.getClass().getName() + ": " + e.getMessage());
                         e.printStackTrace(System.out);
                     }
                     ObjectInstance exceptionObj = wrapException(e);
-                    if (!tryHandleException(current, exceptionObj)) {
+                    if (!tryHandleException(current, exceptionObj))
+                    {
                         current.completeExceptionally(exceptionObj);
                     }
                 }
             }
 
-            if (interrupted) {
+            if (interrupted)
+            {
                 long elapsed = System.nanoTime() - startTime;
                 BytecodeResult result = BytecodeResult.interrupted().withStatistics(instructionCount, elapsed);
                 notifyExecutionEnd(result);
@@ -196,19 +246,25 @@ public final class BytecodeEngine {
 
             long elapsed = System.nanoTime() - startTime;
             BytecodeResult result;
-            if (lastException != null) {
+            if (lastException != null)
+            {
                 List<String> trace = buildStackTrace();
                 result = BytecodeResult.exception(lastException, trace).withStatistics(instructionCount, elapsed);
-            } else {
+            }
+            else
+            {
                 result = BytecodeResult.completed(lastReturnValue).withStatistics(instructionCount, elapsed);
             }
-            if (LOOP_DEBUG) {
+            if (LOOP_DEBUG)
+            {
                 printMethodCallSummary();
             }
             notifyExecutionEnd(result);
             return result;
 
-        } catch (StackOverflowError e) {
+        }
+        catch (StackOverflowError e)
+        {
             List<String> trace = buildStackTrace();
             trace.add("Stack overflow at depth: " + callStack.depth());
             long elapsed = System.nanoTime() - startTime;
@@ -218,19 +274,27 @@ public final class BytecodeEngine {
         }
     }
 
-    public boolean step() {
-        if (callStack.isEmpty() || interrupted) {
+    /**
+     * Executes a single instruction (or completes the top frame) of an in-progress execution.
+     * @return true if frames remain on the call stack, false when execution has finished
+     */
+    public boolean step()
+    {
+        if (callStack.isEmpty() || interrupted)
+        {
             return false;
         }
 
         StackFrame current = callStack.peek();
-        if (current.isCompleted()) {
+        if (current.isCompleted())
+        {
             handleFrameCompletion();
             return !callStack.isEmpty();
         }
 
         Instruction instr = current.getCurrentInstruction();
-        if (instr == null) {
+        if (instr == null)
+        {
             current.complete(ConcreteValue.nullRef());
             return !callStack.isEmpty();
         }
@@ -247,12 +311,21 @@ public final class BytecodeEngine {
         return !callStack.isEmpty();
     }
 
-    public BytecodeEngine addListener(BytecodeListener listener) {
-        if (listener != null) {
+    /**
+     * Registers an execution listener, merging its declared capabilities into the aggregate set.
+     * @param listener the listener to add; ignored if null
+     * @return this engine
+     */
+    public BytecodeEngine addListener(BytecodeListener listener)
+    {
+        if (listener != null)
+        {
             listeners.add(listener);
-            if (listener instanceof CapableListener) {
+            if (listener instanceof CapableListener)
+            {
                 Set<ListenerCapability> caps = ((CapableListener) listener).getCapabilities();
-                if (caps != null) {
+                if (caps != null)
+                {
                     aggregateCapabilities.addAll(caps);
                 }
             }
@@ -260,16 +333,25 @@ public final class BytecodeEngine {
         return this;
     }
 
-    private boolean hasCapability(ListenerCapability capability) {
+    private boolean hasCapability(ListenerCapability capability)
+    {
         return aggregateCapabilities.contains(ListenerCapability.ALL_OPERATIONS) ||
                aggregateCapabilities.contains(capability);
     }
 
-    public void interrupt() {
+    /**
+     * Requests that the current execution stop at the next instruction boundary.
+     */
+    public void interrupt()
+    {
         this.interrupted = true;
     }
 
-    public void reset() {
+    /**
+     * Clears all execution state so the engine can run another method.
+     */
+    public void reset()
+    {
         callStack.clear();
         instructionCount = 0;
         interrupted = false;
@@ -278,66 +360,95 @@ public final class BytecodeEngine {
         methodCallCounts.clear();
     }
 
-    public StackFrame getCurrentFrame() {
+    /**
+     * @return the frame on top of the call stack, or null if the stack is empty
+     */
+    public StackFrame getCurrentFrame()
+    {
         return callStack.isEmpty() ? null : callStack.peek();
     }
 
-    public boolean ensureClassInitialized(String className) {
-        if (initializedClasses.contains(className)) {
+    /**
+     * Runs the static initializer of the named class (and its superclasses) at most once, on a
+     * fresh engine sharing this engine's initialized-class set.
+     * @param className internal name of the class to initialize
+     * @return true if the class initialized cleanly or needs no initialization, false if its
+     *         static initializer did not complete
+     */
+    public boolean ensureClassInitialized(String className)
+    {
+        if (initializedClasses.contains(className))
+        {
             return true;
         }
 
         initializedClasses.add(className);
 
-        try {
+        try
+        {
             ClassFile cf = context.getClassResolver().getClassPool().get(className);
-            if (cf != null) {
+            if (cf != null)
+            {
                 String superName = cf.getSuperClassName();
-                if (superName != null && !superName.equals("java/lang/Object")) {
+                if (superName != null && !superName.equals("java/lang/Object"))
+                {
                     ensureClassInitialized(superName);
                 }
 
                 MethodEntry clinitMethod = null;
-                for (MethodEntry m : cf.getMethods()) {
-                    if (m.getName().equals("<clinit>") && m.getDesc().equals("()V")) {
+                for (MethodEntry m : cf.getMethods())
+                {
+                    if (m.getName().equals("<clinit>") && m.getDesc().equals("()V"))
+                    {
                         clinitMethod = m;
                         break;
                     }
                 }
 
-                if (clinitMethod != null && clinitMethod.getCodeAttribute() != null) {
+                if (clinitMethod != null && clinitMethod.getCodeAttribute() != null)
+                {
                     BytecodeEngine clinitEngine = new BytecodeEngine(context);
                     clinitEngine.initializedClasses.addAll(this.initializedClasses);
                     BytecodeResult result = clinitEngine.execute(clinitMethod);
-                    if (result.getStatus() != BytecodeResult.Status.COMPLETED) {
+                    if (result.getStatus() != BytecodeResult.Status.COMPLETED)
+                    {
                         // clinit did not complete; the class is marked initialized (JVM semantics) but
                         // report the failure so callers can distinguish it from a clean init.
                         return false;
                     }
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             // Class not found or resolution error - continue gracefully
         }
 
         return true;
     }
 
-    private void handleFrameCompletion() {
+    private void handleFrameCompletion()
+    {
         StackFrame completed = callStack.pop();
         ConcreteValue returnVal = completed.getReturnValue();
         notifyFramePop(completed, returnVal);
 
-        if (completed.getException() == null && returnVal != null) {
+        if (completed.getException() == null && returnVal != null)
+        {
             notifyMethodReturn(completed, returnVal);
         }
 
-        if (callStack.isEmpty()) {
-            if (completed.getException() != null) {
+        if (callStack.isEmpty())
+        {
+            if (completed.getException() != null)
+            {
                 lastException = completed.getException();
-            } else {
+            }
+            else
+            {
                 lastReturnValue = returnVal;
-                if (lastReturnValue == null) {
+                if (lastReturnValue == null)
+                {
                     lastReturnValue = ConcreteValue.nullRef();
                 }
             }
@@ -346,22 +457,29 @@ public final class BytecodeEngine {
 
         StackFrame caller = callStack.peek();
 
-        if (completed.getException() != null) {
+        if (completed.getException() != null)
+        {
             ObjectInstance exception = completed.getException();
-            if (!tryHandleException(caller, exception)) {
+            if (!tryHandleException(caller, exception))
+            {
                 caller.completeExceptionally(exception);
             }
-        } else {
+        }
+        else
+        {
             ConcreteValue returnValue = completed.getReturnValue();
-            if (returnValue != null) {
+            if (returnValue != null)
+            {
                 caller.getStack().push(returnValue);
             }
             caller.advancePC(caller.getCurrentInstruction().getLength());
         }
     }
 
-    private void handleDispatchResult(DispatchResult result, StackFrame frame, EngineDispatchContext ctx) {
-        switch (result) {
+    private void handleDispatchResult(DispatchResult result, StackFrame frame, EngineDispatchContext ctx)
+    {
+        switch (result)
+        {
             case CONTINUE:
 
             case CHECKCAST:
@@ -378,11 +496,16 @@ public final class BytecodeEngine {
             case RETURN:
                 int returnOpcode = frame.getCurrentInstruction().getOpcode();
                 ConcreteValue returnValue;
-                if (returnOpcode == RETURN_.getCode()) {
+                if (returnOpcode == RETURN_.getCode())
+                {
                     returnValue = null;
-                } else if (frame.getStack().isEmpty()) {
+                }
+                else if (frame.getStack().isEmpty())
+                {
                     returnValue = ConcreteValue.nullRef();
-                } else {
+                }
+                else
+                {
                     returnValue = frame.getStack().pop();
                 }
                 frame.complete(returnValue);
@@ -437,16 +560,25 @@ public final class BytecodeEngine {
         ConstantDynamicInfo info = ctx.getPendingConstantDynamic();
         String returnType = info.getDescriptor();
 
-        if ("J".equals(returnType)) {
+        if ("J".equals(returnType))
+        {
             frame.getStack().pushLong(0L);
-        } else if ("D".equals(returnType)) {
+        }
+        else if ("D".equals(returnType))
+        {
             frame.getStack().pushDouble(0.0);
-        } else if ("F".equals(returnType)) {
+        }
+        else if ("F".equals(returnType))
+        {
             frame.getStack().pushFloat(0.0f);
-        } else if ("I".equals(returnType) || "Z".equals(returnType) ||
-                   "B".equals(returnType) || "C".equals(returnType) || "S".equals(returnType)) {
+        }
+        else if ("I".equals(returnType) || "Z".equals(returnType) ||
+                   "B".equals(returnType) || "C".equals(returnType) || "S".equals(returnType))
+        {
             frame.getStack().pushInt(0);
-        } else {
+        }
+        else
+        {
             ObjectInstance obj = context.getHeapManager().newObject("java/lang/Object");
             frame.getStack().pushReference(obj);
         }
@@ -466,27 +598,34 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleInvoke(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleInvoke(StackFrame frame, EngineDispatchContext ctx)
+    {
         MethodInfo methodInfo = ctx.getPendingInvoke();
         String descriptor = methodInfo.getDescriptor();
 
-        if (methodInfo.isStatic()) {
+        if (methodInfo.isStatic())
+        {
             ensureClassInitialized(methodInfo.getOwnerClass());
         }
 
-        if (context.getMode() == ExecutionMode.RECURSIVE && invocationHandler != null) {
+        if (context.getMode() == ExecutionMode.RECURSIVE && invocationHandler != null)
+        {
             ConcreteValue[] args = extractArguments(frame, descriptor);
             ObjectInstance receiver = null;
-            if (!methodInfo.isStatic()) {
+            if (!methodInfo.isStatic())
+            {
                 ConcreteValue receiverVal = frame.getStack().pop();
-                if (!receiverVal.isNull()) {
+                if (!receiverVal.isNull())
+                {
                     receiver = receiverVal.asReference();
                 }
             }
 
             MethodEntry targetMethod = resolveMethod(methodInfo);
-            if (targetMethod == null) {
-                if (tryNativeInvoke(frame, methodInfo, receiver, args)) {
+            if (targetMethod == null)
+            {
+                if (tryNativeInvoke(frame, methodInfo, receiver, args))
+                {
                     return;
                 }
                 // args + receiver were already popped above (:478/:481); only produce the result.
@@ -495,27 +634,35 @@ public final class BytecodeEngine {
             }
 
             InvocationResult result;
-            if (methodInfo.isSpecial()) {
+            if (methodInfo.isSpecial())
+            {
                 result = handleSpecialInvoke(targetMethod, receiver, args);
-            } else {
-                result = invocationHandler.invoke(
-                    targetMethod, receiver, args, createInvocationContext());
+            }
+            else
+            {
+                result = invocationHandler.invoke(targetMethod, receiver, args, createInvocationContext());
             }
 
-            if (result.isPushFrame()) {
+            if (result.isPushFrame())
+            {
                 StackFrame newFrame = result.getNewFrame();
-                if (TRACE_INSTRUCTIONS) {
+                if (TRACE_INSTRUCTIONS)
+                {
                     System.out.println("[TRACE] CALL -> " + newFrame.getMethodSignature());
                 }
-                if (LOOP_DEBUG) {
+                if (LOOP_DEBUG)
+                {
                     String methodKey = newFrame.getMethodSignature();
                     int count = methodCallCounts.merge(methodKey, 1, Integer::sum);
-                    if (count >= LOOP_DETECTION_THRESHOLD) {
+                    if (count >= LOOP_DETECTION_THRESHOLD)
+                    {
                         System.out.println("[LOOP-DEBUG] Method called " + count + " times: " + methodKey);
-                        if (count == LOOP_DETECTION_THRESHOLD) {
+                        if (count == LOOP_DETECTION_THRESHOLD)
+                        {
                             System.out.println("[LOOP-DEBUG] Call stack depth: " + callStack.depth());
                             System.out.println("[LOOP-DEBUG] Instruction count: " + instructionCount);
-                            for (StackFrame sf : callStack.topToBottom()) {
+                            for (StackFrame sf : callStack.topToBottom())
+                            {
                                 System.out.println("[LOOP-DEBUG]   -> " + sf.getMethodSignature() + " pc=" + sf.getPC());
                             }
                         }
@@ -524,27 +671,37 @@ public final class BytecodeEngine {
                 notifyMethodCall(frame, targetMethod, args);
                 callStack.push(newFrame);
                 notifyFramePush(newFrame);
-            } else if (result.isNativeHandled()) {
+            }
+            else if (result.isNativeHandled())
+            {
                 ConcreteValue returnVal = result.getReturnValue();
                 String returnType = getReturnType(descriptor);
-                if (returnVal != null && !"V".equals(returnType)) {
+                if (returnVal != null && !"V".equals(returnType))
+                {
                     frame.getStack().push(returnVal);
                 }
                 frame.advancePC(frame.getCurrentInstruction().getLength());
-            } else if (result.isException()) {
+            }
+            else if (result.isException())
+            {
                 frame.completeExceptionally(result.getException());
-            } else {
+            }
+            else
+            {
                 frame.advancePC(frame.getCurrentInstruction().getLength());
             }
-        } else {
+        }
+        else
+        {
             stubInvoke(frame, descriptor, methodInfo.isStatic());
         }
     }
 
-    private boolean tryNativeInvoke(StackFrame frame, MethodInfo methodInfo,
-                                    ObjectInstance receiver, ConcreteValue[] args) {
+    private boolean tryNativeInvoke(StackFrame frame, MethodInfo methodInfo, ObjectInstance receiver, ConcreteValue[] args)
+    {
         NativeRegistry nativeRegistry = getNativeRegistry();
-        if (nativeRegistry == null) {
+        if (nativeRegistry == null)
+        {
             return false;
         }
 
@@ -553,28 +710,35 @@ public final class BytecodeEngine {
         String desc = methodInfo.getDescriptor();
 
         boolean hasHandler = nativeRegistry.hasHandler(owner, name, desc);
-        if (!hasHandler) {
+        if (!hasHandler)
+        {
             return false;
         }
 
-        try {
+        try
+        {
             NativeContext nativeContext = new NativeContext() {
                 @Override
-                public HeapManager getHeapManager() {
+                public HeapManager getHeapManager()
+                {
                     return context.getHeapManager();
                 }
                 @Override
-                public ClassResolver getClassResolver() {
+                public ClassResolver getClassResolver()
+                {
                     return context.getClassResolver();
                 }
                 @Override
-                public ObjectInstance createString(String value) {
+                public ObjectInstance createString(String value)
+                {
                     return context.getHeapManager().internString(value);
                 }
                 @Override
-                public ObjectInstance createException(String className, String message) {
+                public ObjectInstance createException(String className, String message)
+                {
                     ObjectInstance exception = context.getHeapManager().newObject(className);
-                    if (message != null) {
+                    if (message != null)
+                    {
                         ObjectInstance messageStr = context.getHeapManager().internString(message);
                         exception.setField(className, "detailMessage", "Ljava/lang/String;", messageStr);
                     }
@@ -584,49 +748,64 @@ public final class BytecodeEngine {
 
             ConcreteValue result = nativeRegistry.execute(owner, name, desc, receiver, args, nativeContext);
             String returnType = getReturnType(desc);
-            if (!"V".equals(returnType) && result != null) {
+            if (!"V".equals(returnType) && result != null)
+            {
                 frame.getStack().push(result);
             }
             frame.advancePC(frame.getCurrentInstruction().getLength());
             return true;
-        } catch (NativeException e) {
+        }
+        catch (NativeException e)
+        {
             ObjectInstance exception = context.getHeapManager().newObject(e.getExceptionClass());
-            if (e.getMessage() != null) {
+            if (e.getMessage() != null)
+            {
                 ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
                 exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
             }
             frame.completeExceptionally(exception);
             return true;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return false;
         }
     }
 
-    private NativeRegistry getNativeRegistry() {
+    private NativeRegistry getNativeRegistry()
+    {
         return context.getNativeRegistry();
     }
 
-    private InvocationResult handleSpecialInvoke(MethodEntry targetMethod, ObjectInstance receiver, ConcreteValue[] args) {
+    private InvocationResult handleSpecialInvoke(MethodEntry targetMethod, ObjectInstance receiver, ConcreteValue[] args)
+    {
         NativeRegistry nativeRegistry = getNativeRegistry();
-        if (nativeRegistry != null && nativeRegistry.hasHandler(targetMethod)) {
-            try {
+        if (nativeRegistry != null && nativeRegistry.hasHandler(targetMethod))
+        {
+            try
+            {
                 NativeContext nativeContext = new NativeContext() {
                     @Override
-                    public HeapManager getHeapManager() {
+                    public HeapManager getHeapManager()
+                    {
                         return context.getHeapManager();
                     }
                     @Override
-                    public ClassResolver getClassResolver() {
+                    public ClassResolver getClassResolver()
+                    {
                         return context.getClassResolver();
                     }
                     @Override
-                    public ObjectInstance createString(String value) {
+                    public ObjectInstance createString(String value)
+                    {
                         return context.getHeapManager().internString(value);
                     }
                     @Override
-                    public ObjectInstance createException(String className, String message) {
+                    public ObjectInstance createException(String className, String message)
+                    {
                         ObjectInstance exception = context.getHeapManager().newObject(className);
-                        if (message != null) {
+                        if (message != null)
+                        {
                             ObjectInstance messageStr = context.getHeapManager().internString(message);
                             exception.setField(className, "detailMessage", "Ljava/lang/String;", messageStr);
                         }
@@ -635,16 +814,22 @@ public final class BytecodeEngine {
                 };
                 ConcreteValue result = nativeRegistry.execute(targetMethod, receiver, args, nativeContext);
                 return InvocationResult.nativeHandled(result);
-            } catch (NativeException e) {
+            }
+            catch (NativeException e)
+            {
                 ObjectInstance exception = context.getHeapManager().newObject(e.getExceptionClass());
-                if (e.getMessage() != null) {
+                if (e.getMessage() != null)
+                {
                     ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
                     exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
                 }
                 return InvocationResult.exception(exception);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 ObjectInstance exception = context.getHeapManager().newObject("java/lang/Exception");
-                if (e.getMessage() != null) {
+                if (e.getMessage() != null)
+                {
                     ObjectInstance messageStr = context.getHeapManager().internString(e.getMessage());
                     exception.setField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;", messageStr);
                 }
@@ -652,7 +837,8 @@ public final class BytecodeEngine {
             }
         }
 
-        if (targetMethod.getCodeAttribute() == null) {
+        if (targetMethod.getCodeAttribute() == null)
+        {
             return InvocationResult.nativeHandled(ConcreteValue.nullRef());
         }
 
@@ -661,9 +847,11 @@ public final class BytecodeEngine {
         return InvocationResult.pushFrame(newFrame);
     }
 
-    private ConcreteValue[] buildSpecialFrameArgs(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args) {
+    private ConcreteValue[] buildSpecialFrameArgs(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args)
+    {
         boolean isStatic = (method.getAccess() & Modifiers.STATIC) != 0;
-        if (isStatic) {
+        if (isStatic)
+        {
             return args != null ? args : new ConcreteValue[0];
         }
 
@@ -672,19 +860,23 @@ public final class BytecodeEngine {
 
         ConcreteValue[] frameArgs = new ConcreteValue[1 + (args != null ? args.length : 0)];
         frameArgs[0] = receiverValue;
-        if (args != null) {
+        if (args != null)
+        {
             System.arraycopy(args, 0, frameArgs, 1, args.length);
         }
         return frameArgs;
     }
 
-    private void stubInvoke(StackFrame frame, String descriptor, boolean isStatic) {
+    private void stubInvoke(StackFrame frame, String descriptor, boolean isStatic)
+    {
         int paramCount = getParameterCount(descriptor);
-        for (int i = 0; i < paramCount; i++) {
+        for (int i = 0; i < paramCount; i++)
+        {
             frame.getStack().pop();
         }
 
-        if (!isStatic) {
+        if (!isStatic)
+        {
             frame.getStack().pop();
         }
 
@@ -697,19 +889,30 @@ public final class BytecodeEngine {
      * pop-ful {@link #stubInvoke} would double-pop (underflowing at a bare {@code aload_0; invokespecial
      * <init>} site, or silently corrupting the stack elsewhere).
      */
-    private void pushStubResult(StackFrame frame, String descriptor) {
+    private void pushStubResult(StackFrame frame, String descriptor)
+    {
         String returnType = getReturnType(descriptor);
-        if (!"V".equals(returnType)) {
-            if (returnType.startsWith("L") || returnType.startsWith("[")) {
+        if (!"V".equals(returnType))
+        {
+            if (returnType.startsWith("L") || returnType.startsWith("["))
+            {
                 ObjectInstance result = context.getHeapManager().newObject("java/lang/Object");
                 frame.getStack().pushReference(result);
-            } else if ("J".equals(returnType)) {
+            }
+            else if ("J".equals(returnType))
+            {
                 frame.getStack().pushLong(0L);
-            } else if ("D".equals(returnType)) {
+            }
+            else if ("D".equals(returnType))
+            {
                 frame.getStack().pushDouble(0.0);
-            } else if ("F".equals(returnType)) {
+            }
+            else if ("F".equals(returnType))
+            {
                 frame.getStack().pushFloat(0.0f);
-            } else {
+            }
+            else
+            {
                 frame.getStack().pushInt(0);
             }
         }
@@ -717,25 +920,31 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private ConcreteValue[] extractArguments(StackFrame frame, String descriptor) {
+    private ConcreteValue[] extractArguments(StackFrame frame, String descriptor)
+    {
         int paramCount = getParameterCount(descriptor);
         ConcreteValue[] args = new ConcreteValue[paramCount];
-        for (int i = paramCount - 1; i >= 0; i--) {
+        for (int i = paramCount - 1; i >= 0; i--)
+        {
             args[i] = frame.getStack().pop();
         }
         return args;
     }
 
-    private int getParameterCount(String descriptor) {
-        if (descriptor == null || !descriptor.startsWith("(")) {
+    private int getParameterCount(String descriptor)
+    {
+        if (descriptor == null || !descriptor.startsWith("("))
+        {
             return 0;
         }
 
         int count = 0;
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             char c = descriptor.charAt(i);
-            switch (c) {
+            switch (c)
+            {
                 case 'J':
                 case 'D':
                 case 'I':
@@ -749,18 +958,22 @@ public final class BytecodeEngine {
                     break;
                 case 'L':
                     count++;
-                    while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                    while (i < descriptor.length() && descriptor.charAt(i) != ';')
+                    {
                         i++;
                     }
                     i++;
                     break;
                 case '[':
                     count++;
-                    while (i < descriptor.length() && descriptor.charAt(i) == '[') {
+                    while (i < descriptor.length() && descriptor.charAt(i) == '[')
+                    {
                         i++;
                     }
-                    if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
-                        while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                    if (i < descriptor.length() && descriptor.charAt(i) == 'L')
+                    {
+                        while (i < descriptor.length() && descriptor.charAt(i) != ';')
+                        {
                             i++;
                         }
                     }
@@ -775,33 +988,41 @@ public final class BytecodeEngine {
         return count;
     }
 
-    private MethodEntry resolveMethod(MethodInfo methodInfo) {
-        try {
+    private MethodEntry resolveMethod(MethodInfo methodInfo)
+    {
+        try
+        {
             ResolvedMethod resolved = context.getClassResolver().resolveMethod(
                 methodInfo.getOwnerClass(),
                 methodInfo.getMethodName(),
                 methodInfo.getDescriptor()
             );
             return resolved != null ? resolved.getMethod() : null;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return null;
         }
     }
 
-    private InvocationContext createInvocationContext() {
+    private InvocationContext createInvocationContext()
+    {
         return new InvocationContext() {
             @Override
-            public CallStack getCallStack() {
+            public CallStack getCallStack()
+            {
                 return callStack;
             }
 
             @Override
-            public HeapManager getHeapManager() {
+            public HeapManager getHeapManager()
+            {
                 return context.getHeapManager();
             }
 
             @Override
-            public ClassResolver getClassResolver() {
+            public ClassResolver getClassResolver()
+            {
                 return context.getClassResolver();
             }
         };
@@ -811,25 +1032,38 @@ public final class BytecodeEngine {
         InvokeDynamicInfo info = ctx.getPendingInvokeDynamic();
         int paramSlots = info.getParameterSlots();
 
-        for (int i = 0; i < paramSlots; i++) {
+        for (int i = 0; i < paramSlots; i++)
+        {
             frame.getStack().pop();
         }
 
         String returnType = info.getReturnType();
-        if (!"V".equals(returnType)) {
-            if (info.isStringConcat()) {
+        if (!"V".equals(returnType))
+        {
+            if (info.isStringConcat())
+            {
                 ObjectInstance strResult = context.getHeapManager().internString("<concat>");
                 frame.getStack().pushReference(strResult);
-            } else if (returnType.startsWith("L") || returnType.startsWith("[")) {
+            }
+            else if (returnType.startsWith("L") || returnType.startsWith("["))
+            {
                 ObjectInstance lambdaProxy = context.getHeapManager().newObject("java/lang/Object");
                 frame.getStack().pushReference(lambdaProxy);
-            } else if ("J".equals(returnType)) {
+            }
+            else if ("J".equals(returnType))
+            {
                 frame.getStack().pushLong(0L);
-            } else if ("D".equals(returnType)) {
+            }
+            else if ("D".equals(returnType))
+            {
                 frame.getStack().pushDouble(0.0);
-            } else if ("F".equals(returnType)) {
+            }
+            else if ("F".equals(returnType))
+            {
                 frame.getStack().pushFloat(0.0f);
-            } else {
+            }
+            else
+            {
                 frame.getStack().pushInt(0);
             }
         }
@@ -837,27 +1071,35 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleFieldGet(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleFieldGet(StackFrame frame, EngineDispatchContext ctx)
+    {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
         String descriptor = fieldInfo.getDescriptor();
         String owner = fieldInfo.getOwnerClass();
         String name = fieldInfo.getFieldName();
 
-        if (fieldInfo.isStatic()) {
+        if (fieldInfo.isStatic())
+        {
             ensureClassInitialized(owner);
             Object value = context.getHeapManager().getStaticField(owner, name, descriptor);
-            if (value == null) {
+            if (value == null)
+            {
                 // A JDK class's <clinit> cannot run here, so its compile-time constants (e.g.
                 // Integer.MAX_VALUE) would read as the 0 default; supply the known value instead.
                 value = JdkConstants.lookup(owner, name);
             }
             pushFieldValue(frame, descriptor, value);
-        } else {
+        }
+        else
+        {
             ConcreteValue objRef = frame.getStack().pop();
             ObjectInstance obj = objRef.isNull() ? null : objRef.asReference();
-            if (obj == null) {
+            if (obj == null)
+            {
                 pushDefaultValue(frame, descriptor);
-            } else {
+            }
+            else
+            {
                 Object value = obj.getField(owner, name, descriptor);
                 ConcreteValue wrappedValue = wrapStoredValue(value, descriptor);
                 notifyFieldRead(obj, name, wrappedValue);
@@ -868,7 +1110,8 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleFieldPut(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleFieldPut(StackFrame frame, EngineDispatchContext ctx)
+    {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
         String descriptor = fieldInfo.getDescriptor();
         String owner = fieldInfo.getOwnerClass();
@@ -876,13 +1119,17 @@ public final class BytecodeEngine {
 
         ConcreteValue value = frame.getStack().pop();
 
-        if (fieldInfo.isStatic()) {
+        if (fieldInfo.isStatic())
+        {
             ensureClassInitialized(owner);
             context.getHeapManager().putStaticField(owner, name, descriptor, convertToStorable(value, descriptor));
-        } else {
+        }
+        else
+        {
             ConcreteValue objRef = frame.getStack().pop();
             ObjectInstance obj = objRef.isNull() ? null : objRef.asReference();
-            if (obj != null) {
+            if (obj != null)
+            {
                 Object oldRaw = obj.getField(owner, name, descriptor);
                 ConcreteValue oldValue = wrapStoredValue(oldRaw, descriptor);
                 obj.setField(owner, name, descriptor, convertToStorable(value, descriptor));
@@ -893,12 +1140,15 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private ConcreteValue wrapStoredValue(Object raw, String descriptor) {
-        if (raw == null) {
+    private ConcreteValue wrapStoredValue(Object raw, String descriptor)
+    {
+        if (raw == null)
+        {
             return ConcreteValue.nullRef();
         }
         char typeChar = descriptor.charAt(0);
-        switch (typeChar) {
+        switch (typeChar)
+        {
             case 'J':
                 return ConcreteValue.longValue(raw instanceof Long ? (Long) raw : ((Number) raw).longValue());
             case 'D':
@@ -910,16 +1160,22 @@ public final class BytecodeEngine {
             case 'B':
             case 'C':
             case 'S':
-                if (raw instanceof Boolean) {
+                if (raw instanceof Boolean)
+                {
                     return ConcreteValue.intValue((Boolean) raw ? 1 : 0);
-                } else if (raw instanceof Character) {
+                }
+                else if (raw instanceof Character)
+                {
                     return ConcreteValue.intValue((Character) raw);
-                } else {
+                }
+                else
+                {
                     return ConcreteValue.intValue(((Number) raw).intValue());
                 }
             case 'L':
             case '[':
-                if (raw instanceof ObjectInstance) {
+                if (raw instanceof ObjectInstance)
+                {
                     return ConcreteValue.reference((ObjectInstance) raw);
                 }
                 return ConcreteValue.nullRef();
@@ -928,13 +1184,16 @@ public final class BytecodeEngine {
         }
     }
 
-    private void pushFieldValue(StackFrame frame, String descriptor, Object value) {
-        if (value == null) {
+    private void pushFieldValue(StackFrame frame, String descriptor, Object value)
+    {
+        if (value == null)
+        {
             pushDefaultValue(frame, descriptor);
             return;
         }
         char typeChar = descriptor.charAt(0);
-        switch (typeChar) {
+        switch (typeChar)
+        {
             case 'J':
                 frame.getStack().pushLong(value instanceof Long ? (Long) value : ((Number) value).longValue());
                 break;
@@ -949,19 +1208,27 @@ public final class BytecodeEngine {
             case 'B':
             case 'C':
             case 'S':
-                if (value instanceof Boolean) {
+                if (value instanceof Boolean)
+                {
                     frame.getStack().pushInt((Boolean) value ? 1 : 0);
-                } else if (value instanceof Character) {
+                }
+                else if (value instanceof Character)
+                {
                     frame.getStack().pushInt((Character) value);
-                } else {
+                }
+                else
+                {
                     frame.getStack().pushInt(((Number) value).intValue());
                 }
                 break;
             case 'L':
             case '[':
-                if (value instanceof ObjectInstance) {
+                if (value instanceof ObjectInstance)
+                {
                     frame.getStack().pushReference((ObjectInstance) value);
-                } else {
+                }
+                else
+                {
                     frame.getStack().pushReference(null);
                 }
                 break;
@@ -971,9 +1238,11 @@ public final class BytecodeEngine {
         }
     }
 
-    private void pushDefaultValue(StackFrame frame, String descriptor) {
+    private void pushDefaultValue(StackFrame frame, String descriptor)
+    {
         char typeChar = descriptor.charAt(0);
-        switch (typeChar) {
+        switch (typeChar)
+        {
             case 'J':
                 frame.getStack().pushLong(0L);
                 break;
@@ -993,12 +1262,15 @@ public final class BytecodeEngine {
         }
     }
 
-    private Object convertToStorable(ConcreteValue value, String descriptor) {
-        if (value.isNull()) {
+    private Object convertToStorable(ConcreteValue value, String descriptor)
+    {
+        if (value.isNull())
+        {
             return null;
         }
         char typeChar = descriptor.charAt(0);
-        switch (typeChar) {
+        switch (typeChar)
+        {
             case 'J':
                 return value.asLong();
             case 'D':
@@ -1023,7 +1295,8 @@ public final class BytecodeEngine {
         }
     }
 
-    private void handleNewObject(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleNewObject(StackFrame frame, EngineDispatchContext ctx)
+    {
         String className = ctx.getPendingNewClass();
         ensureClassInitialized(className);
         ObjectInstance obj = context.getHeapManager().newObject(className);
@@ -1032,15 +1305,19 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleNewArray(StackFrame frame, EngineDispatchContext ctx) {
+    private void handleNewArray(StackFrame frame, EngineDispatchContext ctx)
+    {
         String className = ctx.getPendingNewClass();
         int[] dimensions = ctx.getPendingArrayDimensions();
 
-        if (dimensions.length == 1) {
+        if (dimensions.length == 1)
+        {
             ArrayInstance array = context.getHeapManager().newArray(className, dimensions[0]);
             notifyArrayAllocation(array);
             frame.getStack().pushReference(array);
-        } else {
+        }
+        else
+        {
             ArrayInstance array = context.getHeapManager().newMultiArray(className, dimensions);
             notifyArrayAllocation(array);
             frame.getStack().pushReference(array);
@@ -1049,18 +1326,22 @@ public final class BytecodeEngine {
         frame.advancePC(frame.getCurrentInstruction().getLength());
     }
 
-    private void handleAthrow(StackFrame frame) {
+    private void handleAthrow(StackFrame frame)
+    {
         ConcreteValue exceptionRef = frame.getStack().pop();
-        if (exceptionRef.isNull()) {
+        if (exceptionRef.isNull())
+        {
             throw new NullPointerException("Cannot throw null exception");
         }
         ObjectInstance exception = exceptionRef.asReference();
 
-        if (TRACE_INSTRUCTIONS && exception != null) {
+        if (TRACE_INSTRUCTIONS && exception != null)
+        {
             String exClass = exception.getClassName();
             Object detailMsg = exception.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
             String msgStr = null;
-            if (detailMsg instanceof ObjectInstance) {
+            if (detailMsg instanceof ObjectInstance)
+            {
                 msgStr = context.getHeapManager().extractString((ObjectInstance) detailMsg);
             }
             System.out.println("[TRACE] ATHROW " + exClass +
@@ -1070,14 +1351,17 @@ public final class BytecodeEngine {
 
         notifyExceptionThrow(frame, exception);
 
-        if (!tryHandleException(frame, exception)) {
+        if (!tryHandleException(frame, exception))
+        {
             frame.completeExceptionally(exception);
         }
     }
 
-    private boolean tryHandleException(StackFrame frame, ObjectInstance exception) {
+    private boolean tryHandleException(StackFrame frame, ObjectInstance exception)
+    {
         ExceptionTableEntry handler = findExceptionHandler(frame, exception);
-        if (handler != null) {
+        if (handler != null)
+        {
             int handlerPC = handler.getHandlerPc();
             notifyExceptionCatch(frame, exception, handlerPC);
             frame.getStack().clear();
@@ -1088,22 +1372,28 @@ public final class BytecodeEngine {
         return false;
     }
 
-    private ExceptionTableEntry findExceptionHandler(StackFrame frame, ObjectInstance exception) {
+    private ExceptionTableEntry findExceptionHandler(StackFrame frame, ObjectInstance exception)
+    {
         CodeAttribute codeAttr = frame.getMethod().getCodeAttribute();
-        if (codeAttr == null) {
+        if (codeAttr == null)
+        {
             return null;
         }
 
         int pc = frame.getPC();
         String exceptionType = exception.getClassName();
 
-        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
-            if (pc >= entry.getStartPc() && pc < entry.getEndPc()) {
-                if (entry.getCatchType() == 0) {
+        for (ExceptionTableEntry entry : codeAttr.getExceptionTable())
+        {
+            if (pc >= entry.getStartPc() && pc < entry.getEndPc())
+            {
+                if (entry.getCatchType() == 0)
+                {
                     return entry;
                 }
                 String catchTypeName = resolveCatchType(frame, entry.getCatchType());
-                if (catchTypeName != null && isExceptionAssignable(exceptionType, catchTypeName)) {
+                if (catchTypeName != null && isExceptionAssignable(exceptionType, catchTypeName))
+                {
                     return entry;
                 }
             }
@@ -1111,59 +1401,75 @@ public final class BytecodeEngine {
         return null;
     }
 
-    private String resolveCatchType(StackFrame frame, int catchTypeIndex) {
-        if (catchTypeIndex == 0) {
+    private String resolveCatchType(StackFrame frame, int catchTypeIndex)
+    {
+        if (catchTypeIndex == 0)
+        {
             return null;
         }
         ConstPool constPool = frame.getMethod().getClassFile().getConstPool();
         Item<?> item = constPool.getItem(catchTypeIndex);
-        if (item instanceof ClassRefItem) {
+        if (item instanceof ClassRefItem)
+        {
             return ((ClassRefItem) item).getClassName();
         }
         return null;
     }
 
-    private boolean isExceptionAssignable(String exceptionType, String catchType) {
-        if (exceptionType == null || catchType == null) {
+    private boolean isExceptionAssignable(String exceptionType, String catchType)
+    {
+        if (exceptionType == null || catchType == null)
+        {
             return false;
         }
-        if (exceptionType.equals(catchType)) {
+        if (exceptionType.equals(catchType))
+        {
             return true;
         }
         ClassResolver resolver = context.getClassResolver();
-        if (resolver != null) {
+        if (resolver != null)
+        {
             return resolver.isAssignableFrom(catchType, exceptionType);
         }
         return false;
     }
 
-    private ObjectInstance wrapException(Exception e) {
-        try {
+    private ObjectInstance wrapException(Exception e)
+    {
+        try
+        {
             String exceptionClass = mapJavaExceptionToInternalName(e.getClass());
             return context.getHeapManager().newObject(exceptionClass);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             return context.getHeapManager().newObject("java/lang/Exception");
         }
     }
 
-    private String mapJavaExceptionToInternalName(Class<?> exceptionClass) {
+    private String mapJavaExceptionToInternalName(Class<?> exceptionClass)
+    {
         String name = exceptionClass.getName().replace('.', '/');
         if (name.startsWith("java/lang/") || name.startsWith("java/io/") ||
-            name.startsWith("java/util/") || name.startsWith("java/net/")) {
+            name.startsWith("java/util/") || name.startsWith("java/net/"))
+            {
             return name;
         }
         return "java/lang/Exception";
     }
 
-    private List<String> buildStackTrace() {
+    private List<String> buildStackTrace()
+    {
         List<String> trace = new ArrayList<>();
-        for (StackFrame frame : callStack.topToBottom()) {
+        for (StackFrame frame : callStack.topToBottom())
+        {
             StringBuilder sb = new StringBuilder();
             sb.append(frame.getMethodSignature());
             sb.append(" (pc=").append(frame.getPC());
 
             int line = frame.getLineNumber();
-            if (line >= 0) {
+            if (line >= 0)
+            {
                 sb.append(", line=").append(line);
             }
             sb.append(")");
@@ -1173,7 +1479,8 @@ public final class BytecodeEngine {
         return trace;
     }
 
-    private void printMethodCallSummary() {
+    private void printMethodCallSummary()
+    {
         System.out.println("[LOOP-DEBUG] ===== Method Call Summary =====");
         System.out.println("[LOOP-DEBUG] Total instructions: " + instructionCount);
         System.out.println("[LOOP-DEBUG] Methods called (sorted by count):");
@@ -1184,147 +1491,196 @@ public final class BytecodeEngine {
         System.out.println("[LOOP-DEBUG] ================================");
     }
 
-    private void notifyBeforeInstruction(StackFrame frame, Instruction instr) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyBeforeInstruction(StackFrame frame, Instruction instr)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.beforeInstruction(frame, instr);
         }
     }
 
-    private void notifyAfterInstruction(StackFrame frame, Instruction instr) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyAfterInstruction(StackFrame frame, Instruction instr)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.afterInstruction(frame, instr);
         }
     }
 
-    private void notifyObjectAllocation(ObjectInstance instance) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyObjectAllocation(ObjectInstance instance)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onObjectAllocation(instance);
         }
     }
 
-    private void notifyArrayAllocation(ArrayInstance array) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyArrayAllocation(ArrayInstance array)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onArrayAllocation(array);
         }
     }
 
-    private void notifyFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onFieldWrite(instance, fieldName, oldValue, newValue);
         }
     }
 
-    private void notifyExecutionStart(MethodEntry method) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyExecutionStart(MethodEntry method)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onExecutionStart(method);
         }
     }
 
-    private void notifyExecutionEnd(BytecodeResult result) {
+    private void notifyExecutionEnd(BytecodeResult result)
+    {
         com.tonic.analysis.execution.result.BytecodeResult listenerResult;
-        if (result.getStatus() == BytecodeResult.Status.COMPLETED) {
+        if (result.getStatus() == BytecodeResult.Status.COMPLETED)
+        {
             listenerResult = com.tonic.analysis.execution.result.BytecodeResult.success(result.getReturnValue());
-        } else if (result.getStatus() == BytecodeResult.Status.EXCEPTION) {
+        }
+        else if (result.getStatus() == BytecodeResult.Status.EXCEPTION)
+        {
             ObjectInstance exObj = result.getException();
             String exMsg = buildExceptionMessage(exObj, result.getStackTrace());
             listenerResult = com.tonic.analysis.execution.result.BytecodeResult.failure(new RuntimeException(exMsg));
-        } else {
+        }
+        else
+        {
             listenerResult = com.tonic.analysis.execution.result.BytecodeResult.incomplete();
         }
-        for (BytecodeListener listener : listeners) {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onExecutionEnd(listenerResult);
         }
     }
 
-    private void notifyFramePush(StackFrame frame) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyFramePush(StackFrame frame)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onFramePush(frame);
         }
     }
 
-    private void notifyFramePop(StackFrame frame, ConcreteValue returnValue) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyFramePop(StackFrame frame, ConcreteValue returnValue)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onFramePop(frame, returnValue);
         }
     }
 
-    private void notifyMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onMethodCall(caller, target, args);
         }
     }
 
-    private void notifyMethodReturn(StackFrame frame, ConcreteValue returnValue) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyMethodReturn(StackFrame frame, ConcreteValue returnValue)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onMethodReturn(frame, returnValue);
         }
     }
 
-    private void notifyExceptionThrow(StackFrame frame, ObjectInstance exception) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyExceptionThrow(StackFrame frame, ObjectInstance exception)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onExceptionThrow(frame, exception);
         }
     }
 
-    private void notifyExceptionCatch(StackFrame frame, ObjectInstance exception, int handlerPC) {
-        for (BytecodeListener listener : listeners) {
+    private void notifyExceptionCatch(StackFrame frame, ObjectInstance exception, int handlerPC)
+    {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onExceptionCatch(frame, exception, handlerPC);
         }
     }
 
-    private void notifyBranch(StackFrame frame, int fromPC, int toPC, boolean taken) {
-        if (!hasCapability(ListenerCapability.BRANCH_OPERATIONS)) {
+    private void notifyBranch(StackFrame frame, int fromPC, int toPC, boolean taken)
+    {
+        if (!hasCapability(ListenerCapability.BRANCH_OPERATIONS))
+        {
             return;
         }
-        for (BytecodeListener listener : listeners) {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onBranch(frame, fromPC, toPC, taken);
         }
     }
 
-    private void notifyFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value) {
-        if (!hasCapability(ListenerCapability.FIELD_OPERATIONS)) {
+    private void notifyFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value)
+    {
+        if (!hasCapability(ListenerCapability.FIELD_OPERATIONS))
+        {
             return;
         }
-        for (BytecodeListener listener : listeners) {
+        for (BytecodeListener listener : listeners)
+        {
             listener.onFieldRead(instance, fieldName, value);
         }
     }
 
-    private String buildExceptionMessage(ObjectInstance exObj, List<String> stackTrace) {
+    private String buildExceptionMessage(ObjectInstance exObj, List<String> stackTrace)
+    {
         StringBuilder sb = new StringBuilder();
-        if (exObj != null) {
+        if (exObj != null)
+        {
             sb.append(exObj.getClassName());
             Object detailMsg = exObj.getField("java/lang/Throwable", "detailMessage", "Ljava/lang/String;");
-            if (detailMsg instanceof ObjectInstance) {
+            if (detailMsg instanceof ObjectInstance)
+            {
                 String msg = context.getHeapManager().extractString((ObjectInstance) detailMsg);
-                if (msg != null && !msg.isEmpty()) {
+                if (msg != null && !msg.isEmpty())
+                {
                     sb.append(": ").append(msg);
                 }
             }
-        } else {
+        }
+        else
+        {
             sb.append("Unknown exception");
         }
-        if (stackTrace != null && !stackTrace.isEmpty()) {
+        if (stackTrace != null && !stackTrace.isEmpty())
+        {
             sb.append("\n  VM Stack Trace:");
-            for (String frame : stackTrace) {
+            for (String frame : stackTrace)
+            {
                 sb.append("\n    at ").append(frame);
             }
         }
         return sb.toString();
     }
 
-    private String getReturnType(String descriptor) {
-        if (descriptor == null) {
+    private String getReturnType(String descriptor)
+    {
+        if (descriptor == null)
+        {
             return "V";
         }
         int parenIndex = descriptor.indexOf(')');
-        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1) {
+        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1)
+        {
             return descriptor.substring(parenIndex + 1);
         }
         return "V";
     }
 
-    private class EngineDispatchContext implements DispatchContext {
+    private class EngineDispatchContext implements DispatchContext
+    {
         private final StackFrame frame;
         private MethodInfo pendingInvoke;
         private FieldInfo pendingFieldAccess;
@@ -1336,119 +1692,148 @@ public final class BytecodeEngine {
         private MethodTypeInfo pendingMethodType;
         private ConstantDynamicInfo pendingConstantDynamic;
 
-        EngineDispatchContext(StackFrame frame) {
+        EngineDispatchContext(StackFrame frame)
+        {
             this.frame = frame;
         }
 
-        private ConstPool getConstPool() {
+        private ConstPool getConstPool()
+        {
             return frame.getMethod().getClassFile().getConstPool();
         }
 
         @Override
-        public int resolveIntConstant(int index) {
+        public int resolveIntConstant(int index)
+        {
             Item<?> item = getConstPool().getItem(index);
-            if (item instanceof IntegerItem) {
+            if (item instanceof IntegerItem)
+            {
                 return ((IntegerItem) item).getValue();
             }
             return 0;
         }
 
         @Override
-        public long resolveLongConstant(int index) {
+        public long resolveLongConstant(int index)
+        {
             Item<?> item = getConstPool().getItem(index);
-            if (item instanceof LongItem) {
+            if (item instanceof LongItem)
+            {
                 return ((LongItem) item).getValue();
             }
             return 0L;
         }
 
         @Override
-        public float resolveFloatConstant(int index) {
+        public float resolveFloatConstant(int index)
+        {
             Item<?> item = getConstPool().getItem(index);
-            if (item instanceof FloatItem) {
+            if (item instanceof FloatItem)
+            {
                 return ((FloatItem) item).getValue();
             }
             return 0.0f;
         }
 
         @Override
-        public double resolveDoubleConstant(int index) {
+        public double resolveDoubleConstant(int index)
+        {
             Item<?> item = getConstPool().getItem(index);
-            if (item instanceof DoubleItem) {
+            if (item instanceof DoubleItem)
+            {
                 return ((DoubleItem) item).getValue();
             }
             return 0.0;
         }
 
         @Override
-        public String resolveStringConstant(int index) {
+        public String resolveStringConstant(int index)
+        {
             Item<?> item = getConstPool().getItem(index);
-            if (item instanceof StringRefItem) {
+            if (item instanceof StringRefItem)
+            {
                 int stringIndex = ((StringRefItem) item).getValue();
                 Item<?> utf8Item = getConstPool().getItem(stringIndex);
-                if (utf8Item instanceof Utf8Item) {
+                if (utf8Item instanceof Utf8Item)
+                {
                     return ((Utf8Item) utf8Item).getValue();
                 }
-            } else if (item instanceof Utf8Item) {
+            }
+            else if (item instanceof Utf8Item)
+            {
                 return ((Utf8Item) item).getValue();
             }
             return "";
         }
 
         @Override
-        public ObjectInstance resolveStringObject(int index) {
+        public ObjectInstance resolveStringObject(int index)
+        {
             String value = resolveStringConstant(index);
             return context.getHeapManager().internString(value);
         }
 
         @Override
-        public ObjectInstance resolveClassConstant(int index) {
+        public ObjectInstance resolveClassConstant(int index)
+        {
             return context.getHeapManager().newObject("java/lang/Class");
         }
 
         @Override
-        public ArrayInstance getArray(ObjectInstance ref) {
-            if (ref instanceof ArrayInstance) {
+        public ArrayInstance getArray(ObjectInstance ref)
+        {
+            if (ref instanceof ArrayInstance)
+            {
                 return (ArrayInstance) ref;
             }
             throw new IllegalArgumentException("Object is not an array: " + ref);
         }
 
         @Override
-        public void checkArrayBounds(ArrayInstance array, int index) {
-            if (index < 0 || index >= array.getLength()) {
+        public void checkArrayBounds(ArrayInstance array, int index)
+        {
+            if (index < 0 || index >= array.getLength())
+            {
                 throw new ArrayIndexOutOfBoundsException("Index " + index + " out of bounds for length " + array.getLength());
             }
         }
 
         @Override
-        public void checkNullReference(ObjectInstance ref, String operation) {
-            if (ref == null) {
+        public void checkNullReference(ObjectInstance ref, String operation)
+        {
+            if (ref == null)
+            {
                 throw new NullPointerException("Null reference in " + operation);
             }
         }
 
         @Override
-        public FieldInfo resolveField(int cpIndex) {
+        public FieldInfo resolveField(int cpIndex)
+        {
             return new FieldInfo("Owner", "field", "I", false);
         }
 
         @Override
-        public MethodInfo resolveMethod(int cpIndex) {
+        public MethodInfo resolveMethod(int cpIndex)
+        {
             return new MethodInfo("Owner", "method", "()V", false, false);
         }
 
         @Override
-        public boolean isInstanceOf(ObjectInstance obj, String className) {
-            if (obj.isInstanceOf(className)) {
+        public boolean isInstanceOf(ObjectInstance obj, String className)
+        {
+            if (obj.isInstanceOf(className))
+            {
                 return true;
             }
             ClassResolver resolver = context.getClassResolver();
-            if (resolver == null) {
+            if (resolver == null)
+            {
                 return false;
             }
             String actual = obj.getClassName();
-            if (resolver.isAssignableFrom(className, actual)) {
+            if (resolver.isAssignableFrom(className, actual))
+            {
                 return true;
             }
             // The hierarchy can only disprove a relationship when both types are loaded. When either
@@ -1461,99 +1846,119 @@ public final class BytecodeEngine {
         }
 
         @Override
-        public void checkCast(ObjectInstance obj, String className) {
-            if (!isInstanceOf(obj, className)) {
+        public void checkCast(ObjectInstance obj, String className)
+        {
+            if (!isInstanceOf(obj, className))
+            {
                 throw new ClassCastException("Cannot cast " + obj.getClassName() + " to " + className);
             }
         }
 
         @Override
-        public MethodInfo getPendingInvoke() {
+        public MethodInfo getPendingInvoke()
+        {
             return pendingInvoke;
         }
 
         @Override
-        public FieldInfo getPendingFieldAccess() {
+        public FieldInfo getPendingFieldAccess()
+        {
             return pendingFieldAccess;
         }
 
         @Override
-        public String getPendingNewClass() {
+        public String getPendingNewClass()
+        {
             return pendingNewClass;
         }
 
         @Override
-        public int[] getPendingArrayDimensions() {
+        public int[] getPendingArrayDimensions()
+        {
             return pendingArrayDimensions;
         }
 
         @Override
-        public void setPendingInvoke(MethodInfo methodInfo) {
+        public void setPendingInvoke(MethodInfo methodInfo)
+        {
             this.pendingInvoke = methodInfo;
         }
 
         @Override
-        public void setPendingFieldAccess(FieldInfo fieldInfo) {
+        public void setPendingFieldAccess(FieldInfo fieldInfo)
+        {
             this.pendingFieldAccess = fieldInfo;
         }
 
         @Override
-        public void setPendingNewClass(String className) {
+        public void setPendingNewClass(String className)
+        {
             this.pendingNewClass = className;
         }
 
         @Override
-        public void setPendingArrayDimensions(int[] dimensions) {
+        public void setPendingArrayDimensions(int[] dimensions)
+        {
             this.pendingArrayDimensions = dimensions;
         }
 
         @Override
-        public void setBranchTarget(int target) {
+        public void setBranchTarget(int target)
+        {
             this.branchTarget = target;
         }
 
         @Override
-        public int getBranchTarget() {
+        public int getBranchTarget()
+        {
             return branchTarget;
         }
 
         @Override
-        public void setPendingInvokeDynamic(InvokeDynamicInfo info) {
+        public void setPendingInvokeDynamic(InvokeDynamicInfo info)
+        {
             this.pendingInvokeDynamic = info;
         }
 
         @Override
-        public InvokeDynamicInfo getPendingInvokeDynamic() {
+        public InvokeDynamicInfo getPendingInvokeDynamic()
+        {
             return pendingInvokeDynamic;
         }
 
         @Override
-        public void setPendingMethodHandle(MethodHandleInfo info) {
+        public void setPendingMethodHandle(MethodHandleInfo info)
+        {
             this.pendingMethodHandle = info;
         }
 
         @Override
-        public MethodHandleInfo getPendingMethodHandle() {
+        public MethodHandleInfo getPendingMethodHandle()
+        {
             return pendingMethodHandle;
         }
 
         @Override
-        public void setPendingMethodType(MethodTypeInfo info) {
+        public void setPendingMethodType(MethodTypeInfo info)
+        {
             this.pendingMethodType = info;
         }
 
         @Override
-        public MethodTypeInfo getPendingMethodType() {
+        public MethodTypeInfo getPendingMethodType()
+        {
             return pendingMethodType;
         }
 
         @Override
-        public void setPendingConstantDynamic(ConstantDynamicInfo info) {
+        public void setPendingConstantDynamic(ConstantDynamicInfo info)
+        {
             this.pendingConstantDynamic = info;
         }
 
         @Override
-        public ConstantDynamicInfo getPendingConstantDynamic() {
+        public ConstantDynamicInfo getPendingConstantDynamic()
+        {
             return pendingConstantDynamic;
         }
     }

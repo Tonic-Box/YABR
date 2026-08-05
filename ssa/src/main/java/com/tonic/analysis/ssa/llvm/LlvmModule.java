@@ -7,7 +7,8 @@ import java.util.List;
  * Assembles a complete textual LLVM IR module: an optional target header (triple / datalayout),
  * the {@code declare} block for external callees, then one or more {@code define} blocks.
  */
-final class LlvmModule {
+final class LlvmModule
+{
 
     private final LlvmLoweringConfig config;
     private final List<String> constants = new ArrayList<>();
@@ -15,57 +16,74 @@ final class LlvmModule {
     private final List<String> declares = new ArrayList<>();
     private final List<String> functions = new ArrayList<>();
 
-    LlvmModule(LlvmLoweringConfig config) {
+    LlvmModule(LlvmLoweringConfig config)
+    {
         this.config = config;
     }
 
-    void addConstants(List<String> constantLines) {
+    void addConstants(List<String> constantLines)
+    {
         constants.addAll(constantLines);
     }
 
-    void addGlobals(List<String> globalLines) {
+    void addGlobals(List<String> globalLines)
+    {
         globals.addAll(globalLines);
     }
 
-    void addDeclares(List<String> declareLines) {
+    void addDeclares(List<String> declareLines)
+    {
         declares.addAll(declareLines);
     }
 
-    void addFunction(String defineText) {
+    void addFunction(String defineText)
+    {
         functions.add(defineText);
     }
 
-    String render() {
+    String render()
+    {
         StringBuilder sb = new StringBuilder();
-        if (config.getTargetTriple() != null) {
+        if (config.getTargetTriple() != null)
+        {
             sb.append("target triple = \"").append(config.getTargetTriple()).append("\"\n");
         }
-        if (config.getDataLayout() != null) {
+        if (config.getDataLayout() != null)
+        {
             sb.append("target datalayout = \"").append(config.getDataLayout()).append("\"\n");
         }
-        if (sb.length() > 0) {
+        if (sb.length() > 0)
+        {
             sb.append('\n');
         }
-        for (String constant : constants) {
+        for (String constant : constants)
+        {
             sb.append(constant).append('\n');
         }
-        if (!constants.isEmpty()) {
+        if (!constants.isEmpty())
+        {
             sb.append('\n');
         }
-        for (String global : globals) {
+        for (String global : globals)
+        {
             sb.append(global).append('\n');
         }
-        if (!globals.isEmpty()) {
+        if (!globals.isEmpty())
+        {
             sb.append('\n');
         }
-        for (String declare : declares) {
+        for (String declare : declares)
+        {
             sb.append(declare).append('\n');
         }
-        if (!declares.isEmpty()) {
+        if (!declares.isEmpty())
+        {
             sb.append('\n');
         }
-        for (int i = 0; i < functions.size(); i++) {
-            if (i > 0) {
+        for (int i = 0; i < functions.size(); i++)
+        {
+            if (i > 0)
+            {
                 sb.append('\n');
             }
             sb.append(functions.get(i)).append('\n');

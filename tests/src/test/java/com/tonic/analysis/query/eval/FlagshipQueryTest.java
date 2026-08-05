@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * "any method call with exactly one int parameter whose value is 999" parses and matches the right
  * method while rejecting the wrong-value and wrong-arity calls.
  */
-class FlagshipQueryTest {
+class FlagshipQueryTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -40,7 +41,8 @@ class FlagshipQueryTest {
     private static ClassFile classFile;
 
     @BeforeAll
-    static void compileFixture() throws Exception {
+    static void compileFixture() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("query-flagship");
@@ -52,7 +54,8 @@ class FlagshipQueryTest {
         classFile = new ClassFile(new ByteArrayInputStream(bytes));
     }
 
-    private boolean matches(String methodName, String query) throws Exception {
+    private boolean matches(String methodName, String query) throws Exception
+    {
         Condition condition = ConditionParser.parse(query);
         MethodEntry method = classFile.getMethods().stream()
                 .filter(m -> m.getName().equals(methodName))
@@ -63,22 +66,26 @@ class FlagshipQueryTest {
     }
 
     @Test
-    void matchesExactlyOneIntArgWith999() throws Exception {
+    void matchesExactlyOneIntArgWith999() throws Exception
+    {
         assertTrue(matches("match", FLAGSHIP), "foo(999) must match");
     }
 
     @Test
-    void rejectsWrongValue() throws Exception {
+    void rejectsWrongValue() throws Exception
+    {
         assertFalse(matches("wrongValue", FLAGSHIP), "foo(998) must not match");
     }
 
     @Test
-    void rejectsWrongArity() throws Exception {
+    void rejectsWrongArity() throws Exception
+    {
         assertFalse(matches("wrongArity", FLAGSHIP), "bar(999, 1) must not match");
     }
 
     @Test
-    void argTypeAndCountCompose() throws Exception {
+    void argTypeAndCountCompose() throws Exception
+    {
         assertTrue(matches("match", "has call where (arg(0).value == 999)"));
         assertTrue(matches("match", "has call where (call.name == \"foo\")"));
         assertFalse(matches("match", "has call where (count(arg) == 2)"));

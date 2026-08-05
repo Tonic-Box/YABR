@@ -10,26 +10,31 @@ import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class AbstractBytecodeListenerTest {
+class AbstractBytecodeListenerTest
+{
 
-    private static class TestListener extends AbstractBytecodeListener {
+    private static class TestListener extends AbstractBytecodeListener
+    {
     }
 
     private TestListener listener;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new TestListener();
     }
 
     @Test
-    void initialStateIsNull() {
+    void initialStateIsNull()
+    {
         assertNull(listener.getCurrentMethod());
         assertEquals(0, listener.getInstructionCount());
     }
 
     @Test
-    void onFramePushSetsCurrentMethod() {
+    void onFramePushSetsCurrentMethod()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         when(frame.getMethod()).thenReturn(method);
@@ -40,7 +45,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void afterInstructionIncrementsCount() {
+    void afterInstructionIncrementsCount()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
 
@@ -54,7 +60,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void resetClearsMethod() {
+    void resetClearsMethod()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         when(frame.getMethod()).thenReturn(method);
@@ -67,7 +74,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void resetClearsInstructionCount() {
+    void resetClearsInstructionCount()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
 
@@ -80,7 +88,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void getCurrentMethodTracksLastFrame() {
+    void getCurrentMethodTracksLastFrame()
+    {
         StackFrame frame1 = mock(StackFrame.class);
         StackFrame frame2 = mock(StackFrame.class);
         MethodEntry method1 = mock(MethodEntry.class);
@@ -97,7 +106,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void instructionCountPersistsAcrossFrames() {
+    void instructionCountPersistsAcrossFrames()
+    {
         StackFrame frame1 = mock(StackFrame.class);
         StackFrame frame2 = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
@@ -112,7 +122,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void protectedAccessorsWork() {
+    void protectedAccessorsWork()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         Instruction instr = mock(Instruction.class);
@@ -127,16 +138,19 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void canBeSubclassed() {
+    void canBeSubclassed()
+    {
         AbstractBytecodeListener custom = new AbstractBytecodeListener() {
             private int customCount;
 
             @Override
-            public void beforeInstruction(StackFrame frame, Instruction instruction) {
+            public void beforeInstruction(StackFrame frame, Instruction instruction)
+            {
                 customCount++;
             }
 
-            public int getCustomCount() {
+            public int getCustomCount()
+            {
                 return customCount;
             }
         };
@@ -145,7 +159,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void resetCanBeCalledMultipleTimes() {
+    void resetCanBeCalledMultipleTimes()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         when(frame.getMethod()).thenReturn(method);
@@ -159,11 +174,13 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void instructionCountDoesNotOverflow() {
+    void instructionCountDoesNotOverflow()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 10000; i++)
+        {
             listener.afterInstruction(frame, instr);
         }
 
@@ -171,7 +188,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void framePopDoesNotClearCurrentMethod() {
+    void framePopDoesNotClearCurrentMethod()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         when(frame.getMethod()).thenReturn(method);
@@ -183,7 +201,8 @@ class AbstractBytecodeListenerTest {
     }
 
     @Test
-    void allDefaultMethodsStillWork() {
+    void allDefaultMethodsStillWork()
+    {
         assertDoesNotThrow(() -> {
             listener.onExecutionStart(null);
             listener.onExecutionEnd(null);

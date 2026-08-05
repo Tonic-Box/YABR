@@ -11,7 +11,12 @@ import com.tonic.type.AccessFlags;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FieldBuilder {
+/**
+ * Fluent builder for a single field of a class under construction, returning to its
+ * {@link ClassBuilder} from {@link #end()}.
+ */
+public class FieldBuilder
+{
 
     private final ClassBuilder parent;
     private final int access;
@@ -22,64 +27,97 @@ public class FieldBuilder {
     private boolean deprecated;
     private final List<AnnotationBuilder<FieldBuilder>> annotations = new ArrayList<>();
 
-    FieldBuilder(ClassBuilder parent, int access, String name, String descriptor) {
+    FieldBuilder(ClassBuilder parent, int access, String name, String descriptor)
+    {
         this.parent = parent;
         this.access = access;
         this.name = name;
         this.descriptor = descriptor;
     }
 
-    public FieldBuilder constantValue(Object value) {
+    /**
+     * Gives the field a ConstantValue attribute.
+     * @param value an Integer, Long, Float, Double or String constant
+     * @return this builder
+     */
+    public FieldBuilder constantValue(Object value)
+    {
         this.constantValue = value;
         return this;
     }
 
-    /** Opens an annotation on this field; call {@link AnnotationBuilder#end()} to return here. */
-    public AnnotationBuilder<FieldBuilder> annotate(String type) {
+    /**
+     * Opens an annotation on this field; call {@link AnnotationBuilder#end()} to return here.
+     * @param type the annotation type
+     * @return the annotation builder
+     */
+    public AnnotationBuilder<FieldBuilder> annotate(String type)
+    {
         AnnotationBuilder<FieldBuilder> annotation = AnnotationBuilder.forParent(this, type);
         annotations.add(annotation);
         return annotation;
     }
 
-    public FieldBuilder synthetic() {
+    /**
+     * Adds ACC_SYNTHETIC to the field's access flags.
+     * @return this builder
+     */
+    public FieldBuilder synthetic()
+    {
         this.synthetic = true;
         return this;
     }
 
-    public FieldBuilder deprecated() {
+    /**
+     * Marks the field for a Deprecated attribute.
+     * @return this builder
+     */
+    public FieldBuilder deprecated()
+    {
         this.deprecated = true;
         return this;
     }
 
-    public ClassBuilder end() {
+    /**
+     * @return the class builder this field belongs to
+     */
+    public ClassBuilder end()
+    {
         return parent;
     }
 
-    int getAccess() {
+    int getAccess()
+    {
         int flags = access;
-        if (synthetic) {
+        if (synthetic)
+        {
             flags |= AccessFlags.ACC_SYNTHETIC;
         }
         return flags;
     }
 
-    boolean isDeprecated() {
+    boolean isDeprecated()
+    {
         return deprecated;
     }
 
-    String getName() {
+    String getName()
+    {
         return name;
     }
 
-    String getDescriptor() {
+    String getDescriptor()
+    {
         return descriptor;
     }
 
-    void buildField(ClassFile classFile, ConstPool constPool) {
+    void buildField(ClassFile classFile, ConstPool constPool)
+    {
         List<Attribute> attributes = new ArrayList<>();
         FieldEntry field = classFile.createNewField(getAccess(), name, descriptor, attributes);
 
-        if (constantValue != null) {
+        if (constantValue != null)
+        {
             int nameIndex = constPool.utf8Index("ConstantValue");
             int valueIndex = addConstantToPool(constPool, constantValue);
             ConstantValueAttribute cvAttr = new ConstantValueAttribute("ConstantValue", field, nameIndex, 2);
@@ -87,27 +125,39 @@ public class FieldBuilder {
             field.getAttributes().add(cvAttr);
         }
 
-        if (deprecated) {
+        if (deprecated)
+        {
             int nameIndex = constPool.utf8Index("Deprecated");
             DeprecatedAttribute deprecatedAttr = new DeprecatedAttribute("Deprecated", field, nameIndex, 0);
             field.getAttributes().add(deprecatedAttr);
         }
 
-        for (AnnotationBuilder<FieldBuilder> annotation : annotations) {
+        for (AnnotationBuilder<FieldBuilder> annotation : annotations)
+        {
             annotation.attachTo(field, constPool);
         }
     }
 
-    private int addConstantToPool(ConstPool pool, Object value) {
-        if (value instanceof Integer) {
+    private int addConstantToPool(ConstPool pool, Object value)
+    {
+        if (value instanceof Integer)
+        {
             return pool.getIndexOf(pool.findOrAddInteger((Integer) value));
-        } else if (value instanceof Long) {
+        }
+        else if (value instanceof Long)
+        {
             return pool.getIndexOf(pool.findOrAddLong((Long) value));
-        } else if (value instanceof Float) {
+        }
+        else if (value instanceof Float)
+        {
             return pool.getIndexOf(pool.findOrAddFloat((Float) value));
-        } else if (value instanceof Double) {
+        }
+        else if (value instanceof Double)
+        {
             return pool.getIndexOf(pool.findOrAddDouble((Double) value));
-        } else if (value instanceof String) {
+        }
+        else if (value instanceof String)
+        {
             return pool.getIndexOf(pool.findOrAddString((String) value));
         }
         throw new IllegalArgumentException("Unsupported constant type: " + value.getClass());

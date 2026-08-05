@@ -22,13 +22,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for TypeInferenceAnalyzer - inferring types and nullability in SSA IR.
  * Covers type inference, nullability analysis, and type narrowing.
  */
-class TypeInferenceAnalyzerTest {
+class TypeInferenceAnalyzerTest
+{
 
     private IRMethod method;
     private TypeInferenceAnalyzer analyzer;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -40,31 +42,35 @@ class TypeInferenceAnalyzerTest {
         analyzer = new TypeInferenceAnalyzer(method);
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void constructorCreatesInstance() {
+    void constructorCreatesInstance()
+    {
         TypeInferenceAnalyzer tia = new TypeInferenceAnalyzer(method);
         assertNotNull(tia);
     }
 
     @Test
-    void constructorSetsMethod() {
+    void constructorSetsMethod()
+    {
         TypeInferenceAnalyzer tia = new TypeInferenceAnalyzer(method);
         assertNotNull(tia);
     }
 
-    // ========== Analyze Tests ==========
+    // Analyze Tests
 
     @Test
-    void analyzeOnEmptyMethod() {
+    void analyzeOnEmptyMethod()
+    {
         analyzer.analyze();
 
         assertNotNull(analyzer.getAllTypeStates());
     }
 
     @Test
-    void analyzeCanBeCalledMultipleTimes() {
+    void analyzeCanBeCalledMultipleTimes()
+    {
         analyzer.analyze();
         analyzer.analyze();
 
@@ -72,9 +78,9 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void analyzeInitializesParameters() {
-        IRMethod methodWithParams = new IRMethod(
-            "com/test/Test", "withParams", "(I)V", true);
+    void analyzeInitializesParameters()
+    {
+        IRMethod methodWithParams = new IRMethod("com/test/Test", "withParams", "(I)V", true);
         IRBlock entry = new IRBlock("entry");
         methodWithParams.addBlock(entry);
         methodWithParams.setEntryBlock(entry);
@@ -89,10 +95,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(state);
     }
 
-    // ========== Type State Tests ==========
+    // Type State Tests
 
     @Test
-    void getTypeStateReturnsBottomForUnknown() {
+    void getTypeStateReturnsBottomForUnknown()
+    {
         SSAValue unknown = new SSAValue(PrimitiveType.INT, "unknown");
 
         TypeState state = analyzer.getTypeState(unknown);
@@ -101,7 +108,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getTypeStateForConstant() {
+    void getTypeStateForConstant()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -116,7 +124,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getTypeStateForNullConstant() {
+    void getTypeStateForNullConstant()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/Object");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -132,7 +141,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getTypeStateForNewInstruction() {
+    void getTypeStateForNewInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/String");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -147,10 +157,11 @@ class TypeInferenceAnalyzerTest {
         assertTrue(state.isDefinitelyNotNull());
     }
 
-    // ========== Inferred Type Tests ==========
+    // Inferred Type Tests
 
     @Test
-    void getInferredTypeReturnsType() {
+    void getInferredTypeReturnsType()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -163,10 +174,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(type);
     }
 
-    // ========== Nullability Tests ==========
+    // Nullability Tests
 
     @Test
-    void getNullabilityForPrimitive() {
+    void getNullabilityForPrimitive()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -180,7 +192,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getNullabilityForNull() {
+    void getNullabilityForNull()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/Object");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -195,7 +208,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void isDefinitelyNullForNullConstant() {
+    void isDefinitelyNullForNullConstant()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/Object");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -209,7 +223,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void isDefinitelyNotNullForNewInstruction() {
+    void isDefinitelyNotNullForNewInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/String");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -223,7 +238,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void isDefinitelyNotNullForPrimitive() {
+    void isDefinitelyNotNullForPrimitive()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -235,10 +251,11 @@ class TypeInferenceAnalyzerTest {
         assertTrue(analyzer.isDefinitelyNotNull(v0));
     }
 
-    // ========== Possible Types Tests ==========
+    // Possible Types Tests
 
     @Test
-    void getPossibleTypesReturnsTypeSet() {
+    void getPossibleTypesReturnsTypeSet()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -251,10 +268,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(types);
     }
 
-    // ========== Block State Tests ==========
+    // Block State Tests
 
     @Test
-    void getTypeStateAtBlockEntryReturnsState() {
+    void getTypeStateAtBlockEntryReturnsState()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -268,7 +286,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getTypeStateAtBlockExitReturnsState() {
+    void getTypeStateAtBlockExitReturnsState()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -281,10 +300,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(state);
     }
 
-    // ========== Value Set Tests ==========
+    // Value Set Tests
 
     @Test
-    void getNullValuesReturnsSet() {
+    void getNullValuesReturnsSet()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/Object");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -300,7 +320,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getNonNullValuesReturnsSet() {
+    void getNonNullValuesReturnsSet()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -315,7 +336,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getAllTypeStatesReturnsMap() {
+    void getAllTypeStatesReturnsMap()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -328,10 +350,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(allStates);
     }
 
-    // ========== Precision Tests ==========
+    // Precision Tests
 
     @Test
-    void hasPreciseTypeForNewInstruction() {
+    void hasPreciseTypeForNewInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/String");
         SSAValue v0 = new SSAValue(refType, "v0");
@@ -341,14 +364,14 @@ class TypeInferenceAnalyzerTest {
 
         analyzer.analyze();
 
-        assertTrue(analyzer.hasPreciseType(v0),
-            "a NEW instruction produces a value of precise (exact) type");
+        assertTrue(analyzer.hasPreciseType(v0), "a NEW instruction produces a value of precise (exact) type");
     }
 
-    // ========== Instruction Processing Tests ==========
+    // Instruction Processing Tests
 
     @Test
-    void processNewArrayInstruction() {
+    void processNewArrayInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType arrayType = new ReferenceType("[I");
         SSAValue v0 = new SSAValue(arrayType, "v0");
@@ -364,7 +387,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void processCastInstruction() {
+    void processCastInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType sourceType = new ReferenceType("java/lang/Object");
         IRType targetType = new ReferenceType("java/lang/String");
@@ -383,15 +407,15 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void processInstanceOfInstruction() {
+    void processInstanceOfInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType refType = new ReferenceType("java/lang/Object");
         SSAValue v0 = new SSAValue(refType, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
 
         entry.addInstruction(new NewInstruction(v0, "java/lang/Object"));
-        TypeCheckInstruction iof = TypeCheckInstruction.createInstanceOf(v1, v0,
-            new ReferenceType("java/lang/String"));
+        TypeCheckInstruction iof = TypeCheckInstruction.createInstanceOf(v1, v0, new ReferenceType("java/lang/String"));
         entry.addInstruction(iof);
 
         analyzer.analyze();
@@ -402,7 +426,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void processCopyInstruction() {
+    void processCopyInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -418,10 +443,11 @@ class TypeInferenceAnalyzerTest {
         assertEquals(state0.getNullability(), state1.getNullability());
     }
 
-    // ========== Phi Instruction Tests ==========
+    // Phi Instruction Tests
 
     @Test
-    void processPhiInstruction() {
+    void processPhiInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         IRBlock merge = new IRBlock("merge");
         method.addBlock(merge);
@@ -445,10 +471,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(state);
     }
 
-    // ========== Known Non-Null Return Tests ==========
+    // Known Non-Null Return Tests
 
     @Test
-    void invokeKnownNonNullMethodToString() {
+    void invokeKnownNonNullMethodToString()
+    {
         IRBlock entry = method.getEntryBlock();
         IRType stringType = new ReferenceType("java/lang/String");
         SSAValue receiver = new SSAValue(stringType, "receiver");
@@ -466,10 +493,11 @@ class TypeInferenceAnalyzerTest {
         assertTrue(state.isDefinitelyNotNull());
     }
 
-    // ========== ToString Tests ==========
+    // ToString Tests
 
     @Test
-    void toStringReturnsMethodInfo() {
+    void toStringReturnsMethodInfo()
+    {
         analyzer.analyze();
         String str = analyzer.toString();
 
@@ -477,10 +505,11 @@ class TypeInferenceAnalyzerTest {
         assertTrue(str.contains("testMethod"));
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void analyzeEmptyMethodDoesNotThrow() {
+    void analyzeEmptyMethodDoesNotThrow()
+    {
         IRMethod emptyMethod = new IRMethod("com/test/Test", "empty", "()V", true);
         IRBlock entry = new IRBlock("entry");
         emptyMethod.addBlock(entry);
@@ -493,7 +522,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void getTypeStateBeforeAnalyzeTriggersAnalysis() {
+    void getTypeStateBeforeAnalyzeTriggersAnalysis()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         entry.addInstruction(new ConstantInstruction(v0, new IntConstant(42)));
@@ -504,7 +534,8 @@ class TypeInferenceAnalyzerTest {
     }
 
     @Test
-    void multipleBlocksWithJoins() {
+    void multipleBlocksWithJoins()
+    {
         IRBlock block1 = new IRBlock("block1");
         IRBlock block2 = new IRBlock("block2");
         IRBlock merge = new IRBlock("merge");
@@ -523,10 +554,11 @@ class TypeInferenceAnalyzerTest {
         assertNotNull(analyzer.getAllTypeStates());
     }
 
-    // ========== Narrowing Tests ==========
+    // Narrowing Tests
 
     @Test
-    void narrowsNullabilityAcrossIfNonNullBranch() {
+    void narrowsNullabilityAcrossIfNonNullBranch()
+    {
         IRMethod m = new IRMethod("com/test/T", "f", "(Ljava/lang/String;)I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock thenB = new IRBlock("then");
@@ -547,12 +579,12 @@ class TypeInferenceAnalyzerTest {
 
         assertTrue(a.getTypeStateAtBlockEntry(thenB, p).isDefinitelyNotNull(),
             "p is non-null on the ifnonnull-true edge");
-        assertTrue(a.getTypeStateAtBlockEntry(elseB, p).isDefinitelyNull(),
-            "p is null on the ifnonnull-false edge");
+        assertTrue(a.getTypeStateAtBlockEntry(elseB, p).isDefinitelyNull(), "p is null on the ifnonnull-false edge");
     }
 
     @Test
-    void narrowsNullabilityAcrossIfNullBranch() {
+    void narrowsNullabilityAcrossIfNullBranch()
+    {
         IRMethod m = new IRMethod("com/test/T", "f", "(Ljava/lang/String;)I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock thenB = new IRBlock("then");
@@ -571,14 +603,14 @@ class TypeInferenceAnalyzerTest {
         TypeInferenceAnalyzer a = new TypeInferenceAnalyzer(m);
         a.analyze();
 
-        assertTrue(a.getTypeStateAtBlockEntry(thenB, p).isDefinitelyNull(),
-            "p is null on the ifnull-true edge");
+        assertTrue(a.getTypeStateAtBlockEntry(thenB, p).isDefinitelyNull(), "p is null on the ifnull-true edge");
         assertTrue(a.getTypeStateAtBlockEntry(elseB, p).isDefinitelyNotNull(),
             "p is non-null on the ifnull-false edge");
     }
 
     @Test
-    void narrowsTypeAndNullabilityAcrossInstanceofBranch() {
+    void narrowsTypeAndNullabilityAcrossInstanceofBranch()
+    {
         IRMethod m = new IRMethod("com/test/T", "g", "(Ljava/lang/Object;)I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock isStr = new IRBlock("isStr");

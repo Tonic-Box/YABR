@@ -6,9 +6,10 @@ import com.tonic.analysis.ssa.ir.PhiInstruction;
 import java.util.*;
 
 /**
- * Represents a basic block in SSA form containing phi instructions and regular instructions.
+ * A basic block in the SSA CFG, holding phi instructions ahead of its regular instructions.
  */
-public class IRBlock {
+public class IRBlock
+{
 
     private static final ThreadLocal<int[]> NEXT_ID = ThreadLocal.withInitial(() -> new int[1]);
 
@@ -30,7 +31,8 @@ public class IRBlock {
     /**
      * Creates a new basic block with an auto-generated name.
      */
-    public IRBlock() {
+    public IRBlock()
+    {
         this.id = NEXT_ID.get()[0]++;
         this.name = "B" + id;
         this.phiInstructions = new ArrayList<>();
@@ -44,141 +46,194 @@ public class IRBlock {
 
     /**
      * Creates a new basic block with the given name.
-     *
      * @param name the block name
      */
-    public IRBlock(String name) {
+    public IRBlock(String name)
+    {
         this();
         this.name = name;
     }
 
-    public int getId() {
+    /**
+     * @return the id
+     */
+    public int getId()
+    {
         return id;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * @param name the block name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public void setMethod(IRMethod method) {
+    /**
+     * @param method the method this block belongs to
+     */
+    public void setMethod(IRMethod method)
+    {
         this.method = method;
     }
 
-    public List<PhiInstruction> getPhiInstructions() {
+    /**
+     * @return the phi instructions
+     */
+    public List<PhiInstruction> getPhiInstructions()
+    {
         return phiInstructions;
     }
 
-    public List<IRInstruction> getInstructions() {
+    /**
+     * @return the instructions
+     */
+    public List<IRInstruction> getInstructions()
+    {
         return instructions;
     }
 
-    public Set<IRBlock> getPredecessors() {
+    /**
+     * @return the predecessors
+     */
+    public Set<IRBlock> getPredecessors()
+    {
         return predecessors;
     }
 
-    public Set<IRBlock> getSuccessors() {
+    /**
+     * @return the successors
+     */
+    public Set<IRBlock> getSuccessors()
+    {
         return successors;
     }
 
-    public Map<IRBlock, EdgeType> getSuccessorEdgeTypes() {
+    /**
+     * @return the successor edge types
+     */
+    public Map<IRBlock, EdgeType> getSuccessorEdgeTypes()
+    {
         return successorEdgeTypes;
     }
 
-    public List<ExceptionHandler> getExceptionHandlers() {
+    /**
+     * @return the exception handlers
+     */
+    public List<ExceptionHandler> getExceptionHandlers()
+    {
         return exceptionHandlers;
     }
 
-    public int getBytecodeOffset() {
+    /**
+     * @return the bytecode offset
+     */
+    public int getBytecodeOffset()
+    {
         return bytecodeOffset;
     }
 
-    public void setBytecodeOffset(int bytecodeOffset) {
+    /**
+     * @param bytecodeOffset the original bytecode offset of the block start, or -1 if unknown
+     */
+    public void setBytecodeOffset(int bytecodeOffset)
+    {
         this.bytecodeOffset = bytecodeOffset;
     }
 
     /**
      * Adds a phi instruction to this block.
-     *
      * @param phi the phi instruction to add
      */
-    public void addPhi(PhiInstruction phi) {
+    public void addPhi(PhiInstruction phi)
+    {
         phi.setBlock(this);
         phiInstructions.add(phi);
     }
 
     /**
      * Alias for addPhi to match common naming convention.
-     *
      * @param phi the phi instruction to add
      */
-    public void addPhiInstruction(PhiInstruction phi) {
+    public void addPhiInstruction(PhiInstruction phi)
+    {
         addPhi(phi);
     }
 
     /**
      * Removes a phi instruction from this block.
-     *
      * @param phi the phi instruction to remove
      */
-    public void removePhi(PhiInstruction phi) {
+    public void removePhi(PhiInstruction phi)
+    {
         phiInstructions.remove(phi);
     }
 
     /**
      * Adds an instruction to the end of this block.
-     *
      * @param instruction the instruction to add
      */
-    public void addInstruction(IRInstruction instruction) {
+    public void addInstruction(IRInstruction instruction)
+    {
         instruction.setBlock(this);
         instructions.add(instruction);
     }
 
     /**
      * Inserts an instruction at the specified index.
-     *
      * @param index the position to insert at
      * @param instruction the instruction to insert
      */
-    public void insertInstruction(int index, IRInstruction instruction) {
+    public void insertInstruction(int index, IRInstruction instruction)
+    {
         instruction.setBlock(this);
         instructions.add(index, instruction);
     }
 
     /**
      * Removes an instruction from this block.
-     *
      * @param instruction the instruction to remove
      */
-    public void removeInstruction(IRInstruction instruction) {
+    public void removeInstruction(IRInstruction instruction)
+    {
         instructions.remove(instruction);
     }
 
     /**
      * Adds a successor block with a normal edge.
-     *
      * @param successor the successor block
      */
-    public void addSuccessor(IRBlock successor) {
+    public void addSuccessor(IRBlock successor)
+    {
         addSuccessor(successor, EdgeType.NORMAL);
     }
 
     /**
      * Adds a successor block with the specified edge type.
-     *
      * @param successor the successor block
      * @param edgeType the type of edge
      */
-    public void addSuccessor(IRBlock successor, EdgeType edgeType) {
-        if (successors.add(successor)) {
+    public void addSuccessor(IRBlock successor, EdgeType edgeType)
+    {
+        if (successors.add(successor))
+        {
             successorEdgeTypes.put(successor, edgeType);
             successor.predecessors.add(this);
         }
@@ -186,10 +241,10 @@ public class IRBlock {
 
     /**
      * Removes a successor block and updates predecessor relationships.
-     *
      * @param successor the successor block to remove
      */
-    public void removeSuccessor(IRBlock successor) {
+    public void removeSuccessor(IRBlock successor)
+    {
         successors.remove(successor);
         successorEdgeTypes.remove(successor);
         successor.predecessors.remove(this);
@@ -197,29 +252,29 @@ public class IRBlock {
 
     /**
      * Gets the edge type to a successor block.
-     *
      * @param successor the successor block
      * @return the edge type
      */
-    public EdgeType getEdgeType(IRBlock successor) {
+    public EdgeType getEdgeType(IRBlock successor)
+    {
         return successorEdgeTypes.getOrDefault(successor, EdgeType.NORMAL);
     }
 
     /**
      * Adds an exception handler to this block.
-     *
      * @param handler the exception handler
      */
-    public void addExceptionHandler(ExceptionHandler handler) {
+    public void addExceptionHandler(ExceptionHandler handler)
+    {
         exceptionHandlers.add(handler);
     }
 
     /**
      * Gets the terminator instruction of this block.
-     *
      * @return the terminator instruction, or null if none
      */
-    public IRInstruction getTerminator() {
+    public IRInstruction getTerminator()
+    {
         if (instructions.isEmpty()) return null;
         IRInstruction last = instructions.get(instructions.size() - 1);
         return last.isTerminator() ? last : null;
@@ -228,13 +283,15 @@ public class IRBlock {
     /**
      * Sets the terminator instruction for this block.
      * If a terminator already exists, it will be replaced.
-     *
      * @param terminator the terminator instruction to set
      */
-    public void setTerminator(IRInstruction terminator) {
-        if (!instructions.isEmpty()) {
+    public void setTerminator(IRInstruction terminator)
+    {
+        if (!instructions.isEmpty())
+        {
             IRInstruction last = instructions.get(instructions.size() - 1);
-            if (last.isTerminator()) {
+            if (last.isTerminator())
+            {
                 instructions.remove(instructions.size() - 1);
             }
         }
@@ -243,37 +300,37 @@ public class IRBlock {
 
     /**
      * Adds a predecessor block directly (for use in block duplication).
-     *
      * @param pred the predecessor block
      */
-    public void addPredecessor(IRBlock pred) {
+    public void addPredecessor(IRBlock pred)
+    {
         predecessors.add(pred);
     }
 
     /**
      * Removes a predecessor block directly.
-     *
      * @param pred the predecessor block to remove
      */
-    public void removePredecessor(IRBlock pred) {
+    public void removePredecessor(IRBlock pred)
+    {
         predecessors.remove(pred);
     }
 
     /**
      * Checks if this block has a terminator instruction.
-     *
      * @return true if block has a terminator, false otherwise
      */
-    public boolean hasTerminator() {
+    public boolean hasTerminator()
+    {
         return getTerminator() != null;
     }
 
     /**
      * Gets all instructions including phi instructions.
-     *
      * @return combined list of phi and regular instructions
      */
-    public List<IRInstruction> getAllInstructions() {
+    public List<IRInstruction> getAllInstructions()
+    {
         List<IRInstruction> all = new ArrayList<>();
         all.addAll(phiInstructions);
         all.addAll(instructions);
@@ -282,35 +339,36 @@ public class IRBlock {
 
     /**
      * Checks if this block is empty.
-     *
      * @return true if no instructions, false otherwise
      */
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         return phiInstructions.isEmpty() && instructions.isEmpty();
     }
 
     /**
      * Checks if this is the entry block.
-     *
      * @return true if this is the method's entry block, false otherwise
      */
-    public boolean isEntry() {
+    public boolean isEntry()
+    {
         return predecessors.isEmpty() && method != null && method.getEntryBlock() == this;
     }
 
     /**
      * Checks if this is an exit block.
-     *
      * @return true if block has no successors, false otherwise
      */
-    public boolean isExit() {
+    public boolean isExit()
+    {
         return successors.isEmpty();
     }
 
     /**
      * Resets the ID counter for basic blocks.
      */
-    public static void resetIdCounter() {
+    public static void resetIdCounter()
+    {
         NEXT_ID.get()[0] = 0;
     }
 
@@ -321,25 +379,30 @@ public class IRBlock {
      * deterministic hashing/iteration order across runs.
      */
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         return this == o || (o instanceof IRBlock && ((IRBlock) o).id == id);
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return id;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append(name).append(":\n");
 
-        for (PhiInstruction phi : phiInstructions) {
+        for (PhiInstruction phi : phiInstructions)
+        {
             sb.append("  ").append(phi).append("\n");
         }
 
-        for (IRInstruction instr : instructions) {
+        for (IRInstruction instr : instructions)
+        {
             sb.append("  ").append(instr).append("\n");
         }
 

@@ -14,13 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for AlgebraicSimplification transform.
  * Verifies that algebraic identities are simplified (x + 0, x * 1, etc.).
  */
-class AlgebraicSimplificationTest {
+class AlgebraicSimplificationTest
+{
 
     private IRMethod method;
     private IRBlock block;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -31,13 +33,15 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void getNameReturnsAlgebraicSimplification() {
+    void getNameReturnsAlgebraicSimplification()
+    {
         AlgebraicSimplification transform = new AlgebraicSimplification();
         assertEquals("AlgebraicSimplification", transform.getName());
     }
 
     @Test
-    void simplifiesAddZeroLeft() {
+    void simplifiesAddZeroLeft()
+    {
         // v1 = 0 + v0 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -56,7 +60,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesAddZeroRight() {
+    void simplifiesAddZeroRight()
+    {
         // v1 = v0 + 0 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -75,7 +80,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesMultiplyOneLeft() {
+    void simplifiesMultiplyOneLeft()
+    {
         // v1 = 1 * v0 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -94,7 +100,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesMultiplyOneRight() {
+    void simplifiesMultiplyOneRight()
+    {
         // v1 = v0 * 1 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -113,7 +120,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesMultiplyZeroLeft() {
+    void simplifiesMultiplyZeroLeft()
+    {
         // v1 = 0 * v0 -> v1 = 0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -132,7 +140,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesMultiplyZeroRight() {
+    void simplifiesMultiplyZeroRight()
+    {
         // v1 = v0 * 0 -> v1 = 0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -151,7 +160,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesSubtractSameValue() {
+    void simplifiesSubtractSameValue()
+    {
         // v1 = v0 - v0 -> v1 = 0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -170,7 +180,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void returnsFalseWhenNoSimplifications() {
+    void returnsFalseWhenNoSimplifications()
+    {
         // v2 = v0 + v1 (no simplification)
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -186,11 +197,11 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesMultipleOperations() {
+    void simplifiesMultipleOperations()
+    {
         // v1 = v0 + 0
         // v2 = v1 * 1
         // v3 = v2 - v2
-        // return v3
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
@@ -210,7 +221,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesSubtractZero() {
+    void simplifiesSubtractZero()
+    {
         // v1 = v0 - 0 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -229,7 +241,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesDivideOne() {
+    void simplifiesDivideOne()
+    {
         // v1 = v0 / 1 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -240,7 +253,8 @@ class AlgebraicSimplificationTest {
         AlgebraicSimplification transform = new AlgebraicSimplification();
         boolean changed = transform.run(method);
 
-        if (changed) {
+        if (changed)
+        {
             IRInstruction first = block.getInstructions().get(0);
             assertTrue(first instanceof CopyInstruction);
             CopyInstruction copy = (CopyInstruction) first;
@@ -249,7 +263,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void doesNotSimplifyDivideByZero() {
+    void doesNotSimplifyDivideByZero()
+    {
         // v1 = v0 / 0 (should not simplify - would throw exception)
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -267,7 +282,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesOrWithZero() {
+    void simplifiesOrWithZero()
+    {
         // v1 = v0 | 0 -> v1 = v0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -278,7 +294,8 @@ class AlgebraicSimplificationTest {
         AlgebraicSimplification transform = new AlgebraicSimplification();
         boolean changed = transform.run(method);
 
-        if (changed) {
+        if (changed)
+        {
             IRInstruction first = block.getInstructions().get(0);
             assertTrue(first instanceof CopyInstruction);
             CopyInstruction copy = (CopyInstruction) first;
@@ -287,7 +304,8 @@ class AlgebraicSimplificationTest {
     }
 
     @Test
-    void simplifiesAndWithZero() {
+    void simplifiesAndWithZero()
+    {
         // v1 = v0 & 0 -> v1 = 0
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -298,7 +316,8 @@ class AlgebraicSimplificationTest {
         AlgebraicSimplification transform = new AlgebraicSimplification();
         boolean changed = transform.run(method);
 
-        if (changed) {
+        if (changed)
+        {
             IRInstruction first = block.getInstructions().get(0);
             assertTrue(first instanceof ConstantInstruction);
             ConstantInstruction constInstr = (ConstantInstruction) first;

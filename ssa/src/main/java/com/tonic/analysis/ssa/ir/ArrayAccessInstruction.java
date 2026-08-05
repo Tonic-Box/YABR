@@ -6,22 +6,43 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 
 import java.util.List;
 
-public class ArrayAccessInstruction extends IRInstruction {
+/**
+ * An array element load or store, distinguished by its {@link AccessMode}.
+ */
+public class ArrayAccessInstruction extends IRInstruction
+{
 
     private final AccessMode mode;
     private Value array;
     private Value index;
     private Value value;
 
-    public static ArrayAccessInstruction createLoad(SSAValue result, Value array, Value index) {
+    /**
+     * Creates an array element load.
+     * @param result the SSA value receiving the loaded element
+     * @param array the array reference
+     * @param index the element index
+     * @return the load instruction
+     */
+    public static ArrayAccessInstruction createLoad(SSAValue result, Value array, Value index)
+    {
         return new ArrayAccessInstruction(AccessMode.LOAD, result, array, index, null);
     }
 
-    public static ArrayAccessInstruction createStore(Value array, Value index, Value value) {
+    /**
+     * Creates an array element store.
+     * @param array the array reference
+     * @param index the element index
+     * @param value the value to store
+     * @return the store instruction
+     */
+    public static ArrayAccessInstruction createStore(Value array, Value index, Value value)
+    {
         return new ArrayAccessInstruction(AccessMode.STORE, null, array, index, value);
     }
 
-    private ArrayAccessInstruction(AccessMode mode, SSAValue result, Value array, Value index, Value value) {
+    private ArrayAccessInstruction(AccessMode mode, SSAValue result, Value array, Value index, Value value)
+    {
         super(result);
         this.mode = mode;
         this.array = array;
@@ -30,95 +51,142 @@ public class ArrayAccessInstruction extends IRInstruction {
         registerUses();
     }
 
-    public AccessMode getMode() {
+    /**
+     * @return the mode
+     */
+    public AccessMode getMode()
+    {
         return mode;
     }
 
-    public Value getArray() {
+    /**
+     * @return the array
+     */
+    public Value getArray()
+    {
         return array;
     }
 
-    public Value getIndex() {
+    /**
+     * @return the index
+     */
+    public Value getIndex()
+    {
         return index;
     }
 
-    public Value getValue() {
+    /**
+     * @return the value
+     */
+    public Value getValue()
+    {
         return value;
     }
 
-    public boolean isLoad() {
+    /**
+     * @return true if this access is a load
+     */
+    public boolean isLoad()
+    {
         return mode == AccessMode.LOAD;
     }
 
-    public boolean isStore() {
+    /**
+     * @return true if this access is a store
+     */
+    public boolean isStore()
+    {
         return mode == AccessMode.STORE;
     }
 
-    private void registerUses() {
-        if (array instanceof SSAValue) {
+    private void registerUses()
+    {
+        if (array instanceof SSAValue)
+        {
             ((SSAValue) array).addUse(this);
         }
-        if (index instanceof SSAValue) {
+        if (index instanceof SSAValue)
+        {
             ((SSAValue) index).addUse(this);
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             ((SSAValue) value).addUse(this);
         }
     }
 
     @Override
-    public List<Value> getOperands() {
-        if (mode == AccessMode.LOAD) {
+    public List<Value> getOperands()
+    {
+        if (mode == AccessMode.LOAD)
+        {
             return List.of(array, index);
         }
         return List.of(array, index, value);
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (array.equals(oldValue)) {
-            if (array instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (array.equals(oldValue))
+        {
+            if (array instanceof SSAValue)
+            {
                 ((SSAValue) array).removeUse(this);
             }
             array = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
-        if (index.equals(oldValue)) {
-            if (index instanceof SSAValue) {
+        if (index.equals(oldValue))
+        {
+            if (index instanceof SSAValue)
+            {
                 ((SSAValue) index).removeUse(this);
             }
             index = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
-        if (value != null && value.equals(oldValue)) {
-            if (value instanceof SSAValue) {
+        if (value != null && value.equals(oldValue))
+        {
+            if (value instanceof SSAValue)
+            {
                 ((SSAValue) value).removeUse(this);
             }
             value = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitArrayAccess(this);
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
-        if (mode == AccessMode.LOAD) {
-            if (newOperands.size() < 2) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
+        if (mode == AccessMode.LOAD)
+        {
+            if (newOperands.size() < 2)
+            {
                 return null;
             }
             return createLoad(newResult, newOperands.get(0), newOperands.get(1));
-        } else {
-            if (newOperands.size() < 3) {
+        }
+        else
+        {
+            if (newOperands.size() < 3)
+            {
                 return null;
             }
             return createStore(newOperands.get(0), newOperands.get(1), newOperands.get(2));
@@ -126,8 +194,10 @@ public class ArrayAccessInstruction extends IRInstruction {
     }
 
     @Override
-    public String toString() {
-        if (mode == AccessMode.LOAD) {
+    public String toString()
+    {
+        if (mode == AccessMode.LOAD)
+        {
             return result + " = " + array + "[" + index + "]";
         }
         return array + "[" + index + "] = " + value;

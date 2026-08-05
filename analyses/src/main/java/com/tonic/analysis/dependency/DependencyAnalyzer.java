@@ -12,15 +12,19 @@ import java.util.stream.Collectors;
  * Analyzes class dependencies by scanning constant pools.
  * Provides queries for dependency relationships and circular dependency detection.
  */
-public class DependencyAnalyzer {
+public class DependencyAnalyzer
+{
 
     private final Map<String, DependencyNode> nodes = new LinkedHashMap<>();
     private final ClassPool classPool;
 
     /**
      * Creates a new DependencyAnalyzer and analyzes the given ClassPool.
+     *
+     * @param classPool the pool whose classes are scanned for dependencies
      */
-    public DependencyAnalyzer(ClassPool classPool) {
+    public DependencyAnalyzer(ClassPool classPool)
+    {
         this.classPool = classPool;
         analyze();
     }
@@ -28,17 +32,20 @@ public class DependencyAnalyzer {
     /**
      * Analyzes all classes in the ClassPool.
      */
-    private void analyze() {
+    private void analyze()
+    {
         List<ClassFile> classes = getClassList(classPool);
         if (classes == null) return;
 
         // First pass: create nodes for all classes
-        for (ClassFile cf : classes) {
+        for (ClassFile cf : classes)
+        {
             getOrCreateNode(cf.getClassName(), cf);
         }
 
         // Second pass: analyze dependencies
-        for (ClassFile cf : classes) {
+        for (ClassFile cf : classes)
+        {
             analyzeClass(cf);
         }
     }
@@ -46,29 +53,35 @@ public class DependencyAnalyzer {
     /**
      * Analyzes dependencies for a single class.
      */
-    private void analyzeClass(ClassFile cf) {
+    private void analyzeClass(ClassFile cf)
+    {
         String className = cf.getClassName();
         DependencyNode node = getOrCreateNode(className, cf);
 
         String superName = cf.getSuperClassName();
-        if (superName != null && !superName.equals(className)) {
+        if (superName != null && !superName.equals(className))
+        {
             addDependency(node, superName, DependencyType.EXTENDS);
         }
 
         ConstPool cp = cf.getConstPool();
-        for (Integer ifaceIndex : cf.getInterfaces()) {
+        for (Integer ifaceIndex : cf.getInterfaces())
+        {
             String ifaceName = resolveClassName(cp, ifaceIndex);
-            if (ifaceName != null) {
+            if (ifaceName != null)
+            {
                 addDependency(node, ifaceName, DependencyType.IMPLEMENTS);
             }
         }
 
-        for (FieldEntry field : cf.getFields()) {
+        for (FieldEntry field : cf.getFields())
+        {
             extractTypesFromDescriptor(field.getDesc()).forEach(type ->
                     addDependency(node, type, DependencyType.FIELD_TYPE));
         }
 
-        for (MethodEntry method : cf.getMethods()) {
+        for (MethodEntry method : cf.getMethods())
+        {
             // Parameter and return types
             extractTypesFromDescriptor(method.getDesc()).forEach(type ->
                     addDependency(node, type, DependencyType.PARAMETER_TYPE));
@@ -80,32 +93,45 @@ public class DependencyAnalyzer {
     /**
      * Analyzes the constant pool for class references.
      */
-    private void analyzeConstantPool(DependencyNode node, ConstPool cp) {
-        for (Item<?> item : cp.getItems()) {
+    private void analyzeConstantPool(DependencyNode node, ConstPool cp)
+    {
+        for (Item<?> item : cp.getItems())
+        {
             if (item == null) continue;
 
-            if (item instanceof ClassRefItem) {
+            if (item instanceof ClassRefItem)
+            {
                 String refClass = ((ClassRefItem) item).getClassName();
-                if (refClass != null && !refClass.equals(node.getClassName())) {
+                if (refClass != null && !refClass.equals(node.getClassName()))
+                {
                     // Could be type check, class literal, etc.
                     addDependency(node, refClass, DependencyType.CLASS_LITERAL);
                 }
-            } else if (item instanceof MethodRefItem) {
+            }
+            else if (item instanceof MethodRefItem)
+            {
                 MethodRefItem ref = (MethodRefItem) item;
                 String owner = ref.getOwner();
-                if (owner != null && !owner.equals(node.getClassName())) {
+                if (owner != null && !owner.equals(node.getClassName()))
+                {
                     addDependency(node, owner, DependencyType.METHOD_CALL);
                 }
-            } else if (item instanceof InterfaceRefItem) {
+            }
+            else if (item instanceof InterfaceRefItem)
+            {
                 InterfaceRefItem ref = (InterfaceRefItem) item;
                 String owner = ref.getOwner();
-                if (owner != null && !owner.equals(node.getClassName())) {
+                if (owner != null && !owner.equals(node.getClassName()))
+                {
                     addDependency(node, owner, DependencyType.METHOD_CALL);
                 }
-            } else if (item instanceof FieldRefItem) {
+            }
+            else if (item instanceof FieldRefItem)
+            {
                 FieldRefItem ref = (FieldRefItem) item;
                 String owner = ref.getOwner();
-                if (owner != null && !owner.equals(node.getClassName())) {
+                if (owner != null && !owner.equals(node.getClassName()))
+                {
                     addDependency(node, owner, DependencyType.FIELD_ACCESS);
                 }
             }
@@ -115,7 +141,8 @@ public class DependencyAnalyzer {
     /**
      * Extracts class names from a type descriptor.
      */
-    private Set<String> extractTypesFromDescriptor(String descriptor) {
+    private Set<String> extractTypesFromDescriptor(String descriptor)
+    {
         if (descriptor == null) return new LinkedHashSet<>();
         return DescriptorUtil.extractClassNames(descriptor);
     }
@@ -123,7 +150,8 @@ public class DependencyAnalyzer {
     /**
      * Adds a dependency edge.
      */
-    private void addDependency(DependencyNode from, String toClassName, DependencyType type) {
+    private void addDependency(DependencyNode from, String toClassName, DependencyType type)
+    {
         if (toClassName == null || toClassName.isEmpty()) return;
         if (toClassName.startsWith("[")) return; // Skip array types (we care about the component)
         if (toClassName.startsWith("(")) return; // Skip method descriptors
@@ -140,7 +168,8 @@ public class DependencyAnalyzer {
     /**
      * Checks if a type name is a primitive.
      */
-    private boolean isPrimitive(String name) {
+    private boolean isPrimitive(String name)
+    {
         return name.length() == 1 &&
                "ZBCSIJFD".indexOf(name.charAt(0)) >= 0;
     }
@@ -148,84 +177,114 @@ public class DependencyAnalyzer {
     /**
      * Gets or creates a node for the given class name.
      */
-    private DependencyNode getOrCreateNode(String className, ClassFile classFile) {
+    private DependencyNode getOrCreateNode(String className, ClassFile classFile)
+    {
         return nodes.computeIfAbsent(className, n -> new DependencyNode(n, classFile));
     }
 
     /**
      * Resolves a class name from a constant pool index.
      */
-    private String resolveClassName(ConstPool cp, int classIndex) {
-        try {
+    private String resolveClassName(ConstPool cp, int classIndex)
+    {
+        try
+        {
             Item<?> item = cp.getItem(classIndex);
-            if (item instanceof ClassRefItem) {
+            if (item instanceof ClassRefItem)
+            {
                 return ((ClassRefItem) item).getClassName();
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             // Ignore
         }
         return null;
     }
 
-    // ===== Public API =====
+    // Public API
 
     /**
-     * Gets the node for a class name.
+     * Looks up the graph node for a class.
+     *
+     * @param className the class to look up
+     * @return the node, or null if the class was never seen
      */
-    public DependencyNode getNode(String className) {
+    public DependencyNode getNode(String className)
+    {
         return nodes.get(className);
     }
 
     /**
-     * Gets all nodes in the dependency graph.
+     * @return an unmodifiable view of every node in the graph
      */
-    public Collection<DependencyNode> getAllNodes() {
+    public Collection<DependencyNode> getAllNodes()
+    {
         return Collections.unmodifiableCollection(nodes.values());
     }
 
     /**
-     * Gets only nodes that are in the ClassPool.
+     * Selects the nodes backed by a class present in the pool.
+     *
+     * @return the in-pool nodes, excluding referenced-only classes
      */
-    public Collection<DependencyNode> getPoolNodes() {
+    public Collection<DependencyNode> getPoolNodes()
+    {
         return nodes.values().stream()
                 .filter(DependencyNode::isInPool)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Gets all classes that the specified class depends on.
+     * Looks up the direct dependencies recorded for a class.
+     *
+     * @param className the class to query
+     * @return the names of classes it depends on, or an empty set if it has no node
      */
-    public Set<String> getDependencies(String className) {
+    public Set<String> getDependencies(String className)
+    {
         DependencyNode node = nodes.get(className);
         if (node == null) return Collections.emptySet();
         return node.getDependencies();
     }
 
     /**
-     * Gets all classes that depend on the specified class.
+     * Looks up the direct dependents recorded for a class.
+     *
+     * @param className the class to query
+     * @return the names of classes depending on it, or an empty set if it has no node
      */
-    public Set<String> getDependents(String className) {
+    public Set<String> getDependents(String className)
+    {
         DependencyNode node = nodes.get(className);
         if (node == null) return Collections.emptySet();
         return node.getDependents();
     }
 
     /**
-     * Gets transitive dependencies (all classes reachable from this class).
+     * Walks the dependency edges breadth-first from the given class.
+     *
+     * @param className the class to start from
+     * @return every class reachable from it, excluding the class itself
      */
-    public Set<String> getTransitiveDependencies(String className) {
+    public Set<String> getTransitiveDependencies(String className)
+    {
         Set<String> visited = new LinkedHashSet<>();
         Deque<String> worklist = new ArrayDeque<>();
         worklist.add(className);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             String current = worklist.poll();
             if (!visited.add(current)) continue;
 
             DependencyNode node = nodes.get(current);
-            if (node != null) {
-                for (String dep : node.getDependencies()) {
-                    if (!visited.contains(dep)) {
+            if (node != null)
+            {
+                for (String dep : node.getDependencies())
+                {
+                    if (!visited.contains(dep))
+                    {
                         worklist.add(dep);
                     }
                 }
@@ -237,21 +296,29 @@ public class DependencyAnalyzer {
     }
 
     /**
-     * Gets transitive dependents (all classes that transitively depend on this class).
+     * Walks the dependent edges breadth-first from the given class.
+     *
+     * @param className the class to start from
+     * @return every class that transitively depends on it, excluding the class itself
      */
-    public Set<String> getTransitiveDependents(String className) {
+    public Set<String> getTransitiveDependents(String className)
+    {
         Set<String> visited = new LinkedHashSet<>();
         Deque<String> worklist = new ArrayDeque<>();
         worklist.add(className);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             String current = worklist.poll();
             if (!visited.add(current)) continue;
 
             DependencyNode node = nodes.get(current);
-            if (node != null) {
-                for (String dep : node.getDependents()) {
-                    if (!visited.contains(dep)) {
+            if (node != null)
+            {
+                for (String dep : node.getDependents())
+                {
+                    if (!visited.contains(dep))
+                    {
                         worklist.add(dep);
                     }
                 }
@@ -263,17 +330,21 @@ public class DependencyAnalyzer {
     }
 
     /**
-     * Finds all circular dependencies in the graph.
-     * Returns a list of cycles, where each cycle is a list of class names.
+     * Walks the pool classes depth-first collecting every dependency cycle found.
+     *
+     * @return one list of class names per cycle, repeating the entry class as the final element
      */
-    public List<List<String>> findCircularDependencies() {
+    public List<List<String>> findCircularDependencies()
+    {
         List<List<String>> cycles = new ArrayList<>();
         Set<String> visited = new HashSet<>();
         Set<String> onStack = new HashSet<>();
 
-        for (DependencyNode node : nodes.values()) {
+        for (DependencyNode node : nodes.values())
+        {
             if (!node.isInPool()) continue;
-            if (!visited.contains(node.getClassName())) {
+            if (!visited.contains(node.getClassName()))
+            {
                 findCyclesDFS(node.getClassName(), visited, onStack, new ArrayList<>(), cycles);
             }
         }
@@ -281,21 +352,26 @@ public class DependencyAnalyzer {
         return cycles;
     }
 
-    private void findCyclesDFS(String current, Set<String> visited, Set<String> onStack,
-                               List<String> path, List<List<String>> cycles) {
+    private void findCyclesDFS(String current, Set<String> visited, Set<String> onStack, List<String> path, List<List<String>> cycles)
+    {
         visited.add(current);
         onStack.add(current);
         path.add(current);
 
         DependencyNode node = nodes.get(current);
-        if (node != null) {
-            for (String dep : node.getDependencies()) {
+        if (node != null)
+        {
+            for (String dep : node.getDependencies())
+            {
                 DependencyNode depNode = nodes.get(dep);
                 if (depNode == null || !depNode.isInPool()) continue;
 
-                if (!visited.contains(dep)) {
+                if (!visited.contains(dep))
+                {
                     findCyclesDFS(dep, visited, onStack, path, cycles);
-                } else if (onStack.contains(dep)) {
+                }
+                else if (onStack.contains(dep))
+                {
                     // Found a cycle
                     int startIndex = path.indexOf(dep);
                     List<String> cycle = new ArrayList<>(path.subList(startIndex, path.size()));
@@ -310,9 +386,13 @@ public class DependencyAnalyzer {
     }
 
     /**
-     * Finds classes matching a predicate.
+     * Finds classes whose node satisfies a predicate.
+     *
+     * @param predicate the test applied to every node in the graph
+     * @return the matching class names, in graph insertion order
      */
-    public Set<String> findClasses(Predicate<DependencyNode> predicate) {
+    public Set<String> findClasses(Predicate<DependencyNode> predicate)
+    {
         return nodes.values().stream()
                 .filter(predicate)
                 .map(DependencyNode::getClassName)
@@ -320,23 +400,33 @@ public class DependencyAnalyzer {
     }
 
     /**
-     * Gets classes with no dependencies (leaf classes).
+     * Finds pool classes that depend on nothing.
+     *
+     * @return the class names with a dependency count of zero
      */
-    public Set<String> findLeafClasses() {
+    public Set<String> findLeafClasses()
+    {
         return findClasses(n -> n.isInPool() && n.getDependencyCount() == 0);
     }
 
     /**
-     * Gets classes with no dependents (root classes).
+     * Finds pool classes that nothing else depends on.
+     *
+     * @return the class names with a dependent count of zero
      */
-    public Set<String> findRootClasses() {
+    public Set<String> findRootClasses()
+    {
         return findClasses(n -> n.isInPool() && n.getDependentCount() == 0);
     }
 
     /**
-     * Gets classes that match a package pattern.
+     * Selects pool classes whose name starts with the given prefix.
+     *
+     * @param packagePrefix the package name prefix to match against
+     * @return the matching class names, in graph insertion order
      */
-    public Set<String> getClassesInPackage(String packagePrefix) {
+    public Set<String> getClassesInPackage(String packagePrefix)
+    {
         return nodes.values().stream()
                 .filter(n -> n.isInPool() && n.getClassName().startsWith(packagePrefix))
                 .map(DependencyNode::getClassName)
@@ -344,34 +434,49 @@ public class DependencyAnalyzer {
     }
 
     /**
-     * Checks if class A depends on class B (directly).
+     * Checks for a direct dependency edge between two classes.
+     *
+     * @param classA the dependent class name
+     * @param classB the candidate dependency class name
+     * @return true if classA directly depends on classB, false if classA has no node
      */
-    public boolean dependsOn(String classA, String classB) {
+    public boolean dependsOn(String classA, String classB)
+    {
         DependencyNode node = nodes.get(classA);
         if (node == null) return false;
         return node.getDependencies().contains(classB);
     }
 
     /**
-     * Checks if class A depends on class B (transitively).
+     * Checks for a dependency reachable through any chain of intermediate classes.
+     *
+     * @param classA the dependent class name
+     * @param classB the candidate dependency class name
+     * @return true if classA transitively depends on classB
      */
-    public boolean transitivelyDependsOn(String classA, String classB) {
+    public boolean transitivelyDependsOn(String classA, String classB)
+    {
         return getTransitiveDependencies(classA).contains(classB);
     }
 
     /**
-     * Returns the number of classes in the graph.
+     * @return the number of nodes in the graph, including classes outside the pool
      */
-    public int size() {
+    public int size()
+    {
         return nodes.size();
     }
 
     /**
-     * Returns the number of dependency edges.
+     * Sums the outgoing dependency edges over every node.
+     *
+     * @return the total number of dependency edges in the graph
      */
-    public int edgeCount() {
+    public int edgeCount()
+    {
         int count = 0;
-        for (DependencyNode node : nodes.values()) {
+        for (DependencyNode node : nodes.values())
+        {
             count += node.getOutgoingDependencies().size();
         }
         return count;
@@ -380,12 +485,14 @@ public class DependencyAnalyzer {
     /**
      * Gets the list of classes from a ClassPool.
      */
-    private static List<ClassFile> getClassList(ClassPool classPool) {
+    private static List<ClassFile> getClassList(ClassPool classPool)
+    {
         return classPool.getClasses();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         long poolCount = nodes.values().stream().filter(DependencyNode::isInPool).count();
         return "DependencyAnalyzer{classes=" + nodes.size() + ", inPool=" + poolCount + ", edges=" + edgeCount() + "}";
     }

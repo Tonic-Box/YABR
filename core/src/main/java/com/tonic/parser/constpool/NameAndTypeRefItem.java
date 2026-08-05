@@ -8,26 +8,42 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a CONSTANT_NameAndType entry in the constant pool.
+ * A CONSTANT_NameAndType constant pool entry, holding the name and descriptor indices of a member.
  */
-public class NameAndTypeRefItem extends Item<NameAndType> {
+public class NameAndTypeRefItem extends Item<NameAndType>
+{
     private ConstPool constPool;
     private NameAndType value;
 
-    public ConstPool getConstPool() {
+    /**
+     * @return the const pool
+     */
+    public ConstPool getConstPool()
+    {
         return constPool;
     }
 
-    public void setConstPool(ConstPool constPool) {
+    /**
+     * Binds the pool used to resolve the name and descriptor indices.
+     * @param constPool the owning constant pool
+     */
+    public void setConstPool(ConstPool constPool)
+    {
         this.constPool = constPool;
     }
 
-    public void setValue(NameAndType value) {
+    /**
+     * Replaces the name and descriptor index pair this entry holds.
+     * @param value the new pair
+     */
+    public void setValue(NameAndType value)
+    {
         this.value = value;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.constPool = classFile.getConstPool();
         int nameIndex = classFile.readUnsignedShort();
         int descriptorIndex = classFile.readUnsignedShort();
@@ -35,33 +51,39 @@ public class NameAndTypeRefItem extends Item<NameAndType> {
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(value.getNameIndex());
         dos.writeShort(value.getDescriptorIndex());
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_NAME_TYPE_REF;
     }
 
     @Override
-    public NameAndType getValue() {
+    public NameAndType getValue()
+    {
         return value;
     }
 
     /**
-     * Retrieves the descriptor string from the constant pool.
-     *
-     * @return The descriptor string.
+     * Resolves the descriptor string through the bound constant pool.
+     * @return the descriptor string
+     * @throws IllegalStateException if no pool is bound or the descriptor index is unresolvable
      */
-    public String getDescriptor() {
-        if (constPool == null) {
+    public String getDescriptor()
+    {
+        if (constPool == null)
+        {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
         String descriptor = ((Utf8Item)constPool.getItem(value.getDescriptorIndex())).getValue();
-        if (descriptor == null) {
+        if (descriptor == null)
+        {
             throw new IllegalStateException("Invalid descriptor index: " + value.getDescriptorIndex());
         }
 
@@ -69,17 +91,20 @@ public class NameAndTypeRefItem extends Item<NameAndType> {
     }
 
     /**
-     * Retrieves the name string from the constant pool.
-     *
-     * @return The name string.
+     * Resolves the name string through the bound constant pool.
+     * @return the name string
+     * @throws IllegalStateException if no pool is bound or the name index is unresolvable
      */
-    public String getName() {
-        if (constPool == null) {
+    public String getName()
+    {
+        if (constPool == null)
+        {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
         String name = ((Utf8Item)constPool.getItem(value.getNameIndex())).getValue();
-        if (name == null) {
+        if (name == null)
+        {
             throw new IllegalStateException("Invalid name index: " + value.getNameIndex());
         }
 
@@ -87,20 +112,20 @@ public class NameAndTypeRefItem extends Item<NameAndType> {
     }
 
     /**
-     * Sets the name index.
-     *
-     * @param nameIndex The constant pool index for the name.
+     * Repoints this entry at a different name.
+     * @param nameIndex the constant pool index of the new name
      */
-    public void setNameIndex(int nameIndex) {
+    public void setNameIndex(int nameIndex)
+    {
         value.setNameIndex(nameIndex);
     }
 
     /**
-     * Sets the descriptor index.
-     *
-     * @param descIndex The constant pool index for the descriptor.
+     * Repoints this entry at a different descriptor.
+     * @param descIndex the constant pool index of the new descriptor
      */
-    public void setDescIndex(int descIndex) {
+    public void setDescIndex(int descIndex)
+    {
         value.setDescriptorIndex(descIndex);
     }
 }

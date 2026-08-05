@@ -3,14 +3,24 @@ package com.tonic.analysis.cpg.node;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
 
-public class CallSiteNode extends CPGNode {
+/**
+ * CPG node wrapping an invoke instruction, exposing its resolved target signature.
+ */
+public class CallSiteNode extends CPGNode
+{
 
     private final InvokeInstruction invoke;
     private final String targetOwner;
     private final String targetName;
     private final String targetDescriptor;
 
-    public CallSiteNode(long id, InvokeInstruction invoke) {
+    /**
+     * Creates a node for an invoke instruction.
+     * @param id the unique node id
+     * @param invoke the wrapped invoke instruction
+     */
+    public CallSiteNode(long id, InvokeInstruction invoke)
+    {
         super(id, CPGNodeType.CALL_SITE);
         this.invoke = invoke;
         this.targetOwner = invoke.getOwner();
@@ -23,63 +33,110 @@ public class CallSiteNode extends CPGNode {
         setProperty("invokeType", invoke.getInvokeType().name());
     }
 
-    public InvokeInstruction getInvoke() {
+    /**
+     * @return the invoke
+     */
+    public InvokeInstruction getInvoke()
+    {
         return invoke;
     }
 
-    public String getTargetOwner() {
+    /**
+     * @return the target owner
+     */
+    public String getTargetOwner()
+    {
         return targetOwner;
     }
 
-    public String getTargetName() {
+    /**
+     * @return the target name
+     */
+    public String getTargetName()
+    {
         return targetName;
     }
 
-    public String getTargetDescriptor() {
+    /**
+     * @return the target descriptor
+     */
+    public String getTargetDescriptor()
+    {
         return targetDescriptor;
     }
 
     @Override
-    public String getLabel() {
+    public String getLabel()
+    {
         return targetOwner + "." + targetName;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getUnderlying() {
+    public <T> T getUnderlying()
+    {
         return (T) invoke;
     }
 
-    public String getFullTarget() {
+    /**
+     * @return the target as owner.name plus descriptor
+     */
+    public String getFullTarget()
+    {
         return targetOwner + "." + targetName + targetDescriptor;
     }
 
-    public InvokeType getInvokeType() {
+    /**
+     * @return the invoke dispatch kind
+     */
+    public InvokeType getInvokeType()
+    {
         return invoke.getInvokeType();
     }
 
-    public boolean isStatic() {
+    /**
+     * @return whether this is an invokestatic call
+     */
+    public boolean isStatic()
+    {
         return invoke.getInvokeType() == InvokeType.STATIC;
     }
 
-    public boolean isVirtual() {
+    /**
+     * @return whether this is an invokevirtual call
+     */
+    public boolean isVirtual()
+    {
         return invoke.getInvokeType() == InvokeType.VIRTUAL;
     }
 
-    public boolean isInterface() {
+    /**
+     * @return whether this is an invokeinterface call
+     */
+    public boolean isInterface()
+    {
         return invoke.getInvokeType() == InvokeType.INTERFACE;
     }
 
-    public boolean isSpecial() {
+    /**
+     * @return whether this is an invokespecial call
+     */
+    public boolean isSpecial()
+    {
         return invoke.getInvokeType() == InvokeType.SPECIAL;
     }
 
-    public int getArgumentCount() {
+    /**
+     * @return the number of call arguments
+     */
+    public int getArgumentCount()
+    {
         return invoke.getArguments().size();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("CallSiteNode[%d: %s.%s]", getId(), targetOwner, targetName);
     }
 }

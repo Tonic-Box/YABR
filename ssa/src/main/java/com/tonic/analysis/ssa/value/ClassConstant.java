@@ -6,49 +6,57 @@ import com.tonic.analysis.ssa.type.ReferenceType;
 /**
  * Represents a class constant (Class object reference).
  */
-public final class ClassConstant extends Constant {
+public final class ClassConstant extends Constant
+{
 
     private final IRType classType;
 
     /**
      * Creates a class constant with the given IR type.
-     *
      * @param classType the class type
      */
-    public ClassConstant(IRType classType) {
+    public ClassConstant(IRType classType)
+    {
         this.classType = classType;
     }
 
     /**
      * Creates a class constant with the given class name.
-     *
      * @param className the internal class name
      */
-    public ClassConstant(String className) {
+    public ClassConstant(String className)
+    {
         this.classType = new ReferenceType(className);
     }
 
-    public IRType getClassType() {
+    /**
+     * @return the class type
+     */
+    public IRType getClassType()
+    {
         return classType;
     }
 
     @Override
-    public IRType getType() {
+    public IRType getType()
+    {
         return ReferenceType.CLASS;
     }
 
     @Override
-    public IRType getValue() {
+    public IRType getValue()
+    {
         return classType;
     }
 
     /**
      * Gets the class name in internal format.
-     *
      * @return the internal class name
      */
-    public String getClassName() {
-        if (classType instanceof ReferenceType) {
+    public String getClassName()
+    {
+        if (classType instanceof ReferenceType)
+        {
             ReferenceType ref = (ReferenceType) classType;
             return ref.getInternalName();
         }
@@ -56,12 +64,14 @@ public final class ClassConstant extends Constant {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return classType.toString() + ".class";
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ClassConstant)) return false;
         ClassConstant that = (ClassConstant) o;
@@ -69,7 +79,8 @@ public final class ClassConstant extends Constant {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return classType.hashCode();
     }
 }

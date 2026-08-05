@@ -16,17 +16,20 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CPGBuilderTest {
+class CPGBuilderTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
     @Test
-    void buildEmptyPoolReturnsValidCPG() {
+    void buildEmptyPoolReturnsValidCPG()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool).build();
 
         assertNotNull(cpg);
@@ -34,7 +37,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildSingleClassWithNoMethods() throws IOException {
+    void buildSingleClassWithNoMethods() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Empty", access);
 
@@ -44,7 +48,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildClassWithSimpleMethod() throws IOException {
+    void buildClassWithSimpleMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Simple", classAccess);
 
@@ -57,7 +62,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildCreatesMethodNodes() throws IOException {
+    void buildCreatesMethodNodes() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Methods", classAccess);
 
@@ -72,7 +78,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildCreatesBlockNodes() throws IOException {
+    void buildCreatesBlockNodes() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Blocks", classAccess);
 
@@ -86,7 +93,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildCreatesCFGEdges() throws IOException {
+    void buildCreatesCFGEdges() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/CFG", classAccess);
 
@@ -102,7 +110,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildWithCallGraphCreatesCallEdges() throws IOException {
+    void buildWithCallGraphCreatesCallEdges() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Calls", classAccess);
 
@@ -117,7 +126,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildWithPDGCreatesDataEdges() throws IOException {
+    void buildWithPDGCreatesDataEdges() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/PDG", classAccess);
 
@@ -132,7 +142,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void buildWithoutCallGraphOmitsCallEdges() throws IOException {
+    void buildWithoutCallGraphOmitsCallEdges() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/NoCalls", classAccess);
 
@@ -146,7 +157,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void getMethodReturnsCorrectNode() throws IOException {
+    void getMethodReturnsCorrectNode() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/GetMethod", classAccess);
 
@@ -160,7 +172,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void getNodeCountMatchesNodes() throws IOException {
+    void getNodeCountMatchesNodes() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Count", classAccess);
 
@@ -173,7 +186,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void getEdgeCountMatchesEdges() throws IOException {
+    void getEdgeCountMatchesEdges() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/EdgeCount", classAccess);
 
@@ -186,7 +200,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void toStringContainsBasicInfo() throws IOException {
+    void toStringContainsBasicInfo() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/ToString", classAccess);
 
@@ -202,7 +217,8 @@ class CPGBuilderTest {
     }
 
     @Test
-    void queryReturnsValidQueryObject() throws IOException {
+    void queryReturnsValidQueryObject() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Query", classAccess);
 

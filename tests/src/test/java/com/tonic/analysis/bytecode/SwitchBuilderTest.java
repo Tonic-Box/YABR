@@ -17,11 +17,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * {@code SizedOp.getSizeAt} sizing (4-byte-aligned padding) and label resolution, validated by loading
  * the built class (the verifier rejects a mis-padded or mis-targeted switch) and running each arm.
  */
-class SwitchBuilderTest {
+class SwitchBuilderTest
+{
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -29,7 +33,8 @@ class SwitchBuilderTest {
     }
 
     @Test
-    void tableswitchDispatches() throws Exception {
+    void tableswitchDispatches() throws Exception
+    {
         ClassFile cf = ClassBuilder.create("TS")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "pick", "(I)I")
@@ -50,9 +55,10 @@ class SwitchBuilderTest {
     }
 
     @Test
-    void lookupswitchDispatches() throws Exception {
+    void lookupswitchDispatches() throws Exception
+    {
         Map<Integer, String> cases = new LinkedHashMap<>();
-        cases.put(100, "lb");   // intentionally out of order — lookupswitch sorts keys
+        cases.put(100, "lb");   // intentionally out of order - lookupswitch sorts keys
         cases.put(1, "la");
 
         ClassFile cf = ClassBuilder.create("LS")

@@ -7,74 +7,127 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 
 /**
- * Represents a return statement: return [expression]
+ * A return statement with an optional value expression.
  */
-public final class ReturnStmt implements Statement {
+public final class ReturnStmt implements Statement
+{
 
     private Expression value;
     private SourceLocation location;
     private ASTNode parent;
     private SourceType methodReturnType;
 
-    public ReturnStmt(Expression value, SourceLocation location) {
+    /**
+     * Creates a return statement and parents the value to it when present.
+     * @param value the returned expression, or null for a void return
+     * @param location source location, or null for unknown
+     */
+    public ReturnStmt(Expression value, SourceLocation location)
+    {
         this.value = value;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        if (value != null) {
+        if (value != null)
+        {
             value.setParent(this);
         }
     }
 
-    public ReturnStmt(Expression value) {
+    /**
+     * Creates a return statement with an unknown location.
+     * @param value the returned expression, or null for a void return
+     */
+    public ReturnStmt(Expression value)
+    {
         this(value, SourceLocation.UNKNOWN);
     }
 
     /**
      * Creates a void return statement.
      */
-    public ReturnStmt() {
+    public ReturnStmt()
+    {
         this(null, SourceLocation.UNKNOWN);
     }
 
-    public Expression getValue() {
+    /**
+     * @return the value
+     */
+    public Expression getValue()
+    {
         return value;
     }
 
-    public void setValue(Expression value) {
+    /**
+     * Replaces the returned expression, reparenting old and new nodes.
+     * @param value the new value, or null for a void return
+     */
+    public void setValue(Expression value)
+    {
         withValue(value);
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public SourceType getMethodReturnType() {
+    /**
+     * @return the method return type
+     */
+    public SourceType getMethodReturnType()
+    {
         return methodReturnType;
     }
 
-    public void setMethodReturnType(SourceType methodReturnType) {
+    /**
+     * Sets the declared return type of the enclosing method.
+     * @param methodReturnType the enclosing method's return type
+     */
+    public void setMethodReturnType(SourceType methodReturnType)
+    {
         this.methodReturnType = methodReturnType;
     }
 
     /**
-     * Checks if this is a void return (no value).
+     * @return true if this return has no value
      */
-    public boolean isVoidReturn() {
+    public boolean isVoidReturn()
+    {
         return value == null;
     }
 
-    public ReturnStmt withValue(Expression value) {
+    /**
+     * Replaces the returned expression, reparenting old and new nodes.
+     * @param value the new value, or null for a void return
+     * @return this statement
+     */
+    public ReturnStmt withValue(Expression value)
+    {
         ASTNode previous = this.value;
         this.value = value;
-        if (value != null) {
+        if (value != null)
+        {
             value.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
@@ -82,22 +135,26 @@ public final class ReturnStmt implements Statement {
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         return value != null ? java.util.List.of(value) : java.util.List.of();
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitReturn(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return value != null ? "return " + value : "return";
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

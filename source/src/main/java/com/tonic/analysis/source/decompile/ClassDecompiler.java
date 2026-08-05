@@ -83,10 +83,11 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Decompiles a ClassFile to Java source code.
- * Produces properly formatted output with class declaration, fields, and methods.
+ * Decompiler that turns a ClassFile into formatted Java source: the class declaration,
+ * fields, and recovered method bodies.
  */
-public class ClassDecompiler {
+public class ClassDecompiler
+{
 
     private final ClassFile classFile;
     private final SSA ssa;
@@ -118,15 +119,32 @@ public class ClassDecompiler {
     private DecompileResult.MemberSpan classSpanCollector;
     private final boolean hasInnerClasses;
 
-    public ClassDecompiler(ClassFile classFile) {
+    /**
+     * Creates a decompiler for the class with the default configuration.
+     * @param classFile the class to decompile
+     */
+    public ClassDecompiler(ClassFile classFile)
+    {
         this(classFile, DecompilerConfig.defaults());
     }
 
-    public ClassDecompiler(ClassFile classFile, SourceEmitterConfig config) {
+    /**
+     * Creates a decompiler with a custom source emitter configuration.
+     * @param classFile the class to decompile
+     * @param config the emitter configuration
+     */
+    public ClassDecompiler(ClassFile classFile, SourceEmitterConfig config)
+    {
         this(classFile, DecompilerConfig.builder().emitterConfig(config).build());
     }
 
-    public ClassDecompiler(ClassFile classFile, DecompilerConfig config) {
+    /**
+     * Creates a decompiler with a full decompiler configuration.
+     * @param classFile the class to decompile
+     * @param config the configuration; defaults are used when null
+     */
+    public ClassDecompiler(ClassFile classFile, DecompilerConfig config)
+    {
         this.classFile = classFile;
         this.ssa = new SSA(classFile.getConstPool());
         this.decompilerConfig = config != null ? config : DecompilerConfig.defaults();
@@ -151,18 +169,24 @@ public class ClassDecompiler {
         this.hasInnerClasses = detectInnerClasses();
     }
 
-    private boolean detectInnerClasses() {
+    private boolean detectInnerClasses()
+    {
         String thisClassName = classFile.getClassName().replace('/', '.');
-        for (Attribute attr : classFile.getClassAttributes()) {
-            if (attr instanceof InnerClassesAttribute) {
+        for (Attribute attr : classFile.getClassAttributes())
+        {
+            if (attr instanceof InnerClassesAttribute)
+            {
                 InnerClassesAttribute innerAttr = (InnerClassesAttribute) attr;
-                for (InnerClassEntry entry : innerAttr.getClasses()) {
+                for (InnerClassEntry entry : innerAttr.getClasses())
+                {
                     String outerName = entry.getOuterClassName();
                     String innerName = entry.getInnerClassName();
-                    if (thisClassName.equals(outerName)) {
+                    if (thisClassName.equals(outerName))
+                    {
                         return true;
                     }
-                    if (innerName != null && innerName.startsWith(thisClassName + "$")) {
+                    if (innerName != null && innerName.startsWith(thisClassName + "$"))
+                    {
                         return true;
                     }
                 }
@@ -173,94 +197,118 @@ public class ClassDecompiler {
 
     /**
      * Creates a builder for configuring a ClassDecompiler.
-     *
      * @param classFile the class file to decompile
      * @return a new builder instance
      */
-    public static Builder builder(ClassFile classFile) {
+    public static Builder builder(ClassFile classFile)
+    {
         return new Builder(classFile);
     }
 
     /**
-     * Builder for ClassDecompiler with fluent configuration API.
+     * Builder for ClassDecompiler with a fluent configuration API.
      */
-    public static class Builder {
+    public static class Builder
+    {
         private final ClassFile classFile;
         private final DecompilerConfig.Builder configBuilder = DecompilerConfig.builder();
 
-        private Builder(ClassFile classFile) {
+        private Builder(ClassFile classFile)
+        {
             this.classFile = classFile;
         }
 
         /**
          * Sets the source emitter configuration.
+         * @param config the emitter configuration
+         * @return this builder
          */
-        public Builder config(SourceEmitterConfig config) {
+        public Builder config(SourceEmitterConfig config)
+        {
             configBuilder.emitterConfig(config);
             return this;
         }
 
         /**
          * Applies a transform preset.
+         * @param preset the preset whose transforms are added
+         * @return this builder
          */
-        public Builder preset(TransformPreset preset) {
+        public Builder preset(TransformPreset preset)
+        {
             configBuilder.preset(preset);
             return this;
         }
 
         /**
          * Adds a single transform to the pipeline.
+         * @param transform the transform to add
+         * @return this builder
          */
-        public Builder addTransform(IRTransform transform) {
+        public Builder addTransform(IRTransform transform)
+        {
             configBuilder.addTransform(transform);
             return this;
         }
 
         /**
          * Adds multiple transforms to the pipeline.
+         * @param transforms the transforms to add
+         * @return this builder
          */
-        public Builder addTransforms(List<IRTransform> transforms) {
+        public Builder addTransforms(List<IRTransform> transforms)
+        {
             configBuilder.addTransforms(transforms);
             return this;
         }
 
         /**
          * Builds the ClassDecompiler with the configured settings.
+         * @return the configured decompiler
          */
-        public ClassDecompiler build() {
+        public ClassDecompiler build()
+        {
             return new ClassDecompiler(classFile, configBuilder.build());
         }
     }
 
     /**
-     * Builds a synthetic {@link LocalVariableTableAttribute} for {@code method} from the recovered slot names,
-     * keyed to the method's original bytecode offsets - for injecting named locals into a stripped class (the
-     * names match what {@link #decompile()} renders). Returns null when the method has no Code or nothing is
-     * recoverable. Does not modify any bytecode; the caller attaches the attribute and writes the class.
+     * Builds a synthetic {@link LocalVariableTableAttribute} from the recovered slot names, keyed to the
+     * original bytecode offsets, for injecting named locals into a stripped class - the names match what
+     * {@link #decompile()} renders. No bytecode is modified; the caller attaches the attribute.
+     *
+     * @param method the method to recover slot names for
+     * @return the synthetic table, or null if the method has no Code or recovery fails
      */
-    public LocalVariableTableAttribute localVariableTableFor(MethodEntry method) {
+    public LocalVariableTableAttribute localVariableTableFor(MethodEntry method)
+    {
         CodeAttribute code = method.getCodeAttribute();
-        if (code == null || code.getCode() == null) {
+        if (code == null || code.getCode() == null)
+        {
             return null;
         }
-        try {
+        try
+        {
             IRMethod ir = ssa.lift(method);
             applyBaselineTransforms(ir);
-            MethodRecoverer recoverer = new MethodRecoverer(ir, method,
-                    decompilerConfig.getNameRecoveryStrategy());
+            MethodRecoverer recoverer = new MethodRecoverer(ir, method, decompilerConfig.getNameRecoveryStrategy());
             recoverer.analyze();
             recoverer.initializeRecovery();
             return SyntheticLocalVariableTable.build(ir, recoverer.getRecoveryContext(), method,
                     code.getCode().length, code.getMaxLocals(), classFile.getConstPool());
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return null;
         }
     }
 
     /**
-     * Decompiles the entire class to a Java source string.
+     * Decompiles the entire class.
+     * @return the Java source text
      */
-    public String decompile() {
+    public String decompile()
+    {
         IndentingWriter writer = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
         decompile(writer);
         return writer.toString();
@@ -271,18 +319,24 @@ public class ClassDecompiler {
      * 1-based output line of the statement recovered from that offset. Provenance flows from the SSA
      * lifter through statement recovery and the AST transform pipeline; statements without surviving
      * provenance (synthesized or merged away) simply have no entry.
+     *
+     * @return the source text together with the per-method line maps and declaration spans
      */
-    public DecompileResult decompileWithLineMap() {
+    public DecompileResult decompileWithLineMap()
+    {
         lineMapsCollector = new LinkedHashMap<>();
         methodSpansCollector = new LinkedHashMap<>();
         fieldSpansCollector = new LinkedHashMap<>();
         classSpanCollector = null;
-        try {
+        try
+        {
             IndentingWriter writer = new IndentingWriter(new StringWriter(), emitterConfig.getIndentString());
             decompile(writer);
             return new DecompileResult(writer.toString(), lineMapsCollector, methodSpansCollector,
                     fieldSpansCollector, classSpanCollector);
-        } finally {
+        }
+        finally
+        {
             lineMapsCollector = null;
             methodSpansCollector = null;
             fieldSpansCollector = null;
@@ -292,8 +346,10 @@ public class ClassDecompiler {
 
     /**
      * Decompiles the entire class to the given writer.
+     * @param writer the writer that receives the source text
      */
-    public void decompile(IndentingWriter writer) {
+    public void decompile(IndentingWriter writer)
+    {
         analyzeSwitchMaps();
         usedTypes.clear();
 
@@ -304,26 +360,32 @@ public class ClassDecompiler {
         emitClassBody(bodyWriter);
         String bodyContent = bodyWriter.toString();
 
-        if (!packageName.isEmpty()) {
+        if (!packageName.isEmpty())
+        {
             writer.writeLine("package " + packageName + ";");
             writer.newLine();
         }
 
-        if (!emitterConfig.isUseFullyQualifiedNames()) {
+        if (!emitterConfig.isUseFullyQualifiedNames())
+        {
             emitImports(writer, className);
         }
 
-        if (lineMapsCollector != null) {
+        if (lineMapsCollector != null)
+        {
             int headerLines = writer.getCurrentLine() - 1;
-            if (headerLines > 0) {
-                for (NavigableMap<Integer, Integer> map : lineMapsCollector.values()) {
+            if (headerLines > 0)
+            {
+                for (NavigableMap<Integer, Integer> map : lineMapsCollector.values())
+                {
                     map.replaceAll((offset, line) -> line + headerLines);
                 }
                 methodSpansCollector.replaceAll((key, span) -> new DecompileResult.MethodSpan(
                         span.getStartLine() + headerLines, span.getEndLine() + headerLines));
                 fieldSpansCollector.replaceAll((key, span) -> new DecompileResult.MemberSpan(
                         span.getStartLine() + headerLines, span.getEndLine() + headerLines));
-                if (classSpanCollector != null) {
+                if (classSpanCollector != null)
+                {
                     classSpanCollector = new DecompileResult.MemberSpan(
                             classSpanCollector.getStartLine() + headerLines,
                             classSpanCollector.getEndLine() + headerLines);
@@ -333,7 +395,8 @@ public class ClassDecompiler {
         writer.writeRaw(bodyContent);
     }
 
-    private void emitClassBody(IndentingWriter writer) {
+    private void emitClassBody(IndentingWriter writer)
+    {
         int classSpanStart = writer.getCurrentLine();
         emitClassAnnotations(writer);
         emitClassDeclaration(writer);
@@ -346,36 +409,47 @@ public class ClassDecompiler {
         RecordAttribute record = findRecordAttribute();
         List<FieldEntry> fields = classFile.getFields();
 
-        if (isEnum) {
+        if (isEnum)
+        {
             emitEnumConstants(writer, fields);
         }
 
         List<FieldEntry> regularFields = isEnum ? getNonEnumConstantFields(fields) : fields;
         List<FieldEntry> nonSyntheticFields = new ArrayList<>();
-        for (FieldEntry field : regularFields) {
-            if (isSuppressedRecordField(record, field)) {
+        for (FieldEntry field : regularFields)
+        {
+            if (isSuppressedRecordField(record, field))
+            {
                 continue;
             }
-            if (!isEnum || !isSyntheticEnumField(field)) {
+            if (!isEnum || !isSyntheticEnumField(field))
+            {
                 nonSyntheticFields.add(field);
             }
         }
         ClinitHoist hoist = isEnum ? null : computeClinitHoist(nonSyntheticFields);
 
-        if (!nonSyntheticFields.isEmpty()) {
-            for (FieldEntry field : nonSyntheticFields) {
+        if (!nonSyntheticFields.isEmpty())
+        {
+            for (FieldEntry field : nonSyntheticFields)
+            {
                 emitField(writer, field, hoist);
             }
             writer.newLine();
         }
 
-        if (!isEnum) {
+        if (!isEnum)
+        {
             MethodEntry clinit = findMethod("<clinit>");
-            if (clinit != null && clinit.getCodeAttribute() != null) {
-                if (hoist == null) {
+            if (clinit != null && clinit.getCodeAttribute() != null)
+            {
+                if (hoist == null)
+                {
                     emitStaticInitializer(writer, clinit);   // recovery failed - emit the whole <clinit>
                     writer.newLine();
-                } else if (hoist.hasRemaining()) {
+                }
+                else if (hoist.hasRemaining())
+                {
                     emitStaticInitializerBlock(writer, hoist.remainingBody, hoist.clinitKey);
                     writer.newLine();
                 }
@@ -386,29 +460,37 @@ public class ClassDecompiler {
         List<MethodEntry> constructors = new ArrayList<>();
         List<MethodEntry> methods = new ArrayList<>();
 
-        for (MethodEntry method : classFile.getMethods()) {
+        for (MethodEntry method : classFile.getMethods())
+        {
             String methodName = method.getName();
             if (isSuppressedRecordMethod(record, method)
                     || methodName.equals("<clinit>")
                     || isSyntheticLambdaMethod(methodName)
-                    || (isEnum && isSyntheticEnumMethod(methodName))) {
+                    || (isEnum && isSyntheticEnumMethod(methodName)))
+            {
                 continue;
             }
-            if (methodName.equals("<init>")) {
-                if (!isEnum) {
+            if (methodName.equals("<init>"))
+            {
+                if (!isEnum)
+                {
                     constructors.add(method);
                 }
-            } else {
+            }
+            else
+            {
                 methods.add(method);
             }
         }
 
-        for (MethodEntry ctor : constructors) {
+        for (MethodEntry ctor : constructors)
+        {
             emitConstructor(writer, ctor);
             writer.newLine();
         }
 
-        for (MethodEntry method : methods) {
+        for (MethodEntry method : methods)
+        {
             emitMethod(writer, method);
             writer.newLine();
         }
@@ -417,18 +499,23 @@ public class ClassDecompiler {
         writer.writeLine("}");
     }
 
-    private void emitEnumConstants(IndentingWriter writer, List<FieldEntry> fields) {
+    private void emitEnumConstants(IndentingWriter writer, List<FieldEntry> fields)
+    {
         String enumType = "L" + classFile.getClassName() + ";";
         List<String> enumConstantNames = new ArrayList<>();
 
-        for (FieldEntry field : fields) {
-            if (isEnumConstantField(field, enumType)) {
+        for (FieldEntry field : fields)
+        {
+            if (isEnumConstantField(field, enumType))
+            {
                 enumConstantNames.add(field.getName());
             }
         }
 
-        if (!enumConstantNames.isEmpty()) {
-            for (int i = 0; i < enumConstantNames.size(); i++) {
+        if (!enumConstantNames.isEmpty())
+        {
+            for (int i = 0; i < enumConstantNames.size(); i++)
+            {
                 String suffix = (i < enumConstantNames.size() - 1) ? "," : ";";
                 writer.writeLine(enumConstantNames.get(i) + suffix);
             }
@@ -436,18 +523,22 @@ public class ClassDecompiler {
         }
     }
 
-    private List<FieldEntry> getNonEnumConstantFields(List<FieldEntry> fields) {
+    private List<FieldEntry> getNonEnumConstantFields(List<FieldEntry> fields)
+    {
         String enumType = "L" + classFile.getClassName() + ";";
         List<FieldEntry> result = new ArrayList<>();
-        for (FieldEntry field : fields) {
-            if (!isEnumConstantField(field, enumType)) {
+        for (FieldEntry field : fields)
+        {
+            if (!isEnumConstantField(field, enumType))
+            {
                 result.add(field);
             }
         }
         return result;
     }
 
-    private boolean isEnumConstantField(FieldEntry field, String enumType) {
+    private boolean isEnumConstantField(FieldEntry field, String enumType)
+    {
         int access = field.getAccess();
         boolean isPublicStaticFinalEnum = Modifiers.isPublic(access)
                 && Modifiers.isStatic(access)
@@ -456,37 +547,46 @@ public class ClassDecompiler {
         return isPublicStaticFinalEnum && enumType.equals(field.getDesc());
     }
 
-    private boolean isSyntheticEnumField(FieldEntry field) {
+    private boolean isSyntheticEnumField(FieldEntry field)
+    {
         String name = field.getName();
         return name != null && name.equals("$VALUES");
     }
 
-    private boolean isSyntheticEnumMethod(String methodName) {
+    private boolean isSyntheticEnumMethod(String methodName)
+    {
         return "values".equals(methodName) || "valueOf".equals(methodName);
     }
 
-    private void analyzeSwitchMaps() {
+    private void analyzeSwitchMaps()
+    {
         analyzeOwnSwitchMap();
         analyzeSiblingSwitchMapHolders();
     }
 
-    private void analyzeOwnSwitchMap() {
-        if (!declaresSwitchMapField(classFile)) {
+    private void analyzeOwnSwitchMap()
+    {
+        if (!declaresSwitchMapField(classFile))
+        {
             return;
         }
 
         MethodEntry clinit = findMethod("<clinit>");
-        if (clinit == null || clinit.getCodeAttribute() == null) {
+        if (clinit == null || clinit.getCodeAttribute() == null)
+        {
             return;
         }
 
-        try {
+        try
+        {
             IRMethod ir = ssa.lift(clinit);
             applyBaselineTransforms(ir);
             List<IRMethod> methods = new ArrayList<>();
             methods.add(ir);
             SwitchMapAnalyzer.analyzeClass(classFile.getClassName(), classFile.getFields(), methods);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             // Switch map analysis failed, continue without it
         }
     }
@@ -498,54 +598,71 @@ public class ClassDecompiler {
      * {@link ClassPool} populates the switch-map registry so the switch emits constant-name case labels.
      * When the holder is not in the pool, the recovery falls back to a switch on {@code ordinal()}.
      */
-    private void analyzeSiblingSwitchMapHolders() {
+    private void analyzeSiblingSwitchMapHolders()
+    {
         // Prefer the pool that actually loaded this class (e.g. a host's project pool); fall back to the
         // default pool for standalone decompilation.
         ClassPool pool = classFile.getClassPool() != null ? classFile.getClassPool() : ClassPool.getDefault();
-        if (pool == null) {
+        if (pool == null)
+        {
             return;
         }
         String thisInternal = classFile.getClassName();
-        for (String holderInternal : nestedClassInternalNames()) {
-            if (holderInternal.equals(thisInternal) || !holderInternal.startsWith(thisInternal + "$")) {
+        for (String holderInternal : nestedClassInternalNames())
+        {
+            if (holderInternal.equals(thisInternal) || !holderInternal.startsWith(thisInternal + "$"))
+            {
                 continue;
             }
             ClassFile holder = pool.get(holderInternal);
-            if (holder == null || !declaresSwitchMapField(holder)) {
+            if (holder == null || !declaresSwitchMapField(holder))
+            {
                 continue;
             }
-            try {
+            try
+            {
                 List<MethodEntry> clinits = holder.getMethods("<clinit>");
-                if (clinits.isEmpty() || clinits.get(0).getCodeAttribute() == null) {
+                if (clinits.isEmpty() || clinits.get(0).getCodeAttribute() == null)
+                {
                     continue;
                 }
                 IRMethod ir = new SSA(holder.getConstPool()).lift(clinits.get(0));
                 List<IRMethod> methods = new ArrayList<>();
                 methods.add(ir);
                 SwitchMapAnalyzer.analyzeClass(holder.getClassName(), holder.getFields(), methods);
-            } catch (Exception ignored) {
+            }
+            catch (Exception ignored)
+            {
                 // Holder unavailable or unliftable; the switch falls back to ordinal().
             }
         }
     }
 
-    private boolean declaresSwitchMapField(ClassFile cf) {
-        for (FieldEntry field : cf.getFields()) {
+    private boolean declaresSwitchMapField(ClassFile cf)
+    {
+        for (FieldEntry field : cf.getFields())
+        {
             String name = field.getName();
-            if (name != null && name.startsWith("$SwitchMap$")) {
+            if (name != null && name.startsWith("$SwitchMap$"))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private List<String> nestedClassInternalNames() {
+    private List<String> nestedClassInternalNames()
+    {
         List<String> names = new ArrayList<>();
-        for (Attribute attr : classFile.getClassAttributes()) {
-            if (attr instanceof InnerClassesAttribute) {
-                for (InnerClassEntry entry : ((InnerClassesAttribute) attr).getClasses()) {
+        for (Attribute attr : classFile.getClassAttributes())
+        {
+            if (attr instanceof InnerClassesAttribute)
+            {
+                for (InnerClassEntry entry : ((InnerClassesAttribute) attr).getClasses())
+                {
                     String inner = entry.getInnerClassName();
-                    if (inner != null) {
+                    if (inner != null)
+                    {
                         names.add(inner.replace('.', '/'));
                     }
                 }
@@ -554,7 +671,8 @@ public class ClassDecompiler {
         return names;
     }
 
-    private void emitClassDeclaration(IndentingWriter writer) {
+    private void emitClassDeclaration(IndentingWriter writer)
+    {
         int access = classFile.getAccess();
         PermittedSubclassesAttribute permits = findPermittedSubclasses();
         RecordAttribute record = findRecordAttribute();
@@ -571,15 +689,24 @@ public class ClassDecompiler {
         if (permits != null) sb.append("sealed ");
 
         // Type keyword
-        if (record != null) {
+        if (record != null)
+        {
             sb.append("record ");
-        } else if (Modifiers.isAnnotation(access)) {
+        }
+        else if (Modifiers.isAnnotation(access))
+        {
             sb.append("@interface ");
-        } else if (Modifiers.isInterface(access)) {
+        }
+        else if (Modifiers.isInterface(access))
+        {
             sb.append("interface ");
-        } else if (Modifiers.isEnum(access) && isEnumProper()) {
+        }
+        else if (Modifiers.isEnum(access) && isEnumProper())
+        {
             sb.append("enum ");
-        } else {
+        }
+        else
+        {
             sb.append("class ");
         }
 
@@ -588,15 +715,18 @@ public class ClassDecompiler {
         String simpleName = ClassNameUtil.getSimpleNameWithInnerClasses(fullName);
         sb.append(simpleName);
         String classSig = getSignature(classFile.getClassAttributes());
-        if (classSig != null) {
+        if (classSig != null)
+        {
             sb.append(typeRecoverer.recoverFormalTypeParameters(classSig));
         }
 
         // Record component list: `record Name(T a, U b)`
-        if (record != null) {
+        if (record != null)
+        {
             sb.append("(");
             List<String[]> comps = record.getComponentNameAndDescriptors();
-            for (int i = 0; i < comps.size(); i++) {
+            for (int i = 0; i < comps.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 String compType = trackAndFormatType(typeRecoverer.recoverType(comps.get(i)[1]));
                 sb.append(compType).append(" ").append(comps.get(i)[0]);
@@ -610,26 +740,32 @@ public class ClassDecompiler {
         if (superName != null && !superName.equals("java/lang/Object")
                 && !superName.equals("java/lang/Enum")
                 && !superName.equals("java/lang/Record")
-                && !Modifiers.isInterface(access) && !isAnnotation) {
+                && !Modifiers.isInterface(access) && !isAnnotation)
+        {
             sb.append(" extends ").append(formatClassName(superName));
         }
 
         // Interfaces - skip implicit interfaces (Annotation for @interface, Enum-related for enum)
         List<Integer> interfaces = classFile.getInterfaces();
-        if (interfaces != null && !interfaces.isEmpty()) {
+        if (interfaces != null && !interfaces.isEmpty())
+        {
             List<String> filteredInterfaces = new ArrayList<>();
-            for (int idx : interfaces) {
+            for (int idx : interfaces)
+            {
                 String ifaceName = resolveClassName(idx);
                 // Skip implicit interfaces
-                if (isAnnotation && "java/lang/annotation/Annotation".equals(ifaceName)) {
+                if (isAnnotation && "java/lang/annotation/Annotation".equals(ifaceName))
+                {
                     continue;
                 }
                 filteredInterfaces.add(ifaceName);
             }
 
-            if (!filteredInterfaces.isEmpty()) {
+            if (!filteredInterfaces.isEmpty())
+            {
                 sb.append(Modifiers.isInterface(access) ? " extends " : " implements ");
-                for (int i = 0; i < filteredInterfaces.size(); i++) {
+                for (int i = 0; i < filteredInterfaces.size(); i++)
+                {
                     if (i > 0) sb.append(", ");
                     sb.append(formatClassName(filteredInterfaces.get(i)));
                 }
@@ -637,10 +773,12 @@ public class ClassDecompiler {
         }
 
         // permits clause for sealed types
-        if (permits != null && !permits.getPermittedClassNames().isEmpty()) {
+        if (permits != null && !permits.getPermittedClassNames().isEmpty())
+        {
             sb.append(" permits ");
             List<String> names = permits.getPermittedClassNames();
-            for (int i = 0; i < names.size(); i++) {
+            for (int i = 0; i < names.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(formatClassName(names.get(i)));
             }
@@ -649,9 +787,12 @@ public class ClassDecompiler {
         writer.write(sb.toString());
     }
 
-    private PermittedSubclassesAttribute findPermittedSubclasses() {
-        for (Attribute a : classFile.getClassAttributes()) {
-            if (a instanceof PermittedSubclassesAttribute) {
+    private PermittedSubclassesAttribute findPermittedSubclasses()
+    {
+        for (Attribute a : classFile.getClassAttributes())
+        {
+            if (a instanceof PermittedSubclassesAttribute)
+            {
                 return (PermittedSubclassesAttribute) a;
             }
         }
@@ -664,14 +805,18 @@ public class ClassDecompiler {
      * {@code java/lang/Enum} - and no legal source declares an enum that extends another type, so such a
      * class is emitted as a plain class for the round trip to parse.
      */
-    private boolean isEnumProper() {
+    private boolean isEnumProper()
+    {
         String superName = classFile.getSuperClassName();
         return "java/lang/Enum".equals(superName);
     }
 
-    private RecordAttribute findRecordAttribute() {
-        for (Attribute a : classFile.getClassAttributes()) {
-            if (a instanceof RecordAttribute) {
+    private RecordAttribute findRecordAttribute()
+    {
+        for (Attribute a : classFile.getClassAttributes())
+        {
+            if (a instanceof RecordAttribute)
+            {
                 return (RecordAttribute) a;
             }
         }
@@ -683,22 +828,28 @@ public class ClassDecompiler {
      * decompiled {@code record} header is the canonical form: the component backing fields, the
      * canonical constructor, the component accessors, and the {@code ObjectMethods}-backed
      * {@code equals}/{@code hashCode}/{@code toString} (recognized by canonical signature + final, so
-     * user overrides — which are not final — are kept).
+     * user overrides - which are not final - are kept).
      */
-    private boolean isSuppressedRecordField(RecordAttribute record, FieldEntry field) {
-        if (record == null || Modifiers.isStatic(field.getAccess())) {
+    private boolean isSuppressedRecordField(RecordAttribute record, FieldEntry field)
+    {
+        if (record == null || Modifiers.isStatic(field.getAccess()))
+        {
             return false;
         }
-        for (String[] comp : record.getComponentNameAndDescriptors()) {
-            if (comp[0].equals(field.getName()) && comp[1].equals(field.getDesc())) {
+        for (String[] comp : record.getComponentNameAndDescriptors())
+        {
+            if (comp[0].equals(field.getName()) && comp[1].equals(field.getDesc()))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isSuppressedRecordMethod(RecordAttribute record, MethodEntry method) {
-        if (record == null) {
+    private boolean isSuppressedRecordMethod(RecordAttribute record, MethodEntry method)
+    {
+        if (record == null)
+        {
             return false;
         }
         String name = method.getName();
@@ -706,24 +857,30 @@ public class ClassDecompiler {
         List<String[]> comps = record.getComponentNameAndDescriptors();
 
         // Component accessor: `T name()`.
-        for (String[] comp : comps) {
-            if (comp[0].equals(name) && ("()" + comp[1]).equals(desc)) {
+        for (String[] comp : comps)
+        {
+            if (comp[0].equals(name) && ("()" + comp[1]).equals(desc))
+            {
                 return true;
             }
         }
         // Canonical constructor: parameter types equal the component types in order.
-        if ("<init>".equals(name)) {
+        if ("<init>".equals(name))
+        {
             StringBuilder canonical = new StringBuilder("(");
-            for (String[] comp : comps) {
+            for (String[] comp : comps)
+            {
                 canonical.append(comp[1]);
             }
             canonical.append(")V");
-            if (canonical.toString().equals(desc)) {
+            if (canonical.toString().equals(desc))
+            {
                 return true;
             }
         }
         // Auto-generated Object methods (final + canonical signature).
-        if (Modifiers.isFinal(method.getAccess())) {
+        if (Modifiers.isFinal(method.getAccess()))
+        {
             return ("toString".equals(name) && "()Ljava/lang/String;".equals(desc))
                     || ("hashCode".equals(name) && "()I".equals(desc))
                     || ("equals".equals(name) && "(Ljava/lang/Object;)Z".equals(desc));
@@ -731,7 +888,8 @@ public class ClassDecompiler {
         return false;
     }
 
-    private void emitField(IndentingWriter writer, FieldEntry field, ClinitHoist hoist) {
+    private void emitField(IndentingWriter writer, FieldEntry field, ClinitHoist hoist)
+    {
         int spanStart = writer.getCurrentLine();
         emitFieldAnnotations(writer, field);
 
@@ -752,10 +910,12 @@ public class ClassDecompiler {
         sb.append(field.getName());
 
         String initializer = hoist == null ? null : hoist.initializers.get(field.getName());
-        if (initializer == null) {
+        if (initializer == null)
+        {
             initializer = getConstantValue(field);
         }
-        if (initializer != null) {
+        if (initializer != null)
+        {
             sb.append(" = ").append(initializer);
         }
 
@@ -764,22 +924,28 @@ public class ClassDecompiler {
         recordFieldSpan(field.getName() + field.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
-    private SourceType getFieldType(FieldEntry field) {
+    private SourceType getFieldType(FieldEntry field)
+    {
         String signature = getSignature(field.getAttributes());
-        if (signature != null) {
+        if (signature != null)
+        {
             return typeRecoverer.recoverGenericType(signature);
         }
         return typeRecoverer.recoverType(field.getDesc());
     }
 
-    private String getSignature(List<Attribute> attributes) {
+    private String getSignature(List<Attribute> attributes)
+    {
         if (attributes == null) return null;
-        for (Attribute attr : attributes) {
-            if (attr instanceof SignatureAttribute) {
+        for (Attribute attr : attributes)
+        {
+            if (attr instanceof SignatureAttribute)
+            {
                 SignatureAttribute sigAttr = (SignatureAttribute) attr;
                 int sigIndex = sigAttr.getSignatureIndex();
                 Item<?> item = classFile.getConstPool().getItem(sigIndex);
-                if (item instanceof Utf8Item) {
+                if (item instanceof Utf8Item)
+                {
                     return ((Utf8Item) item).getValue();
                 }
             }
@@ -789,59 +955,76 @@ public class ClassDecompiler {
 
     /**
      * Extracts the constant value from a field's ConstantValue attribute if present.
-     *
      * @param field the field entry
      * @return the constant value as a string, or null if no constant value
      */
-    private String getConstantValue(FieldEntry field) {
+    private String getConstantValue(FieldEntry field)
+    {
         if (field.getAttributes() == null) return null;
 
-        for (Attribute attr : field.getAttributes()) {
-            if (attr instanceof ConstantValueAttribute) {
+        for (Attribute attr : field.getAttributes())
+        {
+            if (attr instanceof ConstantValueAttribute)
+            {
                 ConstantValueAttribute cva = (ConstantValueAttribute) attr;
                 int cpIndex = cva.getConstantValueIndex();
                 Item<?> item = classFile.getConstPool().getItem(cpIndex);
 
-                if (item instanceof IntegerItem) {
+                if (item instanceof IntegerItem)
+                {
                     IntegerItem intItem = (IntegerItem) item;
                     // Handle boolean type specially
-                    if ("Z".equals(field.getDesc())) {
+                    if ("Z".equals(field.getDesc()))
+                    {
                         return intItem.getValue() != 0 ? "true" : "false";
                     }
                     // Handle char type
-                    if ("C".equals(field.getDesc())) {
+                    if ("C".equals(field.getDesc()))
+                    {
                         char c = (char) intItem.getValue().intValue();
-                        if (c >= 32 && c < 127 && c != '\'' && c != '\\') {
+                        if (c >= 32 && c < 127 && c != '\'' && c != '\\')
+                        {
                             return "'" + c + "'";
                         }
                         return "'" + String.format("\\u%04x", (int) c) + "'";
                     }
                     return String.valueOf(intItem.getValue().intValue());
-                } else if (item instanceof LongItem) {
+                }
+                else if (item instanceof LongItem)
+                {
                     LongItem longItem = (LongItem) item;
                     return longItem.getValue() + "L";
-                } else if (item instanceof FloatItem) {
+                }
+                else if (item instanceof FloatItem)
+                {
                     FloatItem floatItem = (FloatItem) item;
                     float f = floatItem.getValue();
                     if (Float.isNaN(f)) return "Float.NaN";
                     if (f == Float.POSITIVE_INFINITY) return "Float.POSITIVE_INFINITY";
                     if (f == Float.NEGATIVE_INFINITY) return "Float.NEGATIVE_INFINITY";
                     return f + "f";
-                } else if (item instanceof DoubleItem) {
+                }
+                else if (item instanceof DoubleItem)
+                {
                     DoubleItem doubleItem = (DoubleItem) item;
                     double d = doubleItem.getValue();
                     if (Double.isNaN(d)) return "Double.NaN";
                     if (d == Double.POSITIVE_INFINITY) return "Double.POSITIVE_INFINITY";
                     if (d == Double.NEGATIVE_INFINITY) return "Double.NEGATIVE_INFINITY";
                     return String.valueOf(d);
-                } else if (item instanceof Utf8Item) {
+                }
+                else if (item instanceof Utf8Item)
+                {
                     Utf8Item utf8Item = (Utf8Item) item;
                     // String constant - escape special characters
                     return "\"" + escapeString(utf8Item.getValue()) + "\"";
-                } else if (item instanceof StringRefItem) {
+                }
+                else if (item instanceof StringRefItem)
+                {
                     StringRefItem strItem = (StringRefItem) item;
                     Utf8Item strUtf8 = (Utf8Item) classFile.getConstPool().getItem(strItem.getValue());
-                    if (strUtf8 != null) {
+                    if (strUtf8 != null)
+                    {
                         return "\"" + escapeString(strUtf8.getValue()) + "\"";
                     }
                 }
@@ -853,11 +1036,14 @@ public class ClassDecompiler {
     /**
      * Escapes special characters in a string for Java source output.
      */
-    private String escapeString(String s) {
+    private String escapeString(String s)
+    {
         if (s == null) return "";
         StringBuilder sb = new StringBuilder();
-        for (char c : s.toCharArray()) {
-            switch (c) {
+        for (char c : s.toCharArray())
+        {
+            switch (c)
+            {
                 case '\n':
                     sb.append("\\n");
                     break;
@@ -874,9 +1060,12 @@ public class ClassDecompiler {
                     sb.append("\\\"");
                     break;
                 default:
-                    if (c < 32 || c > 126) {
+                    if (c < 32 || c > 126)
+                    {
                         sb.append(String.format("\\u%04x", (int) c));
-                    } else {
+                    }
+                    else
+                    {
                         sb.append(c);
                     }
                     break;
@@ -888,32 +1077,35 @@ public class ClassDecompiler {
     /**
      * Applies baseline transforms (ControlFlowReducibility, DuplicateBlockMerging) to the IR method.
      * Used for static initializers and constructors where these transforms are known to work.
-     *
      * @param ir the IR method to transform
      */
-    private void applyBaselineTransforms(IRMethod ir) {
+    private void applyBaselineTransforms(IRMethod ir)
+    {
         reducibility.run(ir);
         duplicateMerging.run(ir);
     }
 
     /**
      * Applies additional transforms from the config to the IR method.
-     *
      * @param ir the IR method to transform
      */
-    private void applyAdditionalTransforms(IRMethod ir) {
-        for (IRTransform transform : decompilerConfig.getAdditionalTransforms()) {
+    private void applyAdditionalTransforms(IRMethod ir)
+    {
+        for (IRTransform transform : decompilerConfig.getAdditionalTransforms())
+        {
             transform.run(ir);
         }
     }
 
-    /** Lifts + recovers {@code <clinit>} to a fully-transformed AST body (no trailing return). Throws on failure. */
-    private BlockStmt recoverClinitBody(MethodEntry clinit) {
+    /**
+     * Lifts + recovers {@code <clinit>} to a fully-transformed AST body (no trailing return). Throws on failure.
+     */
+    private BlockStmt recoverClinitBody(MethodEntry clinit)
+    {
         IRMethod ir = ssa.lift(clinit);
         applyBaselineTransforms(ir);
         applyAdditionalTransforms(ir);
-        BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit,
-                decompilerConfig.getNameRecoveryStrategy());
+        BlockStmt body = MethodRecoverer.recoverMethod(ir, clinit, decompilerConfig.getNameRecoveryStrategy());
         astSimplifier.transform(body);
         arrayInitReconstructor.transform(body);
         patternInstanceOf.transform(body);
@@ -933,8 +1125,11 @@ public class ClassDecompiler {
         return body;
     }
 
-    /** Emits a {@code static { ... }} block from an already-recovered body. */
-    private void emitStaticInitializerBlock(IndentingWriter writer, BlockStmt body, String key) {
+    /**
+     * Emits a {@code static { ... }} block from an already-recovered body.
+     */
+    private void emitStaticInitializerBlock(IndentingWriter writer, BlockStmt body, String key)
+    {
         int spanStart = writer.getCurrentLine();
         writer.writeLine("static {");
         writer.indent();
@@ -944,13 +1139,17 @@ public class ClassDecompiler {
         recordMethodSpan(key, spanStart, writer.getCurrentLine() - 1);
     }
 
-    private void emitStaticInitializer(IndentingWriter writer, MethodEntry clinit) {
+    private void emitStaticInitializer(IndentingWriter writer, MethodEntry clinit)
+    {
         int spanStart = writer.getCurrentLine();
         writer.writeLine("static {");
         writer.indent();
-        try {
+        try
+        {
             emitBlockContents(writer, recoverClinitBody(clinit), clinit.getName() + clinit.getDesc());
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             writer.writeLine("// Failed to decompile static initializer: " + e.getMessage());
         }
         writer.dedent();
@@ -958,19 +1157,24 @@ public class ClassDecompiler {
         recordMethodSpan(clinit.getName() + clinit.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
-    /** A {@code <clinit>}'s leading static-field assignments hoisted into field initializers + the leftover block. */
-    private static final class ClinitHoist {
+    /**
+     * A {@code <clinit>}'s leading static-field assignments hoisted into field initializers + the leftover block.
+     */
+    private static final class ClinitHoist
+    {
         final Map<String, String> initializers;   // field name -> rendered initializer source
         final BlockStmt remainingBody;             // <clinit> body minus the hoisted prefix
         final String clinitKey;
 
-        ClinitHoist(Map<String, String> initializers, BlockStmt remainingBody, String clinitKey) {
+        ClinitHoist(Map<String, String> initializers, BlockStmt remainingBody, String clinitKey)
+        {
             this.initializers = initializers;
             this.remainingBody = remainingBody;
             this.clinitKey = clinitKey;
         }
 
-        boolean hasRemaining() {
+        boolean hasRemaining()
+        {
             return remainingBody != null && !remainingBody.getStatements().isEmpty();
         }
     }
@@ -984,32 +1188,41 @@ public class ClassDecompiler {
      * {@code <clinit>} execution order exactly. Returns null if there is no {@code <clinit>} or recovery fails, so the
      * caller falls back to emitting the whole block.
      */
-    private ClinitHoist computeClinitHoist(List<FieldEntry> emittedFields) {
+    private ClinitHoist computeClinitHoist(List<FieldEntry> emittedFields)
+    {
         MethodEntry clinit = findMethod("<clinit>");
-        if (clinit == null || clinit.getCodeAttribute() == null) {
+        if (clinit == null || clinit.getCodeAttribute() == null)
+        {
             return null;
         }
         BlockStmt body;
-        try {
+        try
+        {
             body = recoverClinitBody(clinit);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return null;
         }
         String key = clinit.getName() + clinit.getDesc();
 
         Map<String, Integer> declIndex = new HashMap<>();
-        for (int i = 0; i < emittedFields.size(); i++) {
+        for (int i = 0; i < emittedFields.size(); i++)
+        {
             FieldEntry f = emittedFields.get(i);
-            if (Modifiers.isStatic(f.getAccess())) {
+            if (Modifiers.isStatic(f.getAccess()))
+            {
                 declIndex.putIfAbsent(f.getName(), i);
             }
         }
 
         List<Statement> stmts = body.getStatements();
         Map<String, Integer> assignCount = new HashMap<>();
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             String name = staticFieldAssignmentName(s);
-            if (name != null) {
+            if (name != null)
+            {
                 assignCount.merge(name, 1, Integer::sum);
             }
         }
@@ -1017,7 +1230,8 @@ public class ClassDecompiler {
         Map<String, String> hoisted = new LinkedHashMap<>();
         int maxIdx = -1;
         int prefixEnd = 0;
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             String name = staticFieldAssignmentName(s);
             if (name == null) break;                              // not an own-static assignment - stop the prefix
             Integer idx = declIndex.get(name);
@@ -1036,8 +1250,11 @@ public class ClassDecompiler {
         return new ClinitHoist(hoisted, remaining, key);
     }
 
-    /** The field name if {@code s} is {@code ThisClass.staticField = <expr>} (simple {@code =}), else null. */
-    private String staticFieldAssignmentName(Statement s) {
+    /**
+     * The field name if {@code s} is {@code ThisClass.staticField = <expr>} (simple {@code =}), else null.
+     */
+    private String staticFieldAssignmentName(Statement s)
+    {
         if (!(s instanceof ExprStmt)) return null;
         Expression e = ((ExprStmt) s).getExpression();
         if (!(e instanceof BinaryExpr)) return null;
@@ -1048,10 +1265,14 @@ public class ClassDecompiler {
         return fa.getFieldName();
     }
 
-    /** Whether the AST subtree references any local variable (a {@link VarRefExpr}). */
-    private static boolean referencesLocal(ASTNode node) {
+    /**
+     * Whether the AST subtree references any local variable (a {@link VarRefExpr}).
+     */
+    private static boolean referencesLocal(ASTNode node)
+    {
         if (node instanceof VarRefExpr) return true;
-        for (ASTNode child : node.getChildren()) {
+        for (ASTNode child : node.getChildren())
+        {
             if (referencesLocal(child)) return true;
         }
         return false;
@@ -1061,7 +1282,8 @@ public class ClassDecompiler {
      * Removes a trailing void return statement from a block.
      * Used for static initializers where return statements are invalid in Java source.
      */
-    private void removeTrailingReturn(BlockStmt body) {
+    private void removeTrailingReturn(BlockStmt body)
+    {
         removeTrailingVoidReturn(body.getStatements());
     }
 
@@ -1072,57 +1294,77 @@ public class ClassDecompiler {
      * recompiled bytecode routes a try/catch's normal exit through a shared trailing return that recovery
      * then surfaces as an explicit `return;` inside the enclosing block.
      */
-    private void removeTrailingVoidReturn(List<Statement> stmts) {
-        if (stmts.isEmpty()) {
+    private void removeTrailingVoidReturn(List<Statement> stmts)
+    {
+        if (stmts.isEmpty())
+        {
             return;
         }
         Statement last = stmts.get(stmts.size() - 1);
-        if (last instanceof ReturnStmt && ((ReturnStmt) last).getValue() == null) {
+        if (last instanceof ReturnStmt && ((ReturnStmt) last).getValue() == null)
+        {
             stmts.remove(stmts.size() - 1);
             // The statement now in last position (e.g. a trailing if) is itself in tail position; re-process so
             // its own redundant trailing void return is dropped too.
             removeTrailingVoidReturn(stmts);
-        } else if (last instanceof IfStmt) {
+        }
+        else if (last instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) last;
-            if (ifStmt.getThenBranch() instanceof BlockStmt) {
+            if (ifStmt.getThenBranch() instanceof BlockStmt)
+            {
                 removeTrailingVoidReturn(((BlockStmt) ifStmt.getThenBranch()).getStatements());
             }
-            if (ifStmt.getElseBranch() instanceof BlockStmt) {
+            if (ifStmt.getElseBranch() instanceof BlockStmt)
+            {
                 removeTrailingVoidReturn(((BlockStmt) ifStmt.getElseBranch()).getStatements());
             }
-        } else if (last instanceof SynchronizedStmt) {
+        }
+        else if (last instanceof SynchronizedStmt)
+        {
             // A synchronized block in tail position: its body's end IS the method's end (monitor release
             // then implicit return), so a trailing `return;` inside it is the same redundant surfacing.
             SynchronizedStmt sync = (SynchronizedStmt) last;
-            if (sync.getBody() instanceof BlockStmt) {
+            if (sync.getBody() instanceof BlockStmt)
+            {
                 removeTrailingVoidReturn(((BlockStmt) sync.getBody()).getStatements());
             }
-        } else if (last instanceof TryCatchStmt) {
+        }
+        else if (last instanceof TryCatchStmt)
+        {
             // A trailing try/catch's arms are themselves in tail position: a void return there falls out of
             // the method the same as falling off the arm (for a finally, the finally runs either way).
             TryCatchStmt tryCatch = (TryCatchStmt) last;
-            if (tryCatch.getTryBlock() instanceof BlockStmt) {
+            if (tryCatch.getTryBlock() instanceof BlockStmt)
+            {
                 removeTrailingVoidReturn(((BlockStmt) tryCatch.getTryBlock()).getStatements());
             }
-            for (CatchClause clause : tryCatch.getCatches()) {
-                if (clause.body() instanceof BlockStmt) {
+            for (CatchClause clause : tryCatch.getCatches())
+            {
+                if (clause.body() instanceof BlockStmt)
+                {
                     removeTrailingVoidReturn(((BlockStmt) clause.body()).getStatements());
                 }
             }
         }
     }
 
-    private void removeRedundantSuper(BlockStmt body) {
+    private void removeRedundantSuper(BlockStmt body)
+    {
         List<Statement> stmts = body.getStatements();
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
-            if (stmt instanceof ExprStmt) {
+            if (stmt instanceof ExprStmt)
+            {
                 Expression expr = ((ExprStmt) stmt).getExpression();
-                if (expr instanceof MethodCallExpr) {
+                if (expr instanceof MethodCallExpr)
+                {
                     MethodCallExpr call = (MethodCallExpr) expr;
                     if ("super".equals(call.getMethodName()) &&
                         call.getReceiver() == null &&
-                        call.getArguments().isEmpty()) {
+                        call.getArguments().isEmpty())
+                        {
                         stmts.remove(i);
                         break;
                     }
@@ -1131,7 +1373,8 @@ public class ClassDecompiler {
         }
     }
 
-    private void emitConstructor(IndentingWriter writer, MethodEntry ctor) {
+    private void emitConstructor(IndentingWriter writer, MethodEntry ctor)
+    {
         int spanStart = writer.getCurrentLine();
         emitMethodAnnotations(writer, ctor);
 
@@ -1160,7 +1403,8 @@ public class ClassDecompiler {
 
         writer.write(sb.toString());
 
-        if (ctor.getCodeAttribute() == null) {
+        if (ctor.getCodeAttribute() == null)
+        {
             writer.writeLine(";");
             recordMethodSpan(ctor.getName() + ctor.getDesc(), spanStart, writer.getCurrentLine() - 1);
             return;
@@ -1169,12 +1413,12 @@ public class ClassDecompiler {
         writer.writeLine(" {");
         writer.indent();
 
-        try {
+        try
+        {
             IRMethod ir = ssa.lift(ctor);
             applyBaselineTransforms(ir);
             applyAdditionalTransforms(ir);
-            BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor,
-                    decompilerConfig.getNameRecoveryStrategy());
+            BlockStmt body = MethodRecoverer.recoverMethod(ir, ctor, decompilerConfig.getNameRecoveryStrategy());
             astSimplifier.transform(body);
             patternInstanceOf.transform(body);
             singleUseInliner.transform(body);
@@ -1205,13 +1449,16 @@ public class ClassDecompiler {
             scopeEscapeHoister.setNonLocalName(nonLocalNamePredicate(ctor));
             scopeEscapeHoister.transform(body);
             redundantAssignmentEliminator.transform(body);
-            if (whileToForCanonicalizer.transform(body)) {
+            if (whileToForCanonicalizer.transform(body))
+            {
                 forLoopCounterFolder.transform(body);
             }
             removeRedundantSuper(body);
             removeTrailingReturn(body);
             emitBlockContents(writer, body, ctor.getName() + ctor.getDesc(), parameterNamesOf(ctor));
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             writer.writeLine("// Failed to decompile constructor: " + e.getMessage());
         }
 
@@ -1220,7 +1467,8 @@ public class ClassDecompiler {
         recordMethodSpan(ctor.getName() + ctor.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
-    private void emitMethod(IndentingWriter writer, MethodEntry method) {
+    private void emitMethod(IndentingWriter writer, MethodEntry method)
+    {
         int spanStart = writer.getCurrentLine();
         emitMethodAnnotations(writer, method);
 
@@ -1238,7 +1486,8 @@ public class ClassDecompiler {
         // keyword is mandatory - without it the source declares an abstract method with a body.
         if (Modifiers.isInterface(classAccess) && !Modifiers.isStatic(access)
                 && !Modifiers.isAbstract(access) && !Modifiers.isPrivate(access)
-                && method.getCodeAttribute() != null) {
+                && method.getCodeAttribute() != null)
+        {
             sb.append("default ");
         }
         if (Modifiers.isFinal(access)) sb.append("final ");
@@ -1250,9 +1499,11 @@ public class ClassDecompiler {
         String signature = getSignature(method.getAttributes());
         String sigOrDesc = signature != null ? signature : desc;
 
-        if (signature != null) {
+        if (signature != null)
+        {
             String formal = typeRecoverer.recoverFormalTypeParameters(signature);
-            if (!formal.isEmpty()) {
+            if (!formal.isEmpty())
+            {
                 sb.append(formal).append(" ");
             }
         }
@@ -1267,14 +1518,16 @@ public class ClassDecompiler {
         sb.append(")");
 
         String throwsClause = buildThrowsClause(method.getAttributes());
-        if (!throwsClause.isEmpty()) {
+        if (!throwsClause.isEmpty())
+        {
             sb.append(" throws ").append(throwsClause);
         }
 
         writer.write(sb.toString());
 
         // Abstract or native methods have no body
-        if (Modifiers.isAbstract(access) || Modifiers.isNative(access) || method.getCodeAttribute() == null) {
+        if (Modifiers.isAbstract(access) || Modifiers.isNative(access) || method.getCodeAttribute() == null)
+        {
             writer.writeLine(";");
             recordMethodSpan(method.getName() + method.getDesc(), spanStart, writer.getCurrentLine() - 1);
             return;
@@ -1283,14 +1536,14 @@ public class ClassDecompiler {
         writer.writeLine(" {");
         writer.indent();
 
-        try {
+        try
+        {
             IRMethod ir = ssa.lift(method);
             // NOTE: Baseline transforms (reducibility, duplicateMerging) are NOT applied
             // to regular methods as they can cause issues with complex control flow.
             // Only additional transforms from config are applied.
             applyAdditionalTransforms(ir);
-            BlockStmt body = MethodRecoverer.recoverMethod(ir, method,
-                    decompilerConfig.getNameRecoveryStrategy());
+            BlockStmt body = MethodRecoverer.recoverMethod(ir, method, decompilerConfig.getNameRecoveryStrategy());
             dumpStage(method.getName(), method.getDesc(), body, "00-raw");
             astSimplifier.transform(body);
             dumpStage(method.getName(), method.getDesc(), body, "01-simplify");
@@ -1347,13 +1600,16 @@ public class ClassDecompiler {
             // structurer commits to while/for while emitting - before simplification settles the body and the
             // increment reaches its canonical trailing `i++` - so a loop foldable only afterward is caught here.
             // Runs on the settled body, then the counter-folder scopes the freshly-exposed init into the for.
-            if (whileToForCanonicalizer.transform(body)) {
+            if (whileToForCanonicalizer.transform(body))
+            {
                 forLoopCounterFolder.transform(body);
             }
             dumpStage(method.getName(), method.getDesc(), body, "13-final");
             removeTrailingReturn(body);
             emitBlockContents(writer, body, method.getName() + method.getDesc(), parameterNamesOf(method));
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             writer.writeLine("// Failed to decompile: " + e.getMessage());
         }
 
@@ -1362,15 +1618,17 @@ public class ClassDecompiler {
         recordMethodSpan(method.getName() + method.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
-
-    private static void dumpStage(String methodName, String descriptor, BlockStmt body, String stage) {
-        if (System.getProperty("yabr.parents") != null) {
+    private static void dumpStage(String methodName, String descriptor, BlockStmt body, String stage)
+    {
+        if (System.getProperty("yabr.parents") != null)
+        {
             reportDetachedParents(body, methodName + " " + stage);
         }
         String want = System.getProperty("yabr.dump");
         // Match by bare name, or by name+descriptor so ONE overload can be isolated - a bare name matches
         // every overload and interleaves their stages into an unreadable (and misleading) mix.
-        if (want == null || !(want.equals(methodName) || want.equals(methodName + descriptor))) {
+        if (want == null || !(want.equals(methodName) || want.equals(methodName + descriptor)))
+        {
             return;
         }
         System.err.println("[stage] " + stage);
@@ -1382,93 +1640,119 @@ public class ClassDecompiler {
      * the tree; the parent pointers are a cache a transform has to maintain when it moves a node, and a
      * transform that reasons about scope by walking parents silently sees the pre-move tree when it does not.
      */
-    private static void reportDetachedParents(ASTNode root, String stage) {
+    private static void reportDetachedParents(ASTNode root, String stage)
+    {
         java.util.List<String> broken = new java.util.ArrayList<>();
         root.walk(node -> {
-            for (ASTNode child : node.getChildren()) {
-                if (child != null && child.getParent() != node) {
+            for (ASTNode child : node.getChildren())
+            {
+                if (child != null && child.getParent() != node)
+                {
                     broken.add(child.getClass().getSimpleName() + " under " + node.getClass().getSimpleName()
                             + " points at "
                             + (child.getParent() == null ? "null" : child.getParent().getClass().getSimpleName()));
                 }
             }
         });
-        if (!broken.isEmpty()) {
+        if (!broken.isEmpty())
+        {
             System.err.println("[detached-parent] " + stage + " x" + broken.size() + ": " + broken);
         }
     }
 
-    private void recordMethodSpan(String methodKey, int startLine, int endLine) {
-        if (methodSpansCollector != null) {
+    private void recordMethodSpan(String methodKey, int startLine, int endLine)
+    {
+        if (methodSpansCollector != null)
+        {
             methodSpansCollector.put(methodKey, new DecompileResult.MethodSpan(startLine, endLine));
         }
     }
 
-    private void recordFieldSpan(String fieldKey, int startLine, int endLine) {
-        if (fieldSpansCollector != null) {
+    private void recordFieldSpan(String fieldKey, int startLine, int endLine)
+    {
+        if (fieldSpansCollector != null)
+        {
             fieldSpansCollector.put(fieldKey, new DecompileResult.MemberSpan(startLine, endLine));
         }
     }
 
-    private void recordClassSpan(int startLine, int endLine) {
-        if (fieldSpansCollector != null) {
+    private void recordClassSpan(int startLine, int endLine)
+    {
+        if (fieldSpansCollector != null)
+        {
             classSpanCollector = new DecompileResult.MemberSpan(startLine, endLine);
         }
     }
 
-    private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey) {
+    private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey)
+    {
         emitBlockContents(writer, block, methodKey, java.util.Collections.emptySet());
     }
 
-    private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey,
-                                   java.util.Set<String> parameterNames) {
+    private void emitBlockContents(IndentingWriter writer, BlockStmt block, String methodKey, java.util.Set<String> parameterNames)
+    {
         SourceEmitter emitter = new SourceEmitter(writer, emitterConfig);
         emitter.setCurrentClassName(classFile.getClassName());
         emitter.setParameterNames(parameterNames);
-        if (lineMapsCollector != null && methodKey != null) {
+        if (lineMapsCollector != null && methodKey != null)
+        {
             // Statements inside an inlined lambda are reported under the lambda's own impl-method key,
-            // so each method (including synthetic lambda$ methods) gets its own offset→line map.
+            // so each method (including synthetic lambda$ methods) gets its own offset->line map.
             emitter.setLineMapSink(methodKey, (key, stmt, line) ->
                     lineMapsCollector.computeIfAbsent(key, k -> new TreeMap<>())
                             .put(stmt.getLocation().bytecodeOffset(), line));
         }
-        for (Statement stmt : block.getStatements()) {
+        for (Statement stmt : block.getStatements())
+        {
             stmt.accept(emitter);
         }
         usedTypes.addAll(emitter.getUsedTypes());
     }
 
-    private MethodEntry findMethod(String name) {
-        for (MethodEntry method : classFile.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(String name)
+    {
+        for (MethodEntry method : classFile.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
         return null;
     }
 
-    private String formatClassName(String internalName) {
+    private String formatClassName(String internalName)
+    {
         if (internalName == null) return "";
         usedTypes.add(internalName);
-        if (emitterConfig.isUseFullyQualifiedNames()) {
+        if (emitterConfig.isUseFullyQualifiedNames())
+        {
             return ClassNameUtil.toSourceName(internalName);
         }
         return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
     }
 
-    /** Builds the {@code throws} clause from a member's Exceptions attribute (e.g. "IOException, SQLException"), or "". */
-    private String buildThrowsClause(List<Attribute> attributes) {
-        if (attributes == null) {
+    /**
+     * Builds the {@code throws} clause from a member's Exceptions attribute (e.g. "IOException, SQLException"), or "".
+     */
+    private String buildThrowsClause(List<Attribute> attributes)
+    {
+        if (attributes == null)
+        {
             return "";
         }
-        for (Attribute a : attributes) {
-            if (a instanceof ExceptionsAttribute) {
+        for (Attribute a : attributes)
+        {
+            if (a instanceof ExceptionsAttribute)
+            {
                 List<Integer> indices = ((ExceptionsAttribute) a).getExceptionIndexTable();
-                if (indices == null || indices.isEmpty()) {
+                if (indices == null || indices.isEmpty())
+                {
                     return "";
                 }
                 List<String> names = new ArrayList<>();
-                for (int idx : indices) {
+                for (int idx : indices)
+                {
                     names.add(trackAndFormatType(new ReferenceSourceType(resolveClassName(idx))));
                 }
                 return String.join(", ", names);
@@ -1477,21 +1761,28 @@ public class ClassDecompiler {
         return "";
     }
 
-    private String resolveClassName(int classIndex) {
-        try {
+    private String resolveClassName(int classIndex)
+    {
+        try
+        {
             ClassRefItem classRef = (ClassRefItem) classFile.getConstPool().getItem(classIndex);
             return classRef.getClassName();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return "Unknown";
         }
     }
 
-    private String extractReturnType(String desc, boolean isSignature) {
+    private String extractReturnType(String desc, boolean isSignature)
+    {
         String workDesc = desc;
-        if (isSignature && workDesc.startsWith("<")) {
+        if (isSignature && workDesc.startsWith("<"))
+        {
             int depth = 1;
             int i = 1;
-            while (i < workDesc.length() && depth > 0) {
+            while (i < workDesc.length() && depth > 0)
+            {
                 char c = workDesc.charAt(i);
                 if (c == '<') depth++;
                 else if (c == '>') depth--;
@@ -1504,23 +1795,28 @@ public class ClassDecompiler {
         if (parenEnd < 0) return "void";
         String returnDesc = workDesc.substring(parenEnd + 1);
 
-        if (returnDesc.startsWith("^")) {
+        if (returnDesc.startsWith("^"))
+        {
             int semi = returnDesc.indexOf(';');
             if (semi > 0) returnDesc = returnDesc.substring(semi + 1);
         }
 
-        if (isSignature) {
+        if (isSignature)
+        {
             return trackAndFormatType(typeRecoverer.recoverGenericType(returnDesc));
         }
         return trackAndFormatType(typeRecoverer.recoverType(returnDesc));
     }
 
-    private int findClosingParen(String s) {
+    private int findClosingParen(String s)
+    {
         int depth = 0;
-        for (int i = 0; i < s.length(); i++) {
+        for (int i = 0; i < s.length(); i++)
+        {
             char c = s.charAt(i);
             if (c == '(') depth++;
-            else if (c == ')') {
+            else if (c == ')')
+            {
                 depth--;
                 if (depth == 0) return i;
             }
@@ -1528,22 +1824,29 @@ public class ClassDecompiler {
         return -1;
     }
 
-    private String trackAndFormatType(SourceType type) {
+    private String trackAndFormatType(SourceType type)
+    {
         recordTypeFromSourceType(type);
         return type.toJavaSource();
     }
 
-    private void recordTypeFromSourceType(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private void recordTypeFromSourceType(SourceType type)
+    {
+        if (type instanceof ReferenceSourceType)
+        {
             ReferenceSourceType refType = (ReferenceSourceType) type;
             String internalName = refType.getInternalName();
-            if (internalName.contains("/")) {
+            if (internalName.contains("/"))
+            {
                 usedTypes.add(internalName);
             }
-            for (SourceType typeArg : refType.getTypeArguments()) {
+            for (SourceType typeArg : refType.getTypeArguments())
+            {
                 recordTypeFromSourceType(typeArg);
             }
-        } else if (type instanceof ArraySourceType) {
+        }
+        else if (type instanceof ArraySourceType)
+        {
             ArraySourceType arrType = (ArraySourceType) type;
             recordTypeFromSourceType(arrType.getElementType());
         }
@@ -1553,25 +1856,29 @@ public class ClassDecompiler {
      * Maps a method's local slots to their LocalVariableTable names, keeping only slots whose every entry
      * agrees on a single name. Lets the signature show real parameter names that match the recovered body.
      */
-    private Map<Integer, String> unambiguousLvtNames(MethodEntry method) {
+    private Map<Integer, String> unambiguousLvtNames(MethodEntry method)
+    {
         // Delegates to the one live LVT-reading implementation. A parameter's name is the entry
         // covering pc 0 for its slot - exact even when the slot is later reused - with the
         // whole-slot unambiguous name as fallback; the strategy gate is NameRecoverer's own, so the
         // signature line and the body can never disagree about what the strategy allows.
         Map<Integer, String> result = new HashMap<>();
-        if (method.getCodeAttribute() == null) {
+        if (method.getCodeAttribute() == null)
+        {
             return result;
         }
         NameRecoverer names =
-                new NameRecoverer(
-                        null, method, decompilerConfig.getNameRecoveryStrategy());
+                new NameRecoverer(null, method, decompilerConfig.getNameRecoveryStrategy());
         int maxLocals = method.getCodeAttribute().getMaxLocals();
-        for (int slot = 0; slot < maxLocals; slot++) {
+        for (int slot = 0; slot < maxLocals; slot++)
+        {
             String name = names.debugNameAt(slot, 0);
-            if (name == null) {
+            if (name == null)
+            {
                 name = names.unambiguousDebugName(slot);
             }
-            if (name != null) {
+            if (name != null)
+            {
                 result.put(slot, name);
             }
         }
@@ -1584,7 +1891,8 @@ public class ClassDecompiler {
      * lowers as an implicit field store). Feeds the hoister's missing-declaration net so it never
      * manufactures a local that would shadow one of these.
      */
-    private java.util.function.Predicate<String> nonLocalNamePredicate(MethodEntry method) {
+    private java.util.function.Predicate<String> nonLocalNamePredicate(MethodEntry method)
+    {
         java.util.Set<String> params = parameterNamesOf(method);
         ClassPool pool = classFile.getClassPool() != null ? classFile.getClassPool() : ClassPool.getDefault();
         TypeResolver fields =
@@ -1596,20 +1904,25 @@ public class ClassDecompiler {
      * The parameter names as the signature line renders them: the unambiguous LVT name per slot with the
      * positional {@code argN} fallback.
      */
-    private java.util.Set<String> parameterNamesOf(MethodEntry method) {
+    private java.util.Set<String> parameterNamesOf(MethodEntry method)
+    {
         java.util.Set<String> names = new java.util.HashSet<>();
         Map<Integer, String> slotNames = unambiguousLvtNames(method);
         String desc = method.getDesc();
         int slot = Modifiers.isStatic(method.getAccess()) ? 0 : 1;
         int i = desc.indexOf('(') + 1;
         int j = 0;
-        while (i < desc.length() && desc.charAt(i) != ')') {
+        while (i < desc.length() && desc.charAt(i) != ')')
+        {
             int start = i;
             while (desc.charAt(i) == '[') i++;
             char c = desc.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 i = desc.indexOf(';', i) + 1;
-            } else {
+            }
+            else
+            {
                 i++;
             }
             String name = slotNames.get(slot);
@@ -1620,13 +1933,15 @@ public class ClassDecompiler {
         return names;
     }
 
-    private String formatParameters(String desc, boolean isSignature, boolean varargs, boolean isStatic,
-                                    Map<Integer, String> slotNames) {
+    private String formatParameters(String desc, boolean isSignature, boolean varargs, boolean isStatic, Map<Integer, String> slotNames)
+    {
         String workDesc = desc;
-        if (isSignature && workDesc.startsWith("<")) {
+        if (isSignature && workDesc.startsWith("<"))
+        {
             int depth = 1;
             int idx = 1;
-            while (idx < workDesc.length() && depth > 0) {
+            while (idx < workDesc.length() && depth > 0)
+            {
                 char c = workDesc.charAt(idx);
                 if (c == '<') depth++;
                 else if (c == '>') depth--;
@@ -1645,33 +1960,43 @@ public class ClassDecompiler {
         List<String> paramTypes = new ArrayList<>();
         List<Integer> paramWidths = new ArrayList<>();
         int i = 0;
-        while (i < params.length()) {
+        while (i < params.length())
+        {
             int start = i;
-            while (i < params.length() && params.charAt(i) == '[') {
+            while (i < params.length() && params.charAt(i) == '[')
+            {
                 i++;
             }
             if (i >= params.length()) break;
 
             char c = params.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 int end = findTypeEnd(params, i);
                 if (end < 0) break;
                 String typeDesc = params.substring(start, end + 1);
-                if (isSignature) {
+                if (isSignature)
+                {
                     paramTypes.add(trackAndFormatType(typeRecoverer.recoverGenericType(typeDesc)));
-                } else {
+                }
+                else
+                {
                     paramTypes.add(trackAndFormatType(typeRecoverer.recoverType(typeDesc)));
                 }
                 paramWidths.add(1);
                 i = end + 1;
-            } else if (c == 'T') {
+            }
+            else if (c == 'T')
+            {
                 int end = params.indexOf(';', i);
                 if (end < 0) break;
                 String typeVar = params.substring(i + 1, end);
                 paramTypes.add(typeVar);
                 paramWidths.add(1);
                 i = end + 1;
-            } else {
+            }
+            else
+            {
                 String typeDesc = params.substring(start, i + 1);
                 paramTypes.add(trackAndFormatType(typeRecoverer.recoverType(typeDesc)));
                 boolean isArray = i > start;
@@ -1682,10 +2007,12 @@ public class ClassDecompiler {
 
         StringBuilder sb = new StringBuilder();
         int slot = isStatic ? 0 : 1;
-        for (int j = 0; j < paramTypes.size(); j++) {
+        for (int j = 0; j < paramTypes.size(); j++)
+        {
             if (j > 0) sb.append(", ");
             String type = paramTypes.get(j);
-            if (varargs && j == paramTypes.size() - 1 && type.endsWith("[]")) {
+            if (varargs && j == paramTypes.size() - 1 && type.endsWith("[]"))
+            {
                 type = type.substring(0, type.length() - 2) + "...";
             }
             sb.append(type).append(' ');
@@ -1696,9 +2023,11 @@ public class ClassDecompiler {
         return sb.toString();
     }
 
-    private int findTypeEnd(String s, int start) {
+    private int findTypeEnd(String s, int start)
+    {
         int depth = 0;
-        for (int i = start; i < s.length(); i++) {
+        for (int i = start; i < s.length(); i++)
+        {
             char c = s.charAt(i);
             if (c == '<') depth++;
             else if (c == '>') depth--;
@@ -1714,7 +2043,8 @@ public class ClassDecompiler {
      * recompiled generic signature can yield (its package parses to {@code thisClassName}). Unqualified names
      * (no package) are never valid imports and are dropped.
      */
-    private void emitImports(IndentingWriter writer, String thisClassName) {
+    private void emitImports(IndentingWriter writer, String thisClassName)
+    {
         String thisPackage = getPackageName(thisClassName);
 
         List<String> imports = usedTypes.stream()
@@ -1730,22 +2060,26 @@ public class ClassDecompiler {
                 .sorted()
                 .collect(java.util.stream.Collectors.toList());
 
-        if (!imports.isEmpty()) {
-            for (String imp : imports) {
+        if (!imports.isEmpty())
+        {
+            for (String imp : imports)
+            {
                 writer.writeLine("import " + imp + ";");
             }
             writer.newLine();
         }
     }
 
-    private boolean isInnerClassOf(String className, String outerClassName) {
+    private boolean isInnerClassOf(String className, String outerClassName)
+    {
         return className.startsWith(outerClassName + "$");
     }
 
     /**
      * Extracts the package name from an internal class name.
      */
-    private String getPackageName(String internalName) {
+    private String getPackageName(String internalName)
+    {
         if (internalName == null) return "";
         return ClassNameUtil.getPackageName(internalName);
     }
@@ -1753,50 +2087,64 @@ public class ClassDecompiler {
     /**
      * Checks if a class is in the java.lang package (implicitly imported).
      */
-    private boolean isJavaLangClass(String internalName) {
-        if (!internalName.startsWith("java/lang/")) {
+    private boolean isJavaLangClass(String internalName)
+    {
+        if (!internalName.startsWith("java/lang/"))
+        {
             return false;
         }
         String afterLang = internalName.substring("java/lang/".length());
         return !afterLang.contains("/");
     }
 
-    private boolean isInternalJdkClass(String internalName) {
+    private boolean isInternalJdkClass(String internalName)
+    {
         return internalName.startsWith("java/lang/invoke/") || internalName.startsWith("sun/") || internalName.startsWith("jdk/internal/");
     }
 
-    private boolean isSyntheticLambdaMethod(String methodName) {
+    private boolean isSyntheticLambdaMethod(String methodName)
+    {
         return methodName.startsWith("lambda$");
     }
 
     /**
-     * Convenience method to decompile a ClassFile to a string.
+     * Decompiles a class with the default configuration.
+     * @param classFile the class to decompile
+     * @return the Java source text
      */
-    public static String decompile(ClassFile classFile) {
+    public static String decompile(ClassFile classFile)
+    {
         return new ClassDecompiler(classFile).decompile();
     }
 
     /**
-     * Convenience method to decompile a ClassFile with custom config.
+     * Decompiles a class with a custom emitter configuration.
+     * @param classFile the class to decompile
+     * @param config the emitter configuration
+     * @return the Java source text
      */
-    public static String decompile(ClassFile classFile, SourceEmitterConfig config) {
+    public static String decompile(ClassFile classFile, SourceEmitterConfig config)
+    {
         return new ClassDecompiler(classFile, config).decompile();
     }
 
-    // ========== Annotation Support ==========
+    // Annotation Support
 
     /**
      * Emits annotations for a class from its attributes.
      */
-    private void emitClassAnnotations(IndentingWriter writer) {
+    private void emitClassAnnotations(IndentingWriter writer)
+    {
         emitAnnotationsFromAttributes(writer, classFile.getClassAttributes());
     }
 
     /**
      * Emits annotations for a field.
      */
-    private void emitFieldAnnotations(IndentingWriter writer, FieldEntry field) {
-        if (field.getAttributes() != null) {
+    private void emitFieldAnnotations(IndentingWriter writer, FieldEntry field)
+    {
+        if (field.getAttributes() != null)
+        {
             emitAnnotationsFromAttributes(writer, field.getAttributes());
         }
     }
@@ -1804,8 +2152,10 @@ public class ClassDecompiler {
     /**
      * Emits annotations for a method or constructor.
      */
-    private void emitMethodAnnotations(IndentingWriter writer, MethodEntry method) {
-        if (method.getAttributes() != null) {
+    private void emitMethodAnnotations(IndentingWriter writer, MethodEntry method)
+    {
+        if (method.getAttributes() != null)
+        {
             emitAnnotationsFromAttributes(writer, method.getAttributes());
         }
     }
@@ -1813,18 +2163,25 @@ public class ClassDecompiler {
     /**
      * Emits annotations from a list of attributes.
      */
-    private void emitAnnotationsFromAttributes(IndentingWriter writer, List<Attribute> attributes) {
+    private void emitAnnotationsFromAttributes(IndentingWriter writer, List<Attribute> attributes)
+    {
         if (attributes == null) return;
 
-        for (Attribute attr : attributes) {
-            if (attr instanceof RuntimeInvisibleAnnotationsAttribute) {
+        for (Attribute attr : attributes)
+        {
+            if (attr instanceof RuntimeInvisibleAnnotationsAttribute)
+            {
                 RuntimeInvisibleAnnotationsAttribute annAttr = (RuntimeInvisibleAnnotationsAttribute) attr;
-                for (Annotation ann : annAttr.getAnnotations()) {
+                for (Annotation ann : annAttr.getAnnotations())
+                {
                     emitAnnotation(writer, ann);
                 }
-            } else if (attr instanceof RuntimeVisibleAnnotationsAttribute) {
+            }
+            else if (attr instanceof RuntimeVisibleAnnotationsAttribute)
+            {
                 RuntimeVisibleAnnotationsAttribute annAttr = (RuntimeVisibleAnnotationsAttribute) attr;
-                for (Annotation ann : annAttr.getAnnotations()) {
+                for (Annotation ann : annAttr.getAnnotations())
+                {
                     emitAnnotation(writer, ann);
                 }
             }
@@ -1834,30 +2191,36 @@ public class ClassDecompiler {
     /**
      * Emits a single annotation.
      */
-    private void emitAnnotation(IndentingWriter writer, Annotation ann) {
+    private void emitAnnotation(IndentingWriter writer, Annotation ann)
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("@");
 
         String typeName = resolveAnnotationType(ann.getTypeIndex());
 
         // Track the annotation type for imports
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+        if (typeName.startsWith("L") && typeName.endsWith(";"))
+        {
             String internalName = typeName.substring(1, typeName.length() - 1);
             usedTypes.add(internalName);
         }
 
         sb.append(formatAnnotationTypeName(typeName));
 
-        // Emit element-value pairs if present
         List<ElementValuePair> pairs = ann.getElementValuePairs();
-        if (pairs != null && !pairs.isEmpty()) {
+        if (pairs != null && !pairs.isEmpty())
+        {
             sb.append("(");
-            if (pairs.size() == 1 && "value".equals(pairs.get(0).getElementName())) {
+            if (pairs.size() == 1 && "value".equals(pairs.get(0).getElementName()))
+            {
                 // Single "value" element - use shorthand
                 sb.append(formatElementValue(pairs.get(0).getValue()));
-            } else {
+            }
+            else
+            {
                 // Multiple elements or named element
-                for (int i = 0; i < pairs.size(); i++) {
+                for (int i = 0; i < pairs.size(); i++)
+                {
                     if (i > 0) sb.append(", ");
                     ElementValuePair pair = pairs.get(i);
                     sb.append(pair.getElementName());
@@ -1874,9 +2237,11 @@ public class ClassDecompiler {
     /**
      * Resolves an annotation type name from a constant pool index.
      */
-    private String resolveAnnotationType(int typeIndex) {
+    private String resolveAnnotationType(int typeIndex)
+    {
         Item<?> item = classFile.getConstPool().getItem(typeIndex);
-        if (item instanceof Utf8Item) {
+        if (item instanceof Utf8Item)
+        {
             return ((Utf8Item) item).getValue();
         }
         return "Unknown";
@@ -1886,18 +2251,22 @@ public class ClassDecompiler {
      * Formats an annotation type name for output.
      * Converts descriptor format (Ljava/lang/Override;) to simple name (Override).
      */
-    private String formatAnnotationTypeName(String typeName) {
+    private String formatAnnotationTypeName(String typeName)
+    {
         // Remove leading 'L' and trailing ';' if present (descriptor format)
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+        if (typeName.startsWith("L") && typeName.endsWith(";"))
+        {
             typeName = typeName.substring(1, typeName.length() - 1);
         }
 
         typeName = typeName.replace('/', '.');
 
         // Use simple name if not using fully qualified names
-        if (!emitterConfig.isUseFullyQualifiedNames()) {
+        if (!emitterConfig.isUseFullyQualifiedNames())
+        {
             int lastDot = typeName.lastIndexOf('.');
-            if (lastDot >= 0) {
+            if (lastDot >= 0)
+            {
                 typeName = typeName.substring(lastDot + 1);
             }
         }
@@ -1908,11 +2277,13 @@ public class ClassDecompiler {
     /**
      * Formats an element value for annotation output.
      */
-    private String formatElementValue(ElementValue ev) {
+    private String formatElementValue(ElementValue ev)
+    {
         int tag = ev.getTag();
         Object value = ev.getValue();
 
-        switch (tag) {
+        switch (tag)
+        {
             case 'B': // byte
             case 'S': // short
             case 'I': // int
@@ -1957,20 +2328,28 @@ public class ClassDecompiler {
     /**
      * Formats a constant pool value.
      */
-    private String formatConstantValue(int cpIndex) {
+    private String formatConstantValue(int cpIndex)
+    {
         Item<?> item = classFile.getConstPool().getItem(cpIndex);
 
-        if (item instanceof IntegerItem) {
+        if (item instanceof IntegerItem)
+        {
             return String.valueOf(((IntegerItem) item).getValue());
-        } else if (item instanceof LongItem) {
+        }
+        else if (item instanceof LongItem)
+        {
             return String.valueOf(((LongItem) item).getValue());
-        } else if (item instanceof FloatItem) {
+        }
+        else if (item instanceof FloatItem)
+        {
             float f = ((FloatItem) item).getValue();
             if (Float.isNaN(f)) return "Float.NaN";
             if (f == Float.POSITIVE_INFINITY) return "Float.POSITIVE_INFINITY";
             if (f == Float.NEGATIVE_INFINITY) return "Float.NEGATIVE_INFINITY";
             return String.valueOf(f);
-        } else if (item instanceof DoubleItem) {
+        }
+        else if (item instanceof DoubleItem)
+        {
             double d = ((DoubleItem) item).getValue();
             if (Double.isNaN(d)) return "Double.NaN";
             if (d == Double.POSITIVE_INFINITY) return "Double.POSITIVE_INFINITY";
@@ -1984,11 +2363,14 @@ public class ClassDecompiler {
     /**
      * Formats a char constant from constant pool index.
      */
-    private String formatCharConstant(int cpIndex) {
+    private String formatCharConstant(int cpIndex)
+    {
         Item<?> item = classFile.getConstPool().getItem(cpIndex);
-        if (item instanceof IntegerItem) {
+        if (item instanceof IntegerItem)
+        {
             char c = (char) ((IntegerItem) item).getValue().intValue();
-            if (c >= 32 && c < 127 && c != '\'' && c != '\\') {
+            if (c >= 32 && c < 127 && c != '\'' && c != '\\')
+            {
                 return "'" + c + "'";
             }
             return "'" + String.format("\\u%04x", (int) c) + "'";
@@ -1999,9 +2381,11 @@ public class ClassDecompiler {
     /**
      * Formats a boolean constant from constant pool index.
      */
-    private String formatBooleanConstant(int cpIndex) {
+    private String formatBooleanConstant(int cpIndex)
+    {
         Item<?> item = classFile.getConstPool().getItem(cpIndex);
-        if (item instanceof IntegerItem) {
+        if (item instanceof IntegerItem)
+        {
             return ((IntegerItem) item).getValue() != 0 ? "true" : "false";
         }
         return "false";
@@ -2010,14 +2394,19 @@ public class ClassDecompiler {
     /**
      * Formats a String constant from constant pool index.
      */
-    private String formatStringConstant(int cpIndex) {
+    private String formatStringConstant(int cpIndex)
+    {
         Item<?> item = classFile.getConstPool().getItem(cpIndex);
-        if (item instanceof Utf8Item) {
+        if (item instanceof Utf8Item)
+        {
             return "\"" + escapeString(((Utf8Item) item).getValue()) + "\"";
-        } else if (item instanceof StringRefItem) {
+        }
+        else if (item instanceof StringRefItem)
+        {
             StringRefItem strItem = (StringRefItem) item;
             Utf8Item utf8 = (Utf8Item) classFile.getConstPool().getItem(strItem.getValue());
-            if (utf8 != null) {
+            if (utf8 != null)
+            {
                 return "\"" + escapeString(utf8.getValue()) + "\"";
             }
         }
@@ -2027,21 +2416,25 @@ public class ClassDecompiler {
     /**
      * Formats an enum constant.
      */
-    private String formatEnumConstant(EnumConst enumConst) {
+    private String formatEnumConstant(EnumConst enumConst)
+    {
         String typeName = resolveUtf8(enumConst.getTypeNameIndex());
         String constName = resolveUtf8(enumConst.getConstNameIndex());
 
         // Track the enum type for imports
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+        if (typeName.startsWith("L") && typeName.endsWith(";"))
+        {
             String internalName = typeName.substring(1, typeName.length() - 1);
             usedTypes.add(internalName);
             typeName = internalName;
         }
         typeName = typeName.replace('/', '.');
 
-        if (!emitterConfig.isUseFullyQualifiedNames()) {
+        if (!emitterConfig.isUseFullyQualifiedNames())
+        {
             int lastDot = typeName.lastIndexOf('.');
-            if (lastDot >= 0) {
+            if (lastDot >= 0)
+            {
                 typeName = typeName.substring(lastDot + 1);
             }
         }
@@ -2052,18 +2445,21 @@ public class ClassDecompiler {
     /**
      * Formats a class constant (e.g., String.class).
      */
-    private String formatClassConstant(int cpIndex) {
+    private String formatClassConstant(int cpIndex)
+    {
         String className = resolveUtf8(cpIndex);
         String internalName = null;
 
         // Handle descriptor format
-        if (className.startsWith("L") && className.endsWith(";")) {
+        if (className.startsWith("L") && className.endsWith(";"))
+        {
             internalName = className.substring(1, className.length() - 1);
             className = internalName;
         }
 
         // Handle primitive type descriptors
-        switch (className) {
+        switch (className)
+        {
             case "Z": return "boolean.class";
             case "B": return "byte.class";
             case "C": return "char.class";
@@ -2076,21 +2472,27 @@ public class ClassDecompiler {
         }
 
         // Handle array types
-        if (className.startsWith("[")) {
+        if (className.startsWith("["))
+        {
             return typeRecoverer.recoverType(className).toJavaSource() + ".class";
         }
 
         // Track the class type for imports
-        if (internalName != null) {
+        if (internalName != null)
+        {
             usedTypes.add(internalName);
-        } else if (className.contains("/") || className.contains(".")) {
+        }
+        else if (className.contains("/") || className.contains("."))
+        {
             usedTypes.add(className.replace('.', '/'));
         }
 
         className = className.replace('/', '.');
-        if (!emitterConfig.isUseFullyQualifiedNames()) {
+        if (!emitterConfig.isUseFullyQualifiedNames())
+        {
             int lastDot = className.lastIndexOf('.');
-            if (lastDot >= 0) {
+            if (lastDot >= 0)
+            {
                 className = className.substring(lastDot + 1);
             }
         }
@@ -2101,25 +2503,32 @@ public class ClassDecompiler {
     /**
      * Formats a nested annotation.
      */
-    private String formatNestedAnnotation(Annotation ann) {
+    private String formatNestedAnnotation(Annotation ann)
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("@");
 
         String typeName = resolveAnnotationType(ann.getTypeIndex());
         // Track the nested annotation type for imports
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+        if (typeName.startsWith("L") && typeName.endsWith(";"))
+        {
             String internalName = typeName.substring(1, typeName.length() - 1);
             usedTypes.add(internalName);
         }
         sb.append(formatAnnotationTypeName(typeName));
 
         List<ElementValuePair> pairs = ann.getElementValuePairs();
-        if (pairs != null && !pairs.isEmpty()) {
+        if (pairs != null && !pairs.isEmpty())
+        {
             sb.append("(");
-            if (pairs.size() == 1 && "value".equals(pairs.get(0).getElementName())) {
+            if (pairs.size() == 1 && "value".equals(pairs.get(0).getElementName()))
+            {
                 sb.append(formatElementValue(pairs.get(0).getValue()));
-            } else {
-                for (int i = 0; i < pairs.size(); i++) {
+            }
+            else
+            {
+                for (int i = 0; i < pairs.size(); i++)
+                {
                     if (i > 0) sb.append(", ");
                     ElementValuePair pair = pairs.get(i);
                     sb.append(pair.getElementName());
@@ -2136,10 +2545,12 @@ public class ClassDecompiler {
     /**
      * Formats an array value.
      */
-    private String formatArrayValue(List<ElementValue> values) {
+    private String formatArrayValue(List<ElementValue> values)
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        for (int i = 0; i < values.size(); i++) {
+        for (int i = 0; i < values.size(); i++)
+        {
             if (i > 0) sb.append(", ");
             sb.append(formatElementValue(values.get(i)));
         }
@@ -2150,9 +2561,11 @@ public class ClassDecompiler {
     /**
      * Resolves a UTF-8 string from constant pool index.
      */
-    private String resolveUtf8(int index) {
+    private String resolveUtf8(int index)
+    {
         Item<?> item = classFile.getConstPool().getItem(index);
-        if (item instanceof Utf8Item) {
+        if (item instanceof Utf8Item)
+        {
             return ((Utf8Item) item).getValue();
         }
         return "Unknown";

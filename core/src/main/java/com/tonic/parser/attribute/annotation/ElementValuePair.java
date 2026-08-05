@@ -1,33 +1,54 @@
 package com.tonic.parser.attribute.annotation;
 
 /**
- * Represents an element-value pair in an annotation.
+ * An annotation element-value pair: the element name and its value.
  */
-public class ElementValuePair {
+public class ElementValuePair
+{
     private final int nameIndex;
     private final String elementName;
     private final ElementValue value;
 
-    public ElementValuePair(int nameIndex, String elementName, ElementValue value) {
+    /**
+     * Creates an element-value pair.
+     * @param nameIndex constant-pool index of the element name Utf8
+     * @param elementName the resolved element name
+     * @param value the element value
+     */
+    public ElementValuePair(int nameIndex, String elementName, ElementValue value)
+    {
         this.nameIndex = nameIndex;
         this.elementName = elementName;
         this.value = value;
     }
 
-    public int getNameIndex() {
+    /**
+     * @return the name index
+     */
+    public int getNameIndex()
+    {
         return nameIndex;
     }
 
-    public String getElementName() {
+    /**
+     * @return the element name
+     */
+    public String getElementName()
+    {
         return elementName;
     }
 
-    public ElementValue getValue() {
+    /**
+     * @return the value
+     */
+    public ElementValue getValue()
+    {
         return value;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "{" +
                 "elementName='" + elementName + '\'' +
                 ", value=" + value +

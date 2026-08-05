@@ -11,9 +11,20 @@ import com.tonic.parser.MethodEntry;
 import java.io.FileInputStream;
 import java.util.List;
 
-public class DebugExceptionHandlers {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+/**
+ * Debug demo showing the exception handler table of one method after lifting to IR.
+ */
+public class DebugExceptionHandlers
+{
+    /**
+     * Lifts the named method to IR and prints its exception handlers.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugExceptionHandlers <classfile> <methodName>");
             return;
         }
@@ -22,8 +33,10 @@ public class DebugExceptionHandlers {
         ConstPool constPool = cf.getConstPool();
         String methodName = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
                 System.out.println("Entry block offset: 0");
 
@@ -33,8 +46,10 @@ public class DebugExceptionHandlers {
                 List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
                 System.out.println("\nException handlers: " + (handlers == null ? 0 : handlers.size()));
 
-                if (handlers != null) {
-                    for (int i = 0; i < handlers.size(); i++) {
+                if (handlers != null)
+                {
+                    for (int i = 0; i < handlers.size(); i++)
+                    {
                         ExceptionHandler h = handlers.get(i);
                         System.out.println("\nHandler " + i + ":");
                         System.out.println("  tryStart: " + (h.getTryStart() != null ? h.getTryStart().getName() + " (offset " + h.getTryStart().getBytecodeOffset() + ")" : "null"));
@@ -45,7 +60,8 @@ public class DebugExceptionHandlers {
                 }
 
                 System.out.println("\n=== Blocks ===");
-                for (var block : irMethod.getBlocks()) {
+                for (var block : irMethod.getBlocks())
+                {
                     System.out.println(block.getName() + " (offset " + block.getBytecodeOffset() + ")");
                 }
                 break;

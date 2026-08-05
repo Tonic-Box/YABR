@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * a legal Java statement and extracting the call would change short-circuit order - and its presence between
  * a materialized boolean's declaration and its use blocks the fold back to a direct {@code return}.
  */
-class EmptyReachingGuardDecompileTest {
+class EmptyReachingGuardDecompileTest
+{
 
     private static final String SOURCE =
             "import java.util.concurrent.locks.ReentrantLock;\n"
@@ -42,22 +43,21 @@ class EmptyReachingGuardDecompileTest {
                     + "}\n";
 
     @Test
-    void anEmptyMergeIsNotWrappedInItsReachingCondition() throws Exception {
+    void anEmptyMergeIsNotWrappedInItsReachingCondition() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("empty-guard");
         Path src = dir.resolve("EmptyGuardFixture.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("EmptyGuardFixture.class")));
         String d1 = ClassDecompiler.decompile(cf);
         String flat = d1.replaceAll("\\s+", " ");
 
-        assertFalse(flat.contains("isExpired()) { }"),
-                "an empty merge must not be emitted as a guarded no-op:\n" + d1);
+        assertFalse(flat.contains("isExpired()) { }"), "an empty merge must not be emitted as a guarded no-op:\n" + d1);
         assertTrue(flat.contains("return this.session != null && !isExpired();"),
                 "the condition must fold straight into the return:\n" + d1);
 

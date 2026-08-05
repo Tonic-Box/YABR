@@ -15,18 +15,21 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CompileAndRunTest {
+public class CompileAndRunTest
+{
 
     @TempDir
     Path tempDir;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void compileAndRunWithImports() throws Exception {
+    void compileAndRunWithImports() throws Exception
+    {
         String source =
             "package test;\n" +
             "\n" +
@@ -49,9 +52,7 @@ public class CompileAndRunTest {
         System.out.println("Wrote class file to: " + classFilePath);
         System.out.println("Class file size: " + classBytes.length + " bytes");
 
-        ProcessBuilder pb = new ProcessBuilder(
-            "java", "-cp", tempDir.toString(), "test.Logger"
-        );
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", tempDir.toString(), "test.Logger");
         pb.redirectErrorStream(true);
         Process process = pb.start();
 
@@ -66,7 +67,8 @@ public class CompileAndRunTest {
     }
 
     @Test
-    void compileAndRunSimpleConcat() throws Exception {
+    void compileAndRunSimpleConcat() throws Exception
+    {
         String source =
             "package test;\n" +
             "\n" +
@@ -85,9 +87,7 @@ public class CompileAndRunTest {
         byte[] classBytes = cf.write();
         Files.write(classFilePath, classBytes);
 
-        ProcessBuilder pb = new ProcessBuilder(
-            "java", "-cp", tempDir.toString(), "test.Simple"
-        );
+        ProcessBuilder pb = new ProcessBuilder("java", "-cp", tempDir.toString(), "test.Simple");
         pb.redirectErrorStream(true);
         Process process = pb.start();
 
@@ -108,7 +108,8 @@ public class CompileAndRunTest {
      * stores a reference where an int is expected and fails bytecode verification).
      */
     @Test
-    void instanceMethodOnFieldReceiverEmitsInvokevirtual() throws Exception {
+    void instanceMethodOnFieldReceiverEmitsInvokevirtual() throws Exception
+    {
         String source =
             "package test;\n" +
             "public class FieldRecv {\n" +
@@ -123,16 +124,20 @@ public class CompileAndRunTest {
         assertNotNull(len, "len() should be compiled");
 
         boolean foundVirtualLength = false;
-        for (Instruction instr : new CodeWriter(len).getInstructions()) {
-            if (instr instanceof InvokeStaticInstruction) {
+        for (Instruction instr : new CodeWriter(len).getInstructions())
+        {
+            if (instr instanceof InvokeStaticInstruction)
+            {
                 assertNotEquals("length",
                     ((InvokeStaticInstruction) instr).getMethodName(),
                     "length() must not be lowered to invokestatic");
             }
-            if (instr instanceof InvokeVirtualInstruction) {
+            if (instr instanceof InvokeVirtualInstruction)
+            {
                 InvokeVirtualInstruction call =
                     (InvokeVirtualInstruction) instr;
-                if ("length".equals(call.getMethodName())) {
+                if ("length".equals(call.getMethodName()))
+                {
                     foundVirtualLength = true;
                     assertEquals("java/lang/String", call.getOwnerClass());
                     assertEquals("()I", call.getMethodDescriptor());
@@ -144,7 +149,8 @@ public class CompileAndRunTest {
 
 
     @Test
-    void fullyQualifiedStaticFieldAccessResolvesOwner() throws Exception {
+    void fullyQualifiedStaticFieldAccessResolvesOwner() throws Exception
+    {
         // A fully-qualified static field reference (e.g. `java.lang.Integer.MAX_VALUE`) parses as a
         // field-access chain rooted at a name, not a type reference. Lowering must recognize the qualified
         // class name as the static-field owner instead of falling back to java/lang/Object.
@@ -160,7 +166,8 @@ public class CompileAndRunTest {
         assertEquals(Long.MIN_VALUE, cls.getMethod("minLong").invoke(null));
     }
 
-    private ClassFile compileSource(String source, String className) throws Exception {
+    private ClassFile compileSource(String source, String className) throws Exception
+    {
         return TestUtils.compileSource(source, className);
     }
 }

@@ -6,19 +6,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StringPoolTest {
+class StringPoolTest
+{
 
     private StringPool pool;
     private AtomicInteger nextId;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         nextId = new AtomicInteger(1);
         pool = new StringPool(nextId);
     }
 
     @Test
-    void testInternReturnsSameInstanceForSameString() {
+    void testInternReturnsSameInstanceForSameString()
+    {
         ObjectInstance str1 = pool.intern("hello");
         ObjectInstance str2 = pool.intern("hello");
 
@@ -26,7 +29,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternDifferentStringsAreDifferent() {
+    void testInternDifferentStringsAreDifferent()
+    {
         ObjectInstance str1 = pool.intern("hello");
         ObjectInstance str2 = pool.intern("world");
 
@@ -34,14 +38,16 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternCreatesStringObject() {
+    void testInternCreatesStringObject()
+    {
         ObjectInstance str = pool.intern("test");
 
         assertEquals("java/lang/String", str.getClassName());
     }
 
     @Test
-    void testInternCreatesCharArray() {
+    void testInternCreatesCharArray()
+    {
         ObjectInstance str = pool.intern("test");
 
         Object charArrayObj = str.getField("java/lang/String", "value", "[C");
@@ -57,7 +63,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternEmptyString() {
+    void testInternEmptyString()
+    {
         ObjectInstance str = pool.intern("");
 
         Object charArrayObj = str.getField("java/lang/String", "value", "[C");
@@ -66,18 +73,21 @@ class StringPoolTest {
     }
 
     @Test
-    void testIsInternedTrue() {
+    void testIsInternedTrue()
+    {
         pool.intern("hello");
         assertTrue(pool.isInterned("hello"));
     }
 
     @Test
-    void testIsInternedFalse() {
+    void testIsInternedFalse()
+    {
         assertFalse(pool.isInterned("hello"));
     }
 
     @Test
-    void testSize() {
+    void testSize()
+    {
         assertEquals(0, pool.size());
 
         pool.intern("one");
@@ -91,7 +101,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testClear() {
+    void testClear()
+    {
         pool.intern("one");
         pool.intern("two");
         assertEquals(2, pool.size());
@@ -103,7 +114,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternMultipleTimes() {
+    void testInternMultipleTimes()
+    {
         ObjectInstance str1 = pool.intern("repeated");
         ObjectInstance str2 = pool.intern("repeated");
         ObjectInstance str3 = pool.intern("repeated");
@@ -113,7 +125,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternUniqueIds() {
+    void testInternUniqueIds()
+    {
         ObjectInstance str1 = pool.intern("first");
         ObjectInstance str2 = pool.intern("second");
 
@@ -121,7 +134,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternWithSpecialCharacters() {
+    void testInternWithSpecialCharacters()
+    {
         ObjectInstance str = pool.intern("Hello\nWorld\t!");
 
         Object charArrayObj = str.getField("java/lang/String", "value", "[C");
@@ -134,7 +148,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testClearAndReintern() {
+    void testClearAndReintern()
+    {
         ObjectInstance str1 = pool.intern("test");
         pool.clear();
         ObjectInstance str2 = pool.intern("test");
@@ -143,7 +158,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternLongString() {
+    void testInternLongString()
+    {
         String longString = "a".repeat(1000);
         ObjectInstance str = pool.intern(longString);
 
@@ -153,7 +169,8 @@ class StringPoolTest {
     }
 
     @Test
-    void testInternConsumesIds() {
+    void testInternConsumesIds()
+    {
         int startId = nextId.get();
         pool.intern("test");
         int endId = nextId.get();

@@ -13,9 +13,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugStructural {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+/**
+ * Debug demo showing structural analysis output (loops and regions) for one method of a class file.
+ */
+public class DebugStructural
+{
+    /**
+     * Lifts the named method to IR and prints its structural analysis.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugStructural <classfile> <methodName>");
             return;
         }
@@ -24,8 +35,10 @@ public class DebugStructural {
         ConstPool constPool = cf.getConstPool();
         String methodName = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
 
                 SSA ssa = new SSA(constPool);
@@ -38,7 +51,8 @@ public class DebugStructural {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Loop Analysis ===");
-                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops())
+                {
                     System.out.println("Loop header: " + loop.getHeader().getName());
                     System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                 }
@@ -47,9 +61,11 @@ public class DebugStructural {
                 analyzer.analyze();
 
                 System.out.println("\n=== Region Info ===");
-                for (IRBlock block : irMethod.getBlocks()) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
                     StructuralAnalyzer.RegionInfo info = analyzer.getRegionInfo(block);
-                    if (info != null) {
+                    if (info != null)
+                    {
                         System.out.println(block.getName() + ": " + info.getType() +
                             (info.getLoopBody() != null ? " body=" + info.getLoopBody().getName() : "") +
                             (info.getLoopExit() != null ? " exit=" + info.getLoopExit().getName() : "") +

@@ -204,7 +204,8 @@ import java.awt.Graphics;
 import java.util.List;
 import javax.swing.JFrame;
 
-public class MyClass extends JFrame {
+public class MyClass extends JFrame
+{
     private Canvas canvas;
     private List items;
 
@@ -238,7 +239,8 @@ If a method body fails to decompile, the decompiler inserts a comment instead of
 class with a few unsupported methods still produces usable output:
 
 ```java
-public void problematicMethod() {
+public void problematicMethod()
+{
     // Failed to decompile: <error message>
 }
 ```

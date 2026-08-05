@@ -15,12 +15,20 @@ import com.tonic.parser.MethodEntry;
 import java.io.FileInputStream;
 
 /**
- * Debug utility to inspect SSA IR for a method.
+ * Debug demo showing the SSA IR of one method of a class file.
  */
-public class DebugIR {
+public class DebugIR
+{
 
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+    /**
+     * Lifts the named method (name or name+descriptor) to SSA and prints its IR.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugIR <path-to-class-file> <method-name>");
             return;
         }
@@ -29,19 +37,22 @@ public class DebugIR {
         ConstPool constPool = cf.getConstPool();
         String targetMethod = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
+        for (MethodEntry method : cf.getMethods())
+        {
             String methodName = method.getName();
             String methodDesc = method.getDesc();
             // Match by name, or by name+desc if target includes descriptor
             boolean matches = targetMethod.equals(methodName) ||
                              targetMethod.equals(methodName + methodDesc);
-            if (!matches) {
+            if (!matches)
+            {
                 continue;
             }
 
             System.out.println("=== Method: " + methodName + " ===");
 
-            if (method.getCodeAttribute() == null) {
+            if (method.getCodeAttribute() == null)
+            {
                 System.out.println("No code attribute");
                 continue;
             }
@@ -49,19 +60,22 @@ public class DebugIR {
             SSA ssa = new SSA(constPool);
             IRMethod irMethod = ssa.lift(method);
 
-            // Print ALL blocks including PHIs
-            for (IRBlock block : irMethod.getBlocks()) {
+            for (IRBlock block : irMethod.getBlocks())
+            {
                 System.out.println("\nBlock " + block.getId() + ":");
-                // Print PHI instructions
-                for (var phi : block.getPhiInstructions()) {
+                for (var phi : block.getPhiInstructions())
+                {
                     System.out.println("  [PHI] " + phi);
                 }
-                for (IRInstruction instr : block.getInstructions()) {
+                for (IRInstruction instr : block.getInstructions())
+                {
                     System.out.println("  " + instr);
-                    if (instr instanceof InvokeInstruction) {
+                    if (instr instanceof InvokeInstruction)
+                    {
                         InvokeInstruction inv = (InvokeInstruction) instr;
                         SSAValue result = inv.getResult();
-                        if (result != null) {
+                        if (result != null)
+                        {
                             System.out.println("    ^ invoke result=" + result + ", uses=" + result.getUses());
                         }
                     }

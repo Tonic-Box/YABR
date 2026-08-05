@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * (if/loop/switch/try shapes), suppress inlined lambda-body offsets, and leave the plain
  * {@link ClassDecompiler#decompile()} output untouched.
  */
-class LineMapTest {
+class LineMapTest
+{
 
     private static final String SOURCE =
         "public class Mapped {\n" +
@@ -60,25 +61,33 @@ class LineMapTest {
     private static String[] lines;
 
     @BeforeAll
-    static void setUp() throws Exception {
+    static void setUp() throws Exception
+    {
         classFile = compile("Mapped", SOURCE);
         result = new ClassDecompiler(classFile).decompileWithLineMap();
         lines = result.getSource().split("\n", -1);
     }
 
-    /** Compiles a single top-level class to bytecode and parses it into a {@link ClassFile}. */
-    private static ClassFile compile(String simpleName, String source) throws Exception {
+    /**
+     * Compiles a single top-level class to bytecode and parses it into a {@link ClassFile}.
+     */
+    private static ClassFile compile(String simpleName, String source) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null);
         Path dir = Files.createTempDirectory("yabr-linemap");
-        try {
+        try
+        {
             Path src = dir.resolve(simpleName + ".java");
             Files.writeString(src, source);
             assertEquals(0, compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()));
             byte[] bytes = Files.readAllBytes(dir.resolve(simpleName + ".class"));
             return new ClassFile(new ByteArrayInputStream(bytes));
-        } finally {
-            try (var paths = Files.walk(dir)) {
+        }
+        finally
+        {
+            try (var paths = Files.walk(dir))
+            {
                 paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                     try { Files.deleteIfExists(p); } catch (Exception ignored) { }
                 });
@@ -86,12 +95,16 @@ class LineMapTest {
         }
     }
 
-    private static String lineText(int line) {
+    private static String lineText(int line)
+    {
         return line >= 1 && line <= lines.length ? lines[line - 1] : "";
     }
 
-    /** Resolves a PC the way a consumer would: ceiling candidate first, then floor. */
-    private static boolean resolvesToGreetCall(NavigableMap<Integer, Integer> map, int pc) {
+    /**
+     * Resolves a PC the way a consumer would: ceiling candidate first, then floor.
+     */
+    private static boolean resolvesToGreetCall(NavigableMap<Integer, Integer> map, int pc)
+    {
         Map.Entry<Integer, Integer> ceiling = map.ceilingEntry(pc);
         Map.Entry<Integer, Integer> floor = map.floorEntry(pc);
         return (ceiling != null && lineText(ceiling.getValue()).contains("greet("))
@@ -99,7 +112,8 @@ class LineMapTest {
     }
 
     @Test
-    void callSitesResolveToTheirLines() {
+    void callSitesResolveToTheirLines()
+    {
         NavigableMap<Integer, Integer> map = result.getLineMap("sum", "(I)I");
         assertNotNull(map, "sum should have a line map");
         assertFalse(map.isEmpty());
@@ -109,11 +123,14 @@ class LineMapTest {
         IRMethod ir = ssa.lift(sum);
 
         List<Integer> greetOffsets = new ArrayList<>();
-        for (IRBlock block : ir.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 if (instr instanceof InvokeInstruction
                         && "greet".equals(((InvokeInstruction) instr).getName())
-                        && instr.getBytecodeOffset() >= 0) {
+                        && instr.getBytecodeOffset() >= 0)
+                {
                     greetOffsets.add(instr.getBytecodeOffset());
                 }
             }
@@ -121,17 +138,19 @@ class LineMapTest {
         assertTrue(greetOffsets.size() >= 5, "expected the fixture's greet call sites, got " + greetOffsets);
 
         int resolved = 0;
-        for (int pc : greetOffsets) {
-            if (resolvesToGreetCall(map, pc)) {
+        for (int pc : greetOffsets)
+        {
+            if (resolvesToGreetCall(map, pc))
+            {
                 resolved++;
             }
         }
-        assertTrue(resolved >= 5,
-                "call sites resolving to a greet( line: " + resolved + "/" + greetOffsets.size());
+        assertTrue(resolved >= 5, "call sites resolving to a greet(line: " + resolved + "/" + greetOffsets.size());
     }
 
     @Test
-    void switchAndTryArmsAreMapped() {
+    void switchAndTryArmsAreMapped()
+    {
         String mapped = result.getLineMaps().get("sum(I)I").values().stream()
                 .map(LineMapTest::lineText)
                 .reduce("", (a, b) -> a + "\n" + b);
@@ -141,11 +160,13 @@ class LineMapTest {
     }
 
     @Test
-    void enclosingMethodMapExcludesLambdaBody() {
+    void enclosingMethodMapExcludesLambdaBody()
+    {
         // The lambda body's offsets live in a separate method's space, so they must not appear in the
-        // enclosing method's map (they go under the lambda's own key instead — see next test).
+        // enclosing method's map (they go under the lambda's own key instead - see next test).
         NavigableMap<Integer, Integer> map = result.getLineMaps().get("sum(I)I");
-        for (int line : map.values()) {
+        for (int line : map.values())
+        {
             String text = lineText(line);
             assertFalse(text.contains("counter++") || text.contains("\"lambda\""),
                     "lambda-body statement leaked into the enclosing method's map: line "
@@ -154,7 +175,8 @@ class LineMapTest {
     }
 
     @Test
-    void lambdaBodyMappedUnderItsOwnKey() {
+    void lambdaBodyMappedUnderItsOwnKey()
+    {
         String lambdaKey = result.getLineMaps().keySet().stream()
                 .filter(k -> k.startsWith("lambda$"))
                 .findFirst()
@@ -170,14 +192,16 @@ class LineMapTest {
     }
 
     @Test
-    void methodSpansCoverTheirMappedLines() {
+    void methodSpansCoverTheirMappedLines()
+    {
         DecompileResult.MethodSpan sumSpan = result.getMethodSpan("sum", "(I)I");
         assertNotNull(sumSpan, "sum should have a span");
         assertTrue(lineText(sumSpan.getStartLine()).contains("sum("),
                 "span must start at the declaration: " + lineText(sumSpan.getStartLine()).trim());
         assertEquals("}", lineText(sumSpan.getEndLine()).trim(),
                 "span must end at the closing brace: " + lineText(sumSpan.getEndLine()).trim());
-        for (int line : result.getLineMaps().get("sum(I)I").values()) {
+        for (int line : result.getLineMaps().get("sum(I)I").values())
+        {
             assertTrue(sumSpan.contains(line),
                     "mapped line " + line + " outside span [" + sumSpan.getStartLine() + ", " + sumSpan.getEndLine() + "]");
         }
@@ -189,7 +213,8 @@ class LineMapTest {
     }
 
     @Test
-    void fieldSpanCoversDeclaration() {
+    void fieldSpanCoversDeclaration()
+    {
         DecompileResult.MemberSpan span = result.getFieldSpan("counter", "I");
         assertNotNull(span, "counter should have a field span");
         assertEquals(span.getStartLine(), span.getEndLine(), "plain field is a single line");
@@ -199,19 +224,21 @@ class LineMapTest {
     }
 
     @Test
-    void classSpanCoversDeclaration() {
+    void classSpanCoversDeclaration()
+    {
         DecompileResult.MemberSpan span = result.getClassSpan();
         assertNotNull(span, "class should have a span");
         StringBuilder spanned = new StringBuilder();
-        for (int line = span.getStartLine(); line <= span.getEndLine(); line++) {
+        for (int line = span.getStartLine(); line <= span.getEndLine(); line++)
+        {
             spanned.append(lineText(line)).append('\n');
         }
-        assertTrue(spanned.toString().contains("class Mapped"),
-                "class span must cover the declaration:\n" + spanned);
+        assertTrue(spanned.toString().contains("class Mapped"), "class span must cover the declaration:\n" + spanned);
     }
 
     @Test
-    void annotationsAreIncludedInSpans() throws Exception {
+    void annotationsAreIncludedInSpans() throws Exception
+    {
         String source =
             "import java.lang.annotation.*;\n" +
             "@Deprecated\n" +
@@ -228,8 +255,7 @@ class LineMapTest {
                 "annotated field span must include the annotation line");
         assertTrue(aLines[fieldSpan.getStartLine() - 1].contains("@Deprecated"),
                 "field span must start at its annotation");
-        assertTrue(aLines[fieldSpan.getEndLine() - 1].contains("flagged"),
-                "field span must end at the declaration");
+        assertTrue(aLines[fieldSpan.getEndLine() - 1].contains("flagged"), "field span must end at the declaration");
 
         DecompileResult.MemberSpan classSpan = annotated.getClassSpan();
         assertNotNull(classSpan);
@@ -242,7 +268,8 @@ class LineMapTest {
     }
 
     @Test
-    void plainDecompileOutputUnchanged() {
+    void plainDecompileOutputUnchanged()
+    {
         assertEquals(new ClassDecompiler(classFile).decompile(), result.getSource());
     }
 }

@@ -20,7 +20,8 @@ import java.util.List;
  * Represents a Java class file with full parsing and manipulation capabilities.
  * Provides access to constant pool, fields, methods, and class attributes.
  */
-public class ClassFile extends AbstractParser {
+public class ClassFile extends AbstractParser
+{
     private int minorVersion;
     private int majorVersion;
     private int access;
@@ -37,20 +38,20 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Creates a ClassFile from raw class bytes.
-     *
      * @param classBytes the raw bytes of a .class file
      */
-    protected ClassFile(final byte[] classBytes) {
+    protected ClassFile(final byte[] classBytes)
+    {
         super(classBytes);
     }
 
     /**
      * Creates a ClassFile from an InputStream.
-     *
      * @param inputStream the input stream containing class file data
      * @throws IOException if reading from the stream fails
      */
-    public ClassFile(final InputStream inputStream) throws IOException {
+    public ClassFile(final InputStream inputStream) throws IOException
+    {
         super(inputStream.readAllBytes());
     }
 
@@ -58,11 +59,11 @@ public class ClassFile extends AbstractParser {
      * Creates a new, empty class file from scratch (no members). Use
      * {@code com.tonic.analysis.ClassFactory#createClass} to also generate a
      * default constructor and class initializer.
-     *
      * @param className the internal class name (e.g., "com/example/MyClass")
      * @param accessFlags the class access flags
      */
-    public ClassFile(String className, int accessFlags) {
+    public ClassFile(String className, int accessFlags)
+    {
         super(new byte[0], false);
 
         this.constPool = new ConstPool();
@@ -88,71 +89,129 @@ public class ClassFile extends AbstractParser {
         this.majorVersion = 55;
     }
 
-    public int getMinorVersion() {
+    /**
+     * @return the minor version
+     */
+    public int getMinorVersion()
+    {
         return minorVersion;
     }
 
-    public int getMajorVersion() {
+    /**
+     * @return the major version
+     */
+    public int getMajorVersion()
+    {
         return majorVersion;
     }
 
-    public int getAccess() {
+    /**
+     * @return the access
+     */
+    public int getAccess()
+    {
         return access;
     }
 
-    public int getThisClass() {
+    /**
+     * @return the this class
+     */
+    public int getThisClass()
+    {
         return thisClass;
     }
 
-    public int getSuperClass() {
+    /**
+     * @return the super class
+     */
+    public int getSuperClass()
+    {
         return superClass;
     }
 
-    public ConstPool getConstPool() {
+    /**
+     * @return the const pool
+     */
+    public ConstPool getConstPool()
+    {
         return constPool;
     }
 
-    public List<Attribute> getClassAttributes() {
+    /**
+     * @return the class attributes
+     */
+    public List<Attribute> getClassAttributes()
+    {
         return classAttributes;
     }
 
-    public List<FieldEntry> getFields() {
+    /**
+     * @return the fields
+     */
+    public List<FieldEntry> getFields()
+    {
         return fields;
     }
 
-    public List<MethodEntry> getMethods() {
+    /**
+     * @return the methods
+     */
+    public List<MethodEntry> getMethods()
+    {
         return methods;
     }
 
-    public List<Integer> getInterfaces() {
+    /**
+     * @return the interfaces
+     */
+    public List<Integer> getInterfaces()
+    {
         return interfaces;
     }
 
     /**
-     * The pool that loaded this class, if any, so cross-class lookups can resolve siblings.
+     * @return the pool that loaded this class, if any, so cross-class lookups can resolve siblings
      */
-    public ClassPool getClassPool() {
+    public ClassPool getClassPool()
+    {
         return classPool;
     }
 
-    public void setMinorVersion(int minorVersion) {
+    /**
+     * @param minorVersion the class file minor version
+     */
+    public void setMinorVersion(int minorVersion)
+    {
         this.minorVersion = minorVersion;
     }
 
-    public void setMajorVersion(int majorVersion) {
+    /**
+     * @param majorVersion the class file major version
+     */
+    public void setMajorVersion(int majorVersion)
+    {
         this.majorVersion = majorVersion;
     }
 
-    public void setConstPool(ConstPool constPool) {
+    /**
+     * @param constPool the constant pool to use
+     */
+    public void setConstPool(ConstPool constPool)
+    {
         this.constPool = constPool;
     }
 
-    public void setClassPool(ClassPool classPool) {
+    /**
+     * @param classPool the pool this class belongs to
+     */
+    public void setClassPool(ClassPool classPool)
+    {
         this.classPool = classPool;
     }
 
     @Override
-    protected void process() {
+    protected void process()
+    {
         minorVersion = readUnsignedShort();
         majorVersion = readUnsignedShort();
         Logger.info("Version: " + majorVersion + "." + minorVersion);
@@ -171,7 +230,8 @@ public class ClassFile extends AbstractParser {
         final int interfaceCount = readUnsignedShort();
         Logger.info("Interfaces Count: " + interfaceCount);
         interfaces = new ArrayList<>(interfaceCount);
-        for (int i = 0; i < interfaceCount; i++) {
+        for (int i = 0; i < interfaceCount; i++)
+        {
             int ifaceIndex = readUnsignedShort();
             interfaces.add(ifaceIndex);
             Logger.info("  Interface " + (i + 1) + " Index: " + ifaceIndex);
@@ -180,7 +240,8 @@ public class ClassFile extends AbstractParser {
         final int fieldCount = readUnsignedShort();
         Logger.info("Fields Count: " + fieldCount);
         fields = new ArrayList<>(fieldCount);
-        for (int i = 0; i < fieldCount; i++) {
+        for (int i = 0; i < fieldCount; i++)
+        {
             FieldEntry field = new FieldEntry(this);
             fields.add(field);
             Logger.info("  Field " + (i + 1) + ": " + field);
@@ -189,13 +250,15 @@ public class ClassFile extends AbstractParser {
         final int methodCount = readUnsignedShort();
         Logger.info("Methods Count: " + methodCount);
         methods = new ArrayList<>(methodCount);
-        for (int i = 0; i < methodCount; i++) {
+        for (int i = 0; i < methodCount; i++)
+        {
             MethodEntry method = new MethodEntry(this);
             methods.add(method);
             Logger.info("  Method " + (i + 1) + ": " + method);
 
             CodeAttribute codeAttr = method.getCodeAttribute();
-            if (codeAttr != null) {
+            if (codeAttr != null)
+            {
                 Logger.info("    Code Attribute: " + codeAttr);
             }
         }
@@ -203,7 +266,8 @@ public class ClassFile extends AbstractParser {
         final int attributesCount = readUnsignedShort();
         classAttributes = new ArrayList<>(attributesCount);
         Logger.info("Class Attributes Count: " + attributesCount);
-        for (int i = 0; i < attributesCount; i++) {
+        for (int i = 0; i < attributesCount; i++)
+        {
             Attribute attribute = Attribute.get(this, constPool, null);
             Logger.info("  Class Attribute " + (i + 1) + ": " + attribute);
             classAttributes.add(attribute);
@@ -211,7 +275,8 @@ public class ClassFile extends AbstractParser {
     }
 
     @Override
-    protected boolean verify() {
+    protected boolean verify()
+    {
         return readInt() == CLASS_MAGIC;
     }
 
@@ -219,7 +284,8 @@ public class ClassFile extends AbstractParser {
      * Retrieves the class name from the constant pool.
      * @return The class name as a String.
      */
-    public String getClassName() {
+    public String getClassName()
+    {
         return resolveClassName(thisClass);
     }
 
@@ -227,37 +293,43 @@ public class ClassFile extends AbstractParser {
      * Retrieves the superclass name from the constant pool.
      * @return The superclass name as a String.
      */
-    public String getSuperClassName() {
+    public String getSuperClassName()
+    {
         return resolveClassName(superClass);
     }
 
     /**
      * Sets the class name (internal name like "com/tonic/TestClass").
-     *
      * @param newName the new internal class name (e.g., "com/tonic/NewName")
      */
-    public void setClassName(String newName) {
+    public void setClassName(String newName)
+    {
         String internalName = newName.replace('.', '/');
         String oldInternalName = getClassName();
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(thisClass);
         Utf8Item utf8 = (Utf8Item) constPool.getItem(classRef.getValue());
         utf8.setValue(internalName);
 
-        for (MethodEntry method : methods) {
+        for (MethodEntry method : methods)
+        {
             method.setOwnerName(internalName);
         }
-        for (FieldEntry field : fields) {
+        for (FieldEntry field : fields)
+        {
             field.setOwnerName(internalName);
         }
 
         String oldDescriptor = "L" + oldInternalName + ";";
         String newDescriptor = "L" + internalName + ";";
 
-        for (Item<?> item : constPool.getItems()) {
-            if (item instanceof Utf8Item) {
+        for (Item<?> item : constPool.getItems())
+        {
+            if (item instanceof Utf8Item)
+            {
                 Utf8Item u = (Utf8Item) item;
                 String value = u.getValue();
-                if (value.contains(oldDescriptor)) {
+                if (value.contains(oldDescriptor))
+                {
                     u.setValue(value.replace(oldDescriptor, newDescriptor));
                 }
             }
@@ -266,10 +338,10 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Sets the superclass name (internal name like "java/lang/Object").
-     *
      * @param newSuperName the new internal name for the superclass (e.g., "java/lang/String")
      */
-    public void setSuperClassName(String newSuperName) {
+    public void setSuperClassName(String newSuperName)
+    {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(superClass);
         Utf8Item utf8 = (Utf8Item) constPool.getItem(classRef.getValue());
         utf8.setValue(newSuperName);
@@ -277,27 +349,31 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Adds a new interface to the interfaces list.
-     *
      * @param interfaceName the internal name of the interface (e.g., "java/util/List")
      */
-    public void addInterface(String interfaceName) {
+    public void addInterface(String interfaceName)
+    {
         String internalName = interfaceName.replace('.', '/');
 
         int existingIndex = -1;
         List<Item<?>> cpItems = constPool.getItems();
-        for (int i = 1; i < cpItems.size(); i++) {
+        for (int i = 1; i < cpItems.size(); i++)
+        {
             Item<?> item = cpItems.get(i);
-            if (item instanceof ClassRefItem) {
+            if (item instanceof ClassRefItem)
+            {
                 ClassRefItem classRef = (ClassRefItem) item;
                 Utf8Item nameUtf8 = (Utf8Item) constPool.getItem(classRef.getValue());
-                if (nameUtf8 != null && nameUtf8.getValue().equals(internalName)) {
+                if (nameUtf8 != null && nameUtf8.getValue().equals(internalName))
+                {
                     existingIndex = i;
                     break;
                 }
             }
         }
 
-        if (existingIndex == -1) {
+        if (existingIndex == -1)
+        {
             Utf8Item newUtf8 = new Utf8Item();
             newUtf8.setValue(internalName);
             int utf8Index = constPool.addItem(newUtf8);
@@ -308,22 +384,24 @@ public class ClassFile extends AbstractParser {
             existingIndex = constPool.addItem(newClassRef);
         }
 
-        if (!interfaces.contains(existingIndex)) {
+        if (!interfaces.contains(existingIndex))
+        {
             interfaces.add(existingIndex);
         }
     }
 
     /**
      * Adds a new field to the class.
-     *
      * @param accessFlags the access flags for the field (e.g., Modifiers.PUBLIC)
      * @param fieldName the name of the field
      * @param fieldDescriptor the descriptor of the field (e.g., "Ljava/lang/String;")
      * @param attributes a list of attributes for the field (can be null)
      * @return the created FieldEntry
      */
-    public FieldEntry createNewField(int accessFlags, String fieldName, String fieldDescriptor, List<Attribute> attributes) {
-        if (attributes == null) {
+    public FieldEntry createNewField(int accessFlags, String fieldName, String fieldDescriptor, List<Attribute> attributes)
+    {
+        if (attributes == null)
+        {
             attributes = new ArrayList<>();
         }
 
@@ -355,15 +433,17 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Removes a field from the class.
-     *
      * @param fieldName the name of the field to remove
      * @param fieldDescriptor the descriptor of the field to remove
      * @return true if the field was found and removed
      */
-    public boolean removeField(String fieldName, String fieldDescriptor) {
-        for (int i = 0; i < fields.size(); i++) {
+    public boolean removeField(String fieldName, String fieldDescriptor)
+    {
+        for (int i = 0; i < fields.size(); i++)
+        {
             FieldEntry field = fields.get(i);
-            if (field.getName().equals(fieldName) && field.getDesc().equals(fieldDescriptor)) {
+            if (field.getName().equals(fieldName) && field.getDesc().equals(fieldDescriptor))
+            {
                 fields.remove(i);
                 return true;
             }
@@ -373,15 +453,17 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Removes a method by name and descriptor.
-     *
      * @param methodName the method name
      * @param methodDescriptor the method descriptor
      * @return true if a matching method was removed
      */
-    public boolean removeMethod(String methodName, String methodDescriptor) {
-        for (int i = 0; i < methods.size(); i++) {
+    public boolean removeMethod(String methodName, String methodDescriptor)
+    {
+        for (int i = 0; i < methods.size(); i++)
+        {
             MethodEntry method = methods.get(i);
-            if (method.getName().equals(methodName) && method.getDesc().equals(methodDescriptor)) {
+            if (method.getName().equals(methodName) && method.getDesc().equals(methodDescriptor))
+            {
                 methods.remove(i);
                 return true;
             }
@@ -389,61 +471,101 @@ public class ClassFile extends AbstractParser {
         return false;
     }
 
-    /** Returns the first method named {@code name}, or {@code null} if none. */
-    public MethodEntry getMethod(String name) {
-        for (MethodEntry m : methods) {
-            if (m.getName().equals(name)) {
+    /**
+     * Finds the first method with the given name.
+     * @param name the method name
+     * @return the first matching method, or null if none
+     */
+    public MethodEntry getMethod(String name)
+    {
+        for (MethodEntry m : methods)
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         return null;
     }
 
-    /** Returns the method with the exact name and descriptor, or {@code null} if none. */
-    public MethodEntry getMethod(String name, String descriptor) {
-        for (MethodEntry m : methods) {
-            if (m.getName().equals(name) && m.getDesc().equals(descriptor)) {
+    /**
+     * Finds the method with the exact name and descriptor.
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @return the matching method, or null if none
+     */
+    public MethodEntry getMethod(String name, String descriptor)
+    {
+        for (MethodEntry m : methods)
+        {
+            if (m.getName().equals(name) && m.getDesc().equals(descriptor))
+            {
                 return m;
             }
         }
         return null;
     }
 
-    /** Returns every method named {@code name} (the overload set). */
-    public List<MethodEntry> getMethods(String name) {
+    /**
+     * Collects every method with the given name (the overload set).
+     * @param name the method name
+     * @return the matching methods, possibly empty
+     */
+    public List<MethodEntry> getMethods(String name)
+    {
         List<MethodEntry> out = new ArrayList<>();
-        for (MethodEntry m : methods) {
-            if (m.getName().equals(name)) {
+        for (MethodEntry m : methods)
+        {
+            if (m.getName().equals(name))
+            {
                 out.add(m);
             }
         }
         return out;
     }
 
-    /** Returns the constructors ({@code <init>}). */
-    public List<MethodEntry> getConstructors() {
+    /**
+     * @return the constructors ({@code <init>} methods)
+     */
+    public List<MethodEntry> getConstructors()
+    {
         return getMethods("<init>");
     }
 
-    /** Returns the static initializer ({@code <clinit>}), or {@code null} if none. */
-    public MethodEntry getStaticInitializer() {
+    /**
+     * @return the static initializer ({@code <clinit>}), or null if none
+     */
+    public MethodEntry getStaticInitializer()
+    {
         return getMethod("<clinit>");
     }
 
-    /** Returns the first field named {@code name}, or {@code null} if none. */
-    public FieldEntry getField(String name) {
-        for (FieldEntry f : fields) {
-            if (f.getName().equals(name)) {
+    /**
+     * Finds the first field with the given name.
+     * @param name the field name
+     * @return the first matching field, or null if none
+     */
+    public FieldEntry getField(String name)
+    {
+        for (FieldEntry f : fields)
+        {
+            if (f.getName().equals(name))
+            {
                 return f;
             }
         }
         return null;
     }
 
-    /** Returns the resolved internal names of the directly-implemented interfaces. */
-    public List<String> getInterfaceNames() {
+    /**
+     * Resolves the internal names of the directly-implemented interfaces.
+     * @return the interface internal names
+     */
+    public List<String> getInterfaceNames()
+    {
         List<String> names = new ArrayList<>(interfaces.size());
-        for (int index : interfaces) {
+        for (int index : interfaces)
+        {
             names.add(resolveClassName(index));
         }
         return names;
@@ -451,13 +573,13 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Canonicalizes every reference to class {@code fromInternal} in this class so it names
-     * {@code toInternal} — the complete form of {@link #redirectClassReferences}.
-     *
+     * {@code toInternal} - the complete form of {@link #redirectClassReferences}.
      * @param fromInternal the current class internal name (e.g. {@code "pkg/A"})
      * @param toInternal   the new class internal name (e.g. {@code "pkg/B"})
      * @return the number of constants rewritten
      */
-    public int redirectOwner(String fromInternal, String toInternal) {
+    public int redirectOwner(String fromInternal, String toInternal)
+    {
         return redirectClassReferences(fromInternal, toInternal);
     }
 
@@ -466,42 +588,54 @@ public class ClassFile extends AbstractParser {
      * {@code toInternal} (see {@link ConstPool#redirectClassReferences} for exactly what is covered),
      * then refreshes the cached descriptor and owner-name on this class's fields and methods so they
      * stay consistent with the rewritten pool.
-     *
      * @param fromInternal the current class internal name
      * @param toInternal   the new class internal name
      * @return the number of constants rewritten
      */
-    public int redirectClassReferences(String fromInternal, String toInternal) {
+    public int redirectClassReferences(String fromInternal, String toInternal)
+    {
         int count = constPool.redirectClassReferences(fromInternal, toInternal);
-        for (FieldEntry field : fields) {
+        for (FieldEntry field : fields)
+        {
             refreshMemberAfterRedirect(field.getDescIndex(), field::setDesc);
-            if (fromInternal.equals(field.getOwnerName())) {
+            if (fromInternal.equals(field.getOwnerName()))
+            {
                 field.setOwnerName(toInternal);
             }
         }
-        for (MethodEntry method : methods) {
+        for (MethodEntry method : methods)
+        {
             refreshMemberAfterRedirect(method.getDescIndex(), method::setDesc);
-            if (fromInternal.equals(method.getOwnerName())) {
+            if (fromInternal.equals(method.getOwnerName()))
+            {
                 method.setOwnerName(toInternal);
             }
         }
         return count;
     }
 
-    /** Refreshes a member's cached descriptor from the (possibly rewritten) descriptor Utf8. */
-    private void refreshMemberAfterRedirect(int descIndex, java.util.function.Consumer<String> setDesc) {
+    /**
+     * Refreshes a member's cached descriptor from the (possibly rewritten) descriptor Utf8.
+     */
+    private void refreshMemberAfterRedirect(int descIndex, java.util.function.Consumer<String> setDesc)
+    {
         Item<?> item = constPool.getItem(descIndex);
-        if (item instanceof Utf8Item) {
+        if (item instanceof Utf8Item)
+        {
             setDesc.accept(((Utf8Item) item).getValue());
         }
     }
 
     /**
-     * Returns this class's {@link BootstrapMethodsAttribute}, or {@code null} if it has none.
+     * Finds this class's {@link BootstrapMethodsAttribute}.
+     * @return the attribute, or null if the class has none
      */
-    public BootstrapMethodsAttribute getBootstrapMethodsAttribute() {
-        for (Attribute a : classAttributes) {
-            if (a instanceof BootstrapMethodsAttribute) {
+    public BootstrapMethodsAttribute getBootstrapMethodsAttribute()
+    {
+        for (Attribute a : classAttributes)
+        {
+            if (a instanceof BootstrapMethodsAttribute)
+            {
                 return (BootstrapMethodsAttribute) a;
             }
         }
@@ -511,21 +645,24 @@ public class ClassFile extends AbstractParser {
     /**
      * Find-or-adds a bootstrap method (its method-handle index plus static-argument indices, all in
      * this class's pool) to the {@code BootstrapMethods} attribute, creating the attribute if absent.
-     *
      * @param methodHandleIndex constant-pool index of the bootstrap method handle
      * @param arguments         constant-pool indices of the static bootstrap arguments
      * @return the index of the (existing or newly appended) bootstrap method
      */
-    public int addBootstrapMethod(int methodHandleIndex, List<Integer> arguments) {
+    public int addBootstrapMethod(int methodHandleIndex, List<Integer> arguments)
+    {
         BootstrapMethodsAttribute bsm = getBootstrapMethodsAttribute();
-        if (bsm == null) {
+        if (bsm == null)
+        {
             bsm = new BootstrapMethodsAttribute(constPool);
             classAttributes.add(bsm);
         }
         List<BootstrapMethod> entries = bsm.getBootstrapMethods();
-        for (int i = 0; i < entries.size(); i++) {
+        for (int i = 0; i < entries.size(); i++)
+        {
             BootstrapMethod e = entries.get(i);
-            if (e.getBootstrapMethodRef() == methodHandleIndex && e.getBootstrapArguments().equals(arguments)) {
+            if (e.getBootstrapMethodRef() == methodHandleIndex && e.getBootstrapArguments().equals(arguments))
+            {
                 return i;
             }
         }
@@ -538,15 +675,17 @@ public class ClassFile extends AbstractParser {
      * Useful for tools (e.g. resource packers) that emit class versions which don't require
      * split-verification frames, or that recompute frames downstream. Call before {@link #write()}.
      * Note: a frameless class only loads on JVMs/verification modes that don't require a StackMapTable
-     * (class major version &lt; 50, or {@code -Xverify:none}).
-     *
+     * (class major version below 50, or {@code -Xverify:none}).
      * @return the number of StackMapTable attributes removed
      */
-    public int stripStackMapTables() {
+    public int stripStackMapTables()
+    {
         int removed = 0;
-        for (MethodEntry m : methods) {
+        for (MethodEntry m : methods)
+        {
             CodeAttribute code = m.getCodeAttribute();
-            if (code == null) {
+            if (code == null)
+            {
                 continue;
             }
             int before = code.getAttributes().size();
@@ -567,13 +706,14 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Rebuilds this ClassFile into a fresh byte array using the current in-memory state.
-     *
      * @return a new byte array representing the updated class file
      * @throws IOException if an I/O error occurs while writing
      */
-    public byte[] write() throws IOException {
+    public byte[] write() throws IOException
+    {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (DataOutputStream dos = new DataOutputStream(bos)) {
+        try (DataOutputStream dos = new DataOutputStream(bos))
+        {
 
             dos.writeInt(CLASS_MAGIC);
 
@@ -584,15 +724,18 @@ public class ClassFile extends AbstractParser {
             dos.writeShort(cpCountToWrite);
 
             List<Item<?>> cpItems = constPool.getItems();
-            for (int i = 1; i < cpItems.size(); i++) {
+            for (int i = 1; i < cpItems.size(); i++)
+            {
                 Item<?> itm = cpItems.get(i);
-                if (itm == null) {
+                if (itm == null)
+                {
                     continue;
                 }
                 dos.writeByte(itm.getType());
                 itm.write(dos);
 
-                if (itm.getType() == Item.ITEM_LONG || itm.getType() == Item.ITEM_DOUBLE) {
+                if (itm.getType() == Item.ITEM_LONG || itm.getType() == Item.ITEM_DOUBLE)
+                {
                     i++;
                 }
             }
@@ -602,22 +745,26 @@ public class ClassFile extends AbstractParser {
             dos.writeShort(superClass);
 
             dos.writeShort(interfaces.size());
-            for (int ifcIndex : interfaces) {
+            for (int ifcIndex : interfaces)
+            {
                 dos.writeShort(ifcIndex);
             }
 
             dos.writeShort(fields.size());
-            for (FieldEntry f : fields) {
+            for (FieldEntry f : fields)
+            {
                 f.write(dos);
             }
 
             dos.writeShort(methods.size());
-            for (MethodEntry m : methods) {
+            for (MethodEntry m : methods)
+            {
                 m.write(dos);
             }
 
             dos.writeShort(classAttributes.size());
-            for (Attribute attr : classAttributes) {
+            for (Attribute attr : classAttributes)
+            {
                 attr.write(dos);
             }
 
@@ -631,24 +778,34 @@ public class ClassFile extends AbstractParser {
      * Computes the constant pool count for the class file header.
      * Per JVM spec, Long and Double entries occupy two indices.
      * The items list already accounts for this with null entries at the second slot.
-     *
      * @return the constant pool count value
      */
-    private int computeConstantPoolCount() {
+    private int computeConstantPoolCount()
+    {
         return constPool.getItems().size();
     }
 
-    public String resolveClassName(int classIndex) {
-        try {
+    /**
+     * Resolves a constant-pool class reference to its internal name.
+     * @param classIndex constant-pool index of a class reference item
+     * @return the internal class name, or a placeholder string when the index is not a valid class reference
+     */
+    public String resolveClassName(int classIndex)
+    {
+        try
+        {
             ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
             return classRef.getClassName();
-        } catch (ClassCastException | IllegalArgumentException e) {
+        }
+        catch (ClassCastException | IllegalArgumentException e)
+        {
             return "InvalidClassRef(" + classIndex + ")";
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("ClassFile {\n");
 
@@ -660,32 +817,44 @@ public class ClassFile extends AbstractParser {
         sb.append("  This Class: ").append(getClassName()).append("\n");
         sb.append("  Super Class: ").append(getSuperClassName()).append("\n");
 
-        if (!interfaces.isEmpty()) {
+        if (!interfaces.isEmpty())
+        {
             sb.append("  Interfaces:\n");
-            for (int ifaceIndex : interfaces) {
+            for (int ifaceIndex : interfaces)
+            {
                 sb.append("    - ").append(resolveClassName(ifaceIndex)).append("\n");
             }
-        } else {
+        }
+        else
+        {
             sb.append("  Interfaces: None\n");
         }
 
         sb.append("\n").append(constPool.toString()).append("\n");
 
-        if (!fields.isEmpty()) {
+        if (!fields.isEmpty())
+        {
             sb.append("  Fields:\n");
-            for (FieldEntry field : fields) {
+            for (FieldEntry field : fields)
+            {
                 sb.append("    ").append(field).append("\n");
             }
-        } else {
+        }
+        else
+        {
             sb.append("  Fields: None\n");
         }
 
-        if (!methods.isEmpty()) {
+        if (!methods.isEmpty())
+        {
             sb.append("\n  Methods:\n");
-            for (MethodEntry method : methods) {
+            for (MethodEntry method : methods)
+            {
                 sb.append("    ").append(method).append("\n");
             }
-        } else {
+        }
+        else
+        {
             sb.append("\n  Methods: None\n");
         }
 
@@ -693,7 +862,8 @@ public class ClassFile extends AbstractParser {
         return sb.toString();
     }
 
-    private String getAccessFlagsDescription(int access) {
+    private String getAccessFlagsDescription(int access)
+    {
         List<String> flags = new ArrayList<>();
         if ((access & Modifiers.PUBLIC) != 0) flags.add("public");
         if ((access & Modifiers.FINAL) != 0) flags.add("final");
@@ -709,14 +879,14 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Creates a new method with Class-based parameter types.
-     *
      * @param accessFlags the access flags for the method
      * @param methodName the name of the method
      * @param returnType the return type as a Class object
      * @param parameterTypes the parameter types as Class objects
      * @return the created MethodEntry
      */
-    public MethodEntry createNewMethod(int accessFlags, String methodName, Class<?> returnType, Class<?>... parameterTypes) {
+    public MethodEntry createNewMethod(int accessFlags, String methodName, Class<?> returnType, Class<?>... parameterTypes)
+    {
         Logger.info("Creating method: " + methodName + " with return type: " + returnType.getName() + " and parameters: " + Arrays.toString(parameterTypes));
         String methodDescriptor = generateMethodDescriptor(returnType, parameterTypes);
         Logger.info("Generated method descriptor: " + methodDescriptor);
@@ -725,14 +895,14 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Creates a new method with String-based parameter types.
-     *
      * @param accessFlags the access flags for the method
      * @param methodName the name of the method
      * @param returnType the return type as a descriptor string
      * @param parameterTypes the parameter types as descriptor strings
      * @return the created MethodEntry
      */
-    public MethodEntry createNewMethod(int accessFlags, String methodName, String returnType, String... parameterTypes) {
+    public MethodEntry createNewMethod(int accessFlags, String methodName, String returnType, String... parameterTypes)
+    {
         returnType = TypeUtil.validateDescriptorFormat(returnType);
         Logger.info("Creating method: " + methodName + " with return type: " + returnType + " and parameters: " + Arrays.toString(parameterTypes));
         String methodDescriptor = generateMethodDescriptor(returnType, parameterTypes);
@@ -743,13 +913,13 @@ public class ClassFile extends AbstractParser {
     /**
      * Creates a new method with a complete method descriptor.
      * Use this when you have a pre-built descriptor like "(Lcom/test/ClassB;)V".
-     *
      * @param accessFlags the access flags for the method
      * @param methodName the name of the method
      * @param methodDescriptor the complete method descriptor (e.g., "(Ljava/lang/String;I)V")
      * @return the created MethodEntry
      */
-    public MethodEntry createNewMethodWithDescriptor(int accessFlags, String methodName, String methodDescriptor) {
+    public MethodEntry createNewMethodWithDescriptor(int accessFlags, String methodName, String methodDescriptor)
+    {
         Logger.info("Creating method: " + methodName + " with descriptor: " + methodDescriptor);
         // for maxLocals sizing
         int paramCount = countParametersFromDescriptor(methodDescriptor);
@@ -759,30 +929,41 @@ public class ClassFile extends AbstractParser {
     /**
      * Counts the number of local variable slots required for method parameters.
      * Long (J) and double (D) types require 2 slots each.
-     *
      * @param descriptor method descriptor string
      * @return slot count for parameters
      */
-    private int countParametersFromDescriptor(String descriptor) {
+    private int countParametersFromDescriptor(String descriptor)
+    {
         if (descriptor == null || !descriptor.startsWith("(")) return 0;
         int count = 0;
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             char c = descriptor.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 int end = descriptor.indexOf(';', i);
-                if (end > i) {
+                if (end > i)
+                {
                     i = end + 1;
-                } else {
+                }
+                else
+                {
                     i++;
                 }
                 count++;
-            } else if (c == '[') {
+            }
+            else if (c == '[')
+            {
                 i++;
-            } else if (c == 'J' || c == 'D') {
+            }
+            else if (c == 'J' || c == 'D')
+            {
                 count += 2;
                 i++;
-            } else {
+            }
+            else
+            {
                 count++;
                 i++;
             }
@@ -794,14 +975,14 @@ public class ClassFile extends AbstractParser {
      * Creates the structural skeleton of a new method (an empty Code attribute for
      * concrete methods, none for abstract/native) and registers it on the class.
      * Default body generation lives in {@code com.tonic.analysis.ClassFactory}.
-     *
      * @param accessFlags the access flags for the method
      * @param methodName the name of the method
      * @param methodDescriptor the method descriptor string
      * @param parameterTypes the parameter types (used only for local-slot sizing)
      * @return the created MethodEntry
      */
-    private MethodEntry createMethodStructure(int accessFlags, String methodName, String methodDescriptor, Object... parameterTypes) {
+    private MethodEntry createMethodStructure(int accessFlags, String methodName, String methodDescriptor, Object... parameterTypes)
+    {
         Logger.info("Generated method descriptor: " + methodDescriptor);
 
         Utf8Item nameUtf8 = constPool.findOrAddUtf8(methodName);
@@ -815,7 +996,8 @@ public class ClassFile extends AbstractParser {
 
         boolean isAbstract = (accessFlags & Modifiers.ABSTRACT) != 0;
         boolean isNative = (accessFlags & Modifiers.NATIVE) != 0;
-        if (!isAbstract && !isNative) {
+        if (!isAbstract && !isNative)
+        {
             Utf8Item codeUtf8 = constPool.findOrAddUtf8("Code");
             int codeNameIndex = constPool.getIndexOf(codeUtf8);
 
@@ -834,7 +1016,8 @@ public class ClassFile extends AbstractParser {
         newMethod.setOwnerName(getClassName());
         newMethod.setKey(methodName + methodDescriptor);
 
-        if (codeAttr != null) {
+        if (codeAttr != null)
+        {
             codeAttr.setParent(newMethod);
         }
 
@@ -845,15 +1028,16 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Generates a JVM method descriptor string based on the provided return type and parameter types.
-     *
      * @param returnType     The return type of the method.
      * @param parameterTypes The parameter types of the method.
      * @return The JVM method descriptor string.
      */
-    private String generateMethodDescriptor(Class<?> returnType, Class<?>... parameterTypes) {
+    private String generateMethodDescriptor(Class<?> returnType, Class<?>... parameterTypes)
+    {
         StringBuilder descriptor = new StringBuilder();
         descriptor.append('(');
-        for (Class<?> paramType : parameterTypes) {
+        for (Class<?> paramType : parameterTypes)
+        {
             descriptor.append(getTypeDescriptor(paramType));
         }
         descriptor.append(')');
@@ -863,15 +1047,16 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Generates a JVM method descriptor string based on the provided return type and parameter types.
-     *
      * @param returnType     The return type of the method.
      * @param parameterTypes The parameter types of the method.
      * @return The JVM method descriptor string.
      */
-    private String generateMethodDescriptor(String returnType, String... parameterTypes) {
+    private String generateMethodDescriptor(String returnType, String... parameterTypes)
+    {
         StringBuilder descriptor = new StringBuilder();
         descriptor.append('(');
-        for (String paramType : parameterTypes) {
+        for (String paramType : parameterTypes)
+        {
             descriptor.append(getTypeDescriptor(paramType));
         }
         descriptor.append(')');
@@ -881,68 +1066,102 @@ public class ClassFile extends AbstractParser {
 
     /**
      * Returns the JVM type descriptor for a given Class object.
-     *
      * @param clazz The Class object.
      * @return The JVM type descriptor string.
      */
-    private String getTypeDescriptor(Class<?> clazz) {
-        if (clazz.isPrimitive()) {
-            if (clazz == void.class) {
+    private String getTypeDescriptor(Class<?> clazz)
+    {
+        if (clazz.isPrimitive())
+        {
+            if (clazz == void.class)
+            {
                 return "V";
-            } else if (clazz == int.class) {
+            }
+            else if (clazz == int.class)
+            {
                 return "I";
-            } else if (clazz == boolean.class) {
+            }
+            else if (clazz == boolean.class)
+            {
                 return "Z";
-            } else if (clazz == byte.class) {
+            }
+            else if (clazz == byte.class)
+            {
                 return "B";
-            } else if (clazz == char.class) {
+            }
+            else if (clazz == char.class)
+            {
                 return "C";
-            } else if (clazz == short.class) {
+            }
+            else if (clazz == short.class)
+            {
                 return "S";
-            } else if (clazz == long.class) {
+            }
+            else if (clazz == long.class)
+            {
                 return "J";
-            } else if (clazz == float.class) {
+            }
+            else if (clazz == float.class)
+            {
                 return "F";
-            } else if (clazz == double.class) {
+            }
+            else if (clazz == double.class)
+            {
                 return "D";
             }
             throw new IllegalArgumentException("Unrecognized primitive type: " + clazz.getName());
-        } else if (clazz.isArray()) {
+        }
+        else if (clazz.isArray())
+        {
             return clazz.getName().replace('.', '/');
-        } else {
+        }
+        else
+        {
             return "L" + clazz.getName().replace('.', '/') + ";";
         }
     }
 
     /**
-     * Returns the JVM type descriptor for a given field type descriptor string.
-     *
-     * @param descriptor The field type descriptor string.
-     * @return The JVM type descriptor string.
+     * Validates a field type descriptor and returns its canonical form.
+     * @param descriptor the field type descriptor string
+     * @return the validated descriptor string
+     * @throws IllegalArgumentException if the descriptor is null or empty
      */
-    private String getTypeDescriptor(String descriptor) {
-        if (descriptor == null || descriptor.isEmpty()) {
+    private String getTypeDescriptor(String descriptor)
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             throw new IllegalArgumentException("Descriptor cannot be null or empty");
         }
 
         return TypeUtil.validateDescriptorFormat(descriptor);
     }
 
-    public void accept(AbstractClassVisitor visitor) {
-        for(Item<?> item : constPool.getItems()) {
-            if(item != null) {
+    /**
+     * Dispatches the visitor over the constant pool, class attributes, fields, and methods.
+     * @param visitor the visitor to apply
+     */
+    public void accept(AbstractClassVisitor visitor)
+    {
+        for(Item<?> item : constPool.getItems())
+        {
+            if(item != null)
+            {
                 item.accept(visitor);
             }
         }
 
-        for(Attribute attr : classAttributes) {
+        for(Attribute attr : classAttributes)
+        {
             visitor.visitClassAttribute(attr);
         }
 
-        for (FieldEntry field : fields) {
+        for (FieldEntry field : fields)
+        {
             field.accept(visitor);
         }
-        for (MethodEntry method : methods) {
+        for (MethodEntry method : methods)
+        {
             method.accept(visitor);
         }
     }

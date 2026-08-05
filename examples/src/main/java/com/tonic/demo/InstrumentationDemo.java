@@ -7,27 +7,23 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Demonstrates the Instrumentation API usage.
- *
- * <p>The Instrumentation API provides a fluent interface for adding hooks
- * to bytecode at various instrumentation points:</p>
- *
- * <ul>
- *   <li>Method entry/exit</li>
- *   <li>Field read/write</li>
- *   <li>Array load/store</li>
- *   <li>Method call interception</li>
- *   <li>Exception handlers</li>
- * </ul>
+ * Demo showing the fluent instrumentation API for hooking methods, fields, arrays, and calls.
  */
-public class InstrumentationDemo {
+public class InstrumentationDemo
+{
 
-    public static void main(String[] args) throws IOException {
+    /**
+     * Instruments this demo class with method, field, array, and call hooks and prints the results.
+     * @param args unused
+     * @throws IOException if the sample class bytes cannot be read
+     */
+    public static void main(String[] args) throws IOException
+    {
         System.out.println("=== YABR Instrumentation API Demo ===\n");
 
-        // Load a sample class
         ClassFile targetClass = loadSampleClass();
-        if (targetClass == null) {
+        if (targetClass == null)
+        {
             System.out.println("Could not load sample class. Using inline example.");
             demonstrateAPIUsage();
             return;
@@ -39,33 +35,35 @@ public class InstrumentationDemo {
         demonstrateMethodCallHooks(targetClass);
     }
 
-    private static ClassFile loadSampleClass() throws IOException {
+    private static ClassFile loadSampleClass() throws IOException
+    {
         // Try to load this demo class itself
         String className = InstrumentationDemo.class.getName().replace('.', '/') + ".class";
-        try (InputStream is = InstrumentationDemo.class.getClassLoader().getResourceAsStream(className)) {
-            if (is != null) {
+        try (InputStream is = InstrumentationDemo.class.getClassLoader().getResourceAsStream(className))
+        {
+            if (is != null)
+            {
                 return new ClassFile(is);
             }
         }
         return null;
     }
 
-    private static void demonstrateMethodHooks(ClassFile targetClass) {
+    private static void demonstrateMethodHooks(ClassFile targetClass)
+    {
         System.out.println("--- Method Entry/Exit Hooks ---");
 
         Instrumenter.InstrumentationReport report = Instrumenter.forClass(targetClass)
                 // Hook all method entries
                 .onMethodEntry()
-                    .callStatic("com/example/Profiler", "onMethodEntry",
-                            "(Ljava/lang/String;Ljava/lang/String;)V")
+                    .callStatic("com/example/Profiler", "onMethodEntry", "(Ljava/lang/String;Ljava/lang/String;)V")
                     .withClassName()
                     .withMethodName()
                     .register()
 
                 // Hook all method exits
                 .onMethodExit()
-                    .callStatic("com/example/Profiler", "onMethodExit",
-                            "(Ljava/lang/String;Ljava/lang/Object;)V")
+                    .callStatic("com/example/Profiler", "onMethodExit", "(Ljava/lang/String;Ljava/lang/Object;)V")
                     .withMethodName()
                     .withReturnValue()
                     .register()
@@ -80,7 +78,8 @@ public class InstrumentationDemo {
         System.out.println();
     }
 
-    private static void demonstrateFieldHooks(ClassFile targetClass) {
+    private static void demonstrateFieldHooks(ClassFile targetClass)
+    {
         System.out.println("--- Field Write Hooks ---");
 
         Instrumenter.InstrumentationReport report = Instrumenter.forClass(targetClass)
@@ -99,14 +98,14 @@ public class InstrumentationDemo {
         System.out.println();
     }
 
-    private static void demonstrateArrayHooks(ClassFile targetClass) {
+    private static void demonstrateArrayHooks(ClassFile targetClass)
+    {
         System.out.println("--- Array Store Hooks ---");
 
         Instrumenter.InstrumentationReport report = Instrumenter.forClass(targetClass)
                 // Hook array stores
                 .onArrayStore()
-                    .callStatic("com/example/ArrayMonitor", "onArrayStore",
-                            "(Ljava/lang/Object;ILjava/lang/Object;)V")
+                    .callStatic("com/example/ArrayMonitor", "onArrayStore", "(Ljava/lang/Object;ILjava/lang/Object;)V")
                     .withAll()  // array, index, value
                     .register()
 
@@ -116,7 +115,8 @@ public class InstrumentationDemo {
         System.out.println();
     }
 
-    private static void demonstrateMethodCallHooks(ClassFile targetClass) {
+    private static void demonstrateMethodCallHooks(ClassFile targetClass)
+    {
         System.out.println("--- Method Call Interception ---");
 
         Instrumenter.InstrumentationReport report = Instrumenter.forClass(targetClass)
@@ -124,8 +124,7 @@ public class InstrumentationDemo {
                 .onMethodCall()
                     .targeting("java/io/PrintStream", "println")
                     .before()
-                    .callStatic("com/example/IOHooks", "beforePrintln",
-                            "(Ljava/lang/Object;)V")
+                    .callStatic("com/example/IOHooks", "beforePrintln", "(Ljava/lang/Object;)V")
                     .withReceiver()
                     .register()
 
@@ -135,7 +134,8 @@ public class InstrumentationDemo {
         System.out.println();
     }
 
-    private static void demonstrateAPIUsage() {
+    private static void demonstrateAPIUsage()
+    {
         System.out.println("--- Instrumentation API Usage Examples ---\n");
 
         System.out.println("1. Method Entry Hook with Parameters:");
@@ -203,14 +203,23 @@ public class InstrumentationDemo {
     private String name;
     private int[] values = new int[10];
 
-    public void sampleMethod(String input) {
+    /**
+     * Mutates the sample fields so instrumentation hooks have reads and writes to intercept.
+     * @param input the value stored in the name field
+     */
+    public void sampleMethod(String input)
+    {
         this.name = input;
         this.counter++;
         values[0] = counter;
         System.out.println("Sample: " + name);
     }
 
-    public int getCounter() {
+    /**
+     * @return the counter
+     */
+    public int getCounter()
+    {
         return counter;
     }
 }

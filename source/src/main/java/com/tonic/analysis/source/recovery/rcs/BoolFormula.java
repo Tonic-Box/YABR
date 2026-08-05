@@ -7,12 +7,14 @@ package com.tonic.analysis.source.recovery.rcs;
  * emission (it preserves the short-circuit shape the structurer built, which the variable-ordered BDD
  * does not). Reasoning reads {@code bdd}; readable {@code &&}/{@code ||} emission reads {@code nnf}.
  */
-public final class BoolFormula {
+public final class BoolFormula
+{
 
     final Bdd bdd;
     final Nnf nnf;
 
-    BoolFormula(Bdd bdd, Nnf nnf) {
+    BoolFormula(Bdd bdd, Nnf nnf)
+    {
         this.bdd = bdd;
         this.nnf = nnf;
     }

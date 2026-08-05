@@ -13,19 +13,23 @@ import java.util.Set;
  * {@code (branchPC, taken)} edge. Coverage-guided input generation uses this to tell whether a new
  * input reaches a branch direction not seen before.
  */
-final class BranchCoverageListener implements CapableListener {
+final class BranchCoverageListener implements CapableListener
+{
 
     private final Set<Long> edges = new HashSet<>();
 
-    public Set<ListenerCapability> getCapabilities() {
+    public Set<ListenerCapability> getCapabilities()
+    {
         return EnumSet.of(ListenerCapability.BRANCH_OPERATIONS);
     }
 
-    public void onBranch(StackFrame frame, int fromPC, int toPC, boolean taken) {
+    public void onBranch(StackFrame frame, int fromPC, int toPC, boolean taken)
+    {
         edges.add(((long) fromPC << 1) | (taken ? 1L : 0L));
     }
 
-    Set<Long> edges() {
+    Set<Long> edges()
+    {
         return edges;
     }
 }

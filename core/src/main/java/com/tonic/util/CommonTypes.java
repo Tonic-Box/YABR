@@ -1,6 +1,11 @@
 package com.tonic.util;
 
-public final class CommonTypes {
+/**
+ * Internal names, descriptors and method names for the JDK types the toolchain
+ * refers to most.
+ */
+public final class CommonTypes
+{
 
     private CommonTypes() {}
 

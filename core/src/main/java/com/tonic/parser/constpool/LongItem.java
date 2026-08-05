@@ -8,30 +8,40 @@ import java.io.IOException;
 /**
  * Represents a CONSTANT_Long entry in the constant pool.
  */
-public class LongItem extends Item<Long> {
+public class LongItem extends Item<Long>
+{
     private Long value;
 
-    public void setValue(Long value) {
+    /**
+     * Sets the constant this item holds.
+     * @param value the long value
+     */
+    public void setValue(Long value)
+    {
         this.value = value;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.value = classFile.readLong();
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeLong(value);
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_LONG;
     }
 
     @Override
-    public Long getValue() {
+    public Long getValue()
+    {
         return value;
     }
 }

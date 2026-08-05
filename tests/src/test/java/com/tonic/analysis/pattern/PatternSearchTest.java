@@ -21,14 +21,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for PatternSearch - searching code patterns across ClassPool.
  * Covers pattern matching, method calls, field accesses, and type checks.
  */
-class PatternSearchTest {
+class PatternSearchTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private PatternSearch search;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -38,42 +40,48 @@ class PatternSearchTest {
         search = new PatternSearch(pool);
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void constructorCreatesInstance() {
+    void constructorCreatesInstance()
+    {
         PatternSearch ps = new PatternSearch(pool);
         assertNotNull(ps);
     }
 
-    // ========== Scope Configuration Tests ==========
+    // Scope Configuration Tests
 
     @Test
-    void inAllClassesReturnsThis() {
+    void inAllClassesReturnsThis()
+    {
         PatternSearch result = search.inAllClasses();
         assertSame(search, result);
     }
 
     @Test
-    void inClassReturnsThis() {
+    void inClassReturnsThis()
+    {
         PatternSearch result = search.inClass("com/test/SearchTestClass");
         assertSame(search, result);
     }
 
     @Test
-    void inClassWithNonExistentClassReturnsThis() {
+    void inClassWithNonExistentClassReturnsThis()
+    {
         PatternSearch result = search.inClass("com/test/NonExistent");
         assertSame(search, result);
     }
 
     @Test
-    void inPackageReturnsThis() {
+    void inPackageReturnsThis()
+    {
         PatternSearch result = search.inPackage("com/test");
         assertSame(search, result);
     }
 
     @Test
-    void inMethodReturnsThis() {
+    void inMethodReturnsThis()
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testMethod", "V");
 
@@ -82,48 +90,55 @@ class PatternSearchTest {
     }
 
     @Test
-    void inAllMethodsOfReturnsThis() {
+    void inAllMethodsOfReturnsThis()
+    {
         PatternSearch result = search.inAllMethodsOf(classFile);
         assertSame(search, result);
     }
 
     @Test
-    void limitReturnsThis() {
+    void limitReturnsThis()
+    {
         PatternSearch result = search.limit(10);
         assertSame(search, result);
     }
 
-    // ========== Analysis Integration Tests ==========
+    // Analysis Integration Tests
 
     @Test
-    void withCallGraphReturnsThis() {
+    void withCallGraphReturnsThis()
+    {
         PatternSearch result = search.withCallGraph();
         assertSame(search, result);
     }
 
     @Test
-    void withDependenciesReturnsThis() {
+    void withDependenciesReturnsThis()
+    {
         PatternSearch result = search.withDependencies();
         assertSame(search, result);
     }
 
     @Test
-    void withTypeInferenceReturnsThis() {
+    void withTypeInferenceReturnsThis()
+    {
         PatternSearch result = search.withTypeInference();
         assertSame(search, result);
     }
 
-    // ========== Basic Pattern Search Tests ==========
+    // Basic Pattern Search Tests
 
     @Test
-    void findMethodCallsReturnsEmptyForEmptyClass() {
+    void findMethodCallsReturnsEmptyForEmptyClass()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findMethodCalls("java/lang/String");
         assertNotNull(results);
     }
 
     @Test
-    void findMethodCallsByOwnerReturnsResults() throws IOException {
+    void findMethodCallsByOwnerReturnsResults() throws IOException
+    {
         createMethodWithStringCall();
 
         search.inClass("com/test/SearchTestClass");
@@ -133,7 +148,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findMethodCallsByOwnerAndNameReturnsResults() throws IOException {
+    void findMethodCallsByOwnerAndNameReturnsResults() throws IOException
+    {
         createMethodWithStringCall();
 
         search.inClass("com/test/SearchTestClass");
@@ -143,7 +159,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findFieldAccessesReturnsResults() {
+    void findFieldAccessesReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findFieldAccesses("com/test/MyClass");
 
@@ -151,7 +168,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findFieldsByNameReturnsResults() {
+    void findFieldsByNameReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findFieldsByName("myField");
 
@@ -159,7 +177,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findInstanceOfChecksReturnsResults() {
+    void findInstanceOfChecksReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findInstanceOfChecks();
 
@@ -167,7 +186,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findInstanceOfChecksForTypeReturnsResults() {
+    void findInstanceOfChecksForTypeReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findInstanceOfChecks("java/lang/String");
 
@@ -175,7 +195,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findCastsReturnsResults() {
+    void findCastsReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findCasts();
 
@@ -183,7 +204,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findCastsToTypeReturnsResults() {
+    void findCastsToTypeReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findCastsTo("java/lang/String");
 
@@ -191,7 +213,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findAllocationsReturnsResults() {
+    void findAllocationsReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findAllocations();
 
@@ -199,7 +222,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findAllocationsForClassReturnsResults() {
+    void findAllocationsForClassReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findAllocations("java/lang/String");
 
@@ -207,7 +231,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findNullChecksReturnsResults() {
+    void findNullChecksReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findNullChecks();
 
@@ -215,7 +240,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findThrowsReturnsResults() {
+    void findThrowsReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findThrows();
 
@@ -223,55 +249,58 @@ class PatternSearchTest {
     }
 
     @Test
-    void findPatternReturnsResults() {
+    void findPatternReturnsResults()
+    {
         search.inClass("com/test/SearchTestClass");
         List<SearchResult> results = search.findPattern(Patterns.anyReturn());
 
         assertNotNull(results);
     }
 
-    // ========== Call Graph Query Tests ==========
+    // Call Graph Query Tests
 
     @Test
-    void findCallersOfBuildsCallGraphIfNeeded() {
-        List<SearchResult> results = search.findCallersOf(
-            "java/lang/String", "toString", "()Ljava/lang/String;");
+    void findCallersOfBuildsCallGraphIfNeeded()
+    {
+        List<SearchResult> results = search.findCallersOf("java/lang/String", "toString", "()Ljava/lang/String;");
 
         assertNotNull(results);
     }
 
     @Test
-    void findCallersOfReturnsResults() throws IOException {
+    void findCallersOfReturnsResults() throws IOException
+    {
         createMethodWithStringCall();
 
         search.inClass("com/test/SearchTestClass");
-        List<SearchResult> results = search.findCallersOf(
-            "java/lang/String", "valueOf", "(I)Ljava/lang/String;");
+        List<SearchResult> results = search.findCallersOf("java/lang/String", "valueOf", "(I)Ljava/lang/String;");
 
         assertNotNull(results);
     }
 
     @Test
-    void findCalleesOfReturnsResults() throws IOException {
+    void findCalleesOfReturnsResults() throws IOException
+    {
         createMethodWithStringCall();
 
-        List<SearchResult> results = search.findCalleesOf(
-            "com/test/SearchTestClass", "testMethod", "()V");
+        List<SearchResult> results = search.findCalleesOf("com/test/SearchTestClass", "testMethod", "()V");
 
         assertNotNull(results);
     }
 
-    // ========== Dependency Query Tests ==========
+    // Dependency Query Tests
 
     @Test
-    void findDependentsOfBuildsAnalyzerIfNeeded() {
+    void findDependentsOfBuildsAnalyzerIfNeeded()
+    {
         List<SearchResult> results = search.findDependentsOf("java/lang/String");
 
         assertNotNull(results);
     }
 
     @Test
-    void findDependentsOfReturnsResults() {
+    void findDependentsOfReturnsResults()
+    {
         search.withDependencies();
         List<SearchResult> results = search.findDependentsOf("java/lang/String");
 
@@ -279,17 +308,19 @@ class PatternSearchTest {
     }
 
     @Test
-    void findDependenciesOfReturnsResults() {
+    void findDependenciesOfReturnsResults()
+    {
         search.withDependencies();
         List<SearchResult> results = search.findDependenciesOf("com/test/SearchTestClass");
 
         assertNotNull(results);
     }
 
-    // ========== Type Inference Query Tests ==========
+    // Type Inference Query Tests
 
     @Test
-    void findPotentialNullDereferencesReturnsResults() throws IOException {
+    void findPotentialNullDereferencesReturnsResults() throws IOException
+    {
         createSimpleMethod();
 
         search.inClass("com/test/SearchTestClass");
@@ -299,7 +330,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void findPotentialNullDereferencesHandlesNoCode() {
+    void findPotentialNullDereferencesHandlesNoCode()
+    {
         // Create a fresh class without default constructor/clinit for isolation
         ClassPool emptyPool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().setAbstract().build();
@@ -319,10 +351,11 @@ class PatternSearchTest {
         assertTrue(results.isEmpty());
     }
 
-    // ========== Limit Tests ==========
+    // Limit Tests
 
     @Test
-    void limitRestrictsResults() throws IOException {
+    void limitRestrictsResults() throws IOException
+    {
         createMultipleMethods(5);
 
         search.inClass("com/test/SearchTestClass").limit(2);
@@ -332,10 +365,11 @@ class PatternSearchTest {
         // Results may be limited based on implementation
     }
 
-    // ========== Fluent API Tests ==========
+    // Fluent API Tests
 
     @Test
-    void fluentAPIChaining() {
+    void fluentAPIChaining()
+    {
         PatternSearch result = search
             .inClass("com/test/SearchTestClass")
             .withCallGraph()
@@ -347,7 +381,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void multipleInClassCalls() {
+    void multipleInClassCalls()
+    {
         PatternSearch result = search
             .inClass("com/test/Class1")
             .inClass("com/test/Class2")
@@ -356,9 +391,10 @@ class PatternSearchTest {
         assertSame(search, result);
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private void createSimpleMethod() throws IOException {
+    private void createSimpleMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "simpleMethod", "V");
 
@@ -367,7 +403,8 @@ class PatternSearchTest {
         bc.finalizeBytecode();
     }
 
-    private void createMethodWithStringCall() throws IOException {
+    private void createMethodWithStringCall() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "testMethod", "V");
 
@@ -380,8 +417,10 @@ class PatternSearchTest {
         bc.finalizeBytecode();
     }
 
-    private void createMultipleMethods(int count) throws IOException {
-        for (int i = 0; i < count; i++) {
+    private void createMultipleMethods(int count) throws IOException
+    {
+        for (int i = 0; i < count; i++)
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "method" + i, "V");
 
@@ -391,10 +430,11 @@ class PatternSearchTest {
         }
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void searchOnEmptyPool() {
+    void searchOnEmptyPool()
+    {
         ClassPool emptyPool = TestUtils.emptyPool();
         PatternSearch emptySearch = new PatternSearch(emptyPool);
 
@@ -405,7 +445,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void searchWithNullPattern() throws IOException {
+    void searchWithNullPattern() throws IOException
+    {
         // Create a method with code so the pattern will actually be evaluated
         createSimpleMethod();
         search.inClass("com/test/SearchTestClass");
@@ -417,7 +458,8 @@ class PatternSearchTest {
     }
 
     @Test
-    void searchInNonExistentClass() {
+    void searchInNonExistentClass()
+    {
         search.inClass("com/test/NonExistentClass");
         List<SearchResult> results = search.findMethodCalls("java/lang/String");
 

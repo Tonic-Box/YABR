@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * The header's leading statements up to the hashCode dispatch are user code and are now emitted before
  * the switch.
  */
-class StringSwitchSelectorStoreFidelityTest {
+class StringSwitchSelectorStoreFidelityTest
+{
 
     private static final String SOURCE =
             "public class StrSel {\n"
@@ -62,14 +63,14 @@ class StringSwitchSelectorStoreFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("str-sel");
         Path src = dir.resolve("StrSel.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("StrSel.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -79,19 +80,19 @@ class StringSwitchSelectorStoreFidelityTest {
     }
 
     @Test
-    void loopSelectorAssignmentSurvives() {
-        assertTrue(d1.contains("args[") ,
-                "the per-iteration selector assignment must be recovered:\n" + d1);
+    void loopSelectorAssignmentSurvives()
+    {
+        assertTrue(d1.contains("args[") , "the per-iteration selector assignment must be recovered:\n" + d1);
     }
 
     @Test
-    void bothShapesComputeTheRightValues() throws Exception {
+    void bothShapesComputeTheRightValues() throws Exception
+    {
         assertEquals(2, recompiledClass.getMethod("direct").invoke(null),
                 "the straight-line selector's initializer must run and match its case");
         java.lang.reflect.Field calls = recompiledClass.getDeclaredField("calls");
         calls.setAccessible(true);
-        assertEquals(1, calls.getInt(null),
-                "the selector's side-effecting initializer must run exactly once");
+        assertEquals(1, calls.getInt(null), "the selector's side-effecting initializer must run exactly once");
         assertEquals(3, recompiledClass.getMethod("scan", String[].class)
                 .invoke(null, (Object) new String[]{"-x", "-y"}),
                 "the loop must re-read the selector each iteration");

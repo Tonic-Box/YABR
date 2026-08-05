@@ -15,28 +15,32 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests identification and simplification of basic and derived induction
  * variables in loops, including strength reduction optimizations.
  */
-class InductionVariableSimplificationTest {
+class InductionVariableSimplificationTest
+{
 
     private InductionVariableSimplification transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new InductionVariableSimplification();
     }
 
-    // ========== getName Tests ==========
+    // getName Tests
 
     @Test
-    void getNameReturnsInductionVariableSimplification() {
+    void getNameReturnsInductionVariableSimplification()
+    {
         assertEquals("InductionVariableSimplification", transform.getName());
     }
 
-    // ========== Basic Induction Variable Tests ==========
+    // Basic Induction Variable Tests
 
     @Test
-    void identifiesBasicInductionVariable() {
+    void identifiesBasicInductionVariable()
+    {
         // Create simple loop: for (i = 0; i < 10; i++)
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock preheader = new IRBlock("preheader");
@@ -67,8 +71,7 @@ class InductionVariableSimplificationTest {
         iPhi.addIncoming(iNext, body);
         header.addPhi(iPhi);
 
-        BranchInstruction headerBranch = new BranchInstruction(
-            CompareOp.IFLT, i, IntConstant.of(10), body, exit);
+        BranchInstruction headerBranch = new BranchInstruction(CompareOp.IFLT, i, IntConstant.of(10), body, exit);
         headerBranch.setBlock(header);
         header.addInstruction(headerBranch);
 
@@ -95,7 +98,8 @@ class InductionVariableSimplificationTest {
     }
 
     @Test
-    void simplifiesDerivedInductionVariable() {
+    void simplifiesDerivedInductionVariable()
+    {
         // Create loop with derived IV: j = i * 4
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock preheader = new IRBlock("preheader");
@@ -126,8 +130,7 @@ class InductionVariableSimplificationTest {
         iPhi.addIncoming(iNext, body);
         header.addPhi(iPhi);
 
-        BranchInstruction headerBranch = new BranchInstruction(
-            CompareOp.IFLT, i, IntConstant.of(10), body, exit);
+        BranchInstruction headerBranch = new BranchInstruction(CompareOp.IFLT, i, IntConstant.of(10), body, exit);
         headerBranch.setBlock(header);
         header.addInstruction(headerBranch);
 
@@ -152,14 +155,14 @@ class InductionVariableSimplificationTest {
 
         boolean changed = transform.run(method);
 
-        // Should detect the derived IV pattern
         assertTrue(changed);
     }
 
-    // ========== No Change Tests ==========
+    // No Change Tests
 
     @Test
-    void returnsFalseWhenNoSimplifications() {
+    void returnsFalseWhenNoSimplifications()
+    {
         // Loop with no derived IVs to optimize
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock preheader = new IRBlock("preheader");
@@ -190,8 +193,7 @@ class InductionVariableSimplificationTest {
         iPhi.addIncoming(iNext, body);
         header.addPhi(iPhi);
 
-        BranchInstruction headerBranch = new BranchInstruction(
-            CompareOp.IFLT, i, IntConstant.of(10), body, exit);
+        BranchInstruction headerBranch = new BranchInstruction(CompareOp.IFLT, i, IntConstant.of(10), body, exit);
         headerBranch.setBlock(header);
         header.addInstruction(headerBranch);
 
@@ -214,7 +216,8 @@ class InductionVariableSimplificationTest {
     }
 
     @Test
-    void returnsFalseForNullEntryBlock() {
+    void returnsFalseForNullEntryBlock()
+    {
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         // No entry block set
 
@@ -224,7 +227,8 @@ class InductionVariableSimplificationTest {
     }
 
     @Test
-    void returnsFalseForMethodWithNoLoops() {
+    void returnsFalseForMethodWithNoLoops()
+    {
         // Straight-line code with no loops
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -257,7 +261,8 @@ class InductionVariableSimplificationTest {
     }
 
     @Test
-    void handlesLoopWithNonConstantStride() {
+    void handlesLoopWithNonConstantStride()
+    {
         // Loop where increment is not a constant
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock preheader = new IRBlock("preheader");
@@ -291,8 +296,7 @@ class InductionVariableSimplificationTest {
         iPhi.addIncoming(iNext, body);
         header.addPhi(iPhi);
 
-        BranchInstruction headerBranch = new BranchInstruction(
-            CompareOp.IFLT, i, IntConstant.of(10), body, exit);
+        BranchInstruction headerBranch = new BranchInstruction(CompareOp.IFLT, i, IntConstant.of(10), body, exit);
         headerBranch.setBlock(header);
         header.addInstruction(headerBranch);
 

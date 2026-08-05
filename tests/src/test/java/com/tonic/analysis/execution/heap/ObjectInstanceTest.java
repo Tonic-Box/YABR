@@ -3,17 +3,20 @@ package com.tonic.analysis.execution.heap;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class ObjectInstanceTest {
+class ObjectInstanceTest
+{
 
     @Test
-    void testConstructor() {
+    void testConstructor()
+    {
         ObjectInstance obj = new ObjectInstance(1, "java/lang/Object");
         assertEquals(1, obj.getId());
         assertEquals("java/lang/Object", obj.getClassName());
     }
 
     @Test
-    void testSetAndGetField() {
+    void testSetAndGetField()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Person");
         obj.setField("com/example/Person", "name", "Ljava/lang/String;", "John");
 
@@ -22,14 +25,16 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testGetNonExistentField() {
+    void testGetNonExistentField()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Person");
         Object value = obj.getField("com/example/Person", "nonexistent", "I");
         assertNull(value);
     }
 
     @Test
-    void testFieldWithDifferentOwnerClasses() {
+    void testFieldWithDifferentOwnerClasses()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Child");
 
         obj.setField("com/example/Parent", "parentField", "I", 10);
@@ -40,7 +45,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testFieldShadowing() {
+    void testFieldShadowing()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Child");
 
         obj.setField("com/example/Parent", "field", "I", 100);
@@ -51,7 +57,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testFieldOverwrite() {
+    void testFieldOverwrite()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Person");
 
         obj.setField("com/example/Person", "age", "I", 25);
@@ -62,7 +69,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testMultipleFieldsDifferentDescriptors() {
+    void testMultipleFieldsDifferentDescriptors()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
 
         obj.setField("com/example/Test", "value", "I", 42);
@@ -73,7 +81,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testFieldStorageWithNullValue() {
+    void testFieldStorageWithNullValue()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
 
         obj.setField("com/example/Test", "ref", "Ljava/lang/Object;", null);
@@ -81,7 +90,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testFieldStorageWithObjectReference() {
+    void testFieldStorageWithObjectReference()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "com/example/Test");
         ObjectInstance obj2 = new ObjectInstance(2, "java/lang/String");
 
@@ -90,7 +100,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testIdentityHashCode() {
+    void testIdentityHashCode()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "java/lang/Object");
         ObjectInstance obj2 = new ObjectInstance(2, "java/lang/Object");
 
@@ -99,7 +110,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testReferenceEquality() {
+    void testReferenceEquality()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "java/lang/Object");
         ObjectInstance obj2 = new ObjectInstance(2, "java/lang/Object");
         ObjectInstance obj1Ref = obj1;
@@ -112,7 +124,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testHashCodeBasedOnId() {
+    void testHashCodeBasedOnId()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "java/lang/Object");
         ObjectInstance obj2 = new ObjectInstance(2, "java/lang/Object");
 
@@ -121,7 +134,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ObjectInstance obj = new ObjectInstance(255, "com/example/Test");
         String str = obj.toString();
 
@@ -131,25 +145,29 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testIsInstanceOfSameClass() {
+    void testIsInstanceOfSameClass()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
         assertTrue(obj.isInstanceOf("com/example/Test"));
     }
 
     @Test
-    void testIsInstanceOfObject() {
+    void testIsInstanceOfObject()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
         assertTrue(obj.isInstanceOf("java/lang/Object"));
     }
 
     @Test
-    void testIsInstanceOfUnrelatedClass() {
+    void testIsInstanceOfUnrelatedClass()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
         assertFalse(obj.isInstanceOf("com/example/Other"));
     }
 
     @Test
-    void testMultipleFieldsOnSameObject() {
+    void testMultipleFieldsOnSameObject()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Person");
 
         obj.setField("com/example/Person", "name", "Ljava/lang/String;", "Alice");
@@ -162,7 +180,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testFieldKeyEquality() {
+    void testFieldKeyEquality()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
 
         obj.setField("com/example/Test", "field", "I", 100);
@@ -172,7 +191,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testClassResolverCanBeSet() {
+    void testClassResolverCanBeSet()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
         Object resolver = new Object();
 
@@ -180,7 +200,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testDifferentInstancesHaveDifferentIds() {
+    void testDifferentInstancesHaveDifferentIds()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "java/lang/Object");
         ObjectInstance obj2 = new ObjectInstance(2, "java/lang/Object");
 
@@ -189,7 +210,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testFieldStorageWithPrimitiveTypes() {
+    void testFieldStorageWithPrimitiveTypes()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
 
         obj.setField("com/example/Test", "byteVal", "B", (byte) 1);
@@ -212,7 +234,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testComplexFieldInheritanceScenario() {
+    void testComplexFieldInheritanceScenario()
+    {
         ObjectInstance obj = new ObjectInstance(1, "com/example/GrandChild");
 
         obj.setField("com/example/GrandParent", "field1", "I", 1);
@@ -233,7 +256,8 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testToStringWithZeroId() {
+    void testToStringWithZeroId()
+    {
         ObjectInstance obj = new ObjectInstance(0, "java/lang/Object");
         String str = obj.toString();
         assertTrue(str.contains("java/lang/Object"));
@@ -241,14 +265,16 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testToStringWithLargeId() {
+    void testToStringWithLargeId()
+    {
         ObjectInstance obj = new ObjectInstance(0xFFFFFF, "java/lang/Object");
         String str = obj.toString();
         assertTrue(str.contains("ffffff"));
     }
 
     @Test
-    void testFieldsAreIndependentBetweenInstances() {
+    void testFieldsAreIndependentBetweenInstances()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "com/example/Test");
         ObjectInstance obj2 = new ObjectInstance(2, "com/example/Test");
 
@@ -260,20 +286,23 @@ class ObjectInstanceTest {
     }
 
     @Test
-    void testEqualsSameInstance() {
+    void testEqualsSameInstance()
+    {
         ObjectInstance obj = new ObjectInstance(1, "java/lang/Object");
         assertTrue(obj.equals(obj));
     }
 
     @Test
-    void testEqualsDifferentInstancesSameId() {
+    void testEqualsDifferentInstancesSameId()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "java/lang/Object");
         ObjectInstance obj2 = new ObjectInstance(1, "java/lang/Object");
         assertFalse(obj1.equals(obj2));
     }
 
     @Test
-    void testHashCodeConsistency() {
+    void testHashCodeConsistency()
+    {
         ObjectInstance obj = new ObjectInstance(42, "java/lang/Object");
         int hash1 = obj.hashCode();
         int hash2 = obj.hashCode();

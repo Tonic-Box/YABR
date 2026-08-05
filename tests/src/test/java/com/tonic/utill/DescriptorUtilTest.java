@@ -8,251 +8,302 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DescriptorUtilTest {
+class DescriptorUtilTest
+{
 
     @Nested
-    class CategorizationTests {
+    class CategorizationTests
+    {
 
         @Test
-        void categorizeVoidChar() {
+        void categorizeVoidChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.VOID, DescriptorUtil.categorize('V'));
         }
 
         @Test
-        void categorizeBooleanChar() {
+        void categorizeBooleanChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.BOOLEAN, DescriptorUtil.categorize('Z'));
         }
 
         @Test
-        void categorizeByteChar() {
+        void categorizeByteChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.BYTE, DescriptorUtil.categorize('B'));
         }
 
         @Test
-        void categorizeCharChar() {
+        void categorizeCharChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.CHAR, DescriptorUtil.categorize('C'));
         }
 
         @Test
-        void categorizeShortChar() {
+        void categorizeShortChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.SHORT, DescriptorUtil.categorize('S'));
         }
 
         @Test
-        void categorizeIntChar() {
+        void categorizeIntChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.INT, DescriptorUtil.categorize('I'));
         }
 
         @Test
-        void categorizeLongChar() {
+        void categorizeLongChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.LONG, DescriptorUtil.categorize('J'));
         }
 
         @Test
-        void categorizeFloatChar() {
+        void categorizeFloatChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.FLOAT, DescriptorUtil.categorize('F'));
         }
 
         @Test
-        void categorizeDoubleChar() {
+        void categorizeDoubleChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.DOUBLE, DescriptorUtil.categorize('D'));
         }
 
         @Test
-        void categorizeObjectChar() {
+        void categorizeObjectChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.OBJECT, DescriptorUtil.categorize('L'));
         }
 
         @Test
-        void categorizeArrayChar() {
+        void categorizeArrayChar()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.ARRAY, DescriptorUtil.categorize('['));
         }
 
         @Test
-        void categorizeInvalidChar() {
+        void categorizeInvalidChar()
+        {
             assertNull(DescriptorUtil.categorize('X'));
         }
 
         @Test
-        void categorizeStringVoid() {
+        void categorizeStringVoid()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.VOID, DescriptorUtil.categorize("V"));
         }
 
         @Test
-        void categorizeStringInt() {
+        void categorizeStringInt()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.INT, DescriptorUtil.categorize("I"));
         }
 
         @Test
-        void categorizeStringObject() {
+        void categorizeStringObject()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.OBJECT, DescriptorUtil.categorize("Ljava/lang/String;"));
         }
 
         @Test
-        void categorizeStringArray() {
+        void categorizeStringArray()
+        {
             assertEquals(DescriptorUtil.DescriptorCategory.ARRAY, DescriptorUtil.categorize("[I"));
         }
 
         @Test
-        void categorizeNullString() {
+        void categorizeNullString()
+        {
             assertNull(DescriptorUtil.categorize((String) null));
         }
 
         @Test
-        void categorizeEmptyString() {
+        void categorizeEmptyString()
+        {
             assertNull(DescriptorUtil.categorize(""));
         }
     }
 
     @Nested
-    class PrimitiveTests {
+    class PrimitiveTests
+    {
 
         @Test
-        void isPrimitiveVoid() {
+        void isPrimitiveVoid()
+        {
             assertTrue(DescriptorUtil.isPrimitive('V'));
         }
 
         @Test
-        void isPrimitiveBoolean() {
+        void isPrimitiveBoolean()
+        {
             assertTrue(DescriptorUtil.isPrimitive('Z'));
         }
 
         @Test
-        void isPrimitiveByte() {
+        void isPrimitiveByte()
+        {
             assertTrue(DescriptorUtil.isPrimitive('B'));
         }
 
         @Test
-        void isPrimitiveChar() {
+        void isPrimitiveChar()
+        {
             assertTrue(DescriptorUtil.isPrimitive('C'));
         }
 
         @Test
-        void isPrimitiveShort() {
+        void isPrimitiveShort()
+        {
             assertTrue(DescriptorUtil.isPrimitive('S'));
         }
 
         @Test
-        void isPrimitiveInt() {
+        void isPrimitiveInt()
+        {
             assertTrue(DescriptorUtil.isPrimitive('I'));
         }
 
         @Test
-        void isPrimitiveLong() {
+        void isPrimitiveLong()
+        {
             assertTrue(DescriptorUtil.isPrimitive('J'));
         }
 
         @Test
-        void isPrimitiveFloat() {
+        void isPrimitiveFloat()
+        {
             assertTrue(DescriptorUtil.isPrimitive('F'));
         }
 
         @Test
-        void isPrimitiveDouble() {
+        void isPrimitiveDouble()
+        {
             assertTrue(DescriptorUtil.isPrimitive('D'));
         }
 
         @Test
-        void isNotPrimitiveObject() {
+        void isNotPrimitiveObject()
+        {
             assertFalse(DescriptorUtil.isPrimitive('L'));
         }
 
         @Test
-        void isNotPrimitiveArray() {
+        void isNotPrimitiveArray()
+        {
             assertFalse(DescriptorUtil.isPrimitive('['));
         }
     }
 
     @Nested
-    class WideTypeTests {
+    class WideTypeTests
+    {
 
         @Test
-        void isWideTypeLong() {
+        void isWideTypeLong()
+        {
             assertTrue(DescriptorUtil.isWideType("J"));
         }
 
         @Test
-        void isWideTypeDouble() {
+        void isWideTypeDouble()
+        {
             assertTrue(DescriptorUtil.isWideType("D"));
         }
 
         @Test
-        void isNotWideTypeInt() {
+        void isNotWideTypeInt()
+        {
             assertFalse(DescriptorUtil.isWideType("I"));
         }
 
         @Test
-        void isNotWideTypeVoid() {
+        void isNotWideTypeVoid()
+        {
             assertFalse(DescriptorUtil.isWideType("V"));
         }
 
         @Test
-        void isNotWideTypeObject() {
+        void isNotWideTypeObject()
+        {
             assertFalse(DescriptorUtil.isWideType("Ljava/lang/String;"));
         }
 
         @Test
-        void isNotWideTypeNull() {
+        void isNotWideTypeNull()
+        {
             assertFalse(DescriptorUtil.isWideType(null));
         }
 
         @Test
-        void isNotWideTypeEmpty() {
+        void isNotWideTypeEmpty()
+        {
             assertFalse(DescriptorUtil.isWideType(""));
         }
     }
 
     @Nested
-    class TypeSlotsTests {
+    class TypeSlotsTests
+    {
 
         @Test
-        void getTypeSlotsLong() {
+        void getTypeSlotsLong()
+        {
             assertEquals(2, DescriptorUtil.getTypeSlots("J"));
         }
 
         @Test
-        void getTypeSlotsDouble() {
+        void getTypeSlotsDouble()
+        {
             assertEquals(2, DescriptorUtil.getTypeSlots("D"));
         }
 
         @Test
-        void getTypeSlotsVoid() {
+        void getTypeSlotsVoid()
+        {
             assertEquals(0, DescriptorUtil.getTypeSlots("V"));
         }
 
         @Test
-        void getTypeSlotsInt() {
+        void getTypeSlotsInt()
+        {
             assertEquals(1, DescriptorUtil.getTypeSlots("I"));
         }
 
         @Test
-        void getTypeSlotsObject() {
+        void getTypeSlotsObject()
+        {
             assertEquals(1, DescriptorUtil.getTypeSlots("Ljava/lang/String;"));
         }
 
         @Test
-        void getTypeSlotsNull() {
+        void getTypeSlotsNull()
+        {
             assertEquals(1, DescriptorUtil.getTypeSlots(null));
         }
 
         @Test
-        void getTypeSlotsEmpty() {
+        void getTypeSlotsEmpty()
+        {
             assertEquals(1, DescriptorUtil.getTypeSlots(""));
         }
     }
 
     @Nested
-    class ParameterParsingTests {
+    class ParameterParsingTests
+    {
 
         @Test
-        void parseParameterDescriptorsSimple() {
+        void parseParameterDescriptorsSimple()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("(I)V");
             assertEquals(1, params.size());
             assertEquals("I", params.get(0));
         }
 
         @Test
-        void parseParameterDescriptorsMultiple() {
+        void parseParameterDescriptorsMultiple()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("(IJLjava/lang/String;)V");
             assertEquals(3, params.size());
             assertEquals("I", params.get(0));
@@ -261,45 +312,52 @@ class DescriptorUtilTest {
         }
 
         @Test
-        void parseParameterDescriptorsArray() {
+        void parseParameterDescriptorsArray()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("([I)V");
             assertEquals(1, params.size());
             assertEquals("[I", params.get(0));
         }
 
         @Test
-        void parseParameterDescriptorsMultiDimensionalArray() {
+        void parseParameterDescriptorsMultiDimensionalArray()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("([[Ljava/lang/String;)V");
             assertEquals(1, params.size());
             assertEquals("[[Ljava/lang/String;", params.get(0));
         }
 
         @Test
-        void parseParameterDescriptorsEmpty() {
+        void parseParameterDescriptorsEmpty()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("()V");
             assertTrue(params.isEmpty());
         }
 
         @Test
-        void parseParameterDescriptorsNull() {
+        void parseParameterDescriptorsNull()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors(null);
             assertTrue(params.isEmpty());
         }
 
         @Test
-        void parseParameterDescriptorsNoOpenParen() {
+        void parseParameterDescriptorsNoOpenParen()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("I)V");
             assertTrue(params.isEmpty());
         }
 
         @Test
-        void parseParameterDescriptorsNoCloseParen() {
+        void parseParameterDescriptorsNoCloseParen()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("(IV");
             assertTrue(params.isEmpty());
         }
 
         @Test
-        void parseParameterDescriptorsComplexMix() {
+        void parseParameterDescriptorsComplexMix()
+        {
             List<String> params = DescriptorUtil.parseParameterDescriptors("(I[JLjava/lang/Object;[[Ljava/lang/String;ZBCSD)V");
             assertEquals(9, params.size());
             assertEquals("I", params.get(0));
@@ -315,95 +373,114 @@ class DescriptorUtilTest {
     }
 
     @Nested
-    class ReturnDescriptorTests {
+    class ReturnDescriptorTests
+    {
 
         @Test
-        void parseReturnDescriptorVoid() {
+        void parseReturnDescriptorVoid()
+        {
             assertEquals("V", DescriptorUtil.parseReturnDescriptor("()V"));
         }
 
         @Test
-        void parseReturnDescriptorInt() {
+        void parseReturnDescriptorInt()
+        {
             assertEquals("I", DescriptorUtil.parseReturnDescriptor("()I"));
         }
 
         @Test
-        void parseReturnDescriptorObject() {
+        void parseReturnDescriptorObject()
+        {
             assertEquals("Ljava/lang/String;", DescriptorUtil.parseReturnDescriptor("()Ljava/lang/String;"));
         }
 
         @Test
-        void parseReturnDescriptorWithParams() {
+        void parseReturnDescriptorWithParams()
+        {
             assertEquals("I", DescriptorUtil.parseReturnDescriptor("(ILjava/lang/String;)I"));
         }
 
         @Test
-        void parseReturnDescriptorNull() {
+        void parseReturnDescriptorNull()
+        {
             assertNull(DescriptorUtil.parseReturnDescriptor(null));
         }
 
         @Test
-        void parseReturnDescriptorNoCloseParen() {
+        void parseReturnDescriptorNoCloseParen()
+        {
             assertNull(DescriptorUtil.parseReturnDescriptor("(I"));
         }
 
         @Test
-        void parseReturnDescriptorNoReturnType() {
+        void parseReturnDescriptorNoReturnType()
+        {
             assertNull(DescriptorUtil.parseReturnDescriptor("()"));
         }
     }
 
     @Nested
-    class CountingTests {
+    class CountingTests
+    {
 
         @Test
-        void countParametersZero() {
+        void countParametersZero()
+        {
             assertEquals(0, DescriptorUtil.countParameters("()V"));
         }
 
         @Test
-        void countParametersOne() {
+        void countParametersOne()
+        {
             assertEquals(1, DescriptorUtil.countParameters("(I)V"));
         }
 
         @Test
-        void countParametersMultiple() {
+        void countParametersMultiple()
+        {
             assertEquals(3, DescriptorUtil.countParameters("(IJLjava/lang/String;)V"));
         }
 
         @Test
-        void countParameterSlotsSimple() {
+        void countParameterSlotsSimple()
+        {
             assertEquals(1, DescriptorUtil.countParameterSlots("(I)V"));
         }
 
         @Test
-        void countParameterSlotsWideTypes() {
+        void countParameterSlotsWideTypes()
+        {
             assertEquals(4, DescriptorUtil.countParameterSlots("(JD)V"));
         }
 
         @Test
-        void countParameterSlotsMixed() {
+        void countParameterSlotsMixed()
+        {
             assertEquals(4, DescriptorUtil.countParameterSlots("(IJI)V"));
         }
 
         @Test
-        void countParameterSlotsEmpty() {
+        void countParameterSlotsEmpty()
+        {
             assertEquals(0, DescriptorUtil.countParameterSlots("()V"));
         }
     }
 
     @Nested
-    class ClassNameExtractionTests {
+    class ClassNameExtractionTests
+    {
 
         @Test
-        void extractClassNamesSimpleObject() {
+        void extractClassNamesSimpleObject()
+        {
             Set<String> names = DescriptorUtil.extractClassNames("Ljava/lang/String;");
             assertEquals(1, names.size());
             assertTrue(names.contains("java/lang/String"));
         }
 
         @Test
-        void extractClassNamesMultiple() {
+        void extractClassNamesMultiple()
+        {
             Set<String> names = DescriptorUtil.extractClassNames("(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Object;");
             assertEquals(3, names.size());
             assertTrue(names.contains("java/lang/String"));
@@ -412,131 +489,156 @@ class DescriptorUtilTest {
         }
 
         @Test
-        void extractClassNamesArray() {
+        void extractClassNamesArray()
+        {
             Set<String> names = DescriptorUtil.extractClassNames("[Ljava/lang/String;");
             assertEquals(1, names.size());
             assertTrue(names.contains("java/lang/String"));
         }
 
         @Test
-        void extractClassNamesPrimitive() {
+        void extractClassNamesPrimitive()
+        {
             Set<String> names = DescriptorUtil.extractClassNames("I");
             assertTrue(names.isEmpty());
         }
 
         @Test
-        void extractClassNamesNull() {
+        void extractClassNamesNull()
+        {
             Set<String> names = DescriptorUtil.extractClassNames(null);
             assertTrue(names.isEmpty());
         }
 
         @Test
-        void extractClassNamesEmpty() {
+        void extractClassNamesEmpty()
+        {
             Set<String> names = DescriptorUtil.extractClassNames("");
             assertTrue(names.isEmpty());
         }
 
         @Test
-        void extractClassNamesMalformed() {
+        void extractClassNamesMalformed()
+        {
             Set<String> names = DescriptorUtil.extractClassNames("Ljava/lang/String");
             assertTrue(names.isEmpty());
         }
     }
 
     @Nested
-    class ArrayDescriptorTests {
+    class ArrayDescriptorTests
+    {
 
         @Test
-        void getArrayElementTypeSingleDimension() {
+        void getArrayElementTypeSingleDimension()
+        {
             assertEquals("I", DescriptorUtil.getArrayElementType("[I"));
         }
 
         @Test
-        void getArrayElementTypeMultiDimension() {
+        void getArrayElementTypeMultiDimension()
+        {
             assertEquals("I", DescriptorUtil.getArrayElementType("[[I"));
         }
 
         @Test
-        void getArrayElementTypeObject() {
+        void getArrayElementTypeObject()
+        {
             assertEquals("Ljava/lang/String;", DescriptorUtil.getArrayElementType("[Ljava/lang/String;"));
         }
 
         @Test
-        void getArrayElementTypeNotArray() {
+        void getArrayElementTypeNotArray()
+        {
             assertNull(DescriptorUtil.getArrayElementType("I"));
         }
 
         @Test
-        void getArrayElementTypeNull() {
+        void getArrayElementTypeNull()
+        {
             assertNull(DescriptorUtil.getArrayElementType(null));
         }
 
         @Test
-        void getArrayDimensionsSingle() {
+        void getArrayDimensionsSingle()
+        {
             assertEquals(1, DescriptorUtil.getArrayDimensions("[I"));
         }
 
         @Test
-        void getArrayDimensionsDouble() {
+        void getArrayDimensionsDouble()
+        {
             assertEquals(2, DescriptorUtil.getArrayDimensions("[[I"));
         }
 
         @Test
-        void getArrayDimensionsTriple() {
+        void getArrayDimensionsTriple()
+        {
             assertEquals(3, DescriptorUtil.getArrayDimensions("[[[Ljava/lang/String;"));
         }
 
         @Test
-        void getArrayDimensionsNotArray() {
+        void getArrayDimensionsNotArray()
+        {
             assertEquals(0, DescriptorUtil.getArrayDimensions("I"));
         }
 
         @Test
-        void getArrayDimensionsNull() {
+        void getArrayDimensionsNull()
+        {
             assertEquals(0, DescriptorUtil.getArrayDimensions(null));
         }
     }
 
     @Nested
-    class ObjectDescriptorTests {
+    class ObjectDescriptorTests
+    {
 
         @Test
-        void extractClassNameValid() {
+        void extractClassNameValid()
+        {
             assertEquals("java/lang/String", DescriptorUtil.extractClassName("Ljava/lang/String;"));
         }
 
         @Test
-        void extractClassNameInnerClass() {
+        void extractClassNameInnerClass()
+        {
             assertEquals("com/example/Outer$Inner", DescriptorUtil.extractClassName("Lcom/example/Outer$Inner;"));
         }
 
         @Test
-        void extractClassNameNoPrefix() {
+        void extractClassNameNoPrefix()
+        {
             assertNull(DescriptorUtil.extractClassName("java/lang/String;"));
         }
 
         @Test
-        void extractClassNameNoSuffix() {
+        void extractClassNameNoSuffix()
+        {
             assertNull(DescriptorUtil.extractClassName("Ljava/lang/String"));
         }
 
         @Test
-        void extractClassNameNull() {
+        void extractClassNameNull()
+        {
             assertNull(DescriptorUtil.extractClassName(null));
         }
 
         @Test
-        void toObjectDescriptorValid() {
+        void toObjectDescriptorValid()
+        {
             assertEquals("Ljava/lang/String;", DescriptorUtil.toObjectDescriptor("java/lang/String"));
         }
 
         @Test
-        void toObjectDescriptorInnerClass() {
+        void toObjectDescriptorInnerClass()
+        {
             assertEquals("Lcom/example/Outer$Inner;", DescriptorUtil.toObjectDescriptor("com/example/Outer$Inner"));
         }
 
         @Test
-        void toObjectDescriptorNull() {
+        void toObjectDescriptorNull()
+        {
             assertNull(DescriptorUtil.toObjectDescriptor(null));
         }
     }

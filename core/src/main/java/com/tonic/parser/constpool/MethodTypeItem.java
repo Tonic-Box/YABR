@@ -8,7 +8,8 @@ import java.io.IOException;
 /**
  * Represents a CONSTANT_MethodType entry in the constant pool.
  */
-public class MethodTypeItem extends Item<Integer> {
+public class MethodTypeItem extends Item<Integer>
+{
 
     private Integer value;
 
@@ -16,27 +17,32 @@ public class MethodTypeItem extends Item<Integer> {
      * Sets the descriptor index.
      * @param descriptorIndex the index of the UTF8 descriptor entry
      */
-    public void setDescriptorIndex(int descriptorIndex) {
+    public void setDescriptorIndex(int descriptorIndex)
+    {
         this.value = descriptorIndex;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.value = classFile.readUnsignedShort();
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(value);
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_METHOD_TYPE;
     }
 
     @Override
-    public Integer getValue() {
+    public Integer getValue()
+    {
         return value;
     }
 }

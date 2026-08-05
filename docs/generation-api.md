@@ -827,7 +827,8 @@ MethodEntry method = cf.getMethods().stream()
     .findFirst().orElseThrow();
 
 Bytecode bc = new Bytecode(method);
-for (Instruction insn : bc.getCodeWriter().getInstructions()) {
+for (Instruction insn : bc.getCodeWriter().getInstructions())
+{
     System.out.println(insn);
 }
 

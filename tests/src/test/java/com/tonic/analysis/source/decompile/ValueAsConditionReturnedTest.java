@@ -16,10 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * separate synthetic, base()'s result would land in a temp while the returned variable stayed at its
  * default, so the method would always return false.
  */
-public class ValueAsConditionReturnedTest {
+public class ValueAsConditionReturnedTest
+{
 
     @Test
-    public void storedValueUsedAsConditionSharesReturnedVariable() throws Exception {
+    public void storedValueUsedAsConditionSharesReturnedVariable() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("ValueAsConditionReturned");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");

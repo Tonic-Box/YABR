@@ -11,12 +11,17 @@ import java.util.Map;
  * grow past {@link #MAX_ID} nodes and reports {@link #overflowed()} instead - the caller then falls back
  * to the syntactic layer (still correct, only less simplified) rather than producing a wrong key.
  */
-final class BddFactory {
+final class BddFactory
+{
 
-    /** Variable index of the two terminals; larger than any real variable so terminals sort last. */
+    /**
+     * Variable index of the two terminals; larger than any real variable so terminals sort last.
+     */
     static final int TERMINAL_VAR = Integer.MAX_VALUE;
 
-    /** Node-count ceiling. Ids must stay below 2^21 so three of them pack into a signed long key. */
+    /**
+     * Node-count ceiling. Ids must stay below 2^21 so three of them pack into a signed long key.
+     */
     private static final int MAX_ID = 1 << 21;
     private static final long ID_MASK = MAX_ID - 1;
 
@@ -28,22 +33,31 @@ final class BddFactory {
     private int nextId = 2;
     private boolean overflowed;
 
-    /** True once the node budget was hit; results after this point may be under-reduced. */
-    boolean overflowed() {
+    /**
+     * True once the node budget was hit; results after this point may be under-reduced.
+     */
+    boolean overflowed()
+    {
         return overflowed;
     }
 
-    /** The reduced, interned node testing {@code var} with the given branches. */
-    Bdd mk(int var, Bdd low, Bdd high) {
-        if (low == high) {
+    /**
+     * The reduced, interned node testing {@code var} with the given branches.
+     */
+    Bdd mk(int var, Bdd low, Bdd high)
+    {
+        if (low == high)
+        {
             return low;
         }
         long key = (((long) var) << 42) | (((long) low.id) << 21) | high.id;
         Bdd existing = unique.get(key);
-        if (existing != null) {
+        if (existing != null)
+        {
             return existing;
         }
-        if (nextId >= MAX_ID) {
+        if (nextId >= MAX_ID)
+        {
             overflowed = true;
             return low;
         }
@@ -52,27 +66,36 @@ final class BddFactory {
         return node;
     }
 
-    /** The formula "variable {@code var} is true". */
-    Bdd atom(int var) {
+    /**
+     * The formula "variable {@code var} is true".
+     */
+    Bdd atom(int var)
+    {
         return mk(var, zero, one);
     }
 
-    Bdd ite(Bdd f, Bdd g, Bdd h) {
-        if (f == one) {
+    Bdd ite(Bdd f, Bdd g, Bdd h)
+    {
+        if (f == one)
+        {
             return g;
         }
-        if (f == zero) {
+        if (f == zero)
+        {
             return h;
         }
-        if (g == h) {
+        if (g == h)
+        {
             return g;
         }
-        if (g == one && h == zero) {
+        if (g == one && h == zero)
+        {
             return f;
         }
         long key = (((long) f.id) << 42) | (((long) g.id) << 21) | (h.id & ID_MASK);
         Bdd cached = iteCache.get(key);
-        if (cached != null) {
+        if (cached != null)
+        {
             return cached;
         }
         int v = Math.min(f.var, Math.min(g.var, h.var));
@@ -83,58 +106,79 @@ final class BddFactory {
         return result;
     }
 
-    /** The branch of {@code n} taken when variable {@code v} has the given value ({@code n} unchanged if it does not test {@code v}). */
-    private static Bdd cofactor(Bdd n, int v, boolean value) {
-        if (!n.isTerminal() && n.var == v) {
+    /**
+     * The branch of {@code n} taken when variable {@code v} has the given value ({@code n} unchanged if it does not test {@code v}).
+     */
+    private static Bdd cofactor(Bdd n, int v, boolean value)
+    {
+        if (!n.isTerminal() && n.var == v)
+        {
             return value ? n.high : n.low;
         }
         return n;
     }
 
-    Bdd and(Bdd f, Bdd g) {
+    Bdd and(Bdd f, Bdd g)
+    {
         return ite(f, g, zero);
     }
 
-    Bdd or(Bdd f, Bdd g) {
+    Bdd or(Bdd f, Bdd g)
+    {
         return ite(f, one, g);
     }
 
-    Bdd not(Bdd f) {
+    Bdd not(Bdd f)
+    {
         return ite(f, zero, one);
     }
 
-    Bdd xor(Bdd f, Bdd g) {
+    Bdd xor(Bdd f, Bdd g)
+    {
         return ite(f, not(g), g);
     }
 
-    boolean implies(Bdd a, Bdd b) {
+    boolean implies(Bdd a, Bdd b)
+    {
         return or(not(a), b) == one;
     }
 
-    boolean isSat(Bdd f) {
+    boolean isSat(Bdd f)
+    {
         return f != zero;
     }
 
-    boolean isTautology(Bdd f) {
+    boolean isTautology(Bdd f)
+    {
         return f == one;
     }
 
-    /** Cofactor of {@code f} by the assignment {@code var := value} (Shannon restriction). */
-    Bdd restrict(Bdd f, int var, boolean value) {
-        if (f.isTerminal() || f.var > var) {
+    /**
+     * Cofactor of {@code f} by the assignment {@code var := value} (Shannon restriction).
+     */
+    Bdd restrict(Bdd f, int var, boolean value)
+    {
+        if (f.isTerminal() || f.var > var)
+        {
             return f;
         }
-        if (f.var == var) {
+        if (f.var == var)
+        {
             return value ? f.high : f.low;
         }
         return mk(f.var, restrict(f.low, var, value), restrict(f.high, var, value));
     }
 
-    /** The formula that is true when at most one of {@code vars} is true (the domain of a switch selector). */
-    Bdd atMostOne(int[] vars) {
+    /**
+     * The formula that is true when at most one of {@code vars} is true (the domain of a switch selector).
+     */
+    Bdd atMostOne(int[] vars)
+    {
         Bdd result = one;
-        for (int i = 0; i < vars.length; i++) {
-            for (int j = i + 1; j < vars.length; j++) {
+        for (int i = 0; i < vars.length; i++)
+        {
+            for (int j = i + 1; j < vars.length; j++)
+            {
                 result = and(result, not(and(atom(vars[i]), atom(vars[j]))));
             }
         }

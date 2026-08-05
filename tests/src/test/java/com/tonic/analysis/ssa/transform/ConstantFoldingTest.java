@@ -14,13 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ConstantFolding transform.
  * Verifies that constant arithmetic expressions are folded at compile time.
  */
-class ConstantFoldingTest {
+class ConstantFoldingTest
+{
 
     private IRMethod method;
     private IRBlock block;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -31,17 +33,18 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void getNameReturnsConstantFolding() {
+    void getNameReturnsConstantFolding()
+    {
         ConstantFolding transform = new ConstantFolding();
         assertEquals("ConstantFolding", transform.getName());
     }
 
     @Test
-    void foldIntegerAddition() {
+    void foldIntegerAddition()
+    {
         // v0 = 3 + 5
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        BinaryOpInstruction add = new BinaryOpInstruction(result, BinaryOp.ADD,
-            IntConstant.of(3), IntConstant.of(5));
+        BinaryOpInstruction add = new BinaryOpInstruction(result, BinaryOp.ADD, IntConstant.of(3), IntConstant.of(5));
         block.addInstruction(add);
         block.addInstruction(new ReturnInstruction());
 
@@ -53,11 +56,11 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void foldIntegerSubtraction() {
+    void foldIntegerSubtraction()
+    {
         // v0 = 10 - 3
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        BinaryOpInstruction sub = new BinaryOpInstruction(result, BinaryOp.SUB,
-            IntConstant.of(10), IntConstant.of(3));
+        BinaryOpInstruction sub = new BinaryOpInstruction(result, BinaryOp.SUB, IntConstant.of(10), IntConstant.of(3));
         block.addInstruction(sub);
         block.addInstruction(new ReturnInstruction());
 
@@ -72,11 +75,11 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void foldIntegerMultiplication() {
+    void foldIntegerMultiplication()
+    {
         // v0 = 4 * 5
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL,
-            IntConstant.of(4), IntConstant.of(5));
+        BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL, IntConstant.of(4), IntConstant.of(5));
         block.addInstruction(mul);
         block.addInstruction(new ReturnInstruction());
 
@@ -91,11 +94,11 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void foldIntegerDivision() {
+    void foldIntegerDivision()
+    {
         // v0 = 20 / 4
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV,
-            IntConstant.of(20), IntConstant.of(4));
+        BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV, IntConstant.of(20), IntConstant.of(4));
         block.addInstruction(div);
         block.addInstruction(new ReturnInstruction());
 
@@ -110,11 +113,11 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void divisionByZeroDoesNotFold() {
+    void divisionByZeroDoesNotFold()
+    {
         // v0 = 10 / 0 (should not fold)
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV,
-            IntConstant.of(10), IntConstant.ZERO);
+        BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV, IntConstant.of(10), IntConstant.ZERO);
         block.addInstruction(div);
         block.addInstruction(new ReturnInstruction());
 
@@ -127,7 +130,8 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void foldThroughSSADefinitions() {
+    void foldThroughSSADefinitions()
+    {
         // v0 = const 3
         // v1 = const 5
         // v2 = v0 + v1
@@ -152,7 +156,8 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void returnsFalseWhenNothingToFold() {
+    void returnsFalseWhenNothingToFold()
+    {
         // v0 = v1 + v2 (no constants)
         SSAValue v0 = new SSAValue(PrimitiveType.INT);
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
@@ -168,7 +173,8 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void foldTypeConversions() {
+    void foldTypeConversions()
+    {
         // v0 = i2l 42 (int to long conversion)
         SSAValue result = new SSAValue(PrimitiveType.LONG);
         UnaryOpInstruction conv = new UnaryOpInstruction(result, UnaryOp.I2L, IntConstant.of(42));
@@ -181,14 +187,16 @@ class ConstantFoldingTest {
         // Conversion folding depends on implementation
         // If not implemented, should return false
         // If implemented, should fold to LongConstant
-        if (changed) {
+        if (changed)
+        {
             IRInstruction first = block.getInstructions().get(0);
             assertTrue(first instanceof ConstantInstruction);
         }
     }
 
     @Test
-    void foldNegation() {
+    void foldNegation()
+    {
         // v0 = neg 5
         SSAValue result = new SSAValue(PrimitiveType.INT);
         UnaryOpInstruction neg = new UnaryOpInstruction(result, UnaryOp.NEG, IntConstant.of(5));
@@ -198,7 +206,8 @@ class ConstantFoldingTest {
         ConstantFolding transform = new ConstantFolding();
         boolean changed = transform.run(method);
 
-        if (changed) {
+        if (changed)
+        {
             IRInstruction first = block.getInstructions().get(0);
             assertTrue(first instanceof ConstantInstruction);
             ConstantInstruction constInstr = (ConstantInstruction) first;
@@ -207,18 +216,19 @@ class ConstantFoldingTest {
     }
 
     @Test
-    void foldRemainder() {
+    void foldRemainder()
+    {
         // v0 = 10 % 3
         SSAValue result = new SSAValue(PrimitiveType.INT);
-        BinaryOpInstruction rem = new BinaryOpInstruction(result, BinaryOp.REM,
-            IntConstant.of(10), IntConstant.of(3));
+        BinaryOpInstruction rem = new BinaryOpInstruction(result, BinaryOp.REM, IntConstant.of(10), IntConstant.of(3));
         block.addInstruction(rem);
         block.addInstruction(new ReturnInstruction());
 
         ConstantFolding transform = new ConstantFolding();
         boolean changed = transform.run(method);
 
-        if (changed) {
+        if (changed)
+        {
             IRInstruction first = block.getInstructions().get(0);
             assertTrue(first instanceof ConstantInstruction);
             ConstantInstruction constInstr = (ConstantInstruction) first;

@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * This compiles such a class with javac, decompiles it, recompiles the decompiled source, and asserts the finally
  * survives (structurally, as a round-trip fixed point, and in execution order: the resource closes before it runs).
  */
-class TryWithResourcesFinallyFidelityTest {
+class TryWithResourcesFinallyFidelityTest
+{
 
     private static final String SOURCE =
             "public class TwrFin implements AutoCloseable {\n"
@@ -52,14 +53,14 @@ class TryWithResourcesFinallyFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("twr-finally-fidelity");
         Path src = dir.resolve("TwrFin.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("TwrFin.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -71,18 +72,21 @@ class TryWithResourcesFinallyFidelityTest {
     }
 
     @Test
-    void foldsToTryWithResourcesWithAFinally() {
+    void foldsToTryWithResourcesWithAFinally()
+    {
         assertTrue(d1.contains("try ("), "decompiler should fold to try-with-resources:\n" + d1);
         assertTrue(d1.contains("finally"), "the user finally clause must be preserved:\n" + d1);
     }
 
     @Test
-    void isRoundTripFixedPoint() {
+    void isRoundTripFixedPoint()
+    {
         assertEquals(d1, d2, "try-with-resources with a finally must be a round-trip fixed point");
     }
 
     @Test
-    void closesBeforeRunningTheFinally() throws Exception {
+    void closesBeforeRunningTheFinally() throws Exception
+    {
         assertEquals("v7", recompiledClass.getDeclaredMethod("withFinally", int.class).invoke(null, 7),
                 "the normal path must return the body's value");
         assertEquals(1, recompiledClass.getDeclaredMethod("closeCount").invoke(null),

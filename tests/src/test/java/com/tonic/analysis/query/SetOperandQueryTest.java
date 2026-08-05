@@ -19,8 +19,11 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-/** Verifies the {@code IN [a, b, c]} set-membership operand end-to-end. */
-class SetOperandQueryTest {
+/**
+ * Verifies the {@code IN [a, b, c]} set-membership operand end-to-end.
+ */
+class SetOperandQueryTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -32,7 +35,8 @@ class SetOperandQueryTest {
     private static ClassPool pool;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null);
         Path dir = Files.createTempDirectory("query-set");
@@ -43,7 +47,8 @@ class SetOperandQueryTest {
         pool.loadClass(Files.readAllBytes(dir.resolve("t").resolve("Sets.class")));
     }
 
-    private List<String> methods(String query) throws Exception {
+    private List<String> methods(String query) throws Exception
+    {
         Query parsed = new QueryParser().parse(query);
         ProbePlan plan = new QueryPlanner().plan(parsed);
         return new QueryBatchRunner(pool).run(plan, null).matches().stream()
@@ -53,7 +58,8 @@ class SetOperandQueryTest {
     }
 
     @Test
-    void opcodeMembership() throws Exception {
+    void opcodeMembership() throws Exception
+    {
         assertEquals(List.of("num", "obj"),
                 methods("FIND methods WHERE HAS insn WHERE (opcode IN [ireturn, areturn]) AND method.name matches /^(num|obj)$/"));
         assertEquals(List.of("obj"),
@@ -61,13 +67,14 @@ class SetOperandQueryTest {
     }
 
     @Test
-    void nameMembershipWithStrings() throws Exception {
-        assertEquals(List.of("num"),
-                methods("FIND methods WHERE method.name IN [\"num\", \"missing\"]"));
+    void nameMembershipWithStrings() throws Exception
+    {
+        assertEquals(List.of("num"), methods("FIND methods WHERE method.name IN [\"num\", \"missing\"]"));
     }
 
     @Test
-    void emptyOrNonMatchingSet() throws Exception {
+    void emptyOrNonMatchingSet() throws Exception
+    {
         assertEquals(List.of(), methods("FIND methods WHERE HAS insn WHERE (opcode IN [tableswitch, lookupswitch])"));
     }
 }

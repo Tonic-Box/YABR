@@ -10,10 +10,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Provides context information during AST editing.
- * Contains method information, current location, and utility methods.
+ * Traversal context handed to AST editor handlers: the method being edited, the current
+ * location within it, and helpers for building replacements.
  */
-public class EditorContext {
+public class EditorContext
+{
 
     private final BlockStmt methodBody;
     private final String methodName;
@@ -30,7 +31,15 @@ public class EditorContext {
     private int loopDepth;
     private int conditionalDepth;
 
-    public EditorContext(BlockStmt methodBody, String methodName, String methodDescriptor, String ownerClass) {
+    /**
+     * Creates a context for editing the given method body.
+     * @param methodBody the method body being edited
+     * @param methodName the method name; a placeholder is used when null
+     * @param methodDescriptor the method descriptor; defaults to ()V when null
+     * @param ownerClass the internal name of the owning class; a placeholder is used when null
+     */
+    public EditorContext(BlockStmt methodBody, String methodName, String methodDescriptor, String ownerClass)
+    {
         this.methodBody = methodBody;
         this.methodName = methodName != null ? methodName : "<unknown>";
         this.methodDescriptor = methodDescriptor != null ? methodDescriptor : "()V";
@@ -43,200 +52,239 @@ public class EditorContext {
     }
 
     /**
-     * Gets the method body being edited.
+     * @return the method body being edited
      */
-    public BlockStmt getMethodBody() {
+    public BlockStmt getMethodBody()
+    {
         return methodBody;
     }
 
     /**
-     * Gets the name of the method being edited.
+     * @return the name of the method being edited
      */
-    public String getMethodName() {
+    public String getMethodName()
+    {
         return methodName;
     }
 
     /**
-     * Gets the descriptor of the method being edited.
+     * @return the descriptor of the method being edited
      */
-    public String getMethodDescriptor() {
+    public String getMethodDescriptor()
+    {
         return methodDescriptor;
     }
 
     /**
-     * Gets the internal name of the class that owns this method.
+     * @return the internal name of the class that owns this method
      */
-    public String getOwnerClass() {
+    public String getOwnerClass()
+    {
         return ownerClass;
     }
 
     /**
-     * Gets the current statement being visited.
+     * @return the statement currently being visited
      */
-    public Statement getCurrentStatement() {
+    public Statement getCurrentStatement()
+    {
         return currentStatement;
     }
 
     /**
-     * Sets the current statement (called by editor during traversal).
+     * Sets the current statement; called by the editor during traversal.
+     * @param stmt the statement now being visited
      */
-    public void setCurrentStatement(Statement stmt) {
+    public void setCurrentStatement(Statement stmt)
+    {
         this.currentStatement = stmt;
     }
 
     /**
-     * Gets the enclosing block statement.
+     * @return the block enclosing the current statement
      */
-    public BlockStmt getEnclosingBlock() {
+    public BlockStmt getEnclosingBlock()
+    {
         return enclosingBlock;
     }
 
     /**
-     * Sets the enclosing block (called by editor during traversal).
+     * Sets the enclosing block; called by the editor during traversal.
+     * @param block the block enclosing the current statement
      */
-    public void setEnclosingBlock(BlockStmt block) {
+    public void setEnclosingBlock(BlockStmt block)
+    {
         this.enclosingBlock = block;
     }
 
     /**
-     * Gets the index of the current statement within its enclosing block.
+     * @return the index of the current statement within its enclosing block
      */
-    public int getStatementIndex() {
+    public int getStatementIndex()
+    {
         return statementIndex;
     }
 
     /**
-     * Sets the statement index (called by editor during traversal).
+     * Sets the statement index; called by the editor during traversal.
+     * @param index the index of the current statement within its enclosing block
      */
-    public void setStatementIndex(int index) {
+    public void setStatementIndex(int index)
+    {
         this.statementIndex = index;
     }
 
     /**
-     * Checks if the current location is inside a try block.
+     * @return true if the current location is inside a try block
      */
-    public boolean isInTryBlock() {
+    public boolean isInTryBlock()
+    {
         return tryDepth > 0;
     }
 
     /**
-     * Checks if the current location is inside a loop.
+     * @return true if the current location is inside a loop
      */
-    public boolean isInLoop() {
+    public boolean isInLoop()
+    {
         return loopDepth > 0;
     }
 
     /**
-     * Checks if the current location is inside a conditional (if/switch).
+     * @return true if the current location is inside a conditional (if/switch)
      */
-    public boolean isInConditional() {
+    public boolean isInConditional()
+    {
         return conditionalDepth > 0;
     }
 
     /**
-     * Enters a try block.
+     * Records entry into a try block.
      */
-    public void enterTry() {
+    public void enterTry()
+    {
         tryDepth++;
     }
 
     /**
-     * Exits a try block.
+     * Records exit from a try block.
      */
-    public void exitTry() {
+    public void exitTry()
+    {
         tryDepth = Math.max(0, tryDepth - 1);
     }
 
     /**
-     * Enters a loop.
+     * Records entry into a loop.
      */
-    public void enterLoop() {
+    public void enterLoop()
+    {
         loopDepth++;
     }
 
     /**
-     * Exits a loop.
+     * Records exit from a loop.
      */
-    public void exitLoop() {
+    public void exitLoop()
+    {
         loopDepth = Math.max(0, loopDepth - 1);
     }
 
     /**
-     * Enters a conditional.
+     * Records entry into a conditional.
      */
-    public void enterConditional() {
+    public void enterConditional()
+    {
         conditionalDepth++;
     }
 
     /**
-     * Exits a conditional.
+     * Records exit from a conditional.
      */
-    public void exitConditional() {
+    public void exitConditional()
+    {
         conditionalDepth = Math.max(0, conditionalDepth - 1);
     }
 
     /**
-     * Gets all variables that are visible at the current location.
-     * Simplified implementation returning null-checked variables.
+     * Collects variables visible at the current location; simplified to the null-checked set.
+     * @return a copy of the null-checked variable names
      */
-    public Set<String> getVisibleVariables() {
+    public Set<String> getVisibleVariables()
+    {
         return new HashSet<>(checkedVariables);
     }
 
     /**
-     * Checks if an expression has been null-checked.
-     * Currently tracks simple variable names.
+     * Checks whether an expression has been marked null-checked; only simple variable
+     * references are tracked.
+     * @param expr the expression to test
+     * @return true if the expression is a tracked null-checked variable
      */
-    public boolean isNullChecked(Expression expr) {
+    public boolean isNullChecked(Expression expr)
+    {
         String varName = extractVariableName(expr);
         return varName != null && checkedVariables.contains(varName);
     }
 
     /**
      * Marks a variable as null-checked.
+     * @param varName the variable name; ignored when null
      */
-    public void markNullChecked(String varName) {
-        if (varName != null) {
+    public void markNullChecked(String varName)
+    {
+        if (varName != null)
+        {
             checkedVariables.add(varName);
         }
     }
 
     /**
-     * Clears null-check tracking.
+     * Clears all null-check tracking.
      */
-    public void clearNullChecks() {
+    public void clearNullChecks()
+    {
         checkedVariables.clear();
     }
 
     /**
-     * Gets the AST factory for creating new nodes.
+     * @return the AST factory for creating new nodes
      */
-    public ASTFactory factory() {
+    public ASTFactory factory()
+    {
         return factory;
     }
 
     /**
      * Creates a replacement that inserts statements before the current statement.
+     * @param stmts the statements to insert
+     * @return the insert-before replacement
      */
-    public Replacement insertBefore(Statement... stmts) {
+    public Replacement insertBefore(Statement... stmts)
+    {
         return Replacement.insertBefore(stmts);
     }
 
     /**
      * Creates a replacement that inserts statements after the current statement.
+     * @param stmts the statements to insert
+     * @return the insert-after replacement
      */
-    public Replacement insertAfter(Statement... stmts) {
+    public Replacement insertAfter(Statement... stmts)
+    {
         return Replacement.insertAfter(stmts);
     }
 
     /**
-     * Wraps an expression with a null check.
+     * Marks the expression's variable as null-checked without altering the node.
      * @param expr the expression to check
-     * @return a replacement with null check
+     * @return a keep replacement
      */
-    public Replacement wrapWithNullCheck(Expression expr) {
+    public Replacement wrapWithNullCheck(Expression expr)
+    {
         String varName = extractVariableName(expr);
-        if (varName != null) {
+        if (varName != null)
+        {
             markNullChecked(varName);
         }
         return Replacement.keep();
@@ -247,26 +295,35 @@ public class EditorContext {
      * @param expr the expression to extract from
      * @return the variable name or null
      */
-    private String extractVariableName(Expression expr) {
-        if (expr == null) {
+    private String extractVariableName(Expression expr)
+    {
+        if (expr == null)
+        {
             return null;
         }
-        if (expr instanceof VarRefExpr) {
+        if (expr instanceof VarRefExpr)
+        {
             return ((VarRefExpr) expr).getName();
         }
         return null;
     }
 
     /**
-     * Finds the enclosing statement for an expression.
+     * Walks parent links to find the statement that contains an expression.
+     * @param expr the expression to search from
+     * @return the enclosing statement, or null if none is found
      */
-    public Statement findEnclosingStatement(Expression expr) {
-        if (expr == null) {
+    public Statement findEnclosingStatement(Expression expr)
+    {
+        if (expr == null)
+        {
             return null;
         }
         ASTNode node = expr.getParent();
-        while (node != null) {
-            if (node instanceof Statement) {
+        while (node != null)
+        {
+            if (node instanceof Statement)
+            {
                 return (Statement) node;
             }
             node = node.getParent();
@@ -275,9 +332,12 @@ public class EditorContext {
     }
 
     /**
-     * Creates a copy of this context for nested traversal.
+     * Creates a copy of this context, carrying over depths and null-check state, for
+     * nested traversal.
+     * @return the nested context
      */
-    public EditorContext createNestedContext() {
+    public EditorContext createNestedContext()
+    {
         EditorContext nested = new EditorContext(methodBody, methodName, methodDescriptor, ownerClass);
         nested.tryDepth = this.tryDepth;
         nested.loopDepth = this.loopDepth;

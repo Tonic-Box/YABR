@@ -15,28 +15,32 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests pattern-based local optimizations like double negation elimination,
  * redundant shift operations, and arithmetic simplifications.
  */
-class PeepholeOptimizationsTest {
+class PeepholeOptimizationsTest
+{
 
     private PeepholeOptimizations transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new PeepholeOptimizations();
     }
 
-    // ========== getName Tests ==========
+    // getName Tests
 
     @Test
-    void getNameReturnsPeepholeOptimizations() {
+    void getNameReturnsPeepholeOptimizations()
+    {
         assertEquals("PeepholeOptimizations", transform.getName());
     }
 
-    // ========== Double Negation Tests ==========
+    // Double Negation Tests
 
     @Test
-    void eliminatesDoubleNegation() {
+    void eliminatesDoubleNegation()
+    {
         // Create: v2 = NEG(v0); v3 = NEG(v2) -> should become v3 = v0
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -67,10 +71,11 @@ class PeepholeOptimizationsTest {
         assertEquals(v0, copy.getSource());
     }
 
-    // ========== Shift Operation Tests ==========
+    // Shift Operation Tests
 
     @Test
-    void eliminatesShiftByZero() {
+    void eliminatesShiftByZero()
+    {
         // v1 = v0 << 0 -> v1 = v0
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -92,7 +97,8 @@ class PeepholeOptimizationsTest {
     }
 
     @Test
-    void normalizesShiftAmount() {
+    void normalizesShiftAmount()
+    {
         // v1 = v0 << 33 -> v1 = v0 << 1 (since 33 & 31 = 1)
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -116,10 +122,11 @@ class PeepholeOptimizationsTest {
         assertEquals(1, rightOperand.getValue());
     }
 
-    // ========== Arithmetic Simplification Tests ==========
+    // Arithmetic Simplification Tests
 
     @Test
-    void convertsAddNegToSub() {
+    void convertsAddNegToSub()
+    {
         // v2 = NEG v1; v3 = v0 + v2 -> v3 = v0 - v1
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -150,7 +157,8 @@ class PeepholeOptimizationsTest {
     }
 
     @Test
-    void convertsSubNegToAdd() {
+    void convertsSubNegToAdd()
+    {
         // v2 = NEG v1; v3 = v0 - v2 -> v3 = v0 + v1
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -180,10 +188,11 @@ class PeepholeOptimizationsTest {
         assertEquals(v1, binOp.getRight());
     }
 
-    // ========== Consecutive Shifts Tests ==========
+    // Consecutive Shifts Tests
 
     @Test
-    void mergesConsecutiveShifts() {
+    void mergesConsecutiveShifts()
+    {
         // v1 = v0 << 3; v2 = v1 << 2 -> v2 = v0 << 5
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -213,10 +222,11 @@ class PeepholeOptimizationsTest {
         assertEquals(5, shiftAmount.getValue());
     }
 
-    // ========== No Change Tests ==========
+    // No Change Tests
 
     @Test
-    void returnsFalseWhenNoPatternsFound() {
+    void returnsFalseWhenNoPatternsFound()
+    {
         // Simple instruction with no optimization opportunities
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
@@ -237,7 +247,8 @@ class PeepholeOptimizationsTest {
     }
 
     @Test
-    void returnsFalseForEmptyMethod() {
+    void returnsFalseForEmptyMethod()
+    {
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock block = new IRBlock("entry");
         method.addBlock(block);

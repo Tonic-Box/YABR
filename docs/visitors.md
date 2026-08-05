@@ -24,22 +24,26 @@ import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 
-public class MyClassVisitor extends AbstractClassVisitor {
+public class MyClassVisitor extends AbstractClassVisitor
+{
 
     @Override
-    public void visitField(FieldEntry field) {
+    public void visitField(FieldEntry field)
+    {
         System.out.println("Field: " + field.getName() + " " + field.getDesc());
         super.visitField(field);
     }
 
     @Override
-    public void visitMethod(MethodEntry method) {
+    public void visitMethod(MethodEntry method)
+    {
         System.out.println("Method: " + method.getName() + method.getDesc());
         super.visitMethod(method);
     }
 
     @Override
-    public void visitClassAttribute(Attribute attr) {
+    public void visitClassAttribute(Attribute attr)
+    {
         System.out.println("Attribute: " + attr.getName());
     }
 }
@@ -53,15 +57,22 @@ classFile.accept(new MyClassVisitor());
 Constant pool items arrive through the single `visitConstPoolItem` hook; dispatch on the item type:
 
 ```java
-public class ConstPoolVisitor extends AbstractClassVisitor {
+public class ConstPoolVisitor extends AbstractClassVisitor
+{
 
     @Override
-    public void visitConstPoolItem(Item<?> item) {
-        if (item instanceof Utf8Item) {
+    public void visitConstPoolItem(Item<?> item)
+    {
+        if (item instanceof Utf8Item)
+        {
             System.out.println("UTF8: " + ((Utf8Item) item).getValue());
-        } else if (item instanceof ClassRefItem) {
+        }
+        else if (item instanceof ClassRefItem)
+        {
             System.out.println("Class: " + ((ClassRefItem) item).getClassName());
-        } else if (item instanceof MethodRefItem) {
+        }
+        else if (item instanceof MethodRefItem)
+        {
             MethodRefItem m = (MethodRefItem) item;
             System.out.println("Method: " + m.getOwner() + "." + m.getName());
         }
@@ -79,23 +90,27 @@ Visits individual bytecode instructions within a method.
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.analysis.instruction.*;
 
-public class MyBytecodeVisitor extends AbstractBytecodeVisitor {
+public class MyBytecodeVisitor extends AbstractBytecodeVisitor
+{
 
     @Override
-    public void visit(InvokeVirtualInstruction instr) {
+    public void visit(InvokeVirtualInstruction instr)
+    {
         System.out.println("INVOKEVIRTUAL: " + instr.getClassName() +
                           "." + instr.getMethodName());
         super.visit(instr);
     }
 
     @Override
-    public void visit(GetFieldInstruction instr) {
+    public void visit(GetFieldInstruction instr)
+    {
         System.out.println("GETFIELD: " + instr.getFieldName());
         super.visit(instr);
     }
 
     @Override
-    public void visit(MethodReturnInstruction instr) {
+    public void visit(MethodReturnInstruction instr)
+    {
         System.out.println("RETURN at offset " + instr.getOffset());
         super.visit(instr);
     }
@@ -114,10 +129,12 @@ visitor.process(methodEntry);
 The visitor has access to `codeWriter` for modifications:
 
 ```java
-public class LoggingVisitor extends AbstractBytecodeVisitor {
+public class LoggingVisitor extends AbstractBytecodeVisitor
+{
 
     @Override
-    public void visit(MethodReturnInstruction instruction) {
+    public void visit(MethodReturnInstruction instruction)
+    {
         super.visit(instruction);
 
         // Insert logging before each return
@@ -130,9 +147,12 @@ public class LoggingVisitor extends AbstractBytecodeVisitor {
         bytecode.addInvokeVirtual("java/io/PrintStream", "println",
                                   "(Ljava/lang/String;)V");
 
-        try {
+        try
+        {
             bytecode.finalizeBytecode();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException(e);
         }
     }
@@ -195,10 +215,12 @@ import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.IRPrinter;
 
-public class MyBlockVisitor extends AbstractBlockVisitor {
+public class MyBlockVisitor extends AbstractBlockVisitor
+{
 
     @Override
-    public void visitBlock(IRBlock block) {
+    public void visitBlock(IRBlock block)
+    {
         System.out.println("Block: " + block.getName());
         System.out.println("  Predecessors: " + block.getPredecessors().stream()
             .map(IRBlock::getName).toList());
@@ -209,12 +231,14 @@ public class MyBlockVisitor extends AbstractBlockVisitor {
     }
 
     @Override
-    public void visitPhi(PhiInstruction phi) {
+    public void visitPhi(PhiInstruction phi)
+    {
         System.out.println("  [PHI] " + IRPrinter.format(phi));
     }
 
     @Override
-    public void visitInstruction(IRInstruction instruction) {
+    public void visitInstruction(IRInstruction instruction)
+    {
         System.out.println("  " + IRPrinter.format(instruction));
     }
 }
@@ -262,12 +286,15 @@ return v5
 ### Class -> Method -> Bytecode
 
 ```java
-public class InstrumentingVisitor extends AbstractClassVisitor {
+public class InstrumentingVisitor extends AbstractClassVisitor
+{
 
     @Override
-    public void visitMethod(MethodEntry method) {
+    public void visitMethod(MethodEntry method)
+    {
         // Skip constructors and static initializers
-        if (method.getName().startsWith("<")) {
+        if (method.getName().startsWith("<"))
+        {
             return;
         }
 
@@ -276,10 +303,12 @@ public class InstrumentingVisitor extends AbstractClassVisitor {
     }
 }
 
-public class MethodInstrumenter extends AbstractBytecodeVisitor {
+public class MethodInstrumenter extends AbstractBytecodeVisitor
+{
 
     @Override
-    public void visit(MethodReturnInstruction instruction) {
+    public void visit(MethodReturnInstruction instruction)
+    {
         // Add instrumentation before return
         Bytecode bc = new Bytecode(codeWriter);
         bc.setInsertBefore(true);
@@ -287,9 +316,12 @@ public class MethodInstrumenter extends AbstractBytecodeVisitor {
 
         // ... add instrumentation
 
-        try {
+        try
+        {
             bc.finalizeBytecode();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException(e);
         }
     }
@@ -299,10 +331,12 @@ public class MethodInstrumenter extends AbstractBytecodeVisitor {
 ### Using Visitors with SSA Analysis
 
 ```java
-public class OptimizingVisitor extends AbstractClassVisitor {
+public class OptimizingVisitor extends AbstractClassVisitor
+{
 
     @Override
-    public void visitMethod(MethodEntry method) {
+    public void visitMethod(MethodEntry method)
+    {
         if (method.getCodeAttribute() == null) return;
 
         ConstPool cp = method.getClassFile().getConstPool();
@@ -320,10 +354,12 @@ public class OptimizingVisitor extends AbstractClassVisitor {
 ## Complete Example: Method Entry/Exit Logging
 
 ```java
-public class LoggingVisitor extends AbstractBytecodeVisitor {
+public class LoggingVisitor extends AbstractBytecodeVisitor
+{
 
     @Override
-    public void visitMethod(MethodEntry method) {
+    public void visitMethod(MethodEntry method)
+    {
         super.visitMethod(method);
 
         // Add entry logging at the start
@@ -335,15 +371,19 @@ public class LoggingVisitor extends AbstractBytecodeVisitor {
         bc.addInvokeVirtual("java/io/PrintStream", "println",
                           "(Ljava/lang/String;)V");
 
-        try {
+        try
+        {
             bc.finalizeBytecode();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public void visit(MethodReturnInstruction instruction) {
+    public void visit(MethodReturnInstruction instruction)
+    {
         super.visit(instruction);
 
         // Add exit logging before each return
@@ -356,9 +396,12 @@ public class LoggingVisitor extends AbstractBytecodeVisitor {
         bc.addInvokeVirtual("java/io/PrintStream", "println",
                           "(Ljava/lang/String;)V");
 
-        try {
+        try
+        {
             bc.finalizeBytecode();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException(e);
         }
     }
@@ -367,8 +410,10 @@ public class LoggingVisitor extends AbstractBytecodeVisitor {
 // Apply to a class
 classFile.accept(new AbstractClassVisitor() {
     @Override
-    public void visitMethod(MethodEntry method) {
-        if (!method.getName().startsWith("<")) {
+    public void visitMethod(MethodEntry method)
+    {
+        if (!method.getName().startsWith("<"))
+        {
             new LoggingVisitor().process(method);
         }
     }

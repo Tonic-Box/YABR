@@ -9,36 +9,50 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Public entry point for lowering YABR SSA IR to textual LLVM IR.
- *
- * <p>v1 supports the computational subset (arithmetic, conversions, control flow, phis, static
- * calls); constructs requiring the object/runtime model throw {@link UnsupportedOperationException}
- * via {@link UnsupportedLowering}. Output is pure text — no native dependency.
- *
- * <pre>{@code
- *   IRMethod ir = new SSA(cf.getConstPool()).lift(method);
- *   String ll = new LlvmLowering().lower(ir);
- * }</pre>
+ * Entry point lowering YABR SSA IR to textual LLVM IR; unsupported constructs throw
+ * {@link UnsupportedOperationException} via {@link UnsupportedLowering}.
  */
-public final class LlvmLowering {
+public final class LlvmLowering
+{
 
     private final LlvmLoweringConfig config;
 
-    public LlvmLowering() {
+    /**
+     * Creates a lowering with the default configuration.
+     */
+    public LlvmLowering()
+    {
         this(LlvmLoweringConfig.defaults());
     }
 
-    public LlvmLowering(LlvmLoweringConfig config) {
+    /**
+     * Creates a lowering.
+     * @param config the configuration to use; null selects the defaults
+     */
+    public LlvmLowering(LlvmLoweringConfig config)
+    {
         this.config = config != null ? config : LlvmLoweringConfig.defaults();
     }
 
-    /** Lowers a single method to a complete LLVM IR module (declares + one define). */
-    public String lower(IRMethod method) {
+    /**
+     * Lowers a single method to a complete LLVM IR module (declares + one define).
+     * @param method the SSA method to lower
+     * @return the module's LLVM IR text
+     * @throws UnsupportedOperationException when the method uses a construct outside the lowered subset
+     */
+    public String lower(IRMethod method)
+    {
         return lowerToModule(Collections.singletonList(method));
     }
 
-    /** Lowers several methods into one module; callees defined in the module are not re-declared. */
-    public String lowerToModule(List<IRMethod> methods) {
+    /**
+     * Lowers several methods into one module; callees defined in the module are not re-declared.
+     * @param methods the SSA methods to lower
+     * @return the module's LLVM IR text
+     * @throws UnsupportedOperationException when a method uses a construct outside the lowered subset
+     */
+    public String lowerToModule(List<IRMethod> methods)
+    {
         LlvmModule module = new LlvmModule(config);
         DeclareCollector declares = new DeclareCollector();
         GlobalCollector globals = new GlobalCollector();
@@ -47,7 +61,8 @@ public final class LlvmLowering {
         Set<String> definedOwnerClasses = new HashSet<>();
         List<String> defines = new ArrayList<>();
 
-        for (IRMethod method : methods) {
+        for (IRMethod method : methods)
+        {
             LlvmFunctionBuilder fb = new LlvmFunctionBuilder();
             SsaToLlvmLowerer lowerer = new SsaToLlvmLowerer(method, fb, declares, globals, strings, config);
             defines.add(lowerer.lowerFunction());
@@ -58,7 +73,8 @@ public final class LlvmLowering {
         module.addConstants(strings.renderConstants());
         module.addGlobals(globals.renderGlobals(definedOwnerClasses));
         module.addDeclares(declares.renderDeclares(definedSymbols));
-        for (String define : defines) {
+        for (String define : defines)
+        {
             module.addFunction(define);
         }
         return module.render();

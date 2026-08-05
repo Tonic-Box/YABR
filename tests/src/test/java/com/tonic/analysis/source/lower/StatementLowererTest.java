@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for StatementLowerer covering statement lowering to IR.
  * Tests control flow, variable declarations, exception handling, and more.
  */
-class StatementLowererTest {
+class StatementLowererTest
+{
 
     private LoweringContext ctx;
     private StatementLowerer lowerer;
@@ -41,7 +42,8 @@ class StatementLowererTest {
     private IRBlock entryBlock;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/StatementLowererTest", access);
@@ -63,10 +65,11 @@ class StatementLowererTest {
         lowerer = new StatementLowerer(ctx, exprLowerer);
     }
 
-    // ========== Variable Declaration Tests ==========
+    // Variable Declaration Tests
 
     @Test
-    void lowerVarDeclWithoutInitializer() {
+    void lowerVarDeclWithoutInitializer()
+    {
         VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x");
         lowerer.lower(varDecl);
 
@@ -77,7 +80,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerVarDeclWithInitializer() {
+    void lowerVarDeclWithInitializer()
+    {
         Expression init = LiteralExpr.ofInt(42);
         VarDeclStmt varDecl = new VarDeclStmt(PrimitiveSourceType.INT, "x", init);
         lowerer.lower(varDecl);
@@ -92,7 +96,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerMultipleVarDecls() {
+    void lowerMultipleVarDecls()
+    {
         VarDeclStmt var1 = new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1));
         VarDeclStmt var2 = new VarDeclStmt(PrimitiveSourceType.INT, "b", LiteralExpr.ofInt(2));
 
@@ -104,10 +109,11 @@ class StatementLowererTest {
         assertNotSame(ctx.getVariable("a"), ctx.getVariable("b"));
     }
 
-    // ========== Return Statement Tests ==========
+    // Return Statement Tests
 
     @Test
-    void lowerVoidReturn() {
+    void lowerVoidReturn()
+    {
         ReturnStmt ret = new ReturnStmt();
         lowerer.lower(ret);
 
@@ -119,7 +125,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerReturnWithValue() {
+    void lowerReturnWithValue()
+    {
         Expression value = LiteralExpr.ofInt(42);
         ReturnStmt ret = new ReturnStmt(value);
         lowerer.lower(ret);
@@ -131,17 +138,17 @@ class StatementLowererTest {
         assertNotNull(retInstr.getReturnValue());
     }
 
-    // ========== If Statement Tests ==========
+    // If Statement Tests
 
     @Test
-    void lowerIfWithoutElse() {
+    void lowerIfWithoutElse()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement thenBranch = new ReturnStmt();
         IfStmt ifStmt = new IfStmt(condition, thenBranch);
 
         lowerer.lower(ifStmt);
 
-        // Should create then block, merge block
         assertTrue(irMethod.getBlockCount() >= 3);
 
         // Entry block should have a branch instruction
@@ -150,7 +157,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerIfWithElse() {
+    void lowerIfWithElse()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement thenBranch = new ReturnStmt(LiteralExpr.ofInt(1));
         Statement elseBranch = new ReturnStmt(LiteralExpr.ofInt(2));
@@ -169,7 +177,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerNestedIf() {
+    void lowerNestedIf()
+    {
         Expression outerCond = LiteralExpr.ofBoolean(true);
         Expression innerCond = LiteralExpr.ofBoolean(false);
         Statement innerIf = new IfStmt(innerCond, new ReturnStmt());
@@ -181,10 +190,11 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 4);
     }
 
-    // ========== While Loop Tests ==========
+    // While Loop Tests
 
     @Test
-    void lowerWhileLoop() {
+    void lowerWhileLoop()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BlockStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -196,12 +206,12 @@ class StatementLowererTest {
 
         // Entry should goto condition block
         IRInstruction entryTerm = entryBlock.getTerminator();
-        assertTrue(entryTerm instanceof SimpleInstruction &&
-            ((SimpleInstruction) entryTerm).getOp() == SimpleOp.GOTO);
+        assertTrue(entryTerm instanceof SimpleInstruction && ((SimpleInstruction) entryTerm).getOp() == SimpleOp.GOTO);
     }
 
     @Test
-    void lowerWhileWithBreak() {
+    void lowerWhileWithBreak()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BreakStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -212,7 +222,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerWhileWithContinue() {
+    void lowerWhileWithContinue()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new ContinueStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -223,7 +234,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerLabeledWhile() {
+    void lowerLabeledWhile()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BlockStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body, "loop");
@@ -233,10 +245,11 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 4);
     }
 
-    // ========== Do-While Loop Tests ==========
+    // Do-While Loop Tests
 
     @Test
-    void lowerDoWhileLoop() {
+    void lowerDoWhileLoop()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BlockStmt();
         DoWhileStmt doWhile = new DoWhileStmt(body, condition);
@@ -248,12 +261,12 @@ class StatementLowererTest {
 
         // Entry should goto body block (not condition)
         IRInstruction entryTerm = entryBlock.getTerminator();
-        assertTrue(entryTerm instanceof SimpleInstruction &&
-            ((SimpleInstruction) entryTerm).getOp() == SimpleOp.GOTO);
+        assertTrue(entryTerm instanceof SimpleInstruction && ((SimpleInstruction) entryTerm).getOp() == SimpleOp.GOTO);
     }
 
     @Test
-    void lowerDoWhileWithBreak() {
+    void lowerDoWhileWithBreak()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BreakStmt();
         DoWhileStmt doWhile = new DoWhileStmt(body, condition);
@@ -264,7 +277,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerLabeledDoWhile() {
+    void lowerLabeledDoWhile()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BlockStmt();
         DoWhileStmt doWhile = new DoWhileStmt(body, condition, "loop");
@@ -274,13 +288,12 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 4);
     }
 
-    // ========== For Loop Tests ==========
+    // For Loop Tests
 
     @Test
-    void lowerForLoopWithAllParts() {
-        List<Statement> init = List.of(
-            new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0))
-        );
+    void lowerForLoopWithAllParts()
+    {
+        List<Statement> init = List.of(new VarDeclStmt(PrimitiveSourceType.INT, "i", LiteralExpr.ofInt(0)));
         Expression condition = LiteralExpr.ofBoolean(true);
         List<Expression> update = List.of(LiteralExpr.ofInt(1));
         Statement body = new BlockStmt();
@@ -295,7 +308,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerForLoopWithoutCondition() {
+    void lowerForLoopWithoutCondition()
+    {
         List<Statement> init = List.of();
         List<Expression> update = List.of();
         Statement body = new BlockStmt();
@@ -309,7 +323,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerForLoopWithBreak() {
+    void lowerForLoopWithBreak()
+    {
         List<Statement> init = List.of();
         Expression condition = LiteralExpr.ofBoolean(true);
         List<Expression> update = List.of();
@@ -323,7 +338,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerInfiniteForLoop() {
+    void lowerInfiniteForLoop()
+    {
         ForStmt infiniteLoop = ForStmt.infinite(new BlockStmt());
 
         lowerer.lower(infiniteLoop);
@@ -332,7 +348,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerLabeledForLoop() {
+    void lowerLabeledForLoop()
+    {
         List<Statement> init = List.of();
         Expression condition = LiteralExpr.ofBoolean(true);
         List<Expression> update = List.of();
@@ -345,22 +362,20 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 5);
     }
 
-    // ========== ForEach Loop Tests ==========
+    // ForEach Loop Tests
 
     @Test
-    void lowerForEachLoop() {
-        // Create array variable: int[] arr
+    void lowerForEachLoop()
+    {
         ArraySourceType arrayType = new ArraySourceType(PrimitiveSourceType.INT);
         Expression arrayExpr = new VarRefExpr("arr", arrayType);
 
         // Declare loop variable: int element
         VarDeclStmt loopVar = new VarDeclStmt(PrimitiveSourceType.INT, "element");
 
-        // Create foreach statement
         Statement body = new BlockStmt();
         ForEachStmt forEach = new ForEachStmt(loopVar, arrayExpr, body);
 
-        // Set up array variable in context
         SSAValue arrValue = ctx.newValue(arrayType.toIRType());
         ctx.setVariable("arr", arrValue);
 
@@ -372,7 +387,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerForEachWithBreak() {
+    void lowerForEachWithBreak()
+    {
         ArraySourceType arrayType = new ArraySourceType(PrimitiveSourceType.INT);
         Expression arrayExpr = new VarRefExpr("arr", arrayType);
         VarDeclStmt loopVar = new VarDeclStmt(PrimitiveSourceType.INT, "element");
@@ -388,7 +404,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerLabeledForEach() {
+    void lowerLabeledForEach()
+    {
         ArraySourceType arrayType = new ArraySourceType(PrimitiveSourceType.INT);
         Expression arrayExpr = new VarRefExpr("arr", arrayType);
         VarDeclStmt loopVar = new VarDeclStmt(PrimitiveSourceType.INT, "element");
@@ -403,10 +420,11 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 5);
     }
 
-    // ========== Switch Statement Tests ==========
+    // Switch Statement Tests
 
     @Test
-    void lowerSwitchWithDefaultCase() {
+    void lowerSwitchWithDefaultCase()
+    {
         Expression selector = LiteralExpr.ofInt(1);
         List<SwitchCase> cases = List.of(
             SwitchCase.of(1, List.of(new ReturnStmt())),
@@ -426,7 +444,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerSwitchWithoutDefaultCase() {
+    void lowerSwitchWithoutDefaultCase()
+    {
         Expression selector = LiteralExpr.ofInt(1);
         List<SwitchCase> cases = List.of(
             SwitchCase.of(1, List.of(new ReturnStmt())),
@@ -443,7 +462,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerSwitchWithFallthrough() {
+    void lowerSwitchWithFallthrough()
+    {
         Expression selector = LiteralExpr.ofInt(1);
         List<SwitchCase> cases = List.of(
             SwitchCase.of(1, List.of()),  // Empty - falls through
@@ -457,11 +477,10 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerSwitchWithMultipleLabels() {
+    void lowerSwitchWithMultipleLabels()
+    {
         Expression selector = LiteralExpr.ofInt(1);
-        List<SwitchCase> cases = List.of(
-            SwitchCase.of(List.of(1, 2, 3), List.of(new ReturnStmt()))
-        );
+        List<SwitchCase> cases = List.of(SwitchCase.of(List.of(1, 2, 3), List.of(new ReturnStmt())));
         SwitchStmt switchStmt = new SwitchStmt(selector, cases);
 
         lowerer.lower(switchStmt);
@@ -470,7 +489,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerSwitchWithBreak() {
+    void lowerSwitchWithBreak()
+    {
         Expression selector = LiteralExpr.ofInt(1);
         List<SwitchCase> cases = List.of(
             SwitchCase.of(1, List.of(new BreakStmt())),
@@ -483,10 +503,11 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 4);
     }
 
-    // ========== Try-Catch Statement Tests ==========
+    // Try-Catch Statement Tests
 
     @Test
-    void lowerTryCatchWithSingleCatch() {
+    void lowerTryCatchWithSingleCatch()
+    {
         Statement tryBlock = new BlockStmt();
         SourceType exceptionType = new ReferenceSourceType("java/lang/Exception");
         CatchClause catchClause = CatchClause.of(exceptionType, "e", new BlockStmt());
@@ -500,7 +521,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerTryCatchWithMultipleCatches() {
+    void lowerTryCatchWithMultipleCatches()
+    {
         Statement tryBlock = new BlockStmt();
         SourceType exception1 = new ReferenceSourceType("java/lang/RuntimeException");
         SourceType exception2 = new ReferenceSourceType("java/lang/Exception");
@@ -518,7 +540,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerTryCatchFinally() {
+    void lowerTryCatchFinally()
+    {
         Statement tryBlock = new BlockStmt();
         Statement finallyBlock = new BlockStmt();
         SourceType exceptionType = new ReferenceSourceType("java/lang/Exception");
@@ -532,7 +555,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerTryFinallyWithoutCatch() {
+    void lowerTryFinallyWithoutCatch()
+    {
         Statement tryBlock = new BlockStmt();
         Statement finallyBlock = new BlockStmt();
 
@@ -544,7 +568,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerTryCatchWithReturn() {
+    void lowerTryCatchWithReturn()
+    {
         Statement tryBlock = new ReturnStmt();
         SourceType exceptionType = new ReferenceSourceType("java/lang/Exception");
         CatchClause catchClause = CatchClause.of(exceptionType, "e", new ReturnStmt());
@@ -555,10 +580,11 @@ class StatementLowererTest {
         assertTrue(irMethod.getBlockCount() >= 4);
     }
 
-    // ========== Synchronized Statement Tests ==========
+    // Synchronized Statement Tests
 
     @Test
-    void lowerSynchronizedBlock() {
+    void lowerSynchronizedBlock()
+    {
         Expression lock = LiteralExpr.ofNull();
         Statement body = new BlockStmt();
         SynchronizedStmt syncStmt = new SynchronizedStmt(lock, body);
@@ -571,7 +597,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerSynchronizedWithReturn() {
+    void lowerSynchronizedWithReturn()
+    {
         Expression lock = LiteralExpr.ofNull();
         Statement body = new ReturnStmt();
         SynchronizedStmt syncStmt = new SynchronizedStmt(lock, body);
@@ -585,7 +612,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerSynchronizedWithMonitorExit() {
+    void lowerSynchronizedWithMonitorExit()
+    {
         Expression lock = LiteralExpr.ofNull();
         Statement body = new BlockStmt();
         SynchronizedStmt syncStmt = new SynchronizedStmt(lock, body);
@@ -603,10 +631,11 @@ class StatementLowererTest {
         assertTrue(monitorExits >= 1, "the synchronized block must release the monitor");
     }
 
-    // ========== Break and Continue Tests ==========
+    // Break and Continue Tests
 
     @Test
-    void lowerBreakInWhileLoop() {
+    void lowerBreakInWhileLoop()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BreakStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -617,7 +646,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerContinueInWhileLoop() {
+    void lowerContinueInWhileLoop()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new ContinueStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -628,7 +658,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerLabeledBreak() {
+    void lowerLabeledBreak()
+    {
         Expression outerCond = LiteralExpr.ofBoolean(true);
         Expression innerCond = LiteralExpr.ofBoolean(true);
 
@@ -642,7 +673,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerLabeledContinue() {
+    void lowerLabeledContinue()
+    {
         Expression outerCond = LiteralExpr.ofBoolean(true);
         Expression innerCond = LiteralExpr.ofBoolean(true);
 
@@ -656,21 +688,24 @@ class StatementLowererTest {
     }
 
     @Test
-    void breakOutsideLoopThrowsException() {
+    void breakOutsideLoopThrowsException()
+    {
         BreakStmt breakStmt = new BreakStmt();
 
         assertThrows(LoweringException.class, () -> lowerer.lower(breakStmt));
     }
 
     @Test
-    void continueOutsideLoopThrowsException() {
+    void continueOutsideLoopThrowsException()
+    {
         ContinueStmt continueStmt = new ContinueStmt();
 
         assertThrows(LoweringException.class, () -> lowerer.lower(continueStmt));
     }
 
     @Test
-    void breakWithUnknownLabelThrowsException() {
+    void breakWithUnknownLabelThrowsException()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BreakStmt("unknown");
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -679,7 +714,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void continueWithUnknownLabelThrowsException() {
+    void continueWithUnknownLabelThrowsException()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new ContinueStmt("unknown");
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -687,21 +723,22 @@ class StatementLowererTest {
         assertThrows(LoweringException.class, () -> lowerer.lower(whileStmt));
     }
 
-    // ========== Block Statement Tests ==========
+    // Block Statement Tests
 
     @Test
-    void lowerEmptyBlock() {
+    void lowerEmptyBlock()
+    {
         BlockStmt block = new BlockStmt();
 
         lowerer.lower(block);
 
         // Empty block shouldn't add instructions
-        assertTrue(entryBlock.getInstructions().isEmpty() ||
-                   entryBlock.getTerminator() == null);
+        assertTrue(entryBlock.getInstructions().isEmpty() || entryBlock.getTerminator() == null);
     }
 
     @Test
-    void lowerBlockWithMultipleStatements() {
+    void lowerBlockWithMultipleStatements()
+    {
         BlockStmt block = new BlockStmt();
         block.addStatement(new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1)));
         block.addStatement(new VarDeclStmt(PrimitiveSourceType.INT, "b", LiteralExpr.ofInt(2)));
@@ -715,7 +752,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void lowerBlockStopsAfterTerminator() {
+    void lowerBlockStopsAfterTerminator()
+    {
         BlockStmt block = new BlockStmt();
         block.addStatement(new ReturnStmt());
         block.addStatement(new VarDeclStmt(PrimitiveSourceType.INT, "unreachable"));
@@ -727,23 +765,24 @@ class StatementLowererTest {
         assertFalse(ctx.hasVariable("unreachable"));
     }
 
-    // ========== Expression Statement Tests ==========
+    // Expression Statement Tests
 
     @Test
-    void lowerExpressionStatement() {
+    void lowerExpressionStatement()
+    {
         Expression expr = LiteralExpr.ofInt(42);
         ExprStmt exprStmt = new ExprStmt(expr);
 
         lowerer.lower(exprStmt);
 
-        // Should lower the expression
         assertFalse(entryBlock.getInstructions().isEmpty());
     }
 
-    // ========== Throw Statement Tests ==========
+    // Throw Statement Tests
 
     @Test
-    void lowerThrowStatement() {
+    void lowerThrowStatement()
+    {
         Expression exception = LiteralExpr.ofNull();
         ThrowStmt throwStmt = new ThrowStmt(exception);
 
@@ -755,10 +794,11 @@ class StatementLowererTest {
             ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW);
     }
 
-    // ========== Labeled Statement Tests ==========
+    // Labeled Statement Tests
 
     @Test
-    void lowerLabeledStatement() {
+    void lowerLabeledStatement()
+    {
         Statement stmt = new ReturnStmt();
         LabeledStmt labeled = new LabeledStmt("label", stmt);
 
@@ -768,33 +808,39 @@ class StatementLowererTest {
         assertNotNull(entryBlock.getTerminator());
     }
 
-    // ========== Edge Cases and Error Handling ==========
+    // Edge Cases and Error Handling
 
     @Test
-    void unsupportedStatementTypeThrowsException() {
+    void unsupportedStatementTypeThrowsException()
+    {
         // Create a custom unsupported statement (using anonymous class)
         Statement unsupported = new Statement() {
             @Override
-            public String getLabel() {
+            public String getLabel()
+            {
                 return null;
             }
 
             @Override
-            public ASTNode getParent() {
+            public ASTNode getParent()
+            {
                 return null;
             }
 
             @Override
-            public void setParent(ASTNode parent) {
+            public void setParent(ASTNode parent)
+            {
             }
 
             @Override
-            public SourceLocation getLocation() {
+            public SourceLocation getLocation()
+            {
                 return SourceLocation.UNKNOWN;
             }
 
             @Override
-            public <T> T accept(SourceVisitor<T> visitor) {
+            public <T> T accept(SourceVisitor<T> visitor)
+            {
                 return null;
             }
         };
@@ -802,10 +848,11 @@ class StatementLowererTest {
         assertThrows(LoweringException.class, () -> lowerer.lower(unsupported));
     }
 
-    // ========== Control Flow Structure Tests ==========
+    // Control Flow Structure Tests
 
     @Test
-    void ifStatementCreatesCorrectCFG() {
+    void ifStatementCreatesCorrectCFG()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement thenBranch = new BlockStmt();
         Statement elseBranch = new BlockStmt();
@@ -813,14 +860,14 @@ class StatementLowererTest {
 
         lowerer.lower(ifStmt);
 
-        // Verify CFG structure
         assertEquals(2, entryBlock.getSuccessors().size());
         IRInstruction terminator = entryBlock.getTerminator();
         assertTrue(terminator instanceof BranchInstruction);
     }
 
     @Test
-    void whileLoopCreatesCorrectCFG() {
+    void whileLoopCreatesCorrectCFG()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement body = new BlockStmt();
         WhileStmt whileStmt = new WhileStmt(condition, body);
@@ -834,7 +881,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void switchStatementCreatesCorrectCFG() {
+    void switchStatementCreatesCorrectCFG()
+    {
         Expression selector = LiteralExpr.ofInt(1);
         List<SwitchCase> cases = List.of(
             SwitchCase.of(1, List.of(new BlockStmt())),
@@ -850,7 +898,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void tryCatchCreatesExceptionEdges() {
+    void tryCatchCreatesExceptionEdges()
+    {
         Statement tryBlock = new BlockStmt();
         SourceType exceptionType = new ReferenceSourceType("java/lang/Exception");
         CatchClause catchClause = CatchClause.of(exceptionType, "e", new BlockStmt());
@@ -867,10 +916,11 @@ class StatementLowererTest {
         assertFalse(irMethod.getExceptionHandlers().isEmpty());
     }
 
-    // ========== Variable Scoping Tests ==========
+    // Variable Scoping Tests
 
     @Test
-    void variableAvailableAfterDeclaration() {
+    void variableAvailableAfterDeclaration()
+    {
         VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
         lowerer.lower(decl);
 
@@ -879,14 +929,16 @@ class StatementLowererTest {
     }
 
     @Test
-    void accessUndefinedVariableThrowsException() {
+    void accessUndefinedVariableThrowsException()
+    {
         assertThrows(LoweringException.class, () -> ctx.getVariable("undefined"));
     }
 
-    // ========== Complex Nested Structures ==========
+    // Complex Nested Structures
 
     @Test
-    void nestedLoopsWithBreaksAndContinues() {
+    void nestedLoopsWithBreaksAndContinues()
+    {
         Expression outerCond = LiteralExpr.ofBoolean(true);
         Expression innerCond = LiteralExpr.ofBoolean(true);
 
@@ -903,7 +955,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void switchInsideWhileLoop() {
+    void switchInsideWhileLoop()
+    {
         Expression whileCond = LiteralExpr.ofBoolean(true);
         Expression selector = LiteralExpr.ofInt(1);
 
@@ -921,7 +974,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void tryCatchInsideLoop() {
+    void tryCatchInsideLoop()
+    {
         Expression condition = LiteralExpr.ofBoolean(true);
         Statement tryBlock = new BlockStmt();
         SourceType exceptionType = new ReferenceSourceType("java/lang/Exception");
@@ -936,7 +990,8 @@ class StatementLowererTest {
     }
 
     @Test
-    void ifInsideForLoop() {
+    void ifInsideForLoop()
+    {
         List<Statement> init = List.of();
         Expression condition = LiteralExpr.ofBoolean(true);
         List<Expression> update = List.of();

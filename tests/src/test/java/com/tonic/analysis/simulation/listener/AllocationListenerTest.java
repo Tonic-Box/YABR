@@ -14,19 +14,22 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AllocationListenerTest {
+class AllocationListenerTest
+{
 
     private AllocationListener listener;
     private SimulationState mockState;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new AllocationListener();
         mockState = SimulationState.empty();
     }
 
     @Test
-    void trackObjectAllocation() {
+    void trackObjectAllocation()
+    {
         NewInstruction instr = new MockNewInstruction("Ljava/lang/String;");
 
         listener.onAllocation(instr, mockState);
@@ -38,7 +41,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void trackMultipleObjectAllocations() {
+    void trackMultipleObjectAllocations()
+    {
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewInstruction instr2 = new MockNewInstruction("Ljava/lang/Integer;");
         NewInstruction instr3 = new MockNewInstruction("Ljava/lang/String;");
@@ -55,7 +59,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void trackArrayAllocation() {
+    void trackArrayAllocation()
+    {
         NewArrayInstruction instr = new MockNewArrayInstruction("I", 1);
 
         listener.onArrayAllocation(instr, mockState);
@@ -67,7 +72,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void trackMultipleArrayAllocations() {
+    void trackMultipleArrayAllocations()
+    {
         NewArrayInstruction instr1 = new MockNewArrayInstruction("I", 1);
         NewArrayInstruction instr2 = new MockNewArrayInstruction("Ljava/lang/String;", 1);
         NewArrayInstruction instr3 = new MockNewArrayInstruction("I", 1);
@@ -84,7 +90,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void trackMultiDimensionalArray() {
+    void trackMultiDimensionalArray()
+    {
         NewArrayInstruction instr = new MockNewArrayInstruction("I", 3);
 
         listener.onArrayAllocation(instr, mockState);
@@ -96,7 +103,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void trackMixedAllocations() {
+    void trackMixedAllocations()
+    {
         NewInstruction objInstr1 = new MockNewInstruction("Ljava/lang/String;");
         NewArrayInstruction arrInstr1 = new MockNewArrayInstruction("I", 1);
         NewInstruction objInstr2 = new MockNewInstruction("Ljava/util/HashMap;");
@@ -117,7 +125,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void getAllocationsByType() {
+    void getAllocationsByType()
+    {
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewInstruction instr2 = new MockNewInstruction("Ljava/lang/Integer;");
         NewInstruction instr3 = new MockNewInstruction("Ljava/lang/String;");
@@ -137,7 +146,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void getAllocationsByTypeIsUnmodifiable() {
+    void getAllocationsByTypeIsUnmodifiable()
+    {
         NewInstruction instr = new MockNewInstruction("Ljava/lang/String;");
         listener.onAllocation(instr, mockState);
 
@@ -149,12 +159,14 @@ class AllocationListenerTest {
     }
 
     @Test
-    void getCountForTypeWhenTypeDoesNotExist() {
+    void getCountForTypeWhenTypeDoesNotExist()
+    {
         assertEquals(0, listener.getCountForType("Ljava/lang/String;"));
     }
 
     @Test
-    void getDistinctTypeCount() {
+    void getDistinctTypeCount()
+    {
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewInstruction instr2 = new MockNewInstruction("Ljava/lang/Integer;");
         NewInstruction instr3 = new MockNewInstruction("Ljava/lang/String;");
@@ -176,7 +188,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void getAllocationSites() {
+    void getAllocationSites()
+    {
         listener = new AllocationListener(true);
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewArrayInstruction instr2 = new MockNewArrayInstruction("I", 1);
@@ -196,7 +209,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void getAllocationSitesIsUnmodifiable() {
+    void getAllocationSitesIsUnmodifiable()
+    {
         listener = new AllocationListener(true);
         NewInstruction instr = new MockNewInstruction("Ljava/lang/String;");
         listener.onAllocation(instr, mockState);
@@ -209,7 +223,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void getAllocationsOfType() {
+    void getAllocationsOfType()
+    {
         listener = new AllocationListener(true);
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewInstruction instr2 = new MockNewInstruction("Ljava/lang/Integer;");
@@ -233,7 +248,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void trackSitesDisabledDoesNotRecordSites() {
+    void trackSitesDisabledDoesNotRecordSites()
+    {
         listener = new AllocationListener(false);
         NewInstruction instr = new MockNewInstruction("Ljava/lang/String;");
 
@@ -244,7 +260,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void resetOnNewSimulation() {
+    void resetOnNewSimulation()
+    {
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewArrayInstruction instr2 = new MockNewArrayInstruction("I", 1);
 
@@ -265,7 +282,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void handleNullTypeGracefully() {
+    void handleNullTypeGracefully()
+    {
         NewInstruction instr = new MockNewInstruction(null);
 
         listener.onAllocation(instr, mockState);
@@ -275,7 +293,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void handleNullElementTypeForArrayGracefully() {
+    void handleNullElementTypeForArrayGracefully()
+    {
         NewArrayInstruction instr = new MockNewArrayInstruction(null, 1);
 
         listener.onArrayAllocation(instr, mockState);
@@ -285,7 +304,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void allocationSiteToString() {
+    void allocationSiteToString()
+    {
         listener = new AllocationListener(true);
         NewInstruction objInstr = new MockNewInstruction("Ljava/lang/String;");
         NewArrayInstruction arrInstr = new MockNewArrayInstruction("I", 1);
@@ -299,7 +319,8 @@ class AllocationListenerTest {
     }
 
     @Test
-    void listenerToString() {
+    void listenerToString()
+    {
         NewInstruction instr1 = new MockNewInstruction("Ljava/lang/String;");
         NewInstruction instr2 = new MockNewInstruction("Ljava/lang/Integer;");
         NewArrayInstruction instr3 = new MockNewArrayInstruction("I", 1);
@@ -314,82 +335,99 @@ class AllocationListenerTest {
         assertTrue(str.contains("types=3"));
     }
 
-    private static class MockNewInstruction extends NewInstruction {
+    private static class MockNewInstruction extends NewInstruction
+    {
         private final IRType resultType;
 
-        MockNewInstruction(String typeDescriptor) {
+        MockNewInstruction(String typeDescriptor)
+        {
             super(null, "MockClass");
             this.resultType = typeDescriptor != null ? new MockIRType(typeDescriptor) : null;
         }
 
         @Override
-        public IRType getResultType() {
+        public IRType getResultType()
+        {
             return resultType;
         }
     }
 
-    private static class MockNewArrayInstruction extends NewArrayInstruction {
+    private static class MockNewArrayInstruction extends NewArrayInstruction
+    {
         private final int dimensions;
 
-        MockNewArrayInstruction(String elementTypeDescriptor, int dimensions) {
+        MockNewArrayInstruction(String elementTypeDescriptor, int dimensions)
+        {
             super(null, elementTypeDescriptor != null ? new MockIRType(elementTypeDescriptor) : null, (Value) null);
             this.dimensions = dimensions;
         }
 
         @Override
-        public boolean isMultiDimensional() {
+        public boolean isMultiDimensional()
+        {
             return dimensions > 1;
         }
 
         @Override
-        public List<Value> getDimensions() {
+        public List<Value> getDimensions()
+        {
             List<Value> dims = new ArrayList<>();
-            for (int i = 0; i < dimensions; i++) {
+            for (int i = 0; i < dimensions; i++)
+            {
                 dims.add(null);
             }
             return dims;
         }
     }
 
-    private static class MockIRType implements IRType {
+    private static class MockIRType implements IRType
+    {
         private final String descriptor;
 
-        MockIRType(String descriptor) {
+        MockIRType(String descriptor)
+        {
             this.descriptor = descriptor;
         }
 
         @Override
-        public String getDescriptor() {
+        public String getDescriptor()
+        {
             return descriptor;
         }
 
         @Override
-        public int getSize() {
+        public int getSize()
+        {
             return 1;
         }
 
         @Override
-        public boolean isPrimitive() {
+        public boolean isPrimitive()
+        {
             return false;
         }
 
         @Override
-        public boolean isReference() {
+        public boolean isReference()
+        {
             return true;
         }
 
         @Override
-        public boolean isVoid() {
+        public boolean isVoid()
+        {
             return false;
         }
 
         @Override
-        public boolean isArray() {
+        public boolean isArray()
+        {
             return false;
         }
 
         @Override
-        public boolean isTwoSlot() {
+        public boolean isTwoSlot()
+        {
             return false;
         }
     }

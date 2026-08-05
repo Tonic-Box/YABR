@@ -7,10 +7,16 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class WrapperHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the primitive wrapper classes plus StringBuilder and
+ * StringBuffer, backing boxing and string building with heap objects.
+ */
+public final class WrapperHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registry.register("java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;",
             (receiver, args, ctx) -> {
                 int value = args[0].asInt();
@@ -21,7 +27,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Integer", "intValue", "()I",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "intValue on null");
                 }
                 Object value = receiver.getField("java/lang/Integer", "value", "I");
@@ -30,7 +37,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Integer", "<init>", "(I)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Integer init on null");
                 }
                 receiver.setField("java/lang/Integer", "value", "I", args[0].asInt());
@@ -47,7 +55,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Long", "longValue", "()J",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "longValue on null");
                 }
                 Object value = receiver.getField("java/lang/Long", "value", "J");
@@ -56,7 +65,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Long", "<init>", "(J)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Long init on null");
                 }
                 receiver.setField("java/lang/Long", "value", "J", args[0].asLong());
@@ -73,7 +83,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Byte", "<init>", "(B)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Byte init on null");
                 }
                 receiver.setField("java/lang/Byte", "value", "B", (byte) args[0].asInt());
@@ -90,7 +101,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Short", "<init>", "(S)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Short init on null");
                 }
                 receiver.setField("java/lang/Short", "value", "S", (short) args[0].asInt());
@@ -107,7 +119,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Character", "<init>", "(C)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Character init on null");
                 }
                 receiver.setField("java/lang/Character", "value", "C", (char) args[0].asInt());
@@ -124,19 +137,20 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Boolean", "<init>", "(Z)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Boolean init on null");
                 }
                 receiver.setField("java/lang/Boolean", "value", "Z", args[0].asInt() != 0 ? 1 : 0);
                 return ConcreteValue.nullRef();
             });
 
-        registry.register("java/lang/Number", "<init>", "()V",
-            (receiver, args, ctx) -> ConcreteValue.nullRef());
+        registry.register("java/lang/Number", "<init>", "()V", (receiver, args, ctx) -> ConcreteValue.nullRef());
 
         registry.register("java/lang/StringBuffer", "<init>", "()V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "StringBuffer init on null");
                 }
                 ArrayInstance value = ctx.getHeapManager().newArray("B", 16);
@@ -148,17 +162,20 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/StringBuffer", "<init>", "(Ljava/lang/String;)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "StringBuffer init on null");
                 }
                 String str = "";
-                if (!args[0].isNull()) {
+                if (!args[0].isNull())
+                {
                     str = ctx.getHeapManager().extractString(args[0].asReference());
                     if (str == null) str = "";
                 }
                 int capacity = str.length() + 16;
                 ArrayInstance value = ctx.getHeapManager().newArray("B", capacity);
-                for (int i = 0; i < str.length(); i++) {
+                for (int i = 0; i < str.length(); i++)
+                {
                     value.setByte(i, (byte) str.charAt(i));
                 }
                 receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
@@ -169,7 +186,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/StringBuilder", "<init>", "()V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "StringBuilder init on null");
                 }
                 ArrayInstance value = ctx.getHeapManager().newArray("B", 16);
@@ -181,17 +199,20 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "StringBuilder init on null");
                 }
                 String str = "";
-                if (!args[0].isNull()) {
+                if (!args[0].isNull())
+                {
                     str = ctx.getHeapManager().extractString(args[0].asReference());
                     if (str == null) str = "";
                 }
                 int capacity = str.length() + 16;
                 ArrayInstance value = ctx.getHeapManager().newArray("B", capacity);
-                for (int i = 0; i < str.length(); i++) {
+                for (int i = 0; i < str.length(); i++)
+                {
                     value.setByte(i, (byte) str.charAt(i));
                 }
                 receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
@@ -202,7 +223,8 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/StringBuilder", "<init>", "(I)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "StringBuilder init on null");
                 }
                 int capacity = args[0].asInt();
@@ -215,11 +237,13 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "append on null");
                 }
                 String str = "null";
-                if (!args[0].isNull()) {
+                if (!args[0].isNull())
+                {
                     String extracted = ctx.getHeapManager().extractString(args[0].asReference());
                     if (extracted != null) str = extracted;
                 }
@@ -227,23 +251,29 @@ public final class WrapperHandlers implements NativeHandlerProvider {
                 Object countObj = receiver.getField("java/lang/AbstractStringBuilder", "count", "I");
                 int count = countObj instanceof Integer ? (Integer) countObj : 0;
                 ArrayInstance value;
-                if (valueObj instanceof ArrayInstance) {
+                if (valueObj instanceof ArrayInstance)
+                {
                     value = (ArrayInstance) valueObj;
-                } else {
+                }
+                else
+                {
                     value = ctx.getHeapManager().newArray("B", 16);
                     receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
                 }
                 int newCount = count + str.length();
-                if (newCount > value.getLength()) {
+                if (newCount > value.getLength())
+                {
                     int newCapacity = Math.max(newCount, value.getLength() * 2 + 2);
                     ArrayInstance newValue = ctx.getHeapManager().newArray("B", newCapacity);
-                    for (int i = 0; i < count; i++) {
+                    for (int i = 0; i < count; i++)
+                    {
                         newValue.setByte(i, value.getByte(i));
                     }
                     value = newValue;
                     receiver.setField("java/lang/AbstractStringBuilder", "value", "[B", value);
                 }
-                for (int i = 0; i < str.length(); i++) {
+                for (int i = 0; i < str.length(); i++)
+                {
                     value.setByte(count + i, (byte) str.charAt(i));
                 }
                 receiver.setField("java/lang/AbstractStringBuilder", "count", "I", newCount);
@@ -252,18 +282,21 @@ public final class WrapperHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/StringBuilder", "toString", "()Ljava/lang/String;",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "toString on null");
                 }
                 Object valueObj = receiver.getField("java/lang/AbstractStringBuilder", "value", "[B");
                 Object countObj = receiver.getField("java/lang/AbstractStringBuilder", "count", "I");
                 int count = countObj instanceof Integer ? (Integer) countObj : 0;
-                if (!(valueObj instanceof ArrayInstance)) {
+                if (!(valueObj instanceof ArrayInstance))
+                {
                     return ConcreteValue.reference(ctx.getHeapManager().internString(""));
                 }
                 ArrayInstance value = (ArrayInstance) valueObj;
                 StringBuilder sb = new StringBuilder(count);
-                for (int i = 0; i < count; i++) {
+                for (int i = 0; i < count; i++)
+                {
                     sb.append((char) (value.getByte(i) & 0xFF));
                 }
                 return ConcreteValue.reference(ctx.getHeapManager().internString(sb.toString()));

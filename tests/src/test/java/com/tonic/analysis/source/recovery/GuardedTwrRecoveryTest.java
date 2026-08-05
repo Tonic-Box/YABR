@@ -22,11 +22,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * two-statement method and gave up, and the generic fallback emitted an EMPTY try with handler scaffolding
  * referencing a variable that was never declared. With the arm terminal, guard-plus-continuation is the
  * same program, so the trailing else is flattened back to the top level before folding.
- * <p>
+ *
  * The synthesized {@code close()} calls carried the resource's SIMPLE type name as their invoke owner
  * (an unresolvable class at link time); the owner now resolves through the imports.
  */
-class GuardedTwrRecoveryTest {
+class GuardedTwrRecoveryTest
+{
 
     private static final String[] LINES = {
             "import java.io.ByteArrayInputStream;",
@@ -67,14 +68,14 @@ class GuardedTwrRecoveryTest {
     };
 
     @Test
-    void aGuardedTryWithResourcesKeepsItsBody() throws Exception {
+    void aGuardedTryWithResourcesKeepsItsBody() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("guarded-twr");
         Path src = dir.resolve("GuardedTwr.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("GuardedTwr.class")));

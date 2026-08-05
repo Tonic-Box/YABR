@@ -10,16 +10,25 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a switch statement: switch (selector) { cases... }
+ * A switch statement over a selector expression and a list of cases.
  */
-public final class SwitchStmt implements Statement {
+public final class SwitchStmt implements Statement
+{
 
     private Expression selector;
     private final List<SwitchCase> cases;
     private SourceLocation location;
     private ASTNode parent;
 
-    public SwitchStmt(Expression selector, List<SwitchCase> cases, SourceLocation location) {
+    /**
+     * Creates a switch statement and parents the selector to it.
+     * @param selector the switched-on expression
+     * @param cases initial cases, or null for none
+     * @param location source location, or null for unknown
+     * @throws NullPointerException if selector is null
+     */
+    public SwitchStmt(Expression selector, List<SwitchCase> cases, SourceLocation location)
+    {
         this.selector = Objects.requireNonNull(selector, "selector cannot be null");
         this.cases = new ArrayList<>(cases != null ? cases : List.of());
         this.location = location != null ? location : SourceLocation.UNKNOWN;
@@ -27,49 +36,91 @@ public final class SwitchStmt implements Statement {
         selector.setParent(this);
     }
 
-    public SwitchStmt(Expression selector, List<SwitchCase> cases) {
+    /**
+     * Creates a switch statement with an unknown location.
+     * @param selector the switched-on expression
+     * @param cases initial cases, or null for none
+     * @throws NullPointerException if selector is null
+     */
+    public SwitchStmt(Expression selector, List<SwitchCase> cases)
+    {
         this(selector, cases, SourceLocation.UNKNOWN);
     }
 
-    public SwitchStmt(Expression selector) {
+    /**
+     * Creates a switch statement with no cases.
+     * @param selector the switched-on expression
+     * @throws NullPointerException if selector is null
+     */
+    public SwitchStmt(Expression selector)
+    {
         this(selector, List.of(), SourceLocation.UNKNOWN);
     }
 
-    public Expression getSelector() {
+    /**
+     * @return the selector
+     */
+    public Expression getSelector()
+    {
         return selector;
     }
 
-    public void setSelector(Expression selector) {
+    /**
+     * Replaces the selector expression, reparenting old and new nodes.
+     * @param selector the new selector
+     */
+    public void setSelector(Expression selector)
+    {
         withSelector(selector);
     }
 
-    public List<SwitchCase> getCases() {
+    /**
+     * @return the cases
+     */
+    public List<SwitchCase> getCases()
+    {
         return cases;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Adds a case to this switch statement.
+     * Appends a case to this switch.
+     * @param switchCase the case to append
      */
-    public void addCase(SwitchCase switchCase) {
+    public void addCase(SwitchCase switchCase)
+    {
         cases.add(switchCase);
     }
 
     /**
-     * Gets the default case, if present.
+     * @return the default case, or null if there is none
      */
-    public SwitchCase getDefaultCase() {
+    public SwitchCase getDefaultCase()
+    {
         return cases.stream()
                 .filter(SwitchCase::isDefault)
                 .findFirst()
@@ -77,23 +128,32 @@ public final class SwitchStmt implements Statement {
     }
 
     /**
-     * Checks if this switch has a default case.
+     * @return true if this switch has a default case
      */
-    public boolean hasDefault() {
+    public boolean hasDefault()
+    {
         return getDefaultCase() != null;
     }
 
     /**
-     * Gets the number of cases.
+     * @return the number of cases
      */
-    public int getCaseCount() {
+    public int getCaseCount()
+    {
         return cases.size();
     }
 
-    public SwitchStmt withSelector(Expression selector) {
+    /**
+     * Replaces the selector expression, reparenting old and new nodes.
+     * @param selector the new selector
+     * @return this statement
+     */
+    public SwitchStmt withSelector(Expression selector)
+    {
         ASTNode previous = this.selector;
         this.selector = selector;
-        if (selector != null) {
+        if (selector != null)
+        {
             selector.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
@@ -101,10 +161,12 @@ public final class SwitchStmt implements Statement {
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>();
         if (selector != null) children.add(selector);
-        for (SwitchCase sc : cases) {
+        for (SwitchCase sc : cases)
+        {
             children.addAll(sc.expressionLabels());
             children.addAll(sc.statements());
         }
@@ -112,17 +174,20 @@ public final class SwitchStmt implements Statement {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitSwitch(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "switch (" + selector + ") { " + cases.size() + " cases }";
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

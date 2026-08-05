@@ -20,22 +20,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * text covers the computational subset correctly (including the tricky signedness / shift-mask /
  * 3-way-compare cases) and that out-of-subset ops are rejected.
  */
-class SsaToLlvmLowererTest {
+class SsaToLlvmLowererTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    private String lower(ClassFile cf, String name) {
+    private String lower(ClassFile cf, String name)
+    {
         MethodEntry method = find(cf, name);
         IRMethod ir = TestUtils.liftMethod(method);
         return new LlvmLowering().lower(ir);
     }
 
-    private MethodEntry find(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry find(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -43,7 +49,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void intAdd() throws IOException {
+    void intAdd() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("add", "(II)I")
             .iload(0).iload(1).iadd().ireturn().build();
         String ll = lower(cf, "add");
@@ -53,7 +60,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void signedDivAndRem() throws IOException {
+    void signedDivAndRem() throws IOException
+    {
         ClassFile d = BytecodeBuilder.forClass("T").publicStaticMethod("d", "(II)I")
             .iload(0).iload(1).idiv().ireturn().build();
         assertTrue(lower(d, "d").contains("sdiv i32"));
@@ -63,7 +71,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void shiftsAreMaskedAndUseCorrectOpcode() throws IOException {
+    void shiftsAreMaskedAndUseCorrectOpcode() throws IOException
+    {
         ClassFile u = BytecodeBuilder.forClass("T").publicStaticMethod("u", "(II)I")
             .iload(0).iload(1).iushr().ireturn().build();
         String lu = lower(u, "u");
@@ -77,7 +86,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void loopWithPhiAndBranch() throws IOException {
+    void loopWithPhiAndBranch() throws IOException
+    {
         // int sum(int n) { int s=0; for (int i=0; i<n; i++) s+=i; return s; }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sum", "(I)I");
         Label head = mb.newLabel();
@@ -101,7 +111,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void switchStatement() throws IOException {
+    void switchStatement() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sw", "(I)I");
         Label c0 = mb.newLabel();
         Label c1 = mb.newLabel();
@@ -121,7 +132,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void longAndDoubleArithmetic() throws IOException {
+    void longAndDoubleArithmetic() throws IOException
+    {
         ClassFile la = BytecodeBuilder.forClass("T").publicStaticMethod("la", "(JJ)J")
             .lload(0).lload(2).ladd().lreturn().build();
         assertTrue(lower(la, "la").contains("add i64"));
@@ -131,7 +143,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void longCompareExpandsToSelects() throws IOException {
+    void longCompareExpandsToSelects() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("c", "(JJ)I")
             .lload(0).lload(2).lcmp().ireturn().build();
         String ll = lower(cf, "c");
@@ -142,7 +155,8 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void staticCallEmitsCallAndDeclare() throws IOException {
+    void staticCallEmitsCallAndDeclare() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("c", "(I)I")
             .iload(0).invokestatic("Other", "helper", "(I)I").ireturn().build();
         String ll = lower(cf, "c");
@@ -151,11 +165,11 @@ class SsaToLlvmLowererTest {
     }
 
     @Test
-    void unsupportedOpIsRejected() throws IOException {
+    void unsupportedOpIsRejected() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("len", "(I)I")
             .iload(0).newarray(10).arraylength().ireturn().build();
-        UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
-            () -> lower(cf, "len"));
+        UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class, () -> lower(cf, "len"));
         assertTrue(e.getMessage().startsWith("LLVM lowering:"), e.getMessage());
     }
 }

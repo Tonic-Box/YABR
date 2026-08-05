@@ -17,19 +17,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * Covers context initialization, scope management, null-check tracking,
  * and all public methods.
  */
-class EditorContextTest {
+class EditorContextTest
+{
 
     private ASTFactory factory;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         factory = new ASTFactory();
     }
 
-    // ========== Constructor and Initialization Tests ==========
+    // Constructor and Initialization Tests
 
     @Test
-    void createContextWithFullParameters() {
+    void createContextWithFullParameters()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "testMethod", "(II)V", "com/example/Test");
 
@@ -41,7 +44,8 @@ class EditorContextTest {
     }
 
     @Test
-    void createContextWithNullMethodName() {
+    void createContextWithNullMethodName()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, null, "(II)V", "com/example/Test");
 
@@ -49,7 +53,8 @@ class EditorContextTest {
     }
 
     @Test
-    void createContextWithNullMethodDescriptor() {
+    void createContextWithNullMethodDescriptor()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "testMethod", null, "com/example/Test");
 
@@ -57,7 +62,8 @@ class EditorContextTest {
     }
 
     @Test
-    void createContextWithNullOwnerClass() {
+    void createContextWithNullOwnerClass()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "testMethod", "(II)V", null);
 
@@ -65,7 +71,8 @@ class EditorContextTest {
     }
 
     @Test
-    void createContextWithAllNullMetadata() {
+    void createContextWithAllNullMetadata()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, null, null, null);
 
@@ -75,7 +82,8 @@ class EditorContextTest {
     }
 
     @Test
-    void initialStateHasZeroDepths() {
+    void initialStateHasZeroDepths()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -85,7 +93,8 @@ class EditorContextTest {
     }
 
     @Test
-    void initialStateHasEmptyCheckedVariables() {
+    void initialStateHasEmptyCheckedVariables()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -94,10 +103,11 @@ class EditorContextTest {
         assertTrue(visible.isEmpty());
     }
 
-    // ========== Method Metadata Tests ==========
+    // Method Metadata Tests
 
     @Test
-    void getMethodBodyReturnsCorrectBlock() {
+    void getMethodBodyReturnsCorrectBlock()
+    {
         BlockStmt body = factory.block(factory.returnVoid());
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -105,7 +115,8 @@ class EditorContextTest {
     }
 
     @Test
-    void getMethodNameReturnsCorrectName() {
+    void getMethodNameReturnsCorrectName()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "myMethod", "()V", "com/example/Test");
 
@@ -113,7 +124,8 @@ class EditorContextTest {
     }
 
     @Test
-    void getMethodDescriptorReturnsCorrectDescriptor() {
+    void getMethodDescriptorReturnsCorrectDescriptor()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "(Ljava/lang/String;I)Z", "com/example/Test");
 
@@ -121,17 +133,19 @@ class EditorContextTest {
     }
 
     @Test
-    void getOwnerClassReturnsCorrectClass() {
+    void getOwnerClassReturnsCorrectClass()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/MyClass");
 
         assertEquals("com/example/MyClass", ctx.getOwnerClass());
     }
 
-    // ========== Current Statement Management Tests ==========
+    // Current Statement Management Tests
 
     @Test
-    void currentStatementInitiallyNull() {
+    void currentStatementInitiallyNull()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -139,7 +153,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setAndGetCurrentStatement() {
+    void setAndGetCurrentStatement()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -150,7 +165,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setCurrentStatementToNull() {
+    void setCurrentStatementToNull()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -161,7 +177,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setMultipleCurrentStatements() {
+    void setMultipleCurrentStatements()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -175,10 +192,11 @@ class EditorContextTest {
         assertSame(stmt2, ctx.getCurrentStatement());
     }
 
-    // ========== Enclosing Block Management Tests ==========
+    // Enclosing Block Management Tests
 
     @Test
-    void enclosingBlockInitiallyNull() {
+    void enclosingBlockInitiallyNull()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -186,7 +204,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setAndGetEnclosingBlock() {
+    void setAndGetEnclosingBlock()
+    {
         BlockStmt body = factory.block();
         BlockStmt enclosing = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
@@ -197,7 +216,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setEnclosingBlockToNull() {
+    void setEnclosingBlockToNull()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -207,10 +227,11 @@ class EditorContextTest {
         assertNull(ctx.getEnclosingBlock());
     }
 
-    // ========== Statement Index Tests ==========
+    // Statement Index Tests
 
     @Test
-    void statementIndexInitiallyZero() {
+    void statementIndexInitiallyZero()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -218,7 +239,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setAndGetStatementIndex() {
+    void setAndGetStatementIndex()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -233,7 +255,8 @@ class EditorContextTest {
     }
 
     @Test
-    void setNegativeStatementIndex() {
+    void setNegativeStatementIndex()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -241,10 +264,11 @@ class EditorContextTest {
         assertEquals(-1, ctx.getStatementIndex());
     }
 
-    // ========== Try Block Scope Tests ==========
+    // Try Block Scope Tests
 
     @Test
-    void enterTryIncrementsDepth() {
+    void enterTryIncrementsDepth()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -255,7 +279,8 @@ class EditorContextTest {
     }
 
     @Test
-    void exitTryDecrementsDepth() {
+    void exitTryDecrementsDepth()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -267,7 +292,8 @@ class EditorContextTest {
     }
 
     @Test
-    void nestedTryBlocks() {
+    void nestedTryBlocks()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -285,7 +311,8 @@ class EditorContextTest {
     }
 
     @Test
-    void exitTryBelowZeroStaysAtZero() {
+    void exitTryBelowZeroStaysAtZero()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -296,10 +323,11 @@ class EditorContextTest {
         assertFalse(ctx.isInTryBlock());
     }
 
-    // ========== Loop Scope Tests ==========
+    // Loop Scope Tests
 
     @Test
-    void enterLoopIncrementsDepth() {
+    void enterLoopIncrementsDepth()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -310,7 +338,8 @@ class EditorContextTest {
     }
 
     @Test
-    void exitLoopDecrementsDepth() {
+    void exitLoopDecrementsDepth()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -322,7 +351,8 @@ class EditorContextTest {
     }
 
     @Test
-    void nestedLoops() {
+    void nestedLoops()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -346,7 +376,8 @@ class EditorContextTest {
     }
 
     @Test
-    void exitLoopBelowZeroStaysAtZero() {
+    void exitLoopBelowZeroStaysAtZero()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -357,10 +388,11 @@ class EditorContextTest {
         assertFalse(ctx.isInLoop());
     }
 
-    // ========== Conditional Scope Tests ==========
+    // Conditional Scope Tests
 
     @Test
-    void enterConditionalIncrementsDepth() {
+    void enterConditionalIncrementsDepth()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -371,7 +403,8 @@ class EditorContextTest {
     }
 
     @Test
-    void exitConditionalDecrementsDepth() {
+    void exitConditionalDecrementsDepth()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -383,7 +416,8 @@ class EditorContextTest {
     }
 
     @Test
-    void nestedConditionals() {
+    void nestedConditionals()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -401,7 +435,8 @@ class EditorContextTest {
     }
 
     @Test
-    void exitConditionalBelowZeroStaysAtZero() {
+    void exitConditionalBelowZeroStaysAtZero()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -412,10 +447,11 @@ class EditorContextTest {
         assertFalse(ctx.isInConditional());
     }
 
-    // ========== Mixed Scope Tests ==========
+    // Mixed Scope Tests
 
     @Test
-    void multipleScopeTypesIndependent() {
+    void multipleScopeTypesIndependent()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -443,10 +479,11 @@ class EditorContextTest {
         assertFalse(ctx.isInConditional());
     }
 
-    // ========== Null-Check Tracking Tests ==========
+    // Null-Check Tracking Tests
 
     @Test
-    void markVariableAsNullChecked() {
+    void markVariableAsNullChecked()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -457,7 +494,8 @@ class EditorContextTest {
     }
 
     @Test
-    void markMultipleVariablesAsNullChecked() {
+    void markMultipleVariablesAsNullChecked()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -473,7 +511,8 @@ class EditorContextTest {
     }
 
     @Test
-    void markNullCheckedWithNullName() {
+    void markNullCheckedWithNullName()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -484,7 +523,8 @@ class EditorContextTest {
     }
 
     @Test
-    void markSameVariableTwice() {
+    void markSameVariableTwice()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -497,7 +537,8 @@ class EditorContextTest {
     }
 
     @Test
-    void clearNullChecksRemovesAllVariables() {
+    void clearNullChecksRemovesAllVariables()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -512,7 +553,8 @@ class EditorContextTest {
     }
 
     @Test
-    void clearNullChecksOnEmptySet() {
+    void clearNullChecksOnEmptySet()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -523,7 +565,8 @@ class EditorContextTest {
     }
 
     @Test
-    void isNullCheckedForVarRefExpr() {
+    void isNullCheckedForVarRefExpr()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -535,7 +578,8 @@ class EditorContextTest {
     }
 
     @Test
-    void isNullCheckedForNonVarRefExpr() {
+    void isNullCheckedForNonVarRefExpr()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -548,7 +592,8 @@ class EditorContextTest {
     }
 
     @Test
-    void isNullCheckedForNullExpression() {
+    void isNullCheckedForNullExpression()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -556,7 +601,8 @@ class EditorContextTest {
     }
 
     @Test
-    void isNullCheckedForMethodCall() {
+    void isNullCheckedForMethodCall()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -564,10 +610,11 @@ class EditorContextTest {
         assertFalse(ctx.isNullChecked(call));
     }
 
-    // ========== Visible Variables Tests ==========
+    // Visible Variables Tests
 
     @Test
-    void getVisibleVariablesReturnsNewSet() {
+    void getVisibleVariablesReturnsNewSet()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -581,7 +628,8 @@ class EditorContextTest {
     }
 
     @Test
-    void modifyingReturnedSetDoesNotAffectContext() {
+    void modifyingReturnedSetDoesNotAffectContext()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -596,10 +644,11 @@ class EditorContextTest {
         assertFalse(visible2.contains("var2"));
     }
 
-    // ========== Factory Access Tests ==========
+    // Factory Access Tests
 
     @Test
-    void factoryReturnsNonNullInstance() {
+    void factoryReturnsNonNullInstance()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -607,7 +656,8 @@ class EditorContextTest {
     }
 
     @Test
-    void factoryCanCreateNodes() {
+    void factoryCanCreateNodes()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -618,10 +668,11 @@ class EditorContextTest {
         assertNotNull(stmt.getValue());
     }
 
-    // ========== Replacement Helper Tests ==========
+    // Replacement Helper Tests
 
     @Test
-    void insertBeforeCreatesCorrectReplacement() {
+    void insertBeforeCreatesCorrectReplacement()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -636,7 +687,8 @@ class EditorContextTest {
     }
 
     @Test
-    void insertAfterCreatesCorrectReplacement() {
+    void insertAfterCreatesCorrectReplacement()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -649,10 +701,11 @@ class EditorContextTest {
         assertEquals(1, replacement.getStatements().size());
     }
 
-    // ========== Wrap With Null Check Tests ==========
+    // Wrap With Null Check Tests
 
     @Test
-    void wrapWithNullCheckMarksVariableAsChecked() {
+    void wrapWithNullCheckMarksVariableAsChecked()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -667,7 +720,8 @@ class EditorContextTest {
     }
 
     @Test
-    void wrapWithNullCheckOnNonVariable() {
+    void wrapWithNullCheckOnNonVariable()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -680,7 +734,8 @@ class EditorContextTest {
     }
 
     @Test
-    void wrapWithNullCheckOnNull() {
+    void wrapWithNullCheckOnNull()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -689,10 +744,11 @@ class EditorContextTest {
         assertEquals(Replacement.Type.KEEP, replacement.getType());
     }
 
-    // ========== Find Enclosing Statement Tests ==========
+    // Find Enclosing Statement Tests
 
     @Test
-    void findEnclosingStatementForExpressionInStatement() {
+    void findEnclosingStatementForExpressionInStatement()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -705,7 +761,8 @@ class EditorContextTest {
     }
 
     @Test
-    void findEnclosingStatementForNestedExpression() {
+    void findEnclosingStatementForNestedExpression()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -719,7 +776,8 @@ class EditorContextTest {
     }
 
     @Test
-    void findEnclosingStatementForNullExpression() {
+    void findEnclosingStatementForNullExpression()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -729,7 +787,8 @@ class EditorContextTest {
     }
 
     @Test
-    void findEnclosingStatementForExpressionWithoutParent() {
+    void findEnclosingStatementForExpressionWithoutParent()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -741,10 +800,11 @@ class EditorContextTest {
         assertNull(enclosing);
     }
 
-    // ========== Nested Context Tests ==========
+    // Nested Context Tests
 
     @Test
-    void createNestedContextCopiesMetadata() {
+    void createNestedContextCopiesMetadata()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "testMethod", "(II)Z", "com/example/Test");
 
@@ -757,7 +817,8 @@ class EditorContextTest {
     }
 
     @Test
-    void createNestedContextCopiesScopeDepths() {
+    void createNestedContextCopiesScopeDepths()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -774,7 +835,8 @@ class EditorContextTest {
     }
 
     @Test
-    void createNestedContextCopiesNullCheckedVariables() {
+    void createNestedContextCopiesNullCheckedVariables()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -790,7 +852,8 @@ class EditorContextTest {
     }
 
     @Test
-    void nestedContextIsIndependent() {
+    void nestedContextIsIndependent()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -818,7 +881,8 @@ class EditorContextTest {
     }
 
     @Test
-    void nestedContextDoesNotCopyCurrentStatement() {
+    void nestedContextDoesNotCopyCurrentStatement()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
@@ -834,19 +898,18 @@ class EditorContextTest {
         assertEquals(0, nested.getStatementIndex());
     }
 
-    // ========== Integration Tests ==========
+    // Integration Tests
 
     @Test
-    void fullWorkflowSimulation() {
+    void fullWorkflowSimulation()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "processData", "(Ljava/lang/String;)I", "com/example/Processor");
 
-        // Simulate entering nested structures
         ctx.enterConditional();
         ctx.enterTry();
         ctx.enterLoop();
 
-        // Set current position
         ReturnStmt stmt = factory.returnStmt(factory.intLiteral(0));
         ctx.setCurrentStatement(stmt);
         ctx.setEnclosingBlock(body);
@@ -856,7 +919,6 @@ class EditorContextTest {
         ctx.markNullChecked("input");
         ctx.markNullChecked("result");
 
-        // Verify all state
         assertEquals("processData", ctx.getMethodName());
         assertTrue(ctx.isInConditional());
         assertTrue(ctx.isInTryBlock());
@@ -870,7 +932,6 @@ class EditorContextTest {
         assertTrue(visible.contains("input"));
         assertTrue(visible.contains("result"));
 
-        // Create nested context
         EditorContext nested = ctx.createNestedContext();
         nested.markNullChecked("temp");
 
@@ -894,11 +955,11 @@ class EditorContextTest {
     }
 
     @Test
-    void complexNullCheckTracking() {
+    void complexNullCheckTracking()
+    {
         BlockStmt body = factory.block();
         EditorContext ctx = new EditorContext(body, "test", "()V", "com/example/Test");
 
-        // Create variables
         VarRefExpr var1 = factory.variable("obj1");
         VarRefExpr var2 = factory.variable("obj2");
         VarRefExpr var3 = factory.variable("obj3");
@@ -908,7 +969,6 @@ class EditorContextTest {
         assertFalse(ctx.isNullChecked(var2));
         assertFalse(ctx.isNullChecked(var3));
 
-        // Check some variables
         ctx.wrapWithNullCheck(var1);
         ctx.markNullChecked("obj3");
 

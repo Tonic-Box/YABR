@@ -17,24 +17,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for BitTrackingDCE (Bit-Tracking Dead Code Elimination) transform.
  * Verifies that operations on unused bits are eliminated.
  */
-class BitTrackingDCETest {
+class BitTrackingDCETest
+{
 
     private BitTrackingDCE transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new BitTrackingDCE();
     }
 
     @Test
-    void getNameReturnsBitTrackingDCE() {
+    void getNameReturnsBitTrackingDCE()
+    {
         assertEquals("BitTrackingDCE", transform.getName());
     }
 
     @Test
-    void returnsFalseWhenNoDeadCodeFound() {
+    void returnsFalseWhenNoDeadCodeFound()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -51,7 +55,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void eliminatesDeadOperations() {
+    void eliminatesDeadOperations()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -76,7 +81,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void returnsFalseForEmptyMethod() {
+    void returnsFalseForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
 
         boolean changed = transform.run(method);
@@ -85,7 +91,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void preservesInstructionsWithSideEffects() {
+    void preservesInstructionsWithSideEffects()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -108,7 +115,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void tracksBitUsageThroughAndOperation() {
+    void tracksBitUsageThroughAndOperation()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -130,7 +138,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void tracksBitUsageThroughShiftOperations() {
+    void tracksBitUsageThroughShiftOperations()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -152,7 +161,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void handlesMultipleBlocks() {
+    void handlesMultipleBlocks()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -179,7 +189,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void handlesCopyInstructions() {
+    void handlesCopyInstructions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -201,7 +212,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void handlesPhiInstructions() {
+    void handlesPhiInstructions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -247,7 +259,8 @@ class BitTrackingDCETest {
     }
 
     @Test
-    void preservesBranchConditions() {
+    void preservesBranchConditions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -277,7 +290,6 @@ class BitTrackingDCETest {
         transform.run(method);
 
         // Branch condition should be preserved
-        assertTrue(entry.getInstructions().stream()
-            .anyMatch(i -> i instanceof BranchInstruction));
+        assertTrue(entry.getInstructions().stream() .anyMatch(i -> i instanceof BranchInstruction));
     }
 }

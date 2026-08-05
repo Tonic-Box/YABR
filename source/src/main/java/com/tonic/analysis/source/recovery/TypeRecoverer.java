@@ -23,13 +23,18 @@ import java.util.Set;
 /**
  * Recovers source types from IR types.
  */
-public class TypeRecoverer {
+public class TypeRecoverer
+{
 
     /**
      * Recovers a source type from an SSA value.
+     * @param value the SSA value, may be null or untyped
+     * @return the recovered type, void when there is nothing to recover from
      */
-    public SourceType recoverType(SSAValue value) {
-        if (value == null || value.getType() == null) {
+    public SourceType recoverType(SSAValue value)
+    {
+        if (value == null || value.getType() == null)
+        {
             return VoidSourceType.INSTANCE;
         }
         return recoverTypeWithInstructionContext(value);
@@ -37,19 +42,26 @@ public class TypeRecoverer {
 
     /**
      * Recovers a source type from any Value (SSAValue or Constant).
+     * @param value the value, may be null
+     * @return the recovered type, void for null values and unrecognized value kinds
      */
-    public SourceType recoverType(Value value) {
-        if (value == null) {
+    public SourceType recoverType(Value value)
+    {
+        if (value == null)
+        {
             return VoidSourceType.INSTANCE;
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             return recoverTypeWithInstructionContext(ssa);
         }
-        if (value instanceof Constant) {
+        if (value instanceof Constant)
+        {
             Constant c = (Constant) value;
             IRType type = c.getType();
-            if (type == null) {
+            if (type == null)
+            {
                 return VoidSourceType.INSTANCE;
             }
             return SourceType.fromIRType(type);
@@ -60,30 +72,37 @@ public class TypeRecoverer {
     /**
      * Recovers a source type from an SSAValue, considering its defining instruction.
      * This handles cases where the IR type is INT but the actual semantic type is BOOLEAN.
+     * @param ssa the SSA value, may be null or untyped
+     * @return the recovered type, void when there is nothing to recover from
      */
-    public SourceType recoverTypeWithInstructionContext(SSAValue ssa) {
-        if (ssa == null || ssa.getType() == null) {
+    public SourceType recoverTypeWithInstructionContext(SSAValue ssa)
+    {
+        if (ssa == null || ssa.getType() == null)
+        {
             return VoidSourceType.INSTANCE;
         }
 
         IRInstruction def = ssa.getDefinition();
 
-        if (def instanceof TypeCheckInstruction) {
+        if (def instanceof TypeCheckInstruction)
+        {
             TypeCheckInstruction typeCheck = (TypeCheckInstruction) def;
-            if (typeCheck.isInstanceOf()) {
+            if (typeCheck.isInstanceOf())
+            {
                 return PrimitiveSourceType.BOOLEAN;
             }
         }
 
-        if (def instanceof BinaryOpInstruction) {
+        if (def instanceof BinaryOpInstruction)
+        {
             BinaryOpInstruction binOp = (BinaryOpInstruction) def;
             BinaryOp op = binOp.getOp();
-            if (op == BinaryOp.AND ||
-                op == BinaryOp.OR ||
-                op == BinaryOp.XOR) {
+            if (op == BinaryOp.AND || op == BinaryOp.OR || op == BinaryOp.XOR)
+            {
                 SourceType leftType = recoverTypeWithInstructionContext(binOp.getLeft());
                 SourceType rightType = recoverTypeWithInstructionContext(binOp.getRight());
-                if (leftType == PrimitiveSourceType.BOOLEAN || rightType == PrimitiveSourceType.BOOLEAN) {
+                if (leftType == PrimitiveSourceType.BOOLEAN || rightType == PrimitiveSourceType.BOOLEAN)
+                {
                     return PrimitiveSourceType.BOOLEAN;
                 }
             }
@@ -91,22 +110,26 @@ public class TypeRecoverer {
 
         // A PHI that merges only int 0/1 is the JVM encoding of a boolean value
         // (cond ? 1 : 0); type it boolean so declarations, stores, and uses agree.
-        if (def instanceof PhiInstruction && isBooleanPhi((PhiInstruction) def)) {
+        if (def instanceof PhiInstruction && isBooleanPhi((PhiInstruction) def))
+        {
             return PrimitiveSourceType.BOOLEAN;
         }
 
         // A method whose descriptor returns Z yields a boolean value.
         if (def instanceof InvokeInstruction
-                && "Z".equals(returnTypeDescriptor(((InvokeInstruction) def).getDescriptor()))) {
+                && "Z".equals(returnTypeDescriptor(((InvokeInstruction) def).getDescriptor())))
+        {
             return PrimitiveSourceType.BOOLEAN;
         }
 
         // The JVM types an array load (aaload) result conservatively (e.g. Object). The
         // precise element type follows from the array operand, so derive it from there
         // when the array recovers to an array type.
-        if (def instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) def).isLoad()) {
+        if (def instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) def).isLoad())
+        {
             SourceType elementType = arrayElementType(((ArrayAccessInstruction) def).getArray());
-            if (elementType != null && !elementType.isVoid()) {
+            if (elementType != null && !elementType.isVoid())
+            {
                 return elementType;
             }
         }
@@ -114,60 +137,83 @@ public class TypeRecoverer {
         return SourceType.fromIRType(ssa.getType());
     }
 
-    /** The element type of an array operand: the component type after removing one dimension, or null. */
-    private SourceType arrayElementType(Value array) {
+    /**
+     * The element type of an array operand: the component type after removing one dimension, or null.
+     */
+    private SourceType arrayElementType(Value array)
+    {
         SourceType arrayType = recoverType(array);
-        if (!(arrayType instanceof ArraySourceType)) {
+        if (!(arrayType instanceof ArraySourceType))
+        {
             return null;
         }
         ArraySourceType at = (ArraySourceType) arrayType;
-        if (at.getDimensions() > 1) {
+        if (at.getDimensions() > 1)
+        {
             return new ArraySourceType(at.getComponentType(), at.getDimensions() - 1);
         }
         return at.getComponentType();
     }
 
-    /** True if every operand of the phi is an int constant 0 or 1 (inline or via a ConstantInstruction). */
-    private boolean isBooleanPhi(PhiInstruction phi) {
+    /**
+     * True if every operand of the phi is an int constant 0 or 1 (inline or via a ConstantInstruction).
+     */
+    private boolean isBooleanPhi(PhiInstruction phi)
+    {
         List<Value> operands = phi.getOperands();
-        if (operands.isEmpty()) {
+        if (operands.isEmpty())
+        {
             return false;
         }
-        for (Value v : operands) {
-            if (intConstantZeroOrOne(v) == null) {
+        for (Value v : operands)
+        {
+            if (intConstantZeroOrOne(v) == null)
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private Integer intConstantZeroOrOne(Value v) {
+    private Integer intConstantZeroOrOne(Value v)
+    {
         IntConstant ic = null;
-        if (v instanceof IntConstant) {
+        if (v instanceof IntConstant)
+        {
             ic = (IntConstant) v;
-        } else if (v instanceof SSAValue) {
+        }
+        else if (v instanceof SSAValue)
+        {
             IRInstruction d = ((SSAValue) v).getDefinition();
-            if (d instanceof ConstantInstruction) {
+            if (d instanceof ConstantInstruction)
+            {
                 Constant c = ((ConstantInstruction) d).getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     ic = (IntConstant) c;
                 }
             }
         }
-        if (ic == null) {
+        if (ic == null)
+        {
             return null;
         }
         int val = ic.getValue();
         return (val == 0 || val == 1) ? val : null;
     }
 
-    /** The return-type descriptor of a method descriptor (the part after ')'), or null. */
-    private String returnTypeDescriptor(String methodDescriptor) {
-        if (methodDescriptor == null) {
+    /**
+     * The return-type descriptor of a method descriptor (the part after ')'), or null.
+     */
+    private String returnTypeDescriptor(String methodDescriptor)
+    {
+        if (methodDescriptor == null)
+        {
             return null;
         }
         int close = methodDescriptor.indexOf(')');
-        if (close < 0 || close + 1 >= methodDescriptor.length()) {
+        if (close < 0 || close + 1 >= methodDescriptor.length())
+        {
             return null;
         }
         return methodDescriptor.substring(close + 1);
@@ -176,15 +222,19 @@ public class TypeRecoverer {
     /**
      * Recovers type from a Value operand of a binary operation.
      */
-    private SourceType recoverTypeWithInstructionContext(Value value) {
-        if (value instanceof SSAValue) {
+    private SourceType recoverTypeWithInstructionContext(Value value)
+    {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             return recoverTypeWithInstructionContext(ssa);
         }
-        if (value instanceof Constant) {
+        if (value instanceof Constant)
+        {
             Constant c = (Constant) value;
             IRType type = c.getType();
-            if (type == null) {
+            if (type == null)
+            {
                 return VoidSourceType.INSTANCE;
             }
             return SourceType.fromIRType(type);
@@ -197,48 +247,57 @@ public class TypeRecoverer {
      * For incompatible reference types, returns Object.
      * For primitives, returns the widest type in the numeric promotion hierarchy.
      * For identical types, returns that type.
-     *
      * @param types the collection of types to unify
      * @return the common supertype
      */
-    public SourceType computeCommonType(Collection<SourceType> types) {
-        if (types == null || types.isEmpty()) {
+    public SourceType computeCommonType(Collection<SourceType> types)
+    {
+        if (types == null || types.isEmpty())
+        {
             return VoidSourceType.INSTANCE;
         }
 
         Set<SourceType> uniqueTypes = new HashSet<>();
-        for (SourceType type : types) {
-            if (type != null && !type.isVoid()) {
+        for (SourceType type : types)
+        {
+            if (type != null && !type.isVoid())
+            {
                 uniqueTypes.add(type);
             }
         }
 
-        if (uniqueTypes.isEmpty()) {
+        if (uniqueTypes.isEmpty())
+        {
             return VoidSourceType.INSTANCE;
         }
 
-        if (uniqueTypes.size() == 1) {
+        if (uniqueTypes.size() == 1)
+        {
             return uniqueTypes.iterator().next();
         }
 
         SourceType first = uniqueTypes.iterator().next();
         boolean allSame = uniqueTypes.stream().allMatch(t -> t.equals(first));
-        if (allSame) {
+        if (allSame)
+        {
             return first;
         }
 
         boolean allPrimitives = uniqueTypes.stream().allMatch(SourceType::isPrimitive);
-        if (allPrimitives) {
+        if (allPrimitives)
+        {
             return computeWidestPrimitive(uniqueTypes);
         }
 
         boolean allArrays = uniqueTypes.stream().allMatch(SourceType::isArray);
-        if (allArrays) {
+        if (allArrays)
+        {
             return computeCommonArrayType(uniqueTypes);
         }
 
         boolean allReferences = uniqueTypes.stream().allMatch(SourceType::isReference);
-        if (allReferences) {
+        if (allReferences)
+        {
             return computeCommonReferenceType(uniqueTypes);
         }
 
@@ -248,20 +307,24 @@ public class TypeRecoverer {
     /**
      * Computes the widest primitive type using Java numeric promotion rules.
      */
-    private SourceType computeWidestPrimitive(Set<SourceType> types) {
+    private SourceType computeWidestPrimitive(Set<SourceType> types)
+    {
         boolean hasNumeric = types.stream()
                 .anyMatch(t -> t != PrimitiveSourceType.BOOLEAN);
 
         // All-boolean slot stays boolean. A slot mixing boolean with a numeric type
         // unifies to the widest numeric type: boolean values are JVM ints, and boolean
         // stores into the slot are coerced to 0/1 at the store site (coerceForStore).
-        if (!hasNumeric) {
+        if (!hasNumeric)
+        {
             return PrimitiveSourceType.BOOLEAN;
         }
 
         int maxRank = 0;
-        for (SourceType type : types) {
-            if (type == PrimitiveSourceType.BOOLEAN) {
+        for (SourceType type : types)
+        {
+            if (type == PrimitiveSourceType.BOOLEAN)
+            {
                 continue;
             }
             maxRank = Math.max(maxRank, getPrimitiveRank((PrimitiveSourceType) type));
@@ -269,7 +332,8 @@ public class TypeRecoverer {
         return getPrimitiveByRank(maxRank);
     }
 
-    private int getPrimitiveRank(PrimitiveSourceType type) {
+    private int getPrimitiveRank(PrimitiveSourceType type)
+    {
         if (type == PrimitiveSourceType.BYTE) return 1;
         if (type == PrimitiveSourceType.SHORT) return 2;
         if (type == PrimitiveSourceType.CHAR) return 3;
@@ -280,7 +344,8 @@ public class TypeRecoverer {
         return 0;
     }
 
-    private PrimitiveSourceType getPrimitiveByRank(int rank) {
+    private PrimitiveSourceType getPrimitiveByRank(int rank)
+    {
         if (rank == 1) return PrimitiveSourceType.BYTE;
         if (rank == 2) return PrimitiveSourceType.SHORT;
         if (rank == 3) return PrimitiveSourceType.CHAR;
@@ -295,16 +360,22 @@ public class TypeRecoverer {
      * Computes common type for array types.
      * Returns Object[] if element types are incompatible.
      */
-    private SourceType computeCommonArrayType(Set<SourceType> types) {
+    private SourceType computeCommonArrayType(Set<SourceType> types)
+    {
         Set<SourceType> elementTypes = new HashSet<>();
         int dimensions = -1;
 
-        for (SourceType type : types) {
-            if (type instanceof ArraySourceType) {
+        for (SourceType type : types)
+        {
+            if (type instanceof ArraySourceType)
+            {
                 ArraySourceType arr = (ArraySourceType) type;
-                if (dimensions == -1) {
+                if (dimensions == -1)
+                {
                     dimensions = arr.getDimensions();
-                } else if (dimensions != arr.getDimensions()) {
+                }
+                else if (dimensions != arr.getDimensions())
+                {
                     return ReferenceSourceType.OBJECT;
                 }
                 elementTypes.add(arr.getElementType());
@@ -319,16 +390,20 @@ public class TypeRecoverer {
      * Computes common type for reference types.
      * Without full class hierarchy, returns Object for incompatible types.
      */
-    private SourceType computeCommonReferenceType(Set<SourceType> types) {
+    private SourceType computeCommonReferenceType(Set<SourceType> types)
+    {
         Set<String> classNames = new HashSet<>();
-        for (SourceType type : types) {
-            if (type instanceof ReferenceSourceType) {
+        for (SourceType type : types)
+        {
+            if (type instanceof ReferenceSourceType)
+            {
                 ReferenceSourceType ref = (ReferenceSourceType) type;
                 classNames.add(ref.getInternalName());
             }
         }
 
-        if (classNames.size() == 1) {
+        if (classNames.size() == 1)
+        {
             return types.iterator().next();
         }
 
@@ -337,20 +412,28 @@ public class TypeRecoverer {
 
     /**
      * Recovers a source type from an IR type.
+     * @param irType the IR type to convert
+     * @return the equivalent source type
      */
-    public SourceType recoverType(IRType irType) {
+    public SourceType recoverType(IRType irType)
+    {
         return SourceType.fromIRType(irType);
     }
 
     /**
      * Recovers a source type from a JVM type descriptor.
+     * @param descriptor a field descriptor, may be null or empty
+     * @return the parsed type, void for an empty or unrecognized descriptor
      */
-    public SourceType recoverType(String descriptor) {
-        if (descriptor == null || descriptor.isEmpty()) {
+    public SourceType recoverType(String descriptor)
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             return VoidSourceType.INSTANCE;
         }
 
-        switch (descriptor.charAt(0)) {
+        switch (descriptor.charAt(0))
+        {
             case 'V':
                 return VoidSourceType.INSTANCE;
             case 'Z':
@@ -369,12 +452,14 @@ public class TypeRecoverer {
                 return PrimitiveSourceType.FLOAT;
             case 'D':
                 return PrimitiveSourceType.DOUBLE;
-            case 'L': {
+            case 'L':
+            {
                 int end = descriptor.indexOf(';');
                 String internalName = end > 0 ? descriptor.substring(1, end) : descriptor.substring(1);
                 return new ReferenceSourceType(internalName, java.util.Collections.emptyList());
             }
-            case '[': {
+            case '[':
+            {
                 SourceType component = recoverType(descriptor.substring(1));
                 return new ArraySourceType(component);
             }
@@ -386,39 +471,54 @@ public class TypeRecoverer {
     /**
      * Recovers a source type from a JVM generic signature.
      * Generic signatures include parameterized types like List&lt;String&gt;.
+     * @param signature the signature to parse, may be null or empty
+     * @return the parsed type, void when the signature is empty
      */
-    public SourceType recoverGenericType(String signature) {
-        if (signature == null || signature.isEmpty()) {
+    public SourceType recoverGenericType(String signature)
+    {
+        if (signature == null || signature.isEmpty())
+        {
             return VoidSourceType.INSTANCE;
         }
         SignatureParser parser = new SignatureParser(signature);
         return parser.parseType();
     }
 
-    /** Renders a class/method signature's formal type parameters, e.g. {@code "<T extends Comparable<T>>"}, else "". */
-    public String recoverFormalTypeParameters(String signature) {
-        if (signature == null || signature.isEmpty() || signature.charAt(0) != '<') {
+    /**
+     * Renders a class/method signature's formal type parameters, e.g. {@code "<T extends Comparable<T>>"}, else "".
+     * @param signature the class or method signature, may be null
+     * @return the rendered parameter list, or "" when the signature declares none
+     */
+    public String recoverFormalTypeParameters(String signature)
+    {
+        if (signature == null || signature.isEmpty() || signature.charAt(0) != '<')
+        {
             return "";
         }
         return new SignatureParser(signature).parseFormalTypeParameters();
     }
 
-    private static class SignatureParser {
+    private static class SignatureParser
+    {
         private final String sig;
         private int pos;
 
-        SignatureParser(String sig) {
+        SignatureParser(String sig)
+        {
             this.sig = sig;
             this.pos = 0;
         }
 
-        SourceType parseType() {
-            if (pos >= sig.length()) {
+        SourceType parseType()
+        {
+            if (pos >= sig.length())
+            {
                 return VoidSourceType.INSTANCE;
             }
 
             char c = sig.charAt(pos);
-            switch (c) {
+            switch (c)
+            {
                 case 'V':
                     pos++;
                     return VoidSourceType.INSTANCE;
@@ -468,68 +568,90 @@ public class TypeRecoverer {
             }
         }
 
-        /** Parses a leading {@code <FormalTypeParameters>} and renders it as Java source. */
-        String parseFormalTypeParameters() {
-            if (pos >= sig.length() || sig.charAt(pos) != '<') {
+        /**
+         * Parses a leading {@code <FormalTypeParameters>} and renders it as Java source.
+         */
+        String parseFormalTypeParameters()
+        {
+            if (pos >= sig.length() || sig.charAt(pos) != '<')
+            {
                 return "";
             }
             pos++;
             StringBuilder out = new StringBuilder("<");
             boolean first = true;
-            while (pos < sig.length() && sig.charAt(pos) != '>') {
-                if (!first) {
+            while (pos < sig.length() && sig.charAt(pos) != '>')
+            {
+                if (!first)
+                {
                     out.append(", ");
                 }
                 first = false;
                 StringBuilder name = new StringBuilder();
-                while (pos < sig.length() && sig.charAt(pos) != ':') {
+                while (pos < sig.length() && sig.charAt(pos) != ':')
+                {
                     name.append(sig.charAt(pos));
                     pos++;
                 }
                 out.append(name);
                 java.util.List<String> bounds = new java.util.ArrayList<>();
-                while (pos < sig.length() && sig.charAt(pos) == ':') {
+                while (pos < sig.length() && sig.charAt(pos) == ':')
+                {
                     pos++; // a ':' precedes each (possibly empty) class/interface bound
-                    if (pos < sig.length() && sig.charAt(pos) != ':' && sig.charAt(pos) != '>') {
+                    if (pos < sig.length() && sig.charAt(pos) != ':' && sig.charAt(pos) != '>')
+                    {
                         String b = parseType().toJavaSource();
-                        if (!"Object".equals(b) && !"java.lang.Object".equals(b)) {
+                        if (!"Object".equals(b) && !"java.lang.Object".equals(b))
+                        {
                             bounds.add(b);
                         }
                     }
                 }
-                if (!bounds.isEmpty()) {
+                if (!bounds.isEmpty())
+                {
                     out.append(" extends ").append(String.join(" & ", bounds));
                 }
             }
-            if (pos < sig.length() && sig.charAt(pos) == '>') {
+            if (pos < sig.length() && sig.charAt(pos) == '>')
+            {
                 pos++;
             }
             return out.append(">").toString();
         }
 
-        private SourceType parseClassType() {
+        private SourceType parseClassType()
+        {
             pos++;
             StringBuilder name = new StringBuilder();
             java.util.List<SourceType> typeArgs = new java.util.ArrayList<>();
 
-            while (pos < sig.length()) {
+            while (pos < sig.length())
+            {
                 char c = sig.charAt(pos);
-                if (c == ';') {
+                if (c == ';')
+                {
                     pos++;
                     break;
                 }
-                if (c == '<') {
+                if (c == '<')
+                {
                     pos++;
-                    while (pos < sig.length() && sig.charAt(pos) != '>') {
+                    while (pos < sig.length() && sig.charAt(pos) != '>')
+                    {
                         typeArgs.add(parseType());
                     }
-                    if (pos < sig.length() && sig.charAt(pos) == '>') {
+                    if (pos < sig.length() && sig.charAt(pos) == '>')
+                    {
                         pos++;
                     }
-                } else if (c == '.') {
+                }
+                else if (c == '.')
+                {
                     name.append('$');
                     pos++;
-                } else {
+                }
+                else
+                {
                     name.append(c);
                     pos++;
                 }
@@ -538,14 +660,17 @@ public class TypeRecoverer {
             return new ReferenceSourceType(name.toString(), typeArgs);
         }
 
-        private SourceType parseTypeVariable() {
+        private SourceType parseTypeVariable()
+        {
             pos++;
             StringBuilder name = new StringBuilder();
-            while (pos < sig.length() && sig.charAt(pos) != ';') {
+            while (pos < sig.length() && sig.charAt(pos) != ';')
+            {
                 name.append(sig.charAt(pos));
                 pos++;
             }
-            if (pos < sig.length() && sig.charAt(pos) == ';') {
+            if (pos < sig.length() && sig.charAt(pos) == ';')
+            {
                 pos++;
             }
             // A type variable renders as its bare name (e.g. T), not Object<T>.

@@ -8,11 +8,13 @@ import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
  * expression kinds are assumed to have side effects. Shared by the AST cleanup transforms so they
  * agree on what is safe to remove or reorder.
  */
-public class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
+public class SideEffectDetector extends AbstractSourceVisitor<Boolean>
+{
 
     public static final SideEffectDetector INSTANCE = new SideEffectDetector();
 
-    protected SideEffectDetector() {
+    protected SideEffectDetector()
+    {
     }
 
     @Override
@@ -40,23 +42,27 @@ public class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
     public Boolean visitMethodRef(MethodRefExpr expr) { return false; }
 
     @Override
-    public Boolean visitBinary(BinaryExpr expr) {
+    public Boolean visitBinary(BinaryExpr expr)
+    {
         if (expr.getOperator().isAssignment()) return true;
         return expr.getLeft().accept(this) || expr.getRight().accept(this);
     }
 
     @Override
-    public Boolean visitUnary(UnaryExpr expr) {
+    public Boolean visitUnary(UnaryExpr expr)
+    {
         UnaryOperator op = expr.getOperator();
         if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC ||
-            op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
+            op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
+            {
             return true;
         }
         return expr.getOperand().accept(this);
     }
 
     @Override
-    public Boolean visitTernary(TernaryExpr expr) {
+    public Boolean visitTernary(TernaryExpr expr)
+    {
         return expr.getCondition().accept(this) ||
                expr.getThenExpr().accept(this) ||
                expr.getElseExpr().accept(this);
@@ -78,18 +84,22 @@ public class SideEffectDetector extends AbstractSourceVisitor<Boolean> {
     public Boolean visitNewArray(NewArrayExpr expr) { return true; }
 
     @Override
-    public Boolean visitFieldAccess(FieldAccessExpr expr) {
+    public Boolean visitFieldAccess(FieldAccessExpr expr)
+    {
         return expr.getReceiver() != null && expr.getReceiver().accept(this);
     }
 
     @Override
-    public Boolean visitArrayAccess(ArrayAccessExpr expr) {
+    public Boolean visitArrayAccess(ArrayAccessExpr expr)
+    {
         return expr.getArray().accept(this) || expr.getIndex().accept(this);
     }
 
     @Override
-    public Boolean visitArrayInit(ArrayInitExpr expr) {
-        for (Expression elem : expr.getElements()) {
+    public Boolean visitArrayInit(ArrayInitExpr expr)
+    {
+        for (Expression elem : expr.getElements())
+        {
             if (elem.accept(this)) return true;
         }
         return false;

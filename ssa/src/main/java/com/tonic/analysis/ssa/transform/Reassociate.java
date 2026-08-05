@@ -12,37 +12,41 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Reassociate optimization - reorders commutative operations to group constants
- * together, enabling better constant folding.
- *
- * Example: (x + 5) + 10 → x + (5 + 10) → x + 15
- *
- * This is a simple version that only swaps operands of single binary ops
- * to put constants on the right (canonical form for other optimizations).
+ * Reorders commutative operations so constants group together for folding, e.g.
+ * (x + 5) + 10 -&gt; x + 15. Only swaps the operands of a single binary op, putting the
+ * constant on the right as the canonical form other passes match against.
  */
-public class Reassociate implements IRTransform {
+public class Reassociate implements IRTransform
+{
 
     private Map<Value, Integer> rankMap;
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "Reassociate";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
         computeRanks(method);
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (IRInstruction instr : instructions) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : instructions)
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (isCommutative(binOp.getOp())) {
-                        if (canonicalize(binOp)) {
+                    if (isCommutative(binOp.getOp()))
+                    {
+                        if (canonicalize(binOp))
+                        {
                             changed = true;
                         }
                     }
@@ -53,17 +57,22 @@ public class Reassociate implements IRTransform {
         return changed;
     }
 
-    private void computeRanks(IRMethod method) {
+    private void computeRanks(IRMethod method)
+    {
         rankMap = new HashMap<>();
 
-        for (SSAValue param : method.getParameters()) {
+        for (SSAValue param : method.getParameters())
+        {
             rankMap.put(param, 1);
         }
 
         int blockRank = 2;
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr.getResult() != null) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr.getResult() != null)
+                {
                     rankMap.put(instr.getResult(), blockRank);
                 }
             }
@@ -71,40 +80,44 @@ public class Reassociate implements IRTransform {
         }
     }
 
-    private int getRank(Value v) {
-        if (v instanceof Constant) {
+    private int getRank(Value v)
+    {
+        if (v instanceof Constant)
+        {
             return 0;
         }
         return rankMap.getOrDefault(v, 1);
     }
 
-    private boolean isCommutative(BinaryOp op) {
+    private boolean isCommutative(BinaryOp op)
+    {
         return op == BinaryOp.ADD || op == BinaryOp.MUL ||
                op == BinaryOp.AND || op == BinaryOp.OR || op == BinaryOp.XOR;
     }
 
     /**
-     * Canonicalize a binary op by putting higher-rank operand on left.
-     * This puts constants on the right, making patterns easier to match.
+     * Canonicalizes a binary op by putting the higher-rank operand on the left, which leaves
+     * constants on the right where later passes expect them.
      */
-    private boolean canonicalize(BinaryOpInstruction binOp) {
+    private boolean canonicalize(BinaryOpInstruction binOp)
+    {
         Value left = binOp.getLeft();
         Value right = binOp.getRight();
 
         int leftRank = getRank(left);
         int rightRank = getRank(right);
 
-        if (leftRank < rightRank) {
+        if (leftRank < rightRank)
+        {
             SSAValue result = binOp.getResult();
             IRBlock block = binOp.getBlock();
 
-            BinaryOpInstruction newInstr = new BinaryOpInstruction(
-                result, binOp.getOp(), right, left
-            );
+            BinaryOpInstruction newInstr = new BinaryOpInstruction(result, binOp.getOp(), right, left);
             newInstr.setBlock(block);
 
             int idx = block.getInstructions().indexOf(binOp);
-            if (idx >= 0) {
+            if (idx >= 0)
+            {
                 block.removeInstruction(binOp);
                 block.insertInstruction(idx, newInstr);
                 return true;

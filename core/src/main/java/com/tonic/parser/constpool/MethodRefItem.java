@@ -10,17 +10,24 @@ import java.io.IOException;
 import static com.tonic.parser.constpool.structure.InvokeParameterUtil.*;
 
 /**
- * Represents a CONSTANT_Methodref entry in the constant pool.
+ * A CONSTANT_Methodref constant pool entry, holding the class and name-and-type
+ * indices of a class method.
  */
-public class MethodRefItem extends Item<MethodRef> {
+public class MethodRefItem extends Item<MethodRef>
+{
     private MethodRef value;
 
-    public void setValue(MethodRef value) {
+    /**
+     * @param value the method reference to hold
+     */
+    public void setValue(MethodRef value)
+    {
         this.value = value;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.classFile = classFile;
         int classIndex = classFile.readUnsignedShort();
         int nameAndTypeIndex = classFile.readUnsignedShort();
@@ -28,27 +35,30 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(value.getClassIndex());
         dos.writeShort(value.getNameAndTypeIndex());
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_METHOD_REF;
     }
 
     @Override
-    public MethodRef getValue() {
+    public MethodRef getValue()
+    {
         return value;
     }
 
     /**
      * Gets the class name from constant pool.
-     *
      * @return class name or null if unavailable
      */
-    public String getClassName() {
+    public String getClassName()
+    {
         if(classFile == null)
             return null;
         ConstPool constPool = classFile.getConstPool();
@@ -59,10 +69,10 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Gets the method name from constant pool.
-     *
      * @return method name or null if unavailable
      */
-    public String getName() {
+    public String getName()
+    {
         if(classFile == null)
             return null;
         ConstPool constPool = classFile.getConstPool();
@@ -73,10 +83,10 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Gets the method descriptor from constant pool.
-     *
      * @return method descriptor or null if unavailable
      */
-    public String getDescriptor() {
+    public String getDescriptor()
+    {
         if(classFile == null)
             return null;
         ConstPool constPool = classFile.getConstPool();
@@ -87,17 +97,19 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Gets the number of method parameters.
-     *
      * @return parameter count
      * @throws IllegalStateException if classFile not set or invalid index
      */
-    public int getParameterCount() {
-        if (classFile == null) {
+    public int getParameterCount()
+    {
+        if (classFile == null)
+        {
             throw new IllegalStateException("classFile not set. Ensure read(ClassFile) has been called.");
         }
 
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) classFile.getConstPool().getItem(value.getNameAndTypeIndex());
-        if (nameAndType == null) {
+        if (nameAndType == null)
+        {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
@@ -112,17 +124,19 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Gets the number of slots for the return type.
-     *
      * @return return type slot count
      * @throws IllegalStateException if ConstPool not set or invalid index
      */
-    public int getReturnTypeSlots() {
-        if (classFile == null || classFile.getConstPool() == null) {
+    public int getReturnTypeSlots()
+    {
+        if (classFile == null || classFile.getConstPool() == null)
+        {
             throw new IllegalStateException("ClassFile or ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) classFile.getConstPool().getItem(value.getNameAndTypeIndex());
-        if (nameAndType == null) {
+        if (nameAndType == null)
+        {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
@@ -133,7 +147,6 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Sets the class index.
-     *
      * @param classIndex class index to set
      */
     public void setClassIndex(int classIndex)
@@ -143,7 +156,6 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Sets the name and type index.
-     *
      * @param nameAndTypeIndex name and type index to set
      */
     public void setNameAndTypeIndex(int nameAndTypeIndex)
@@ -153,10 +165,10 @@ public class MethodRefItem extends Item<MethodRef> {
 
     /**
      * Gets owner class internal name from constant pool.
-     *
      * @return owner class internal name or null if unavailable
      */
-    public String getOwner() {
+    public String getOwner()
+    {
         if (classFile == null)
             return null;
         ConstPool cp = classFile.getConstPool();
@@ -166,7 +178,8 @@ public class MethodRefItem extends Item<MethodRef> {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodRefItem{" + getClassName() + "." + getName() + getDescriptor() + "}";
     }
 }

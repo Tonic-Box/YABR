@@ -31,11 +31,16 @@ analyzer.analyze();
 SSAValue value = instruction.getResult();
 Nullability nullability = analyzer.getNullability(value);
 
-if (nullability.isDefinitelyNull()) {
+if (nullability.isDefinitelyNull())
+{
     System.out.println(value.getName() + " is always null");
-} else if (nullability.isDefinitelyNotNull()) {
+}
+else if (nullability.isDefinitelyNotNull())
+{
     System.out.println(value.getName() + " is never null");
-} else {
+}
+else
+{
     System.out.println(value.getName() + " may be null");
 }
 
@@ -109,9 +114,12 @@ For polymorphic receivers (e.g., interface calls), the analyzer tracks multiple 
 ```java
 TypeSet possibleTypes = analyzer.getPossibleTypes(receiver);
 
-if (possibleTypes.isSingleton()) {
+if (possibleTypes.isSingleton())
+{
     IRType exactType = possibleTypes.getSingleType();
-} else {
+}
+else
+{
     System.out.println("Possible types: " + possibleTypes);
     // Output: {ArrayList, LinkedList, Vector}
 }

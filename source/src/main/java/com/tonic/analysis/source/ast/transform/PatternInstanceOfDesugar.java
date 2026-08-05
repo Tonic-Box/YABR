@@ -26,62 +26,76 @@ import java.util.List;
  * the inverse of {@link PatternInstanceOfReconstructor}. A pattern binding is rewritten into a classic
  * {@code instanceof} test plus an injected {@code T t = (T) x;} declaration placed where the binding
  * is in scope, so the existing instanceof/cast/declaration lowering handles it with no special cases.
- * <ul>
- *   <li>{@code if (x instanceof T t) THEN} -> {@code if (x instanceof T) { T t = (T) x; THEN }}</li>
- *   <li>{@code if (!(x instanceof T t)) GUARD; REST} -> inject {@code T t = (T) x;} after the if.</li>
- *   <li>{@code if (x instanceof T t && REST)} -> hoist {@code T t = x instanceof T ? (T) x : null;}
+ * - {@code if (x instanceof T t) THEN} -&gt; {@code if (x instanceof T) { T t = (T) x; THEN }}
+ * - {@code if (!(x instanceof T t)) GUARD; REST} -&gt; inject {@code T t = (T) x;} after the if.
+ * - {@code if (x instanceof T t && REST)} -&gt; hoist {@code T t = x instanceof T ? (T) x : null;}
  *       before the if and test {@code t != null} in place - the binding is visible to the remaining
  *       conjuncts and both branches, and {@code t != null} is equivalent to the original test for a
- *       pure operand (a null or non-matching x both yield null).</li>
- * </ul>
+ *       pure operand (a null or non-matching x both yield null).
  * Restricted to simple ({@code VarRefExpr}) operands so the operand can be safely re-referenced.
  */
-public class PatternInstanceOfDesugar implements ASTTransform {
+public class PatternInstanceOfDesugar implements ASTTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "PatternInstanceOfDesugar";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         return process(block.getStatements());
     }
 
-    private boolean process(List<Statement> stmts) {
+    private boolean process(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
-            if (s instanceof IfStmt) {
+            if (s instanceof IfStmt)
+            {
                 changed |= desugarIf((IfStmt) s, stmts, i);
             }
         }
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             changed |= recurse(s);
         }
         return changed;
     }
 
-    private boolean recurse(ASTNode node) {
+    private boolean recurse(ASTNode node)
+    {
         boolean changed = false;
-        for (ASTNode child : node.getChildren()) {
-            if (child instanceof BlockStmt) {
+        for (ASTNode child : node.getChildren())
+        {
+            if (child instanceof BlockStmt)
+            {
                 changed |= process(((BlockStmt) child).getStatements());
-            } else {
+            }
+            else
+            {
                 changed |= recurse(child);
             }
         }
         return changed;
     }
 
-    private boolean desugarIf(IfStmt ifStmt, List<Statement> enclosing, int index) {
+    private boolean desugarIf(IfStmt ifStmt, List<Statement> enclosing, int index)
+    {
         Expression cond = ifStmt.getCondition();
 
-        if (cond instanceof InstanceOfExpr) {
+        if (cond instanceof InstanceOfExpr)
+        {
             InstanceOfExpr test = (InstanceOfExpr) cond;
-            if (test.hasPatternVariable()) {
+            if (test.hasPatternVariable())
+            {
                 int hoisted = stabilizeOperand(test, enclosing, index);
-                if (hoisted < 0) {
+                if (hoisted < 0)
+                {
                     return false;
                 }
                 VarDeclStmt bind = bindingDecl(test);
@@ -95,12 +109,15 @@ public class PatternInstanceOfDesugar implements ASTTransform {
             return false;
         }
 
-        if (cond instanceof BinaryExpr && ((BinaryExpr) cond).getOperator() == BinaryOperator.AND) {
+        if (cond instanceof BinaryExpr && ((BinaryExpr) cond).getOperator() == BinaryOperator.AND)
+        {
             List<Statement> hoisted = new ArrayList<>();
             Expression rewritten = rewriteAndSpine(cond, hoisted);
-            if (!hoisted.isEmpty()) {
+            if (!hoisted.isEmpty())
+            {
                 ifStmt.withCondition(rewritten);
-                for (int j = 0; j < hoisted.size(); j++) {
+                for (int j = 0; j < hoisted.size(); j++)
+                {
                     enclosing.add(index + j, hoisted.get(j));
                 }
                 return true;
@@ -108,13 +125,17 @@ public class PatternInstanceOfDesugar implements ASTTransform {
             return false;
         }
 
-        if (cond instanceof UnaryExpr) {
+        if (cond instanceof UnaryExpr)
+        {
             UnaryExpr u = (UnaryExpr) cond;
-            if (u.getOperator() == UnaryOperator.NOT && u.getOperand() instanceof InstanceOfExpr) {
+            if (u.getOperator() == UnaryOperator.NOT && u.getOperand() instanceof InstanceOfExpr)
+            {
                 InstanceOfExpr test = (InstanceOfExpr) u.getOperand();
-                if (test.hasPatternVariable()) {
+                if (test.hasPatternVariable())
+                {
                     int hoisted = stabilizeOperand(test, enclosing, index);
-                    if (hoisted < 0) {
+                    if (hoisted < 0)
+                    {
                         return false;
                     }
                     VarDeclStmt bind = bindingDecl(test);
@@ -132,8 +153,10 @@ public class PatternInstanceOfDesugar implements ASTTransform {
      * variable already can (returns 0); any other operand is evaluated ONCE into a hoisted temp
      * before the if, and the test is retargeted at the temp (returns 1, the statements inserted).
      */
-    private int stabilizeOperand(InstanceOfExpr test, List<Statement> enclosing, int index) {
-        if (test.getExpression() instanceof VarRefExpr) {
+    private int stabilizeOperand(InstanceOfExpr test, List<Statement> enclosing, int index)
+    {
+        if (test.getExpression() instanceof VarRefExpr)
+        {
             return 0;
         }
         String tmp = test.getPatternVariable() + "$src";
@@ -150,19 +173,24 @@ public class PatternInstanceOfDesugar implements ASTTransform {
      * {@code T t = x instanceof T ? (T) x : null;} for each. Only {@code &&} nodes are descended:
      * a binding under {@code ||} is not definitely assigned where it would be read.
      */
-    private Expression rewriteAndSpine(Expression e, List<Statement> hoisted) {
-        if (e instanceof BinaryExpr && ((BinaryExpr) e).getOperator() == BinaryOperator.AND) {
+    private Expression rewriteAndSpine(Expression e, List<Statement> hoisted)
+    {
+        if (e instanceof BinaryExpr && ((BinaryExpr) e).getOperator() == BinaryOperator.AND)
+        {
             BinaryExpr and = (BinaryExpr) e;
             Expression left = rewriteAndSpine(and.getLeft(), hoisted);
             Expression right = rewriteAndSpine(and.getRight(), hoisted);
-            if (left == and.getLeft() && right == and.getRight()) {
+            if (left == and.getLeft() && right == and.getRight())
+            {
                 return e;
             }
             return new BinaryExpr(BinaryOperator.AND, left, right, and.getType());
         }
-        if (e instanceof InstanceOfExpr) {
+        if (e instanceof InstanceOfExpr)
+        {
             InstanceOfExpr test = (InstanceOfExpr) e;
-            if (test.hasPatternVariable() && test.getExpression() instanceof VarRefExpr) {
+            if (test.hasPatternVariable() && test.getExpression() instanceof VarRefExpr)
+            {
                 VarRefExpr operand = (VarRefExpr) test.getExpression();
                 SourceType type = test.getCheckType();
                 String name = test.getPatternVariable();
@@ -180,19 +208,23 @@ public class PatternInstanceOfDesugar implements ASTTransform {
         return e;
     }
 
-    private static VarDeclStmt bindingDecl(InstanceOfExpr test) {
+    private static VarDeclStmt bindingDecl(InstanceOfExpr test)
+    {
         VarRefExpr operand = (VarRefExpr) test.getExpression();
         SourceType type = test.getCheckType();
         VarRefExpr operandCopy = new VarRefExpr(operand.getName(), operand.getType());
         return new VarDeclStmt(type, test.getPatternVariable(), new CastExpr(type, operandCopy));
     }
 
-    private static BlockStmt asBlock(Statement s) {
-        if (s instanceof BlockStmt) {
+    private static BlockStmt asBlock(Statement s)
+    {
+        if (s instanceof BlockStmt)
+        {
             return (BlockStmt) s;
         }
         List<Statement> list = new ArrayList<>();
-        if (s != null) {
+        if (s != null)
+        {
             list.add(s);
         }
         return new BlockStmt(list);

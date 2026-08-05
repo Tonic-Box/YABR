@@ -9,11 +9,11 @@ import com.tonic.analysis.source.editor.Replacement;
  * Use this to intercept and transform exception handling.
  */
 @FunctionalInterface
-public interface TryCatchHandler {
+public interface TryCatchHandler
+{
 
     /**
      * Handle a try-catch statement.
-     *
      * @param ctx      the editing context
      * @param tryCatch the try-catch statement
      * @return the replacement action

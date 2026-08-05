@@ -23,15 +23,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Cross-{@link ClassFile} method grafting with constant-pool remapping ({@link MethodGrafter}) plus
  * owner redirection ({@link ClassFile#redirectOwner}): two methods are moved from {@code Sound} into
- * {@code Game} — one calling the other — then the call's owner is repointed {@code Sound -> Game}, and
+ * {@code Game} - one calling the other - then the call's owner is repointed {@code Sound -> Game}, and
  * the self-contained {@code Game} is loaded and run.
  */
-class MethodGraftTest {
+class MethodGraftTest
+{
 
     @Test
-    void graftMethodsAndRedirectOwnerRunsOnTarget() throws Exception {
+    void graftMethodsAndRedirectOwnerRunsOnTarget() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
-        for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
+        for (String cn : new String[]{"java/lang/Object", "java/lang/String"})
+        {
             pool.loadPlatformClass(cn + ".class");
         }
 
@@ -46,8 +49,10 @@ class MethodGraftTest {
         lowerer.setCurrentClassDecl(cls);
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(sound.getConstPool());
-        for (MethodDecl m : cls.getMethods()) {
-            if (m.getBody() == null) {
+        for (MethodDecl m : cls.getMethods())
+        {
+            if (m.getBody() == null)
+            {
                 continue;
             }
             sound.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(), m.getName(), "()I");
@@ -68,16 +73,17 @@ class MethodGraftTest {
     }
 
     @Test
-    void graftsInvokeDynamicByCopyingBootstrap() throws Exception {
-        org.junit.jupiter.api.Assumptions.assumeTrue(
-                ModernJdk.available(17), "JDK 17 not installed");
+    void graftsInvokeDynamicByCopyingBootstrap() throws Exception
+    {
+        org.junit.jupiter.api.Assumptions.assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
         // javac compiles `"v" + n` to a StringConcatFactory invokedynamic; graft must copy + remap its
         // bootstrap method into the target's BootstrapMethods. (Loaded on the Java 11 test JVM, which
         // has StringConcatFactory.)
         java.util.Map<String, byte[]> javac = ModernJdk.compile(
                 17, "Sound", "public class Sound { public static String tag(int n) { return \"v\" + n; } }");
         ClassPool pool = TestUtils.emptyPool();
-        for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
+        for (String cn : new String[]{"java/lang/Object", "java/lang/String"})
+        {
             pool.loadPlatformClass(cn + ".class");
         }
         ClassFile sound = new ClassFile(new java.io.ByteArrayInputStream(javac.get("Sound")));
@@ -90,18 +96,19 @@ class MethodGraftTest {
     }
 
     @Test
-    void constPoolRemapperSplicesBodyIntoExistingMethod() throws Exception {
+    void constPoolRemapperSplicesBodyIntoExistingMethod() throws Exception
+    {
         // The graftMethod path can't help when the target already owns the method (e.g. merging into an
         // existing <clinit>). Here we drive ConstPoolRemapper + cloneRangeWithTargets directly to splice
         // a source body into an existing target method, relocating its String constant across pools.
         ClassPool pool = TestUtils.emptyPool();
-        for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
+        for (String cn : new String[]{"java/lang/Object", "java/lang/String"})
+        {
             pool.loadPlatformClass(cn + ".class");
         }
         ClassFile sound = compile(pool, "Sound",
                 "public class Sound { public static String src() { return \"spliced-7\"; } }");
-        ClassFile game = compile(pool, "Game",
-                "public class Game { public static String run() { return \"old\"; } }");
+        ClassFile game = compile(pool, "Game", "public class Game { public static String run() { return \"old\"; } }");
 
         ConstPoolRemapper remapper =
                 new ConstPoolRemapper(sound, game);
@@ -120,12 +127,14 @@ class MethodGraftTest {
     }
 
     @Test
-    void replaceMethodBodyKeepsMemberSetForLiveRedefine() throws Exception {
+    void replaceMethodBodyKeepsMemberSetForLiveRedefine() throws Exception
+    {
         // The live-patch use case: overwrite a method's body in place, leaving the class's member set (and
         // every other method) untouched so a JVMTI redefine accepts it. Here Game.run() is rebodied from
         // Sound.src() across pools, and the spliced String constant is relocated.
         ClassPool pool = TestUtils.emptyPool();
-        for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
+        for (String cn : new String[]{"java/lang/Object", "java/lang/String"})
+        {
             pool.loadPlatformClass(cn + ".class");
         }
         ClassFile sound = compile(pool, "Sound",
@@ -143,8 +152,11 @@ class MethodGraftTest {
         assertEquals(42, (int) clazz.getMethod("keep").invoke(null), "untouched methods must be unaffected");
     }
 
-    /** Compiles a single-method class onto the given pool via the YABR front end. */
-    private static ClassFile compile(ClassPool pool, String name, String src) throws Exception {
+    /**
+     * Compiles a single-method class onto the given pool via the YABR front end.
+     */
+    private static ClassFile compile(ClassPool pool, String name, String src) throws Exception
+    {
         CompilationUnit cu = JavaParser.create().parse(src);
         ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
         ClassFile cf = pool.createNewClass(name, new AccessBuilder().setPublic().build());
@@ -152,8 +164,10 @@ class MethodGraftTest {
         lowerer.setCurrentClassDecl(cls);
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(cf.getConstPool());
-        for (MethodDecl m : cls.getMethods()) {
-            if (m.getBody() == null) {
+        for (MethodDecl m : cls.getMethods())
+        {
+            if (m.getBody() == null)
+            {
                 continue;
             }
             cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(),
@@ -163,9 +177,12 @@ class MethodGraftTest {
         return cf;
     }
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }

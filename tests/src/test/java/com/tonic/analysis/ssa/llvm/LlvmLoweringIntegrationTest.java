@@ -22,22 +22,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * assert the result matches running the same method on the JVM. Skipped (via {@link Assumptions})
  * when {@code lli} is not installed, so CI without LLVM stays green.
  *
- * <p>Results are returned as the process exit code, so test inputs are chosen to yield a small
+ *Results are returned as the process exit code, so test inputs are chosen to yield a small
  * non-negative value (0..127).
  */
-class LlvmLoweringIntegrationTest {
+class LlvmLoweringIntegrationTest
+{
 
     @TempDir
     Path tempDir;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
         Assumptions.assumeTrue(toolAvailable("lli"), "lli not available; skipping LLVM run test");
     }
 
     @Test
-    void intAddMatchesJvm() throws Exception {
+    void intAddMatchesJvm() throws Exception
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("add", "(II)I")
             .iload(0).iload(1).iadd().ireturn().build();
         int jvm = (int) TestUtils.loadAndVerify(cf).getMethod("add", int.class, int.class).invoke(null, 7, 5);
@@ -47,7 +50,8 @@ class LlvmLoweringIntegrationTest {
     }
 
     @Test
-    void intLoopMatchesJvm() throws Exception {
+    void intLoopMatchesJvm() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sum", "(I)I");
         Label head = mb.newLabel();
         Label end = mb.newLabel();
@@ -62,7 +66,8 @@ class LlvmLoweringIntegrationTest {
         assertEquals(jvm & 0xFF, runViaLli(cf, "sum", main) & 0xFF);
     }
 
-    private int runViaLli(ClassFile cf, String method, String mainFunction) throws Exception {
+    private int runViaLli(ClassFile cf, String method, String mainFunction) throws Exception
+    {
         MethodEntry m = cf.getMethods().stream()
             .filter(x -> x.getName().equals(method)).findFirst().orElseThrow();
         IRMethod ir = TestUtils.liftMethod(m);
@@ -74,12 +79,16 @@ class LlvmLoweringIntegrationTest {
         return p.waitFor();
     }
 
-    private static boolean toolAvailable(String tool) {
-        try {
+    private static boolean toolAvailable(String tool)
+    {
+        try
+        {
             Process p = new ProcessBuilder(tool, "--version").redirectErrorStream(true).start();
             p.getInputStream().readAllBytes();
             return p.waitFor() == 0;
-        } catch (IOException | InterruptedException e) {
+        }
+        catch (IOException | InterruptedException e)
+        {
             return false;
         }
     }

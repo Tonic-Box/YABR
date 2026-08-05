@@ -8,33 +8,57 @@ import java.util.List;
  * pushed it and the contexts that popped it. Port of RuneLite's {@code StackContext} minus the abstract-value
  * field (the ModArith port reads constants from the pushing instruction, not a value domain).
  */
-public final class StackCtx {
+public final class StackCtx
+{
 
     private final InsnContext pushed;
     private final boolean wide; // long/double occupy a logical wide slot
     private final List<InsnContext> popped = new ArrayList<>();
     boolean removed;
 
-    public StackCtx(InsnContext pushed, boolean wide) {
+    /**
+     * Creates a slot for a pushed value.
+     * @param pushed the instruction-execution that pushed the value
+     * @param wide true for a long/double entry
+     */
+    public StackCtx(InsnContext pushed, boolean wide)
+    {
         this.pushed = pushed;
         this.wide = wide;
     }
 
-    /** Returns the instruction-execution that pushed this value. */
-    public InsnContext getPushed() {
+    /**
+     * @return the instruction-execution that pushed this value
+     */
+    public InsnContext getPushed()
+    {
         return pushed;
     }
 
-    public boolean isWide() {
+    /**
+     * @return whether wide
+     */
+    public boolean isWide()
+    {
         return wide;
     }
 
-    public List<InsnContext> getPopped() {
+    /**
+     * @return the popped
+     */
+    public List<InsnContext> getPopped()
+    {
         return popped;
     }
 
-    public void addPopped(InsnContext ctx) {
-        if (!popped.contains(ctx)) {
+    /**
+     * Records a context that popped this value, ignoring duplicates.
+     * @param ctx the popping instruction-execution
+     */
+    public void addPopped(InsnContext ctx)
+    {
+        if (!popped.contains(ctx))
+        {
             popped.add(ctx);
         }
     }

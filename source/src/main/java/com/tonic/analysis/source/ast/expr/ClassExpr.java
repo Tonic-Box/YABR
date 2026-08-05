@@ -10,9 +10,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a class literal expression: Type.class
+ * A class literal expression: Type.class.
  */
-public final class ClassExpr implements Expression {
+public final class ClassExpr implements Expression
+{
 
     /**
      * The type being referenced.
@@ -22,43 +23,78 @@ public final class ClassExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public ClassExpr(SourceType classType, SourceLocation location) {
+    /**
+     * Creates a class literal; its static type is java.lang.Class parameterized by the referenced type.
+     * @param classType the type being referenced
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if classType is null
+     */
+    public ClassExpr(SourceType classType, SourceLocation location)
+    {
         this.classType = Objects.requireNonNull(classType, "classType cannot be null");
         this.type = new ReferenceSourceType("java/lang/Class", List.of(classType));
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public ClassExpr(SourceType classType) {
+    /**
+     * Creates a class literal with an unknown source location.
+     * @param classType the type being referenced
+     * @throws NullPointerException if classType is null
+     */
+    public ClassExpr(SourceType classType)
+    {
         this(classType, SourceLocation.UNKNOWN);
     }
 
-    public SourceType getClassType() {
+    /**
+     * @return the class type
+     */
+    public SourceType getClassType()
+    {
         return classType;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitClass(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return classType.toJavaSource() + ".class";
     }
 }

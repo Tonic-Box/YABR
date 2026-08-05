@@ -18,12 +18,14 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherNewArithmeticTest {
+class OpcodeDispatcherNewArithmeticTest
+{
     private BytecodeContext context;
     private SimpleHeapManager heapManager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heapManager = new SimpleHeapManager();
         context = new BytecodeContext.Builder()
             .heapManager(heapManager)
@@ -32,13 +34,17 @@ class OpcodeDispatcherNewArithmeticTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -46,9 +52,11 @@ class OpcodeDispatcherNewArithmeticTest {
     }
 
     @Nested
-    class NewObjectTests {
+    class NewObjectTests
+    {
         @Test
-        void testNewBasicObject() throws IOException {
+        void testNewBasicObject() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestNew")
                 .publicStaticMethod("test", "()Ljava/lang/Object;")
                     .new_("java/lang/Object")
@@ -60,7 +68,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testNewCustomClass() throws IOException {
+        void testNewCustomClass() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestNew2")
                 .publicStaticMethod("test", "()Ljava/lang/String;")
                     .new_("java/lang/String")
@@ -72,7 +81,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testNewThenDup() throws IOException {
+        void testNewThenDup() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestNew3")
                 .publicStaticMethod("test", "()Ljava/lang/Object;")
                     .new_("java/lang/Object")
@@ -87,9 +97,11 @@ class OpcodeDispatcherNewArithmeticTest {
     }
 
     @Nested
-    class MultiANewArrayTests {
+    class MultiANewArrayTests
+    {
         @Test
-        void testMultiANewArray2D() throws IOException {
+        void testMultiANewArray2D() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMulti2D")
                 .publicStaticMethod("test", "(II)[[I")
                     .iload(0)
@@ -98,14 +110,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .areturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(3),
-                ConcreteValue.intValue(4));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(3), ConcreteValue.intValue(4));
             assertFalse(result.getReturnValue().isNull());
         }
 
         @Test
-        void testMultiANewArray3D() throws IOException {
+        void testMultiANewArray3D() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMulti3D")
                 .publicStaticMethod("test", "(III)[[[Ljava/lang/String;")
                     .iload(0)
@@ -123,7 +134,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testMultiANewArrayObject2D() throws IOException {
+        void testMultiANewArrayObject2D() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMultiObj2D")
                 .publicStaticMethod("test", "(II)[[Ljava/lang/Object;")
                     .iload(0)
@@ -132,14 +144,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .areturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(5),
-                ConcreteValue.intValue(6));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(5), ConcreteValue.intValue(6));
             assertFalse(result.getReturnValue().isNull());
         }
 
         @Test
-        void testMultiANewArrayInt2D() throws IOException {
+        void testMultiANewArrayInt2D() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMultiInt2D")
                 .publicStaticMethod("test", "(II)[[I")
                     .iload(0)
@@ -148,17 +159,17 @@ class OpcodeDispatcherNewArithmeticTest {
                     .areturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(20));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(20));
             assertFalse(result.getReturnValue().isNull());
         }
     }
 
     @Nested
-    class MonitorTests {
+    class MonitorTests
+    {
         @Test
-        void testMonitorEnterExit() throws IOException {
+        void testMonitorEnterExit() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMonitor")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)V")
                     .aload(0)
@@ -174,7 +185,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testNestedMonitors() throws IOException {
+        void testNestedMonitors() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestNestedMonitor")
                 .publicStaticMethod("test", "(Ljava/lang/Object;Ljava/lang/Object;)V")
                     .aload(0)
@@ -190,14 +202,13 @@ class OpcodeDispatcherNewArithmeticTest {
             MethodEntry method = findMethod(cf, "test");
             ObjectInstance obj1 = heapManager.newObject("java/lang/Object");
             ObjectInstance obj2 = heapManager.newObject("java/lang/Object");
-            BytecodeResult result = execute(method,
-                ConcreteValue.reference(obj1),
-                ConcreteValue.reference(obj2));
+            BytecodeResult result = execute(method, ConcreteValue.reference(obj1), ConcreteValue.reference(obj2));
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
         }
 
         @Test
-        void testMonitorSameObjectTwice() throws IOException {
+        void testMonitorSameObjectTwice() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMonitorSame")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)V")
                     .aload(0)
@@ -218,9 +229,11 @@ class OpcodeDispatcherNewArithmeticTest {
     }
 
     @Nested
-    class AThrowTests {
+    class AThrowTests
+    {
         @Test
-        void testAThrowWithException() throws IOException {
+        void testAThrowWithException() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestThrow")
                 .publicStaticMethod("test", "(Ljava/lang/Throwable;)V")
                     .aload(0)
@@ -233,7 +246,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testAThrowAfterNew() throws IOException {
+        void testAThrowAfterNew() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestThrowNew")
                 .publicStaticMethod("test", "()V")
                     .new_("java/lang/RuntimeException")
@@ -246,9 +260,11 @@ class OpcodeDispatcherNewArithmeticTest {
     }
 
     @Nested
-    class LongRemainderTests {
+    class LongRemainderTests
+    {
         @Test
-        void testLRemPositive() throws IOException {
+        void testLRemPositive() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLRem1")
                 .publicStaticMethod("test", "(JJ)J")
                     .lload(0)
@@ -257,14 +273,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .lreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.longValue(17L),
-                ConcreteValue.longValue(5L));
+            BytecodeResult result = execute(method, ConcreteValue.longValue(17L), ConcreteValue.longValue(5L));
             assertEquals(2L, result.getReturnValue().asLong());
         }
 
         @Test
-        void testLRemNegativeDividend() throws IOException {
+        void testLRemNegativeDividend() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLRem2")
                 .publicStaticMethod("test", "(JJ)J")
                     .lload(0)
@@ -273,14 +288,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .lreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.longValue(-17L),
-                ConcreteValue.longValue(5L));
+            BytecodeResult result = execute(method, ConcreteValue.longValue(-17L), ConcreteValue.longValue(5L));
             assertEquals(-2L, result.getReturnValue().asLong());
         }
 
         @Test
-        void testLRemNegativeDivisor() throws IOException {
+        void testLRemNegativeDivisor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLRem3")
                 .publicStaticMethod("test", "(JJ)J")
                     .lload(0)
@@ -289,17 +303,17 @@ class OpcodeDispatcherNewArithmeticTest {
                     .lreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.longValue(17L),
-                ConcreteValue.longValue(-5L));
+            BytecodeResult result = execute(method, ConcreteValue.longValue(17L), ConcreteValue.longValue(-5L));
             assertEquals(2L, result.getReturnValue().asLong());
         }
     }
 
     @Nested
-    class FloatRemainderTests {
+    class FloatRemainderTests
+    {
         @Test
-        void testFRemBasic() throws IOException {
+        void testFRemBasic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestFRem1")
                 .publicStaticMethod("test", "(FF)F")
                     .fload(0)
@@ -308,14 +322,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .freturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.floatValue(10.5f),
-                ConcreteValue.floatValue(3.0f));
+            BytecodeResult result = execute(method, ConcreteValue.floatValue(10.5f), ConcreteValue.floatValue(3.0f));
             assertEquals(1.5f, result.getReturnValue().asFloat(), 0.0001f);
         }
 
         @Test
-        void testFRemNegative() throws IOException {
+        void testFRemNegative() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestFRem2")
                 .publicStaticMethod("test", "(FF)F")
                     .fload(0)
@@ -324,14 +337,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .freturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.floatValue(-10.5f),
-                ConcreteValue.floatValue(3.0f));
+            BytecodeResult result = execute(method, ConcreteValue.floatValue(-10.5f), ConcreteValue.floatValue(3.0f));
             assertEquals(-1.5f, result.getReturnValue().asFloat(), 0.0001f);
         }
 
         @Test
-        void testFRemDecimal() throws IOException {
+        void testFRemDecimal() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestFRem3")
                 .publicStaticMethod("test", "(FF)F")
                     .fload(0)
@@ -340,17 +352,17 @@ class OpcodeDispatcherNewArithmeticTest {
                     .freturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.floatValue(10.0f),
-                ConcreteValue.floatValue(3.0f));
+            BytecodeResult result = execute(method, ConcreteValue.floatValue(10.0f), ConcreteValue.floatValue(3.0f));
             assertEquals(1.0f, result.getReturnValue().asFloat(), 0.0001f);
         }
     }
 
     @Nested
-    class DoubleRemainderTests {
+    class DoubleRemainderTests
+    {
         @Test
-        void testDRemPositive() throws IOException {
+        void testDRemPositive() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestDRem1")
                 .publicStaticMethod("test", "(DD)D")
                     .dload(0)
@@ -359,14 +371,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .dreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.doubleValue(10.0),
-                ConcreteValue.doubleValue(3.0));
+            BytecodeResult result = execute(method, ConcreteValue.doubleValue(10.0), ConcreteValue.doubleValue(3.0));
             assertEquals(1.0, result.getReturnValue().asDouble(), 0.0001);
         }
 
         @Test
-        void testDRemNegative() throws IOException {
+        void testDRemNegative() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestDRem2")
                 .publicStaticMethod("test", "(DD)D")
                     .dload(0)
@@ -375,14 +386,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .dreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.doubleValue(-10.0),
-                ConcreteValue.doubleValue(3.0));
+            BytecodeResult result = execute(method, ConcreteValue.doubleValue(-10.0), ConcreteValue.doubleValue(3.0));
             assertEquals(-1.0, result.getReturnValue().asDouble(), 0.0001);
         }
 
         @Test
-        void testDRemLargeDividend() throws IOException {
+        void testDRemLargeDividend() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestDRem3")
                 .publicStaticMethod("test", "(DD)D")
                     .dload(0)
@@ -391,17 +401,17 @@ class OpcodeDispatcherNewArithmeticTest {
                     .dreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.doubleValue(100.0),
-                ConcreteValue.doubleValue(7.0));
+            BytecodeResult result = execute(method, ConcreteValue.doubleValue(100.0), ConcreteValue.doubleValue(7.0));
             assertEquals(2.0, result.getReturnValue().asDouble(), 0.0001);
         }
     }
 
     @Nested
-    class AdditionalConversionTests {
+    class AdditionalConversionTests
+    {
         @Test
-        void testI2F() throws IOException {
+        void testI2F() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestI2F")
                 .publicStaticMethod("test", "(I)F")
                     .iload(0)
@@ -414,7 +424,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testI2D() throws IOException {
+        void testI2D() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestI2D")
                 .publicStaticMethod("test", "(I)D")
                     .iload(0)
@@ -427,7 +438,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testL2I() throws IOException {
+        void testL2I() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestL2I")
                 .publicStaticMethod("test", "(J)I")
                     .lload(0)
@@ -440,7 +452,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testF2I() throws IOException {
+        void testF2I() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestF2I")
                 .publicStaticMethod("test", "(F)I")
                     .fload(0)
@@ -453,7 +466,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testD2I() throws IOException {
+        void testD2I() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestD2I")
                 .publicStaticMethod("test", "(D)I")
                     .dload(0)
@@ -467,9 +481,11 @@ class OpcodeDispatcherNewArithmeticTest {
     }
 
     @Nested
-    class CombinedOperationsTests {
+    class CombinedOperationsTests
+    {
         @Test
-        void testNewThenMonitor() throws IOException {
+        void testNewThenMonitor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestNewMonitor")
                 .publicStaticMethod("test", "()Ljava/lang/Object;")
                     .new_("java/lang/Object")
@@ -485,7 +501,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testMultiArrayWithLength() throws IOException {
+        void testMultiArrayWithLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMultiArrayLen")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -500,7 +517,8 @@ class OpcodeDispatcherNewArithmeticTest {
         }
 
         @Test
-        void testArithmeticChainWithRemainder() throws IOException {
+        void testArithmeticChainWithRemainder() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestRemChain")
                 .publicStaticMethod("test", "(JJ)J")
                     .lload(0)
@@ -511,14 +529,13 @@ class OpcodeDispatcherNewArithmeticTest {
                     .lreturn()
                 .build();
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.longValue(23L),
-                ConcreteValue.longValue(7L));
+            BytecodeResult result = execute(method, ConcreteValue.longValue(23L), ConcreteValue.longValue(7L));
             assertEquals(3L, result.getReturnValue().asLong());
         }
 
         @Test
-        void testConversionChain() throws IOException {
+        void testConversionChain() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestConvChain")
                 .publicStaticMethod("test", "(I)D")
                     .iload(0)

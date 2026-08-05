@@ -5,7 +5,8 @@ package com.tonic.analysis.execution.listener;
  * High-frequency events (stack, local, array operations) are only dispatched to
  * listeners that explicitly request them via CapableListener.getCapabilities().
  */
-public enum ListenerCapability {
+public enum ListenerCapability
+{
     /**
      * Stack push/pop notifications (very high frequency).
      * Events: onStackPush, onStackPop

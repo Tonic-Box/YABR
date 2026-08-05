@@ -1,14 +1,11 @@
 package com.tonic.analysis;
 
 /**
- * Immutable configuration for {@link CodePrinter}'s method-level disassembly. Each flag enables one
- * enrichment over the bare instruction listing. {@link #terse()} (all off) reproduces the legacy
- * per-instruction output; {@link #verbose()} (all on) is the rich view JStudio consumes.
- *
- * <p>Instances are created with {@link #terse()}/{@link #verbose()} and refined with the
- * {@code with*} methods, e.g. {@code DisassemblyOptions.terse().withExceptionTable(true)}.
+ * Immutable flag set selecting which enrichments {@link CodePrinter} adds to a method disassembly,
+ * built from {@link #terse()} or {@link #verbose()} and refined with the {@code with*} copies.
  */
-public final class DisassemblyOptions {
+public final class DisassemblyOptions
+{
 
     private final boolean header;
     private final boolean lineNumbers;
@@ -17,8 +14,8 @@ public final class DisassemblyOptions {
     private final boolean stackMapFrames;
     private final boolean resolveBootstraps;
 
-    private DisassemblyOptions(boolean header, boolean lineNumbers, boolean localVariables,
-                               boolean exceptionTable, boolean stackMapFrames, boolean resolveBootstraps) {
+    private DisassemblyOptions(boolean header, boolean lineNumbers, boolean localVariables, boolean exceptionTable, boolean stackMapFrames, boolean resolveBootstraps)
+    {
         this.header = header;
         this.lineNumbers = lineNumbers;
         this.localVariables = localVariables;
@@ -27,71 +24,129 @@ public final class DisassemblyOptions {
         this.resolveBootstraps = resolveBootstraps;
     }
 
-    /** Returns whether a {@code max_stack}/{@code max_locals} header line is emitted. */
-    public boolean isHeader() {
+    /**
+     * @return whether a {@code max_stack}/{@code max_locals} header line is emitted
+     */
+    public boolean isHeader()
+    {
         return header;
     }
 
-    /** Returns whether {@code // line N} comments from the LineNumberTable are interleaved. */
-    public boolean isLineNumbers() {
+    /**
+     * @return whether {@code // line N} comments from the LineNumberTable are interleaved
+     */
+    public boolean isLineNumbers()
+    {
         return lineNumbers;
     }
 
-    /** Returns whether local-slot operands are annotated with {@code // name: descriptor} from the LocalVariableTable. */
-    public boolean isLocalVariables() {
+    /**
+     * @return whether local-slot operands are annotated with {@code // name: descriptor} from the LocalVariableTable
+     */
+    public boolean isLocalVariables()
+    {
         return localVariables;
     }
 
-    /** Returns whether the method's exception table is emitted. */
-    public boolean isExceptionTable() {
+    /**
+     * @return whether the method's exception table is emitted
+     */
+    public boolean isExceptionTable()
+    {
         return exceptionTable;
     }
 
-    /** Returns whether stack-map frame markers from the StackMapTable are interleaved. */
-    public boolean isStackMapFrames() {
+    /**
+     * @return whether stack-map frame markers from the StackMapTable are interleaved
+     */
+    public boolean isStackMapFrames()
+    {
         return stackMapFrames;
     }
 
-    /** Returns whether each invokedynamic's bootstrap method handle and static arguments are resolved. */
-    public boolean isResolveBootstraps() {
+    /**
+     * @return whether each invokedynamic's bootstrap method handle and static arguments are resolved
+     */
+    public boolean isResolveBootstraps()
+    {
         return resolveBootstraps;
     }
 
-    public DisassemblyOptions withHeader(boolean header) {
-        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
-    }
-
-    public DisassemblyOptions withLineNumbers(boolean lineNumbers) {
-        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
-    }
-
-    public DisassemblyOptions withLocalVariables(boolean localVariables) {
-        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
-    }
-
-    public DisassemblyOptions withExceptionTable(boolean exceptionTable) {
-        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
-    }
-
-    public DisassemblyOptions withStackMapFrames(boolean stackMapFrames) {
-        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
-    }
-
-    public DisassemblyOptions withResolveBootstraps(boolean resolveBootstraps) {
+    /**
+     * Derives a copy with the header flag replaced.
+     * @param header whether to emit the {@code max_stack}/{@code max_locals} header line
+     * @return the derived options
+     */
+    public DisassemblyOptions withHeader(boolean header)
+    {
         return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
     }
 
     /**
-     * @return options with every enrichment disabled (the legacy terse listing).
+     * Derives a copy with the line-number flag replaced.
+     * @param lineNumbers whether to interleave {@code // line N} comments
+     * @return the derived options
      */
-    public static DisassemblyOptions terse() {
+    public DisassemblyOptions withLineNumbers(boolean lineNumbers)
+    {
+        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
+    }
+
+    /**
+     * Derives a copy with the local-variable flag replaced.
+     * @param localVariables whether to annotate local-slot operands from the LocalVariableTable
+     * @return the derived options
+     */
+    public DisassemblyOptions withLocalVariables(boolean localVariables)
+    {
+        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
+    }
+
+    /**
+     * Derives a copy with the exception-table flag replaced.
+     * @param exceptionTable whether to emit the method's exception table
+     * @return the derived options
+     */
+    public DisassemblyOptions withExceptionTable(boolean exceptionTable)
+    {
+        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
+    }
+
+    /**
+     * Derives a copy with the stack-map-frame flag replaced.
+     * @param stackMapFrames whether to interleave stack-map frame markers
+     * @return the derived options
+     */
+    public DisassemblyOptions withStackMapFrames(boolean stackMapFrames)
+    {
+        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
+    }
+
+    /**
+     * Derives a copy with the bootstrap-resolution flag replaced.
+     * @param resolveBootstraps whether to resolve each invokedynamic's bootstrap handle and static arguments
+     * @return the derived options
+     */
+    public DisassemblyOptions withResolveBootstraps(boolean resolveBootstraps)
+    {
+        return new DisassemblyOptions(header, lineNumbers, localVariables, exceptionTable, stackMapFrames, resolveBootstraps);
+    }
+
+    /**
+     * Creates options with every enrichment disabled.
+     * @return the bare instruction-listing options
+     */
+    public static DisassemblyOptions terse()
+    {
         return new DisassemblyOptions(false, false, false, false, false, false);
     }
 
     /**
-     * @return options with every enrichment enabled.
+     * Creates options with every enrichment enabled.
+     * @return the fully enriched options
      */
-    public static DisassemblyOptions verbose() {
+    public static DisassemblyOptions verbose()
+    {
         return new DisassemblyOptions(true, true, true, true, true, true);
     }
 }

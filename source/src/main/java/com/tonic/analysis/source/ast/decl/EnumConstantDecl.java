@@ -9,7 +9,11 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class EnumConstantDecl implements ASTNode {
+/**
+ * A single enum constant, with optional constructor arguments and an optional class body of fields and methods.
+ */
+public final class EnumConstantDecl implements ASTNode
+{
 
     private String name;
     private final NodeList<AnnotationExpr> annotations;
@@ -19,7 +23,13 @@ public final class EnumConstantDecl implements ASTNode {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public EnumConstantDecl(String name, SourceLocation location) {
+    /**
+     * Creates an enum constant with no arguments or body.
+     * @param name the constant name
+     * @param location the source location, or null for unknown
+     */
+    public EnumConstantDecl(String name, SourceLocation location)
+    {
         this.name = name;
         this.annotations = new NodeList<>(this);
         this.arguments = new NodeList<>(this);
@@ -28,81 +38,163 @@ public final class EnumConstantDecl implements ASTNode {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public EnumConstantDecl(String name) {
+    /**
+     * Creates an enum constant at an unknown location.
+     * @param name the constant name
+     */
+    public EnumConstantDecl(String name)
+    {
         this(name, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Sets the constant name.
+     * @param name the constant name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public NodeList<AnnotationExpr> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public NodeList<AnnotationExpr> getAnnotations()
+    {
         return annotations;
     }
 
-    public NodeList<Expression> getArguments() {
+    /**
+     * @return the arguments
+     */
+    public NodeList<Expression> getArguments()
+    {
         return arguments;
     }
 
-    public NodeList<MethodDecl> getMethods() {
+    /**
+     * @return the methods
+     */
+    public NodeList<MethodDecl> getMethods()
+    {
         return methods;
     }
 
-    public NodeList<FieldDecl> getFields() {
+    /**
+     * @return the fields
+     */
+    public NodeList<FieldDecl> getFields()
+    {
         return fields;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the parent node.
+     * @param parent the new parent
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public EnumConstantDecl withName(String name) {
+    /**
+     * Sets the constant name.
+     * @param name the constant name
+     * @return this declaration
+     */
+    public EnumConstantDecl withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public EnumConstantDecl addAnnotation(AnnotationExpr annotation) {
+    /**
+     * Adds an annotation.
+     * @param annotation the annotation to add
+     * @return this declaration
+     */
+    public EnumConstantDecl addAnnotation(AnnotationExpr annotation)
+    {
         annotations.add(annotation);
         return this;
     }
 
-    public EnumConstantDecl addArgument(Expression argument) {
+    /**
+     * Adds a constructor argument.
+     * @param argument the argument expression
+     * @return this declaration
+     */
+    public EnumConstantDecl addArgument(Expression argument)
+    {
         arguments.add(argument);
         return this;
     }
 
-    public EnumConstantDecl addMethod(MethodDecl method) {
+    /**
+     * Adds a method to the constant's class body.
+     * @param method the method declaration
+     * @return this declaration
+     */
+    public EnumConstantDecl addMethod(MethodDecl method)
+    {
         methods.add(method);
         return this;
     }
 
-    public EnumConstantDecl addField(FieldDecl field) {
+    /**
+     * Adds a field to the constant's class body.
+     * @param field the field declaration
+     * @return this declaration
+     */
+    public EnumConstantDecl addField(FieldDecl field)
+    {
         fields.add(field);
         return this;
     }
 
-    public boolean hasArguments() {
+    /**
+     * @return true if the constant passes constructor arguments
+     */
+    public boolean hasArguments()
+    {
         return !arguments.isEmpty();
     }
 
-    public boolean hasBody() {
+    /**
+     * @return true if the constant declares a class body
+     */
+    public boolean hasBody()
+    {
         return !methods.isEmpty() || !fields.isEmpty();
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>();
         children.addAll(annotations);
         children.addAll(arguments);
@@ -112,20 +204,25 @@ public final class EnumConstantDecl implements ASTNode {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             sb.append(ann).append(" ");
         }
         sb.append(name);
-        if (!arguments.isEmpty()) {
+        if (!arguments.isEmpty())
+        {
             sb.append("(");
-            for (int i = 0; i < arguments.size(); i++) {
+            for (int i = 0; i < arguments.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(arguments.get(i));
             }

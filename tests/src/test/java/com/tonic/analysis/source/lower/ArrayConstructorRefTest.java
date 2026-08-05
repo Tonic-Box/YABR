@@ -28,13 +28,15 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ArrayConstructorRefTest {
+class ArrayConstructorRefTest
+{
 
     private LoweringContext ctx;
     private ExpressionLowerer lowerer;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/ArrayConstructorRefTest", access);
@@ -55,15 +57,18 @@ class ArrayConstructorRefTest {
         lowerer = new ExpressionLowerer(ctx);
     }
 
-    private MethodRefExpr createArrayConstructorRef(String arrayTypeName, SourceType funcInterfaceType) {
+    private MethodRefExpr createArrayConstructorRef(String arrayTypeName, SourceType funcInterfaceType)
+    {
         return new MethodRefExpr(null, "new", arrayTypeName, MethodRefKind.ARRAY_CONSTRUCTOR, funcInterfaceType);
     }
 
     @Nested
-    class PrimitiveArrayConstructors {
+    class PrimitiveArrayConstructors
+    {
 
         @Test
-        void intArrayConstructor() {
+        void intArrayConstructor()
+        {
             SourceType intFuncType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("int[]", intFuncType);
 
@@ -91,7 +96,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void longArrayConstructor() {
+        void longArrayConstructor()
+        {
             SourceType longFuncType = new ReferenceSourceType("java/util/function/LongFunction");
             MethodRefExpr ref = createArrayConstructorRef("long[]", longFuncType);
 
@@ -105,7 +111,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void doubleArrayConstructor() {
+        void doubleArrayConstructor()
+        {
             SourceType doubleFuncType = new ReferenceSourceType("java/util/function/DoubleFunction");
             MethodRefExpr ref = createArrayConstructorRef("double[]", doubleFuncType);
 
@@ -118,7 +125,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void booleanArrayConstructor() {
+        void booleanArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("boolean[]", funcType);
 
@@ -131,7 +139,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void byteArrayConstructor() {
+        void byteArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("byte[]", funcType);
 
@@ -142,7 +151,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void charArrayConstructor() {
+        void charArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("char[]", funcType);
 
@@ -153,7 +163,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void shortArrayConstructor() {
+        void shortArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("short[]", funcType);
 
@@ -164,7 +175,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void floatArrayConstructor() {
+        void floatArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("float[]", funcType);
 
@@ -176,10 +188,12 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class ReferenceArrayConstructors {
+    class ReferenceArrayConstructors
+    {
 
         @Test
-        void stringArrayConstructor() {
+        void stringArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("java/lang/String[]", funcType);
 
@@ -196,7 +210,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void objectArrayConstructor() {
+        void objectArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("java/lang/Object[]", funcType);
 
@@ -207,7 +222,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void customClassArrayConstructor() {
+        void customClassArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("com/example/MyClass[]", funcType);
 
@@ -218,7 +234,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void innerClassArrayConstructor() {
+        void innerClassArrayConstructor()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("com/example/Outer$Inner[]", funcType);
 
@@ -230,10 +247,12 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class MultiDimensionalArrays {
+    class MultiDimensionalArrays
+    {
 
         @Test
-        void twoDimensionalIntArray() {
+        void twoDimensionalIntArray()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("int[][]", funcType);
 
@@ -249,7 +268,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void twoDimensionalStringArray() {
+        void twoDimensionalStringArray()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("java/lang/String[][]", funcType);
 
@@ -260,7 +280,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void threeDimensionalArray() {
+        void threeDimensionalArray()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("int[][][]", funcType);
 
@@ -274,10 +295,12 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class BootstrapMethodValidation {
+    class BootstrapMethodValidation
+    {
 
         @Test
-        void correctBootstrapMethodHandle() {
+        void correctBootstrapMethodHandle()
+        {
             SourceType intFuncType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("int[]", intFuncType);
 
@@ -293,7 +316,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void correctBootstrapArguments() {
+        void correctBootstrapArguments()
+        {
             SourceType intFuncType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("int[]", intFuncType);
 
@@ -319,10 +343,12 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class SyntheticMethodNaming {
+    class SyntheticMethodNaming
+    {
 
         @Test
-        void uniqueNamesForMultipleConstructors() {
+        void uniqueNamesForMultipleConstructors()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
 
             lowerer.lower(createArrayConstructorRef("int[]", funcType));
@@ -339,10 +365,12 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class DescriptorFormatParsing {
+    class DescriptorFormatParsing
+    {
 
         @Test
-        void parseDescriptorFormat() {
+        void parseDescriptorFormat()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("[I", funcType);
 
@@ -353,7 +381,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void parseReferenceDescriptorFormat() {
+        void parseReferenceDescriptorFormat()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("[Ljava/lang/String;", funcType);
 
@@ -364,7 +393,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void parseMultiDimensionalDescriptorFormat() {
+        void parseMultiDimensionalDescriptorFormat()
+        {
             SourceType funcType = new ReferenceSourceType("java/util/function/IntFunction");
             MethodRefExpr ref = createArrayConstructorRef("[[I", funcType);
 
@@ -378,13 +408,13 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class SyntheticArrayConstructorClass {
+    class SyntheticArrayConstructorClass
+    {
 
         @Test
-        void primitiveArrayDescriptor() {
-            SyntheticArrayConstructor sac = new SyntheticArrayConstructor(
-                "test", PrimitiveSourceType.INT, 1
-            );
+        void primitiveArrayDescriptor()
+        {
+            SyntheticArrayConstructor sac = new SyntheticArrayConstructor("test", PrimitiveSourceType.INT, 1);
 
             assertEquals("(I)[I", sac.getDescriptor());
             assertEquals("[I", sac.getArrayTypeDescriptor());
@@ -392,7 +422,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void referenceArrayDescriptor() {
+        void referenceArrayDescriptor()
+        {
             SyntheticArrayConstructor sac = new SyntheticArrayConstructor(
                 "test", new ReferenceSourceType("java/lang/String"), 1
             );
@@ -403,10 +434,9 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void multiDimensionalDescriptor() {
-            SyntheticArrayConstructor sac = new SyntheticArrayConstructor(
-                "test", PrimitiveSourceType.INT, 3
-            );
+        void multiDimensionalDescriptor()
+        {
+            SyntheticArrayConstructor sac = new SyntheticArrayConstructor("test", PrimitiveSourceType.INT, 3);
 
             assertEquals("(I)[[[I", sac.getDescriptor());
             assertEquals("[[[I", sac.getArrayTypeDescriptor());
@@ -415,10 +445,12 @@ class ArrayConstructorRefTest {
     }
 
     @Nested
-    class LoweringContextIntegration {
+    class LoweringContextIntegration
+    {
 
         @Test
-        void registerAndClearArrayConstructors() {
+        void registerAndClearArrayConstructors()
+        {
             SyntheticArrayConstructor sac1 = new SyntheticArrayConstructor("test1", PrimitiveSourceType.INT, 1);
             SyntheticArrayConstructor sac2 = new SyntheticArrayConstructor("test2", PrimitiveSourceType.LONG, 1);
 
@@ -432,7 +464,8 @@ class ArrayConstructorRefTest {
         }
 
         @Test
-        void generateUniqueMethodNames() {
+        void generateUniqueMethodNames()
+        {
             String name1 = ctx.generateArrayConstructorMethodName();
             String name2 = ctx.generateArrayConstructorMethodName();
             String name3 = ctx.generateArrayConstructorMethodName();

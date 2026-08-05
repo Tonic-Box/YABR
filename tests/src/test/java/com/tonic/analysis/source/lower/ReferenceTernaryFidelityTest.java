@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * type is the JOIN of the arms ({@code Object local1 = null; if (...) { local1 = ...; } return local1;})
  * rather than the conditional that was written.
  */
-class ReferenceTernaryFidelityTest {
+class ReferenceTernaryFidelityTest
+{
 
     private static final String[] LINES = {
             "import java.util.ArrayList;",
@@ -49,14 +50,14 @@ class ReferenceTernaryFidelityTest {
     };
 
     @Test
-    void aReferenceTernaryStaysATernary() throws Exception {
+    void aReferenceTernaryStaysATernary() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("ref-tern");
         Path src = dir.resolve("RefTern.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("RefTern.class")));
@@ -66,14 +67,12 @@ class ReferenceTernaryFidelityTest {
         String d1 = ClassDecompiler.decompile(cf);
         assertTrue(d1.contains("?"), "each conditional must be recovered as one:\n" + d1);
 
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "RefTern"),
-                "the decompiled source must recompile:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "RefTern"), "the decompiled source must recompile:\n" + d1);
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
 
         String d2 = ClassDecompiler.decompile(cf);
-        assertFalse(d2.contains("Object local"),
-                "no arm may be staged through a join-typed local:\n" + d2);
+        assertFalse(d2.contains("Object local"), "no arm may be staged through a join-typed local:\n" + d2);
         assertEquals(d1, d2, "decompiling must be a fixed point");
     }
 }

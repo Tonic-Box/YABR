@@ -14,22 +14,26 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for LoopPredication optimization transform.
  * Tests moving loop-invariant conditions out of loops.
  */
-class LoopPredicationTest {
+class LoopPredicationTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Test
-    void getName_ReturnsLoopPredication() {
+    void getName_ReturnsLoopPredication()
+    {
         LoopPredication lp = new LoopPredication();
         assertEquals("LoopPredication", lp.getName());
     }
 
     @Test
-    void run_WithEmptyMethod_ReturnsFalse() {
+    void run_WithEmptyMethod_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         LoopPredication lp = new LoopPredication();
 
@@ -37,7 +41,8 @@ class LoopPredicationTest {
     }
 
     @Test
-    void run_WithNullEntry_ReturnsFalse() {
+    void run_WithNullEntry_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         LoopPredication lp = new LoopPredication();
 
@@ -45,7 +50,8 @@ class LoopPredicationTest {
     }
 
     @Test
-    void run_WithNoLoops_ReturnsFalse() {
+    void run_WithNoLoops_ReturnsFalse()
+    {
         // Create method with straight-line code (no loops)
         IRMethod method = new IRMethod("Test", "straightLine", "()I", true);
 
@@ -73,7 +79,8 @@ class LoopPredicationTest {
     }
 
     @Test
-    void run_WithSimpleLoop_ProcessesLoop() {
+    void run_WithSimpleLoop_ProcessesLoop()
+    {
         // Create a simple loop: for (i = 0; i < 10; i++)
         IRMethod method = new IRMethod("Test", "simpleLoop", "()V", true);
 
@@ -135,7 +142,8 @@ class LoopPredicationTest {
     }
 
     @Test
-    void run_WithLoopGuard_PredicatesGuard() {
+    void run_WithLoopGuard_PredicatesGuard()
+    {
         // Create loop with guard: for (i = 0; i < n; i++) { if (i < limit) ... }
         // If n <= limit, guard is always true
         IRMethod method = new IRMethod("Test", "loopWithGuard", "(I)V", true);
@@ -175,18 +183,14 @@ class LoopPredicationTest {
         // Header: if (v1 < limit) goto body else exit
         header.addSuccessor(body);
         header.addSuccessor(exit);
-        BranchInstruction loopCondition = new BranchInstruction(
-            CompareOp.LT, phiResult, limitParam, body, exit
-        );
+        BranchInstruction loopCondition = new BranchInstruction(CompareOp.LT, phiResult, limitParam, body, exit);
         loopCondition.setBlock(header);
         header.addInstruction(loopCondition);
 
         // Body: if (v1 < limit) goto guardTrue else guardFalse
         body.addSuccessor(guardTrue);
         body.addSuccessor(guardFalse);
-        BranchInstruction guard = new BranchInstruction(
-            CompareOp.LT, phiResult, limitParam, guardTrue, guardFalse
-        );
+        BranchInstruction guard = new BranchInstruction(CompareOp.LT, phiResult, limitParam, guardTrue, guardFalse);
         guard.setBlock(body);
         body.addInstruction(guard);
 
@@ -214,7 +218,8 @@ class LoopPredicationTest {
     }
 
     @Test
-    void run_WithNonPredicatableGuard_ReturnsFalse() {
+    void run_WithNonPredicatableGuard_ReturnsFalse()
+    {
         // Create loop with guard that cannot be predicated
         IRMethod method = new IRMethod("Test", "nonPredicatable", "(II)V", true);
 
@@ -249,9 +254,7 @@ class LoopPredicationTest {
 
         header.addSuccessor(body);
         header.addSuccessor(exit);
-        BranchInstruction loopCondition = new BranchInstruction(
-            CompareOp.LT, phiResult, param1, body, exit
-        );
+        BranchInstruction loopCondition = new BranchInstruction(CompareOp.LT, phiResult, param1, body, exit);
         loopCondition.setBlock(header);
         header.addInstruction(loopCondition);
 

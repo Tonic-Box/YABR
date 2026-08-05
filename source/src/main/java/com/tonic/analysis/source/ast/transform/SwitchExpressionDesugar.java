@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Desugars switch expressions (Java 14) for the source-to-bytecode front end — the inverse of
+ * Desugars switch expressions (Java 14) for the source-to-bytecode front end - the inverse of
  * {@link SwitchExpressionReconstructor}. A switch expression used as a declaration initializer or a
  * return value is rewritten into the equivalent statement switch over a target variable, so the
  * existing statement-switch lowering handles it with no value-producing-switch codegen:
@@ -33,27 +33,34 @@ import java.util.List;
  *     =&gt;  T t; switch (s) { case L: t = e; break; ... } return t;
  * </pre>
  */
-public class SwitchExpressionDesugar implements ASTTransform {
+public class SwitchExpressionDesugar implements ASTTransform
+{
 
     private int tempCounter = 0;
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "SwitchExpressionDesugar";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         return process(block.getStatements());
     }
 
-    private boolean process(List<Statement> stmts) {
+    private boolean process(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
-            if (s instanceof VarDeclStmt) {
+            if (s instanceof VarDeclStmt)
+            {
                 VarDeclStmt vd = (VarDeclStmt) s;
-                if (vd.getInitializer() instanceof SwitchExpr) {
+                if (vd.getInitializer() instanceof SwitchExpr)
+                {
                     SwitchExpr se = (SwitchExpr) vd.getInitializer();
                     stmts.set(i, new VarDeclStmt(vd.getType(), vd.getName(), defaultLiteral(vd.getType())));
                     stmts.add(i + 1, buildAssignSwitch(vd.getName(), vd.getType(), se));
@@ -62,9 +69,11 @@ public class SwitchExpressionDesugar implements ASTTransform {
                     continue;
                 }
             }
-            if (s instanceof ReturnStmt) {
+            if (s instanceof ReturnStmt)
+            {
                 ReturnStmt rs = (ReturnStmt) s;
-                if (rs.getValue() instanceof SwitchExpr) {
+                if (rs.getValue() instanceof SwitchExpr)
+                {
                     SwitchExpr se = (SwitchExpr) rs.getValue();
                     String tmp = "$swexpr" + (tempCounter++);
                     SourceType type = se.getType();
@@ -77,27 +86,37 @@ public class SwitchExpressionDesugar implements ASTTransform {
                 }
             }
         }
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             changed |= recurse(s);
         }
         return changed;
     }
 
-    private boolean recurse(ASTNode node) {
+    private boolean recurse(ASTNode node)
+    {
         boolean changed = false;
-        for (ASTNode child : node.getChildren()) {
-            if (child instanceof BlockStmt) {
+        for (ASTNode child : node.getChildren())
+        {
+            if (child instanceof BlockStmt)
+            {
                 changed |= process(((BlockStmt) child).getStatements());
-            } else {
+            }
+            else
+            {
                 changed |= recurse(child);
             }
         }
         return changed;
     }
 
-    /** A type-appropriate default so the target local is definitely-assigned (avoids verifier frame gaps). */
-    private static Expression defaultLiteral(SourceType type) {
-        if (type instanceof PrimitiveSourceType) {
+    /**
+     * A type-appropriate default so the target local is definitely-assigned (avoids verifier frame gaps).
+     */
+    private static Expression defaultLiteral(SourceType type)
+    {
+        if (type instanceof PrimitiveSourceType)
+        {
             PrimitiveSourceType p = (PrimitiveSourceType) type;
             if (p == PrimitiveSourceType.BOOLEAN) return LiteralExpr.ofBoolean(false);
             if (p == PrimitiveSourceType.LONG) return LiteralExpr.ofLong(0L);
@@ -108,17 +127,22 @@ public class SwitchExpressionDesugar implements ASTTransform {
         return LiteralExpr.ofNull();
     }
 
-    private SwitchStmt buildAssignSwitch(String target, SourceType type, SwitchExpr se) {
+    private SwitchStmt buildAssignSwitch(String target, SourceType type, SwitchExpr se)
+    {
         List<SwitchCase> cases = new ArrayList<>();
-        for (SwitchExpr.Arm arm : se.getArms()) {
+        for (SwitchExpr.Arm arm : se.getArms())
+        {
             List<Statement> body = new ArrayList<>();
             Expression assign = new BinaryExpr(BinaryOperator.ASSIGN,
                     new VarRefExpr(target, type), arm.getResult(), type);
             body.add(new ExprStmt(assign));
             body.add(new BreakStmt());
-            if (arm.isDefault()) {
+            if (arm.isDefault())
+            {
                 cases.add(SwitchCase.defaultCase(body));
-            } else {
+            }
+            else
+            {
                 cases.add(SwitchCase.ofExpressions(new ArrayList<>(arm.getLabels()), body));
             }
         }

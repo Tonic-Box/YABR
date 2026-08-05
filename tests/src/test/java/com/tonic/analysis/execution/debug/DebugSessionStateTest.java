@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DebugSessionStateTest {
+class DebugSessionStateTest
+{
 
     @Test
-    void testAllStatesExist() {
+    void testAllStatesExist()
+    {
         assertNotNull(DebugSessionState.IDLE);
         assertNotNull(DebugSessionState.RUNNING);
         assertNotNull(DebugSessionState.PAUSED);
@@ -15,33 +17,39 @@ class DebugSessionStateTest {
     }
 
     @Test
-    void testCorrectStateCount() {
+    void testCorrectStateCount()
+    {
         DebugSessionState[] states = DebugSessionState.values();
         assertEquals(4, states.length);
     }
 
     @Test
-    void testValueOfIdle() {
+    void testValueOfIdle()
+    {
         assertEquals(DebugSessionState.IDLE, DebugSessionState.valueOf("IDLE"));
     }
 
     @Test
-    void testValueOfRunning() {
+    void testValueOfRunning()
+    {
         assertEquals(DebugSessionState.RUNNING, DebugSessionState.valueOf("RUNNING"));
     }
 
     @Test
-    void testValueOfPaused() {
+    void testValueOfPaused()
+    {
         assertEquals(DebugSessionState.PAUSED, DebugSessionState.valueOf("PAUSED"));
     }
 
     @Test
-    void testValueOfStopped() {
+    void testValueOfStopped()
+    {
         assertEquals(DebugSessionState.STOPPED, DebugSessionState.valueOf("STOPPED"));
     }
 
     @Test
-    void testEnumOrdinals() {
+    void testEnumOrdinals()
+    {
         assertEquals(0, DebugSessionState.IDLE.ordinal());
         assertEquals(1, DebugSessionState.RUNNING.ordinal());
         assertEquals(2, DebugSessionState.PAUSED.ordinal());

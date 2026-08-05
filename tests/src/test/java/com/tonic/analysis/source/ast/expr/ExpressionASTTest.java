@@ -35,228 +35,275 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ExpressionASTTest {
+class ExpressionASTTest
+{
 
-    private static Expression createTestExpression() {
+    private static Expression createTestExpression()
+    {
         return LiteralExpr.ofInt(42);
     }
 
-    private static SourceLocation createTestLocation() {
+    private static SourceLocation createTestLocation()
+    {
         return new SourceLocation(10, 5);
     }
 
-    private static class TestVisitor implements SourceVisitor<String> {
+    private static class TestVisitor implements SourceVisitor<String>
+    {
         @Override
-        public String visitLiteral(LiteralExpr expr) {
+        public String visitLiteral(LiteralExpr expr)
+        {
             return "visitLiteral";
         }
 
         @Override
-        public String visitVarRef(VarRefExpr expr) {
+        public String visitVarRef(VarRefExpr expr)
+        {
             return "visitVarRef";
         }
 
         @Override
-        public String visitFieldAccess(FieldAccessExpr expr) {
+        public String visitFieldAccess(FieldAccessExpr expr)
+        {
             return "visitFieldAccess";
         }
 
         @Override
-        public String visitArrayAccess(ArrayAccessExpr expr) {
+        public String visitArrayAccess(ArrayAccessExpr expr)
+        {
             return "visitArrayAccess";
         }
 
         @Override
-        public String visitMethodCall(MethodCallExpr expr) {
+        public String visitMethodCall(MethodCallExpr expr)
+        {
             return "visitMethodCall";
         }
 
         @Override
-        public String visitNew(NewExpr expr) {
+        public String visitNew(NewExpr expr)
+        {
             return "visitNew";
         }
 
         @Override
-        public String visitNewArray(NewArrayExpr expr) {
+        public String visitNewArray(NewArrayExpr expr)
+        {
             return "visitNewArray";
         }
 
         @Override
-        public String visitArrayInit(ArrayInitExpr expr) {
+        public String visitArrayInit(ArrayInitExpr expr)
+        {
             return "visitArrayInit";
         }
 
         @Override
-        public String visitBinary(BinaryExpr expr) {
+        public String visitBinary(BinaryExpr expr)
+        {
             return "visitBinary";
         }
 
         @Override
-        public String visitUnary(UnaryExpr expr) {
+        public String visitUnary(UnaryExpr expr)
+        {
             return "visitUnary";
         }
 
         @Override
-        public String visitCast(CastExpr expr) {
+        public String visitCast(CastExpr expr)
+        {
             return "visitCast";
         }
 
         @Override
-        public String visitInstanceOf(InstanceOfExpr expr) {
+        public String visitInstanceOf(InstanceOfExpr expr)
+        {
             return "visitInstanceOf";
         }
 
         @Override
-        public String visitTernary(TernaryExpr expr) {
+        public String visitTernary(TernaryExpr expr)
+        {
             return "visitTernary";
         }
 
         @Override
-        public String visitLambda(LambdaExpr expr) {
+        public String visitLambda(LambdaExpr expr)
+        {
             return "visitLambda";
         }
 
         @Override
-        public String visitMethodRef(MethodRefExpr expr) {
+        public String visitMethodRef(MethodRefExpr expr)
+        {
             return "visitMethodRef";
         }
 
         @Override
-        public String visitThis(ThisExpr expr) {
+        public String visitThis(ThisExpr expr)
+        {
             return "visitThis";
         }
 
         @Override
-        public String visitSuper(SuperExpr expr) {
+        public String visitSuper(SuperExpr expr)
+        {
             return "visitSuper";
         }
 
         @Override
-        public String visitClass(ClassExpr expr) {
+        public String visitClass(ClassExpr expr)
+        {
             return "visitClass";
         }
 
         @Override
-        public String visitDynamicConstant(DynamicConstantExpr expr) {
+        public String visitDynamicConstant(DynamicConstantExpr expr)
+        {
             return "visitDynamicConstant";
         }
 
         @Override
-        public String visitInvokeDynamic(InvokeDynamicExpr expr) {
+        public String visitInvokeDynamic(InvokeDynamicExpr expr)
+        {
             return "visitInvokeDynamic";
         }
 
         @Override
-        public String visitBlock(BlockStmt stmt) {
+        public String visitBlock(BlockStmt stmt)
+        {
             return "visitBlock";
         }
 
         @Override
-        public String visitIf(IfStmt stmt) {
+        public String visitIf(IfStmt stmt)
+        {
             return "visitIf";
         }
 
         @Override
-        public String visitWhile(WhileStmt stmt) {
+        public String visitWhile(WhileStmt stmt)
+        {
             return "visitWhile";
         }
 
         @Override
-        public String visitDoWhile(DoWhileStmt stmt) {
+        public String visitDoWhile(DoWhileStmt stmt)
+        {
             return "visitDoWhile";
         }
 
         @Override
-        public String visitFor(ForStmt stmt) {
+        public String visitFor(ForStmt stmt)
+        {
             return "visitFor";
         }
 
         @Override
-        public String visitForEach(ForEachStmt stmt) {
+        public String visitForEach(ForEachStmt stmt)
+        {
             return "visitForEach";
         }
 
         @Override
-        public String visitSwitch(SwitchStmt stmt) {
+        public String visitSwitch(SwitchStmt stmt)
+        {
             return "visitSwitch";
         }
 
         @Override
-        public String visitTryCatch(TryCatchStmt stmt) {
+        public String visitTryCatch(TryCatchStmt stmt)
+        {
             return "visitTryCatch";
         }
 
         @Override
-        public String visitReturn(ReturnStmt stmt) {
+        public String visitReturn(ReturnStmt stmt)
+        {
             return "visitReturn";
         }
 
         @Override
-        public String visitThrow(ThrowStmt stmt) {
+        public String visitThrow(ThrowStmt stmt)
+        {
             return "visitThrow";
         }
 
         @Override
-        public String visitVarDecl(VarDeclStmt stmt) {
+        public String visitVarDecl(VarDeclStmt stmt)
+        {
             return "visitVarDecl";
         }
 
         @Override
-        public String visitExprStmt(ExprStmt stmt) {
+        public String visitExprStmt(ExprStmt stmt)
+        {
             return "visitExprStmt";
         }
 
         @Override
-        public String visitSynchronized(SynchronizedStmt stmt) {
+        public String visitSynchronized(SynchronizedStmt stmt)
+        {
             return "visitSynchronized";
         }
 
         @Override
-        public String visitLabeled(LabeledStmt stmt) {
+        public String visitLabeled(LabeledStmt stmt)
+        {
             return "visitLabeled";
         }
 
         @Override
-        public String visitBreak(BreakStmt stmt) {
+        public String visitBreak(BreakStmt stmt)
+        {
             return "visitBreak";
         }
 
         @Override
-        public String visitContinue(ContinueStmt stmt) {
+        public String visitContinue(ContinueStmt stmt)
+        {
             return "visitContinue";
         }
 
         @Override
-        public String visitIRRegion(IRRegionStmt stmt) {
+        public String visitIRRegion(IRRegionStmt stmt)
+        {
             return "visitIRRegion";
         }
 
         @Override
-        public String visitPrimitiveType(PrimitiveSourceType type) {
+        public String visitPrimitiveType(PrimitiveSourceType type)
+        {
             return "visitPrimitiveType";
         }
 
         @Override
-        public String visitReferenceType(ReferenceSourceType type) {
+        public String visitReferenceType(ReferenceSourceType type)
+        {
             return "visitReferenceType";
         }
 
         @Override
-        public String visitArrayType(ArraySourceType type) {
+        public String visitArrayType(ArraySourceType type)
+        {
             return "visitArrayType";
         }
 
         @Override
-        public String visitVoidType(VoidSourceType type) {
+        public String visitVoidType(VoidSourceType type)
+        {
             return "visitVoidType";
         }
     }
 
     @Nested
-    class ArrayAccessExprTests {
+    class ArrayAccessExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression array = LiteralExpr.ofString("arr");
             Expression index = LiteralExpr.ofInt(0);
             SourceType type = PrimitiveSourceType.INT;
@@ -271,7 +318,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             Expression array = LiteralExpr.ofString("arr");
             Expression index = LiteralExpr.ofInt(0);
             SourceLocation location = createTestLocation();
@@ -282,7 +330,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void parentChildRelationships() {
+        void parentChildRelationships()
+        {
             Expression array = LiteralExpr.ofString("arr");
             Expression index = LiteralExpr.ofInt(0);
 
@@ -293,7 +342,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             ArrayAccessExpr expr = new ArrayAccessExpr(
                     LiteralExpr.ofString("arr"),
                     LiteralExpr.ofInt(0),
@@ -311,28 +361,32 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullArrayThrows() {
+        void nullArrayThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new ArrayAccessExpr(null, LiteralExpr.ofInt(0), PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullIndexThrows() {
+        void nullIndexThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new ArrayAccessExpr(LiteralExpr.ofString("arr"), null, PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new ArrayAccessExpr(LiteralExpr.ofString("arr"), LiteralExpr.ofInt(0), null)
             );
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             ArrayAccessExpr expr = new ArrayAccessExpr(
                     LiteralExpr.ofString("arr"),
                     LiteralExpr.ofInt(0),
@@ -346,7 +400,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             ArrayAccessExpr expr = new ArrayAccessExpr(
                     LiteralExpr.ofString("arr"),
                     LiteralExpr.ofInt(5),
@@ -363,10 +418,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class NewArrayExprTests {
+    class NewArrayExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             SourceType elementType = PrimitiveSourceType.INT;
             List<Expression> dimensions = List.of(LiteralExpr.ofInt(10));
 
@@ -380,7 +437,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withSize() {
+        void withSize()
+        {
             Expression size = LiteralExpr.ofInt(5);
 
             NewArrayExpr expr = NewArrayExpr.withSize(PrimitiveSourceType.INT, size);
@@ -390,7 +448,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withInitializer() {
+        void withInitializer()
+        {
             ArrayInitExpr init = new ArrayInitExpr(
                     Arrays.asList(LiteralExpr.ofInt(1), LiteralExpr.ofInt(2)),
                     new ArraySourceType(PrimitiveSourceType.INT)
@@ -403,11 +462,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void multiDimensional() {
-            List<Expression> dimensions = Arrays.asList(
-                    LiteralExpr.ofInt(5),
-                    LiteralExpr.ofInt(10)
-            );
+        void multiDimensional()
+        {
+            List<Expression> dimensions = Arrays.asList(LiteralExpr.ofInt(5), LiteralExpr.ofInt(10));
 
             NewArrayExpr expr = new NewArrayExpr(PrimitiveSourceType.INT, dimensions);
 
@@ -415,7 +472,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void addDimension() {
+        void addDimension()
+        {
             NewArrayExpr expr = new NewArrayExpr(PrimitiveSourceType.INT, Collections.emptyList());
 
             Expression dim = LiteralExpr.ofInt(7);
@@ -426,7 +484,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void parentChildRelationships() {
+        void parentChildRelationships()
+        {
             Expression dim1 = LiteralExpr.ofInt(5);
             Expression dim2 = LiteralExpr.ofInt(10);
             ArrayInitExpr init = new ArrayInitExpr(Collections.emptyList(), new ArraySourceType(PrimitiveSourceType.INT));
@@ -445,14 +504,14 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullElementTypeThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new NewArrayExpr(null, Collections.emptyList())
-            );
+        void nullElementTypeThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new NewArrayExpr(null, Collections.emptyList()));
         }
 
         @Test
-        void nullDimensionsHandled() {
+        void nullDimensionsHandled()
+        {
             NewArrayExpr expr = new NewArrayExpr(PrimitiveSourceType.INT, (List<Expression>) null);
 
             assertNotNull(expr.getDimensions());
@@ -460,7 +519,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setInitializer() {
+        void setInitializer()
+        {
             NewArrayExpr expr = new NewArrayExpr(PrimitiveSourceType.INT, Collections.emptyList());
             ArrayInitExpr init = new ArrayInitExpr(Collections.emptyList(), new ArraySourceType(PrimitiveSourceType.INT));
 
@@ -471,7 +531,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             NewArrayExpr expr = new NewArrayExpr(PrimitiveSourceType.INT, Collections.emptyList());
             TestVisitor visitor = new TestVisitor();
 
@@ -481,7 +542,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithDimension() {
+        void toStringWithDimension()
+        {
             NewArrayExpr expr = NewArrayExpr.withSize(PrimitiveSourceType.INT, LiteralExpr.ofInt(10));
 
             String str = expr.toString();
@@ -494,7 +556,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithInitializer() {
+        void toStringWithInitializer()
+        {
             ArrayInitExpr init = new ArrayInitExpr(
                     List.of(LiteralExpr.ofInt(1)),
                     new ArraySourceType(PrimitiveSourceType.INT)
@@ -510,10 +573,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class BinaryExprTests {
+    class BinaryExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression left = LiteralExpr.ofInt(5);
             Expression right = LiteralExpr.ofInt(3);
             BinaryOperator op = BinaryOperator.ADD;
@@ -528,7 +593,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             SourceLocation location = createTestLocation();
 
             BinaryExpr expr = new BinaryExpr(
@@ -543,7 +609,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void getPrecedence() {
+        void getPrecedence()
+        {
             BinaryExpr expr = new BinaryExpr(
                     BinaryOperator.MUL,
                     LiteralExpr.ofInt(2),
@@ -555,7 +622,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void isAssignment() {
+        void isAssignment()
+        {
             BinaryExpr assignExpr = new BinaryExpr(
                     BinaryOperator.ASSIGN,
                     createTestExpression(),
@@ -574,7 +642,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void isComparison() {
+        void isComparison()
+        {
             BinaryExpr eqExpr = new BinaryExpr(
                     BinaryOperator.EQ,
                     createTestExpression(),
@@ -593,7 +662,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void isLogical() {
+        void isLogical()
+        {
             BinaryExpr andExpr = new BinaryExpr(
                     BinaryOperator.AND,
                     LiteralExpr.ofBoolean(true),
@@ -612,7 +682,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void parentChildRelationships() {
+        void parentChildRelationships()
+        {
             Expression left = LiteralExpr.ofInt(5);
             Expression right = LiteralExpr.ofInt(3);
 
@@ -623,7 +694,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             BinaryExpr expr = new BinaryExpr(
                     BinaryOperator.ADD,
                     LiteralExpr.ofInt(1),
@@ -645,35 +717,40 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullOperatorThrows() {
+        void nullOperatorThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new BinaryExpr(null, createTestExpression(), createTestExpression(), PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullLeftThrows() {
+        void nullLeftThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new BinaryExpr(BinaryOperator.ADD, null, createTestExpression(), PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullRightThrows() {
+        void nullRightThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new BinaryExpr(BinaryOperator.ADD, createTestExpression(), null, PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new BinaryExpr(BinaryOperator.ADD, createTestExpression(), createTestExpression(), null)
             );
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             BinaryExpr expr = new BinaryExpr(
                     BinaryOperator.ADD,
                     createTestExpression(),
@@ -688,7 +765,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             BinaryExpr expr = new BinaryExpr(
                     BinaryOperator.ADD,
                     LiteralExpr.ofInt(5),
@@ -707,10 +785,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class CastExprTests {
+    class CastExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             SourceType targetType = PrimitiveSourceType.INT;
             Expression expression = LiteralExpr.ofDouble(3.14);
 
@@ -724,20 +804,18 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             SourceLocation location = createTestLocation();
 
-            CastExpr expr = new CastExpr(
-                    PrimitiveSourceType.INT,
-                    LiteralExpr.ofDouble(3.14),
-                    location
-            );
+            CastExpr expr = new CastExpr(PrimitiveSourceType.INT, LiteralExpr.ofDouble(3.14), location);
 
             assertEquals(location, expr.getLocation());
         }
 
         @Test
-        void getTypeReturnsCastType() {
+        void getTypeReturnsCastType()
+        {
             SourceType targetType = PrimitiveSourceType.LONG;
 
             CastExpr expr = new CastExpr(targetType, createTestExpression());
@@ -746,7 +824,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression expression = LiteralExpr.ofDouble(3.14);
 
             CastExpr expr = new CastExpr(PrimitiveSourceType.INT, expression);
@@ -755,7 +834,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setExpression() {
+        void setExpression()
+        {
             CastExpr expr = new CastExpr(PrimitiveSourceType.INT, LiteralExpr.ofDouble(1.0));
 
             Expression newExpr = LiteralExpr.ofDouble(2.0);
@@ -765,21 +845,20 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullTargetTypeThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new CastExpr(null, createTestExpression())
-            );
+        void nullTargetTypeThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new CastExpr(null, createTestExpression()));
         }
 
         @Test
-        void nullExpressionThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new CastExpr(PrimitiveSourceType.INT, null)
-            );
+        void nullExpressionThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new CastExpr(PrimitiveSourceType.INT, null));
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             CastExpr expr = new CastExpr(PrimitiveSourceType.INT, createTestExpression());
             TestVisitor visitor = new TestVisitor();
 
@@ -789,7 +868,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             CastExpr expr = new CastExpr(PrimitiveSourceType.INT, LiteralExpr.ofDouble(3.14));
 
             String str = expr.toString();
@@ -802,10 +882,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class ClassExprTests {
+    class ClassExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             SourceType classType = PrimitiveSourceType.INT;
 
             ClassExpr expr = new ClassExpr(classType);
@@ -816,7 +898,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             SourceLocation location = createTestLocation();
 
             ClassExpr expr = new ClassExpr(PrimitiveSourceType.INT, location);
@@ -825,7 +908,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void typeIsClassType() {
+        void typeIsClassType()
+        {
             ClassExpr expr = new ClassExpr(PrimitiveSourceType.INT);
 
             assertNotNull(expr.getType());
@@ -833,7 +917,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void referenceType() {
+        void referenceType()
+        {
             SourceType classType = ReferenceSourceType.STRING;
 
             ClassExpr expr = new ClassExpr(classType);
@@ -842,14 +927,14 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullClassTypeThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new ClassExpr(null)
-            );
+        void nullClassTypeThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new ClassExpr(null));
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             ClassExpr expr = new ClassExpr(PrimitiveSourceType.INT);
             TestVisitor visitor = new TestVisitor();
 
@@ -859,7 +944,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             ClassExpr expr = new ClassExpr(PrimitiveSourceType.INT);
 
             String str = expr.toString();
@@ -870,10 +956,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class FieldAccessExprTests {
+    class FieldAccessExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression receiver = createTestExpression();
             String fieldName = "value";
             String ownerClass = "java/lang/String";
@@ -890,12 +978,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void staticFieldAccess() {
-            FieldAccessExpr expr = FieldAccessExpr.staticField(
-                    "java/lang/System",
-                    "out",
-                    ReferenceSourceType.OBJECT
-            );
+        void staticFieldAccess()
+        {
+            FieldAccessExpr expr = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
 
             assertNull(expr.getReceiver());
             assertTrue(expr.isStatic());
@@ -903,7 +988,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void instanceFieldAccess() {
+        void instanceFieldAccess()
+        {
             Expression receiver = createTestExpression();
 
             FieldAccessExpr expr = FieldAccessExpr.instanceField(
@@ -919,35 +1005,26 @@ class ExpressionASTTest {
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression receiver = createTestExpression();
 
-            FieldAccessExpr expr = new FieldAccessExpr(
-                    receiver,
-                    "field",
-                    "Owner",
-                    false,
-                    PrimitiveSourceType.INT
-            );
+            FieldAccessExpr expr = new FieldAccessExpr(receiver, "field", "Owner", false, PrimitiveSourceType.INT);
 
             assertEquals(expr, receiver.getParent());
         }
 
         @Test
-        void nullReceiverAllowedForStatic() {
-            FieldAccessExpr expr = new FieldAccessExpr(
-                    null,
-                    "staticField",
-                    "Owner",
-                    true,
-                    PrimitiveSourceType.INT
-            );
+        void nullReceiverAllowedForStatic()
+        {
+            FieldAccessExpr expr = new FieldAccessExpr(null, "staticField", "Owner", true, PrimitiveSourceType.INT);
 
             assertNull(expr.getReceiver());
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             FieldAccessExpr expr = new FieldAccessExpr(
                     createTestExpression(),
                     "field",
@@ -967,28 +1044,32 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullFieldNameThrows() {
+        void nullFieldNameThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new FieldAccessExpr(createTestExpression(), null, "Owner", false, PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullOwnerClassThrows() {
+        void nullOwnerClassThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new FieldAccessExpr(createTestExpression(), "field", null, false, PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new FieldAccessExpr(createTestExpression(), "field", "Owner", false, null)
             );
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             FieldAccessExpr expr = FieldAccessExpr.instanceField(
                     createTestExpression(),
                     "field",
@@ -1003,7 +1084,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringInstanceAccess() {
+        void toStringInstanceAccess()
+        {
             FieldAccessExpr expr = FieldAccessExpr.instanceField(
                     LiteralExpr.ofString("obj"),
                     "field",
@@ -1019,12 +1101,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringStaticAccess() {
-            FieldAccessExpr expr = FieldAccessExpr.staticField(
-                    "java/lang/System",
-                    "out",
-                    ReferenceSourceType.OBJECT
-            );
+        void toStringStaticAccess()
+        {
+            FieldAccessExpr expr = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
 
             String str = expr.toString();
 
@@ -1034,10 +1113,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class InstanceOfExprTests {
+    class InstanceOfExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression expression = createTestExpression();
             SourceType checkType = ReferenceSourceType.STRING;
 
@@ -1051,7 +1132,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withPatternVariable() {
+        void withPatternVariable()
+        {
             Expression expression = createTestExpression();
             SourceType checkType = ReferenceSourceType.STRING;
             String pattern = "str";
@@ -1063,7 +1145,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             SourceLocation location = createTestLocation();
 
             InstanceOfExpr expr = new InstanceOfExpr(
@@ -1077,17 +1160,16 @@ class ExpressionASTTest {
         }
 
         @Test
-        void typeIsBoolean() {
-            InstanceOfExpr expr = new InstanceOfExpr(
-                    createTestExpression(),
-                    ReferenceSourceType.STRING
-            );
+        void typeIsBoolean()
+        {
+            InstanceOfExpr expr = new InstanceOfExpr(createTestExpression(), ReferenceSourceType.STRING);
 
             assertEquals(PrimitiveSourceType.BOOLEAN, expr.getType());
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression expression = createTestExpression();
 
             InstanceOfExpr expr = new InstanceOfExpr(expression, ReferenceSourceType.STRING);
@@ -1096,11 +1178,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
-            InstanceOfExpr expr = new InstanceOfExpr(
-                    createTestExpression(),
-                    ReferenceSourceType.STRING
-            );
+        void setters()
+        {
+            InstanceOfExpr expr = new InstanceOfExpr(createTestExpression(), ReferenceSourceType.STRING);
 
             Expression newExpr = LiteralExpr.ofString("test");
             String newPattern = "s";
@@ -1114,21 +1194,20 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullExpressionThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new InstanceOfExpr(null, ReferenceSourceType.STRING)
-            );
+        void nullExpressionThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new InstanceOfExpr(null, ReferenceSourceType.STRING));
         }
 
         @Test
-        void nullCheckTypeThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new InstanceOfExpr(createTestExpression(), null)
-            );
+        void nullCheckTypeThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new InstanceOfExpr(createTestExpression(), null));
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             InstanceOfExpr expr = new InstanceOfExpr(createTestExpression(), ReferenceSourceType.STRING);
             TestVisitor visitor = new TestVisitor();
 
@@ -1138,11 +1217,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithoutPattern() {
-            InstanceOfExpr expr = new InstanceOfExpr(
-                    LiteralExpr.ofString("obj"),
-                    ReferenceSourceType.STRING
-            );
+        void toStringWithoutPattern()
+        {
+            InstanceOfExpr expr = new InstanceOfExpr(LiteralExpr.ofString("obj"), ReferenceSourceType.STRING);
 
             String str = expr.toString();
 
@@ -1152,12 +1229,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithPattern() {
-            InstanceOfExpr expr = new InstanceOfExpr(
-                    LiteralExpr.ofString("obj"),
-                    ReferenceSourceType.STRING,
-                    "str"
-            );
+        void toStringWithPattern()
+        {
+            InstanceOfExpr expr = new InstanceOfExpr(LiteralExpr.ofString("obj"), ReferenceSourceType.STRING, "str");
 
             String str = expr.toString();
 
@@ -1169,10 +1243,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class LiteralExprTests {
+    class LiteralExprTests
+    {
 
         @Test
-        void ofInt() {
+        void ofInt()
+        {
             LiteralExpr expr = LiteralExpr.ofInt(42);
 
             assertEquals(42, expr.getValue());
@@ -1183,7 +1259,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofLong() {
+        void ofLong()
+        {
             LiteralExpr expr = LiteralExpr.ofLong(100L);
 
             assertEquals(100L, expr.getValue());
@@ -1192,7 +1269,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofFloat() {
+        void ofFloat()
+        {
             LiteralExpr expr = LiteralExpr.ofFloat(3.14f);
 
             assertEquals(3.14f, expr.getValue());
@@ -1201,7 +1279,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofDouble() {
+        void ofDouble()
+        {
             LiteralExpr expr = LiteralExpr.ofDouble(2.718);
 
             assertEquals(2.718, expr.getValue());
@@ -1210,7 +1289,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofBoolean() {
+        void ofBoolean()
+        {
             LiteralExpr expr = LiteralExpr.ofBoolean(true);
 
             assertEquals(true, expr.getValue());
@@ -1219,7 +1299,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofChar() {
+        void ofChar()
+        {
             LiteralExpr expr = LiteralExpr.ofChar('A');
 
             assertEquals('A', expr.getValue());
@@ -1227,7 +1308,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofString() {
+        void ofString()
+        {
             LiteralExpr expr = LiteralExpr.ofString("hello");
 
             assertEquals("hello", expr.getValue());
@@ -1237,7 +1319,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ofNull() {
+        void ofNull()
+        {
             LiteralExpr expr = LiteralExpr.ofNull();
 
             assertNull(expr.getValue());
@@ -1247,7 +1330,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             SourceLocation location = createTestLocation();
 
             LiteralExpr expr = new LiteralExpr(42, PrimitiveSourceType.INT, location);
@@ -1256,7 +1340,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             LiteralExpr expr = LiteralExpr.ofInt(1);
 
             expr.setValue(2);
@@ -1267,7 +1352,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             LiteralExpr expr = LiteralExpr.ofInt(42);
             TestVisitor visitor = new TestVisitor();
 
@@ -1277,28 +1363,32 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringNull() {
+        void toStringNull()
+        {
             LiteralExpr expr = LiteralExpr.ofNull();
 
             assertEquals("null", expr.toString());
         }
 
         @Test
-        void toStringInt() {
+        void toStringInt()
+        {
             LiteralExpr expr = LiteralExpr.ofInt(42);
 
             assertEquals("42", expr.toString());
         }
 
         @Test
-        void toStringLong() {
+        void toStringLong()
+        {
             LiteralExpr expr = LiteralExpr.ofLong(100L);
 
             assertEquals("100L", expr.toString());
         }
 
         @Test
-        void toStringFloat() {
+        void toStringFloat()
+        {
             LiteralExpr expr = LiteralExpr.ofFloat(3.14f);
 
             assertTrue(expr.toString().contains("3.14"));
@@ -1306,7 +1396,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringDouble() {
+        void toStringDouble()
+        {
             LiteralExpr expr = LiteralExpr.ofDouble(2.718);
 
             assertTrue(expr.toString().contains("2.718"));
@@ -1314,7 +1405,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringBoolean() {
+        void toStringBoolean()
+        {
             LiteralExpr trueExpr = LiteralExpr.ofBoolean(true);
             LiteralExpr falseExpr = LiteralExpr.ofBoolean(false);
 
@@ -1323,21 +1415,24 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringChar() {
+        void toStringChar()
+        {
             LiteralExpr expr = LiteralExpr.ofChar('A');
 
             assertEquals("'A'", expr.toString());
         }
 
         @Test
-        void toStringString() {
+        void toStringString()
+        {
             LiteralExpr expr = LiteralExpr.ofString("hello");
 
             assertEquals("\"hello\"", expr.toString());
         }
 
         @Test
-        void toStringEscapesSpecialChars() {
+        void toStringEscapesSpecialChars()
+        {
             LiteralExpr expr = LiteralExpr.ofString("line1\nline2");
 
             assertTrue(expr.toString().contains("\\n"));
@@ -1345,10 +1440,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class VarRefExprTests {
+    class VarRefExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             String name = "variable";
             SourceType type = PrimitiveSourceType.INT;
 
@@ -1362,7 +1459,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withSSAValue() {
+        void withSSAValue()
+        {
             SSAValue ssaValue = null;
             VarRefExpr expr = new VarRefExpr("var", PrimitiveSourceType.INT, ssaValue);
 
@@ -1370,21 +1468,18 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withLocation() {
+        void withLocation()
+        {
             SourceLocation location = createTestLocation();
 
-            VarRefExpr expr = new VarRefExpr(
-                    "var",
-                    PrimitiveSourceType.INT,
-                    null,
-                    location
-            );
+            VarRefExpr expr = new VarRefExpr("var", PrimitiveSourceType.INT, null, location);
 
             assertEquals(location, expr.getLocation());
         }
 
         @Test
-        void setName() {
+        void setName()
+        {
             VarRefExpr expr = new VarRefExpr("var1", PrimitiveSourceType.INT);
 
             expr.setName("var2");
@@ -1393,21 +1488,20 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullNameThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new VarRefExpr(null, PrimitiveSourceType.INT)
-            );
+        void nullNameThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new VarRefExpr(null, PrimitiveSourceType.INT));
         }
 
         @Test
-        void nullTypeThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new VarRefExpr("var", null)
-            );
+        void nullTypeThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new VarRefExpr("var", null));
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             VarRefExpr expr = new VarRefExpr("var", PrimitiveSourceType.INT);
             TestVisitor visitor = new TestVisitor();
 
@@ -1417,7 +1511,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             VarRefExpr expr = new VarRefExpr("myVariable", PrimitiveSourceType.INT);
 
             assertEquals("myVariable", expr.toString());
@@ -1425,24 +1520,19 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class MethodCallExprTests {
+    class MethodCallExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression receiver = createTestExpression();
             String methodName = "toString";
             String ownerClass = "java/lang/Object";
             List<Expression> arguments = List.of(createTestExpression());
             SourceType returnType = ReferenceSourceType.STRING;
 
-            MethodCallExpr expr = new MethodCallExpr(
-                    receiver,
-                    methodName,
-                    ownerClass,
-                    arguments,
-                    false,
-                    returnType
-            );
+            MethodCallExpr expr = new MethodCallExpr(receiver, methodName, ownerClass, arguments, false, returnType);
 
             assertNotNull(expr);
             assertEquals(receiver, expr.getReceiver());
@@ -1454,7 +1544,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void staticCall() {
+        void staticCall()
+        {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "java/lang/Math",
                     "abs",
@@ -1469,7 +1560,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void instanceCall() {
+        void instanceCall()
+        {
             Expression receiver = createTestExpression();
 
             MethodCallExpr expr = MethodCallExpr.instanceCall(
@@ -1486,7 +1578,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void addArgument() {
+        void addArgument()
+        {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "Owner",
                     "method",
@@ -1502,7 +1595,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullArguments() {
+        void nullArguments()
+        {
             MethodCallExpr expr = new MethodCallExpr(
                     createTestExpression(),
                     "method",
@@ -1517,7 +1611,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullReturnType() {
+        void nullReturnType()
+        {
             MethodCallExpr expr = new MethodCallExpr(
                     createTestExpression(),
                     "method",
@@ -1531,7 +1626,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void parentChildRelationships() {
+        void parentChildRelationships()
+        {
             Expression receiver = createTestExpression();
             Expression arg1 = LiteralExpr.ofInt(1);
             Expression arg2 = LiteralExpr.ofInt(2);
@@ -1551,7 +1647,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "Owner",
                     "method",
@@ -1570,7 +1667,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullMethodNameThrows() {
+        void nullMethodNameThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new MethodCallExpr(
                             createTestExpression(),
@@ -1584,7 +1682,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullOwnerClassThrows() {
+        void nullOwnerClassThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new MethodCallExpr(
                             createTestExpression(),
@@ -1598,7 +1697,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "Owner",
                     "method",
@@ -1613,7 +1713,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringStaticCall() {
+        void toStringStaticCall()
+        {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "java/lang/Math",
                     "abs",
@@ -1630,7 +1731,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringInstanceCall() {
+        void toStringInstanceCall()
+        {
             MethodCallExpr expr = MethodCallExpr.instanceCall(
                     LiteralExpr.ofString("str"),
                     "length",
@@ -1649,7 +1751,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringMultipleArgs() {
+        void toStringMultipleArgs()
+        {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "Owner",
                     "method",
@@ -1666,10 +1769,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class NewExprTests {
+    class NewExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             String className = "java/lang/String";
 
             NewExpr expr = new NewExpr(className);
@@ -1681,7 +1786,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withArguments() {
+        void withArguments()
+        {
             String className = "java/lang/StringBuilder";
             List<Expression> arguments = List.of(LiteralExpr.ofString("initial"));
 
@@ -1692,7 +1798,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void withTypeAndLocation() {
+        void withTypeAndLocation()
+        {
             String className = "Owner";
             SourceType type = new ReferenceSourceType(className);
             SourceLocation location = createTestLocation();
@@ -1704,7 +1811,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void addArgument() {
+        void addArgument()
+        {
             NewExpr expr = new NewExpr("Owner");
 
             Expression arg = createTestExpression();
@@ -1715,7 +1823,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullArguments() {
+        void nullArguments()
+        {
             NewExpr expr = new NewExpr("Owner", null);
 
             assertNotNull(expr.getArguments());
@@ -1723,14 +1832,16 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullType() {
+        void nullType()
+        {
             NewExpr expr = new NewExpr("Owner", Collections.emptyList(), null);
 
             assertNotNull(expr.getType());
         }
 
         @Test
-        void parentChildRelationships() {
+        void parentChildRelationships()
+        {
             Expression arg1 = LiteralExpr.ofInt(1);
             Expression arg2 = LiteralExpr.ofString("test");
 
@@ -1741,14 +1852,14 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullClassNameThrows() {
-            assertThrows(NullPointerException.class, () ->
-                    new NewExpr(null)
-            );
+        void nullClassNameThrows()
+        {
+            assertThrows(NullPointerException.class, () -> new NewExpr(null));
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             NewExpr expr = new NewExpr("Owner");
             TestVisitor visitor = new TestVisitor();
 
@@ -1758,7 +1869,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringNoArgs() {
+        void toStringNoArgs()
+        {
             NewExpr expr = new NewExpr("java/lang/Object");
 
             String str = expr.toString();
@@ -1769,11 +1881,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithArgs() {
-            NewExpr expr = new NewExpr(
-                    "Owner",
-                    Arrays.asList(LiteralExpr.ofInt(1), LiteralExpr.ofString("test"))
-            );
+        void toStringWithArgs()
+        {
+            NewExpr expr = new NewExpr("Owner", Arrays.asList(LiteralExpr.ofInt(1), LiteralExpr.ofString("test")));
 
             String str = expr.toString();
 
@@ -1787,10 +1897,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class LambdaExprTests {
+    class LambdaExprTests
+    {
 
         @Test
-        void constructorWithExpressionBody() {
+        void constructorWithExpressionBody()
+        {
             List<LambdaParameter> params = Arrays.asList(
                     LambdaParameter.implicit("x", PrimitiveSourceType.INT),
                     LambdaParameter.implicit("y", PrimitiveSourceType.INT)
@@ -1809,14 +1921,13 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorWithBlockBody() {
+        void constructorWithBlockBody()
+        {
             List<LambdaParameter> params = Collections.singletonList(
                     LambdaParameter.explicit(PrimitiveSourceType.INT, "x")
             );
             Statement body =
-                    new BlockStmt(
-                            Collections.singletonList(new ReturnStmt())
-                    );
+                    new BlockStmt(Collections.singletonList(new ReturnStmt()));
             SourceType type = new ReferenceSourceType("java/util/function/Function");
 
             LambdaExpr lambda = new LambdaExpr(params, body, type);
@@ -1829,7 +1940,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void emptyParameterList() {
+        void emptyParameterList()
+        {
             Expression body = LiteralExpr.ofInt(42);
             SourceType type = new ReferenceSourceType("java/util/function/Supplier");
 
@@ -1840,7 +1952,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void isExpressionBody() {
+        void isExpressionBody()
+        {
             Expression body = LiteralExpr.ofInt(10);
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
                     new ReferenceSourceType("java/util/function/Supplier"));
@@ -1851,7 +1964,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void isBlockBody() {
+        void isBlockBody()
+        {
             Statement body =
                     new BlockStmt(Collections.emptyList());
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
@@ -1863,7 +1977,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void getExpressionBodyThrowsForBlockBody() {
+        void getExpressionBodyThrowsForBlockBody()
+        {
             Statement body =
                     new BlockStmt(Collections.emptyList());
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
@@ -1873,7 +1988,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void getBlockBodyThrowsForExpressionBody() {
+        void getBlockBodyThrowsForExpressionBody()
+        {
             Expression body = LiteralExpr.ofInt(10);
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
                     new ReferenceSourceType("java/util/function/Supplier"));
@@ -1882,7 +1998,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void hasImplicitParameterTypes() {
+        void hasImplicitParameterTypes()
+        {
             List<LambdaParameter> implicitParams = Arrays.asList(
                     LambdaParameter.implicit("x", PrimitiveSourceType.INT),
                     LambdaParameter.implicit("y", PrimitiveSourceType.INT)
@@ -1894,7 +2011,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void hasExplicitParameterTypes() {
+        void hasExplicitParameterTypes()
+        {
             List<LambdaParameter> explicitParams = Collections.singletonList(
                     LambdaParameter.explicit(PrimitiveSourceType.INT, "x")
             );
@@ -1905,7 +2023,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setBody() {
+        void setBody()
+        {
             Expression originalBody = LiteralExpr.ofInt(10);
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), originalBody,
                     new ReferenceSourceType("java/util/function/Supplier"));
@@ -1917,7 +2036,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), LiteralExpr.ofInt(10),
                     new ReferenceSourceType("java/util/function/Supplier"));
 
@@ -1927,13 +2047,13 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithSingleImplicitParameter() {
+        void toStringWithSingleImplicitParameter()
+        {
             List<LambdaParameter> params = Collections.singletonList(
                     LambdaParameter.implicit("x", PrimitiveSourceType.INT)
             );
             Expression body = LiteralExpr.ofInt(10);
-            LambdaExpr lambda = new LambdaExpr(params, body,
-                    new ReferenceSourceType("java/util/function/Function"));
+            LambdaExpr lambda = new LambdaExpr(params, body, new ReferenceSourceType("java/util/function/Function"));
 
             String result = lambda.toString();
 
@@ -1942,14 +2062,14 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithMultipleParameters() {
+        void toStringWithMultipleParameters()
+        {
             List<LambdaParameter> params = Arrays.asList(
                     LambdaParameter.explicit(PrimitiveSourceType.INT, "x"),
                     LambdaParameter.explicit(PrimitiveSourceType.INT, "y")
             );
             Expression body = LiteralExpr.ofInt(10);
-            LambdaExpr lambda = new LambdaExpr(params, body,
-                    new ReferenceSourceType("java/util/function/BiFunction"));
+            LambdaExpr lambda = new LambdaExpr(params, body, new ReferenceSourceType("java/util/function/BiFunction"));
 
             String result = lambda.toString();
 
@@ -1960,7 +2080,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringWithBlockBody() {
+        void toStringWithBlockBody()
+        {
             Statement body =
                     new BlockStmt(Collections.emptyList());
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
@@ -1973,22 +2094,24 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullBodyThrows() {
+        void nullBodyThrows()
+        {
             assertThrows(NullPointerException.class, () ->
-                    new LambdaExpr(Collections.emptyList(), null,
-                            new ReferenceSourceType("java/lang/Runnable"))
+                    new LambdaExpr(Collections.emptyList(), null, new ReferenceSourceType("java/lang/Runnable"))
             );
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new LambdaExpr(Collections.emptyList(), LiteralExpr.ofInt(10), null)
             );
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression body = LiteralExpr.ofInt(10);
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
                     new ReferenceSourceType("java/util/function/Supplier"));
@@ -1998,10 +2121,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class LambdaParameterTests {
+    class LambdaParameterTests
+    {
 
         @Test
-        void explicitParameter() {
+        void explicitParameter()
+        {
             LambdaParameter param = LambdaParameter.explicit(PrimitiveSourceType.INT, "count");
 
             assertEquals("count", param.name());
@@ -2010,7 +2135,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void implicitParameter() {
+        void implicitParameter()
+        {
             LambdaParameter param = LambdaParameter.implicit("value", PrimitiveSourceType.DOUBLE);
 
             assertEquals("value", param.name());
@@ -2019,7 +2145,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toJavaSourceExplicit() {
+        void toJavaSourceExplicit()
+        {
             LambdaParameter param = LambdaParameter.explicit(PrimitiveSourceType.INT, "x");
 
             String source = param.toJavaSource();
@@ -2028,7 +2155,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toJavaSourceImplicit() {
+        void toJavaSourceImplicit()
+        {
             LambdaParameter param = LambdaParameter.implicit("x", PrimitiveSourceType.INT);
 
             String source = param.toJavaSource();
@@ -2037,7 +2165,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toJavaSourceImplicitWithNullType() {
+        void toJavaSourceImplicitWithNullType()
+        {
             LambdaParameter param = new LambdaParameter("x", null, true);
 
             String source = param.toJavaSource();
@@ -2046,7 +2175,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void equalsAndHashCode() {
+        void equalsAndHashCode()
+        {
             LambdaParameter param1 = LambdaParameter.explicit(PrimitiveSourceType.INT, "x");
             LambdaParameter param2 = LambdaParameter.explicit(PrimitiveSourceType.INT, "x");
             LambdaParameter param3 = LambdaParameter.explicit(PrimitiveSourceType.INT, "y");
@@ -2059,7 +2189,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             LambdaParameter param = LambdaParameter.explicit(PrimitiveSourceType.INT, "count");
 
             String result = param.toString();
@@ -2071,10 +2202,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class MethodRefExprTests {
+    class MethodRefExprTests
+    {
 
         @Test
-        void constructorWithReceiver() {
+        void constructorWithReceiver()
+        {
             Expression receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
             SourceType type = new ReferenceSourceType("java/util/function/Function");
             SourceLocation location = createTestLocation();
@@ -2092,7 +2225,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorWithoutReceiver() {
+        void constructorWithoutReceiver()
+        {
             SourceType type = new ReferenceSourceType("java/util/function/Function");
 
             MethodRefExpr methodRef = new MethodRefExpr(null, "parseInt", "java/lang/Integer",
@@ -2104,7 +2238,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void staticRef() {
+        void staticRef()
+        {
             SourceType type = new ReferenceSourceType("java/util/function/Function");
 
             MethodRefExpr methodRef = MethodRefExpr.staticRef("java/lang/Integer", "parseInt", type);
@@ -2116,7 +2251,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void instanceRef() {
+        void instanceRef()
+        {
             SourceType type = new ReferenceSourceType("java/util/function/Function");
 
             MethodRefExpr methodRef = MethodRefExpr.instanceRef("java/lang/String", "length", type);
@@ -2128,12 +2264,12 @@ class ExpressionASTTest {
         }
 
         @Test
-        void boundRef() {
+        void boundRef()
+        {
             Expression receiver = new VarRefExpr("str", ReferenceSourceType.STRING);
             SourceType type = new ReferenceSourceType("java/util/function/Supplier");
 
-            MethodRefExpr methodRef = MethodRefExpr.boundRef(receiver, "length",
-                    "java/lang/String", type);
+            MethodRefExpr methodRef = MethodRefExpr.boundRef(receiver, "length", "java/lang/String", type);
 
             assertSame(receiver, methodRef.getReceiver());
             assertEquals("length", methodRef.getMethodName());
@@ -2142,7 +2278,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorRef() {
+        void constructorRef()
+        {
             SourceType type = new ReferenceSourceType("java/util/function/Supplier");
 
             MethodRefExpr methodRef = MethodRefExpr.constructorRef("java/lang/String", type);
@@ -2155,7 +2292,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void arrayConstructorRef() {
+        void arrayConstructorRef()
+        {
             SourceType arrayType = new ReferenceSourceType("java/lang/String");
 
             MethodRefExpr methodRef = MethodRefExpr.arrayConstructorRef(arrayType);
@@ -2167,7 +2305,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             MethodRefExpr methodRef = MethodRefExpr.staticRef("java/lang/Integer", "parseInt",
                     new ReferenceSourceType("java/util/function/Function"));
 
@@ -2180,7 +2319,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void isConstructorRef() {
+        void isConstructorRef()
+        {
             MethodRefExpr constructor = MethodRefExpr.constructorRef("java/lang/String",
                     new ReferenceSourceType("java/util/function/Supplier"));
             MethodRefExpr arrayConstructor = MethodRefExpr.arrayConstructorRef(ReferenceSourceType.STRING);
@@ -2193,7 +2333,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             MethodRefExpr methodRef = MethodRefExpr.staticRef("java/lang/Integer", "parseInt",
                     new ReferenceSourceType("java/util/function/Function"));
 
@@ -2203,7 +2344,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringStatic() {
+        void toStringStatic()
+        {
             MethodRefExpr methodRef = MethodRefExpr.staticRef("java/lang/Integer", "parseInt",
                     new ReferenceSourceType("java/util/function/Function"));
 
@@ -2214,7 +2356,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringBound() {
+        void toStringBound()
+        {
             Expression receiver = new VarRefExpr("str", ReferenceSourceType.STRING);
             MethodRefExpr methodRef = MethodRefExpr.boundRef(receiver, "length",
                     "java/lang/String", new ReferenceSourceType("java/util/function/Supplier"));
@@ -2226,7 +2369,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringConstructor() {
+        void toStringConstructor()
+        {
             MethodRefExpr methodRef = MethodRefExpr.constructorRef("java/lang/String",
                     new ReferenceSourceType("java/util/function/Supplier"));
 
@@ -2237,7 +2381,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullMethodNameThrows() {
+        void nullMethodNameThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new MethodRefExpr(null, null, "java/lang/Object",
                             MethodRefKind.STATIC, new ReferenceSourceType("java/util/function/Function"))
@@ -2245,7 +2390,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullOwnerClassThrows() {
+        void nullOwnerClassThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new MethodRefExpr(null, "method", null,
                             MethodRefKind.STATIC, new ReferenceSourceType("java/util/function/Function"))
@@ -2253,7 +2399,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullKindThrows() {
+        void nullKindThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new MethodRefExpr(null, "method", "java/lang/Object",
                             null, new ReferenceSourceType("java/util/function/Function"))
@@ -2261,15 +2408,16 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
-                    new MethodRefExpr(null, "method", "java/lang/Object",
-                            MethodRefKind.STATIC, null)
+                    new MethodRefExpr(null, "method", "java/lang/Object", MethodRefKind.STATIC, null)
             );
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
             MethodRefExpr methodRef = MethodRefExpr.boundRef(receiver, "toString",
                     "java/lang/Object", new ReferenceSourceType("java/util/function/Supplier"));
@@ -2279,10 +2427,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class TernaryExprTests {
+    class TernaryExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression condition = LiteralExpr.ofBoolean(true);
             Expression thenExpr = LiteralExpr.ofInt(10);
             Expression elseExpr = LiteralExpr.ofInt(20);
@@ -2302,7 +2452,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorWithoutLocation() {
+        void constructorWithoutLocation()
+        {
             Expression condition = LiteralExpr.ofBoolean(true);
             Expression thenExpr = LiteralExpr.ofInt(10);
             Expression elseExpr = LiteralExpr.ofInt(20);
@@ -2314,7 +2465,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             Expression condition = LiteralExpr.ofBoolean(true);
             TernaryExpr ternary = new TernaryExpr(condition, LiteralExpr.ofInt(10),
                     LiteralExpr.ofInt(20), PrimitiveSourceType.INT);
@@ -2333,7 +2485,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             TernaryExpr ternary = new TernaryExpr(LiteralExpr.ofBoolean(true),
                     LiteralExpr.ofInt(10), LiteralExpr.ofInt(20), PrimitiveSourceType.INT);
 
@@ -2343,7 +2496,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             TernaryExpr ternary = new TernaryExpr(LiteralExpr.ofBoolean(true),
                     LiteralExpr.ofInt(10), LiteralExpr.ofInt(20), PrimitiveSourceType.INT);
 
@@ -2354,44 +2508,44 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullConditionThrows() {
+        void nullConditionThrows()
+        {
             assertThrows(NullPointerException.class, () ->
-                    new TernaryExpr(null, LiteralExpr.ofInt(10), LiteralExpr.ofInt(20),
-                            PrimitiveSourceType.INT)
+                    new TernaryExpr(null, LiteralExpr.ofInt(10), LiteralExpr.ofInt(20), PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullThenExprThrows() {
+        void nullThenExprThrows()
+        {
             assertThrows(NullPointerException.class, () ->
-                    new TernaryExpr(LiteralExpr.ofBoolean(true), null, LiteralExpr.ofInt(20),
-                            PrimitiveSourceType.INT)
+                    new TernaryExpr(LiteralExpr.ofBoolean(true), null, LiteralExpr.ofInt(20), PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullElseExprThrows() {
+        void nullElseExprThrows()
+        {
             assertThrows(NullPointerException.class, () ->
-                    new TernaryExpr(LiteralExpr.ofBoolean(true), LiteralExpr.ofInt(10), null,
-                            PrimitiveSourceType.INT)
+                    new TernaryExpr(LiteralExpr.ofBoolean(true), LiteralExpr.ofInt(10), null, PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
-                    new TernaryExpr(LiteralExpr.ofBoolean(true), LiteralExpr.ofInt(10),
-                            LiteralExpr.ofInt(20), null)
+                    new TernaryExpr(LiteralExpr.ofBoolean(true), LiteralExpr.ofInt(10), LiteralExpr.ofInt(20), null)
             );
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression condition = LiteralExpr.ofBoolean(true);
             Expression thenExpr = LiteralExpr.ofInt(10);
             Expression elseExpr = LiteralExpr.ofInt(20);
-            TernaryExpr ternary = new TernaryExpr(condition, thenExpr, elseExpr,
-                    PrimitiveSourceType.INT);
+            TernaryExpr ternary = new TernaryExpr(condition, thenExpr, elseExpr, PrimitiveSourceType.INT);
 
             assertSame(ternary, condition.getParent());
             assertSame(ternary, thenExpr.getParent());
@@ -2400,10 +2554,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class ThisExprTests {
+    class ThisExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             SourceType type = new ReferenceSourceType("com/example/MyClass");
             SourceLocation location = createTestLocation();
 
@@ -2414,7 +2570,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorWithoutLocation() {
+        void constructorWithoutLocation()
+        {
             SourceType type = new ReferenceSourceType("com/example/MyClass");
 
             ThisExpr thisExpr = new ThisExpr(type);
@@ -2424,7 +2581,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             ThisExpr thisExpr = new ThisExpr(new ReferenceSourceType("com/example/MyClass"));
 
             String result = thisExpr.accept(new TestVisitor());
@@ -2433,7 +2591,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             ThisExpr thisExpr = new ThisExpr(new ReferenceSourceType("com/example/MyClass"));
 
             String result = thisExpr.toString();
@@ -2442,16 +2601,19 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () -> new ThisExpr(null));
         }
     }
 
     @Nested
-    class SuperExprTests {
+    class SuperExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             SourceType type = new ReferenceSourceType("com/example/MyClass");
             SourceLocation location = createTestLocation();
 
@@ -2462,7 +2624,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorWithoutLocation() {
+        void constructorWithoutLocation()
+        {
             SourceType type = new ReferenceSourceType("com/example/MyClass");
 
             SuperExpr superExpr = new SuperExpr(type);
@@ -2472,7 +2635,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
+        void visitorPattern()
+        {
             SuperExpr superExpr = new SuperExpr(new ReferenceSourceType("com/example/MyClass"));
 
             String result = superExpr.accept(new TestVisitor());
@@ -2481,7 +2645,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SuperExpr superExpr = new SuperExpr(new ReferenceSourceType("com/example/MyClass"));
 
             String result = superExpr.toString();
@@ -2490,16 +2655,19 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () -> new SuperExpr(null));
         }
     }
 
     @Nested
-    class UnaryExprTests {
+    class UnaryExprTests
+    {
 
         @Test
-        void basicConstructor() {
+        void basicConstructor()
+        {
             Expression operand = LiteralExpr.ofInt(42);
             SourceType type = PrimitiveSourceType.INT;
             SourceLocation location = createTestLocation();
@@ -2514,7 +2682,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void constructorWithoutLocation() {
+        void constructorWithoutLocation()
+        {
             Expression operand = LiteralExpr.ofInt(42);
             SourceType type = PrimitiveSourceType.INT;
 
@@ -2524,15 +2693,15 @@ class ExpressionASTTest {
         }
 
         @Test
-        void prefixOperators() {
+        void prefixOperators()
+        {
             Expression operand = LiteralExpr.ofInt(42);
 
             UnaryExpr negation = new UnaryExpr(UnaryOperator.NEG, operand, PrimitiveSourceType.INT);
             assertTrue(negation.isPrefix());
             assertFalse(negation.isPostfix());
 
-            UnaryExpr not = new UnaryExpr(UnaryOperator.NOT, LiteralExpr.ofBoolean(true),
-                    PrimitiveSourceType.BOOLEAN);
+            UnaryExpr not = new UnaryExpr(UnaryOperator.NOT, LiteralExpr.ofBoolean(true), PrimitiveSourceType.BOOLEAN);
             assertTrue(not.isPrefix());
 
             UnaryExpr preInc = new UnaryExpr(UnaryOperator.PRE_INC, operand, PrimitiveSourceType.INT);
@@ -2541,7 +2710,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void postfixOperators() {
+        void postfixOperators()
+        {
             Expression operand = LiteralExpr.ofInt(42);
 
             UnaryExpr postInc = new UnaryExpr(UnaryOperator.POST_INC, operand, PrimitiveSourceType.INT);
@@ -2555,10 +2725,12 @@ class ExpressionASTTest {
         }
 
         @Test
-        void allUnaryOperators() {
+        void allUnaryOperators()
+        {
             Expression operand = LiteralExpr.ofInt(42);
 
-            for (UnaryOperator op : UnaryOperator.values()) {
+            for (UnaryOperator op : UnaryOperator.values())
+            {
                 UnaryExpr unary = new UnaryExpr(op, operand, PrimitiveSourceType.INT);
                 assertEquals(op, unary.getOperator());
                 assertEquals(op.isPrefix(), unary.isPrefix());
@@ -2567,7 +2739,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void setters() {
+        void setters()
+        {
             Expression operand = LiteralExpr.ofInt(42);
             UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, operand, PrimitiveSourceType.INT);
 
@@ -2580,9 +2753,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void visitorPattern() {
-            UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(42),
-                    PrimitiveSourceType.INT);
+        void visitorPattern()
+        {
+            UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(42), PrimitiveSourceType.INT);
 
             String result = unary.accept(new TestVisitor());
 
@@ -2590,9 +2763,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringPrefix() {
-            UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(42),
-                    PrimitiveSourceType.INT);
+        void toStringPrefix()
+        {
+            UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(42), PrimitiveSourceType.INT);
 
             String result = unary.toString();
 
@@ -2600,9 +2773,9 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringPostfix() {
-            UnaryExpr unary = new UnaryExpr(UnaryOperator.POST_INC, LiteralExpr.ofInt(42),
-                    PrimitiveSourceType.INT);
+        void toStringPostfix()
+        {
+            UnaryExpr unary = new UnaryExpr(UnaryOperator.POST_INC, LiteralExpr.ofInt(42), PrimitiveSourceType.INT);
 
             String result = unary.toString();
 
@@ -2610,28 +2783,32 @@ class ExpressionASTTest {
         }
 
         @Test
-        void nullOperatorThrows() {
+        void nullOperatorThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new UnaryExpr(null, LiteralExpr.ofInt(42), PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullOperandThrows() {
+        void nullOperandThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new UnaryExpr(UnaryOperator.NEG, null, PrimitiveSourceType.INT)
             );
         }
 
         @Test
-        void nullTypeThrows() {
+        void nullTypeThrows()
+        {
             assertThrows(NullPointerException.class, () ->
                     new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(42), null)
             );
         }
 
         @Test
-        void parentChildRelationship() {
+        void parentChildRelationship()
+        {
             Expression operand = LiteralExpr.ofInt(42);
             UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, operand, PrimitiveSourceType.INT);
 
@@ -2640,10 +2817,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class UnaryOperatorTests {
+    class UnaryOperatorTests
+    {
 
         @Test
-        void prefixOperators() {
+        void prefixOperators()
+        {
             assertTrue(UnaryOperator.NEG.isPrefix());
             assertTrue(UnaryOperator.POS.isPrefix());
             assertTrue(UnaryOperator.BNOT.isPrefix());
@@ -2656,7 +2835,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void postfixOperators() {
+        void postfixOperators()
+        {
             assertTrue(UnaryOperator.POST_INC.isPostfix());
             assertTrue(UnaryOperator.POST_DEC.isPostfix());
 
@@ -2669,7 +2849,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void incDecOperators() {
+        void incDecOperators()
+        {
             assertTrue(UnaryOperator.PRE_INC.isIncDec());
             assertTrue(UnaryOperator.PRE_DEC.isIncDec());
             assertTrue(UnaryOperator.POST_INC.isIncDec());
@@ -2682,7 +2863,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void symbols() {
+        void symbols()
+        {
             assertEquals("-", UnaryOperator.NEG.getSymbol());
             assertEquals("+", UnaryOperator.POS.getSymbol());
             assertEquals("~", UnaryOperator.BNOT.getSymbol());
@@ -2694,7 +2876,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             assertEquals("-", UnaryOperator.NEG.toString());
             assertEquals("+", UnaryOperator.POS.toString());
             assertEquals("~", UnaryOperator.BNOT.toString());
@@ -2707,10 +2890,12 @@ class ExpressionASTTest {
     }
 
     @Nested
-    class FluentSetterTests {
+    class FluentSetterTests
+    {
 
         @Test
-        void binaryExpr_fluentChaining() {
+        void binaryExpr_fluentChaining()
+        {
             LiteralExpr left = new LiteralExpr(1, PrimitiveSourceType.INT);
             LiteralExpr right = new LiteralExpr(2, PrimitiveSourceType.INT);
             LiteralExpr newLeft = new LiteralExpr(10, PrimitiveSourceType.INT);
@@ -2734,7 +2919,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void binaryExpr_withNullOperands() {
+        void binaryExpr_withNullOperands()
+        {
             LiteralExpr left = new LiteralExpr(1, PrimitiveSourceType.INT);
             LiteralExpr right = new LiteralExpr(2, PrimitiveSourceType.INT);
             BinaryExpr expr = new BinaryExpr(BinaryOperator.ADD, left, right, PrimitiveSourceType.INT);
@@ -2748,7 +2934,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void unaryExpr_fluentChaining() {
+        void unaryExpr_fluentChaining()
+        {
             LiteralExpr operand = new LiteralExpr(5, PrimitiveSourceType.INT);
             LiteralExpr newOperand = new LiteralExpr(10, PrimitiveSourceType.INT);
 
@@ -2766,7 +2953,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void methodCallExpr_fluentChaining() {
+        void methodCallExpr_fluentChaining()
+        {
             VarRefExpr receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
             VarRefExpr newReceiver = new VarRefExpr("other", ReferenceSourceType.OBJECT);
             List<Expression> args = new ArrayList<>();
@@ -2785,7 +2973,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void fieldAccessExpr_fluentChaining() {
+        void fieldAccessExpr_fluentChaining()
+        {
             VarRefExpr receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
             VarRefExpr newReceiver = new VarRefExpr("other", ReferenceSourceType.OBJECT);
 
@@ -2800,7 +2989,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void arrayAccessExpr_fluentChaining() {
+        void arrayAccessExpr_fluentChaining()
+        {
             VarRefExpr array = new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT, 1));
             LiteralExpr index = new LiteralExpr(0, PrimitiveSourceType.INT);
             VarRefExpr newArray = new VarRefExpr("arr2", new ArraySourceType(PrimitiveSourceType.INT, 1));
@@ -2820,7 +3010,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void castExpr_fluentChaining() {
+        void castExpr_fluentChaining()
+        {
             LiteralExpr original = new LiteralExpr(1, PrimitiveSourceType.INT);
             LiteralExpr newExpr = new LiteralExpr(2, PrimitiveSourceType.INT);
 
@@ -2835,7 +3026,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void ternaryExpr_fluentChaining() {
+        void ternaryExpr_fluentChaining()
+        {
             LiteralExpr cond = new LiteralExpr(true, PrimitiveSourceType.BOOLEAN);
             LiteralExpr thenE = new LiteralExpr(1, PrimitiveSourceType.INT);
             LiteralExpr elseE = new LiteralExpr(2, PrimitiveSourceType.INT);
@@ -2860,7 +3052,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void instanceOfExpr_fluentChaining() {
+        void instanceOfExpr_fluentChaining()
+        {
             VarRefExpr original = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
             VarRefExpr newExpr = new VarRefExpr("other", ReferenceSourceType.OBJECT);
 
@@ -2878,7 +3071,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void varRefExpr_fluentChaining() {
+        void varRefExpr_fluentChaining()
+        {
             VarRefExpr expr = new VarRefExpr("oldName", PrimitiveSourceType.INT);
 
             VarRefExpr result = expr.withName("newName");
@@ -2888,7 +3082,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void literalExpr_fluentChaining() {
+        void literalExpr_fluentChaining()
+        {
             LiteralExpr expr = new LiteralExpr(42, PrimitiveSourceType.INT);
 
             LiteralExpr result = expr
@@ -2901,7 +3096,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void methodRefExpr_fluentChaining() {
+        void methodRefExpr_fluentChaining()
+        {
             VarRefExpr receiver = new VarRefExpr("list", ReferenceSourceType.OBJECT);
             VarRefExpr newReceiver = new VarRefExpr("set", ReferenceSourceType.OBJECT);
 
@@ -2919,7 +3115,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void newArrayExpr_fluentChaining() {
+        void newArrayExpr_fluentChaining()
+        {
             ArrayInitExpr init = new ArrayInitExpr(
                     List.of(new LiteralExpr(1, PrimitiveSourceType.INT)),
                     new ArraySourceType(PrimitiveSourceType.INT, 1)
@@ -2940,7 +3137,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void fluentSetters_preserveParentChildRelationship() {
+        void fluentSetters_preserveParentChildRelationship()
+        {
             BinaryExpr parent = new BinaryExpr(
                     BinaryOperator.ADD,
                     new LiteralExpr(1, PrimitiveSourceType.INT),
@@ -2955,7 +3153,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void fluentSetters_clearOldParent() {
+        void fluentSetters_clearOldParent()
+        {
             LiteralExpr child = new LiteralExpr(1, PrimitiveSourceType.INT);
             BinaryExpr parent1 = new BinaryExpr(BinaryOperator.ADD, child, new LiteralExpr(2, PrimitiveSourceType.INT), PrimitiveSourceType.INT);
 
@@ -2968,7 +3167,8 @@ class ExpressionASTTest {
         }
 
         @Test
-        void fluentSetters_chainMultipleOperations() {
+        void fluentSetters_chainMultipleOperations()
+        {
             BinaryExpr expr = new BinaryExpr(
                     BinaryOperator.ADD,
                     new LiteralExpr(1, PrimitiveSourceType.INT),

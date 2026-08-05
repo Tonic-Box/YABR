@@ -3,7 +3,8 @@ package com.tonic.analysis.source.emit;
 /**
  * Modes for handling non-standard identifiers during source emission.
  */
-public enum IdentifierMode {
+public enum IdentifierMode
+{
     /**
      * Keep identifiers exactly as they appear in bytecode.
      * May produce invalid Java source for obfuscated names.

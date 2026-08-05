@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodInfoTest {
+class MethodInfoTest
+{
 
     @Test
-    void constructor_shouldInitializeAllFields() {
+    void constructor_shouldInitializeAllFields()
+    {
         MethodInfo info = new MethodInfo("java/lang/String", "charAt", "(I)C", false, false);
 
         assertNotNull(info);
@@ -19,56 +21,64 @@ class MethodInfoTest {
     }
 
     @Test
-    void getOwnerClass_shouldReturnCorrectValue() {
+    void getOwnerClass_shouldReturnCorrectValue()
+    {
         MethodInfo info = new MethodInfo("com/example/Calculator", "add", "(II)I", true, false);
 
         assertEquals("com/example/Calculator", info.getOwnerClass());
     }
 
     @Test
-    void getMethodName_shouldReturnCorrectValue() {
+    void getMethodName_shouldReturnCorrectValue()
+    {
         MethodInfo info = new MethodInfo("com/example/Calculator", "multiply", "(DD)D", false, false);
 
         assertEquals("multiply", info.getMethodName());
     }
 
     @Test
-    void getDescriptor_shouldReturnCorrectValue() {
+    void getDescriptor_shouldReturnCorrectValue()
+    {
         MethodInfo info = new MethodInfo("com/example/Service", "process", "(Ljava/lang/String;)V", false, false);
 
         assertEquals("(Ljava/lang/String;)V", info.getDescriptor());
     }
 
     @Test
-    void isStatic_shouldReturnTrueForStaticMethod() {
+    void isStatic_shouldReturnTrueForStaticMethod()
+    {
         MethodInfo info = new MethodInfo("java/lang/Math", "abs", "(I)I", true, false);
 
         assertTrue(info.isStatic());
     }
 
     @Test
-    void isStatic_shouldReturnFalseForInstanceMethod() {
+    void isStatic_shouldReturnFalseForInstanceMethod()
+    {
         MethodInfo info = new MethodInfo("java/lang/String", "toLowerCase", "()Ljava/lang/String;", false, false);
 
         assertFalse(info.isStatic());
     }
 
     @Test
-    void isInterface_shouldReturnTrueForInterfaceMethod() {
+    void isInterface_shouldReturnTrueForInterfaceMethod()
+    {
         MethodInfo info = new MethodInfo("java/util/List", "size", "()I", false, true);
 
         assertTrue(info.isInterface());
     }
 
     @Test
-    void isInterface_shouldReturnFalseForNonInterfaceMethod() {
+    void isInterface_shouldReturnFalseForNonInterfaceMethod()
+    {
         MethodInfo info = new MethodInfo("java/util/ArrayList", "size", "()I", false, false);
 
         assertFalse(info.isInterface());
     }
 
     @Test
-    void toString_shouldIncludeStaticMarkerForStaticMethod() {
+    void toString_shouldIncludeStaticMarkerForStaticMethod()
+    {
         MethodInfo info = new MethodInfo("com/example/Utils", "helper", "()V", true, false);
 
         String result = info.toString();
@@ -78,7 +88,8 @@ class MethodInfoTest {
     }
 
     @Test
-    void toString_shouldIncludeInterfaceMarkerForInterfaceMethod() {
+    void toString_shouldIncludeInterfaceMarkerForInterfaceMethod()
+    {
         MethodInfo info = new MethodInfo("java/lang/Runnable", "run", "()V", false, true);
 
         String result = info.toString();
@@ -88,7 +99,8 @@ class MethodInfoTest {
     }
 
     @Test
-    void toString_shouldIncludeBothMarkersForStaticInterfaceMethod() {
+    void toString_shouldIncludeBothMarkersForStaticInterfaceMethod()
+    {
         MethodInfo info = new MethodInfo("java/util/Comparator", "naturalOrder", "()Ljava/util/Comparator;", true, true);
 
         String result = info.toString();
@@ -98,7 +110,8 @@ class MethodInfoTest {
     }
 
     @Test
-    void toString_shouldNotIncludeMarkersForNormalMethod() {
+    void toString_shouldNotIncludeMarkersForNormalMethod()
+    {
         MethodInfo info = new MethodInfo("com/example/Bean", "getValue", "()I", false, false);
 
         String result = info.toString();
@@ -109,7 +122,8 @@ class MethodInfoTest {
     }
 
     @Test
-    void toString_shouldFormatWithOwnerClassAndMethodNameAndDescriptor() {
+    void toString_shouldFormatWithOwnerClassAndMethodNameAndDescriptor()
+    {
         MethodInfo info = new MethodInfo("java/io/PrintStream", "println", "(Ljava/lang/String;)V", false, false);
 
         String result = info.toString();
@@ -118,7 +132,8 @@ class MethodInfoTest {
     }
 
     @Test
-    void shouldHandleComplexMethodDescriptors() {
+    void shouldHandleComplexMethodDescriptors()
+    {
         MethodInfo info = new MethodInfo("com/example/Processor", "transform",
             "([Ljava/lang/String;Ljava/util/Map;)Ljava/util/List;", false, false);
 

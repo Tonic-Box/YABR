@@ -17,13 +17,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for BlockMerging transform.
  * Verifies merging of linear blocks where B has single predecessor A.
  */
-class BlockMergingTest {
+class BlockMergingTest
+{
 
     private IRMethod method;
     private BlockMerging transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -32,12 +34,14 @@ class BlockMergingTest {
     }
 
     @Test
-    void getNameReturnsCorrectName() {
+    void getNameReturnsCorrectName()
+    {
         assertEquals("BlockMerging", transform.getName());
     }
 
     @Test
-    void mergesLinearBlocks() {
+    void mergesLinearBlocks()
+    {
         // Create: A -> B (where B has single predecessor)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -50,7 +54,6 @@ class BlockMergingTest {
         blockA.addInstruction(SimpleInstruction.createGoto(blockB));
         blockA.addSuccessor(blockB);
 
-        // Add some instructions to verify merging
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         blockB.addInstruction(new BinaryOpInstruction(result, BinaryOp.ADD, x, IntConstant.of(1)));
@@ -63,7 +66,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void doesNotMergeBranchBlocks() {
+    void doesNotMergeBranchBlocks()
+    {
         // Create: A -> B, A -> C (where A has multiple successors)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -84,7 +88,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void doesNotMergeBlocksWithMultiplePredecessors() {
+    void doesNotMergeBlocksWithMultiplePredecessors()
+    {
         // Create: A -> C, B -> C (where C has multiple predecessors)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -107,7 +112,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void returnsFalseWhenNoBlocksToMerge() {
+    void returnsFalseWhenNoBlocksToMerge()
+    {
         // Single block - nothing to merge
         IRBlock blockA = new IRBlock("A");
         method.addBlock(blockA);
@@ -119,14 +125,16 @@ class BlockMergingTest {
     }
 
     @Test
-    void returnsFalseOnEmptyMethod() {
+    void returnsFalseOnEmptyMethod()
+    {
         boolean changed = transform.run(method);
 
         assertFalse(changed, "Transform should return false on empty method");
     }
 
     @Test
-    void mergesChainOfLinearBlocks() {
+    void mergesChainOfLinearBlocks()
+    {
         // Create: A -> B -> C (linear chain)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -151,7 +159,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void preservesInstructionsAfterMerging() {
+    void preservesInstructionsAfterMerging()
+    {
         // Create: A -> B with instructions in both
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -160,7 +169,6 @@ class BlockMergingTest {
         method.addBlock(blockB);
         method.setEntryBlock(blockA);
 
-        // Add instructions
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue y = new SSAValue(PrimitiveType.INT);
         SSAValue result1 = new SSAValue(PrimitiveType.INT);
@@ -181,7 +189,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void doesNotMergeEntryBlockWithPredecessor() {
+    void doesNotMergeEntryBlockWithPredecessor()
+    {
         // Edge case: if entry block somehow has predecessor, don't merge
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -193,7 +202,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void doesNotMergeAwayLoopHeaderEntryBlock() {
+    void doesNotMergeAwayLoopHeaderEntryBlock()
+    {
         // Regression: a while(true)-style loop whose ENTRY is the loop header. The header has two successors
         // (loop body + exit), so it is never a merge SOURCE; the body's back-edge gotos the header, making the
         // header a merge SUCCESSOR with a single predecessor. Merging it would delete the entry block, leaving
@@ -226,9 +236,10 @@ class BlockMergingTest {
     }
 
     @Test
-    void doesNotMergeAcrossExceptionRegionBoundary() {
+    void doesNotMergeAcrossExceptionRegionBoundary()
+    {
         // entry -> body -> after, where a handler protects ONLY body. Merging body (inside the try) with
-        // entry or after (outside) would create a block that is partly protected — inexpressible in the
+        // entry or after (outside) would create a block that is partly protected - inexpressible in the
         // exception table and the cause of the gamepack synchronized-body coverage collapse. Must not merge.
         IRBlock entry = new IRBlock("entry");
         IRBlock body = new IRBlock("body");
@@ -259,7 +270,8 @@ class BlockMergingTest {
     }
 
     @Test
-    void mergesMultiplePairsOfBlocks() {
+    void mergesMultiplePairsOfBlocks()
+    {
         // Create: A -> B, C -> D (two separate linear pairs)
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -283,7 +295,6 @@ class BlockMergingTest {
         int initialBlockCount = method.getBlocks().size();
         transform.run(method);
 
-        // Should merge at least one pair
         assertTrue(method.getBlocks().size() <= initialBlockCount, "Should merge some blocks");
     }
 }

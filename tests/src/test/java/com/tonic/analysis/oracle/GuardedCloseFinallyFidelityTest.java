@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * close ran twice. The subgraph template de-duplication now matches the copy block-for-block along the
  * branch structure and excises it, keeping the clause as the single close site.
  */
-class GuardedCloseFinallyFidelityTest {
+class GuardedCloseFinallyFidelityTest
+{
 
     private static final String SOURCE =
             "public class GuardedClose {\n"
@@ -57,14 +58,14 @@ class GuardedCloseFinallyFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("guarded-close");
         Path src = dir.resolve("GuardedClose.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("GuardedClose.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -73,20 +74,23 @@ class GuardedCloseFinallyFidelityTest {
         recompiledClass = TestUtils.loadAndVerify(recovered);
     }
 
-    private static int closes() throws Exception {
+    private static int closes() throws Exception
+    {
         java.lang.reflect.Field f = recompiledClass.getDeclaredField("closes");
         f.setAccessible(true);
         return f.getInt(null);
     }
 
-    private static void reset() throws Exception {
+    private static void reset() throws Exception
+    {
         java.lang.reflect.Field f = recompiledClass.getDeclaredField("closes");
         f.setAccessible(true);
         f.setInt(null, 0);
     }
 
     @Test
-    void normalPathClosesOnceAndReturnsTheResult() throws Exception {
+    void normalPathClosesOnceAndReturnsTheResult() throws Exception
+    {
         reset();
         Object r = recompiledClass.getMethod("use", boolean.class).invoke(null, false);
         assertEquals(7, r, "the result must flow through the finally to the return:\n" + d1);
@@ -94,12 +98,12 @@ class GuardedCloseFinallyFidelityTest {
     }
 
     @Test
-    void exceptionPathClosesOnceAndPropagates() throws Exception {
+    void exceptionPathClosesOnceAndPropagates() throws Exception
+    {
         reset();
         InvocationTargetException ex = assertThrows(InvocationTargetException.class,
                 () -> recompiledClass.getMethod("use", boolean.class).invoke(null, true));
         assertEquals(IllegalStateException.class, ex.getCause().getClass());
-        assertEquals(1, closes(),
-                "the guarded close must run exactly once on the exception path: " + d1);
+        assertEquals(1, closes(), "the guarded close must run exactly once on the exception path: " + d1);
     }
 }

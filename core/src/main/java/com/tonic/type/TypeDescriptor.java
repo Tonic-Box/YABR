@@ -6,7 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class TypeDescriptor {
+/**
+ * An immutable JVM field or method descriptor, classified by a sort constant.
+ */
+public class TypeDescriptor
+{
 
     public static final int VOID = 0;
     public static final int BOOLEAN = 1;
@@ -34,27 +38,50 @@ public class TypeDescriptor {
     private final String descriptor;
     private final int sort;
 
-    private TypeDescriptor(String descriptor, int sort) {
+    private TypeDescriptor(String descriptor, int sort)
+    {
         this.descriptor = descriptor;
         this.sort = sort;
     }
 
-    public static TypeDescriptor forClass(String internalName) {
+    /**
+     * Wraps an internal class name as an object descriptor.
+     * @param internalName the slash-separated class name
+     * @return the object descriptor
+     */
+    public static TypeDescriptor forClass(String internalName)
+    {
         return new TypeDescriptor("L" + internalName + ";", OBJECT);
     }
 
-    public static TypeDescriptor forArray(TypeDescriptor element, int dimensions) {
+    /**
+     * Wraps a type in array brackets.
+     * @param element the element type
+     * @param dimensions how many bracket levels to add
+     * @return the array descriptor
+     */
+    public static TypeDescriptor forArray(TypeDescriptor element, int dimensions)
+    {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < dimensions; i++) {
+        for (int i = 0; i < dimensions; i++)
+        {
             sb.append('[');
         }
         sb.append(element.descriptor);
         return new TypeDescriptor(sb.toString(), ARRAY);
     }
 
-    public static TypeDescriptor forMethod(TypeDescriptor returnType, TypeDescriptor... params) {
+    /**
+     * Builds a method descriptor from its parameter and return types.
+     * @param returnType the return type
+     * @param params the parameter types in declaration order
+     * @return the method descriptor
+     */
+    public static TypeDescriptor forMethod(TypeDescriptor returnType, TypeDescriptor... params)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (TypeDescriptor param : params) {
+        for (TypeDescriptor param : params)
+        {
             sb.append(param.descriptor);
         }
         sb.append(")");
@@ -62,13 +89,22 @@ public class TypeDescriptor {
         return new TypeDescriptor(sb.toString(), METHOD);
     }
 
-    public static TypeDescriptor parse(String descriptor) {
-        if (descriptor == null || descriptor.isEmpty()) {
+    /**
+     * Parses a field or method descriptor, returning a shared instance for primitives.
+     * @param descriptor the descriptor text
+     * @return the parsed type
+     * @throws IllegalArgumentException if the descriptor is null, empty, or starts with an unknown tag
+     */
+    public static TypeDescriptor parse(String descriptor)
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             throw new IllegalArgumentException("Descriptor cannot be null or empty");
         }
 
         char first = descriptor.charAt(0);
-        switch (first) {
+        switch (first)
+        {
             case 'V': return VOID_TYPE;
             case 'Z': return BOOLEAN_TYPE;
             case 'B': return BYTE_TYPE;
@@ -86,88 +122,156 @@ public class TypeDescriptor {
         }
     }
 
-    public int getSort() {
+    /**
+     * @return the sort
+     */
+    public int getSort()
+    {
         return sort;
     }
 
-    public boolean isPrimitive() {
+    /**
+     * @return true if this is void or a primitive type
+     */
+    public boolean isPrimitive()
+    {
         return sort >= VOID && sort <= DOUBLE;
     }
 
-    public boolean isArray() {
+    /**
+     * @return true if this is an array type
+     */
+    public boolean isArray()
+    {
         return sort == ARRAY;
     }
 
-    public boolean isObject() {
+    /**
+     * @return true if this is a non-array reference type
+     */
+    public boolean isObject()
+    {
         return sort == OBJECT;
     }
 
-    public boolean isMethod() {
+    /**
+     * @return true if this is a method descriptor
+     */
+    public boolean isMethod()
+    {
         return sort == METHOD;
     }
 
-    public String getInternalName() {
-        if (sort == OBJECT) {
+    /**
+     * Unwraps the slash-separated class name, descending through array dimensions.
+     * @return the internal name, or null for primitives, method descriptors and primitive arrays
+     */
+    public String getInternalName()
+    {
+        if (sort == OBJECT)
+        {
             return descriptor.substring(1, descriptor.length() - 1);
         }
-        if (sort == ARRAY) {
+        if (sort == ARRAY)
+        {
             String elem = getArrayElementType(descriptor);
-            if (elem != null && elem.startsWith("L")) {
+            if (elem != null && elem.startsWith("L"))
+            {
                 return elem.substring(1, elem.length() - 1);
             }
         }
         return null;
     }
 
-    public String getClassName() {
+    /**
+     * @return the dotted class name, or null when there is no class to name
+     */
+    public String getClassName()
+    {
         String internal = getInternalName();
         return internal != null ? internal.replace('/', '.') : null;
     }
 
-    public int getDimensions() {
+    /**
+     * @return the array dimension count, or 0 if this is not an array
+     */
+    public int getDimensions()
+    {
         if (sort != ARRAY) return 0;
         return DescriptorUtil.getArrayDimensions(descriptor);
     }
 
-    public TypeDescriptor getElementType() {
+    /**
+     * @return the type left after stripping every array dimension, or null if this is not an array
+     */
+    public TypeDescriptor getElementType()
+    {
         if (sort != ARRAY) return null;
         String elemDesc = DescriptorUtil.getArrayElementType(descriptor);
         return elemDesc != null ? parse(elemDesc) : null;
     }
 
-    public TypeDescriptor getReturnType() {
+    /**
+     * @return the return type, or null if this is not a method descriptor
+     */
+    public TypeDescriptor getReturnType()
+    {
         if (sort != METHOD) return null;
         String ret = DescriptorUtil.parseReturnDescriptor(descriptor);
         return ret != null ? parse(ret) : null;
     }
 
-    public TypeDescriptor[] getArgumentTypes() {
+    /**
+     * @return the parameter types in declaration order, empty if this is not a method descriptor
+     */
+    public TypeDescriptor[] getArgumentTypes()
+    {
         if (sort != METHOD) return new TypeDescriptor[0];
         List<String> params = DescriptorUtil.parseParameterDescriptors(descriptor);
         TypeDescriptor[] result = new TypeDescriptor[params.size()];
-        for (int i = 0; i < params.size(); i++) {
+        for (int i = 0; i < params.size(); i++)
+        {
             result[i] = parse(params.get(i));
         }
         return result;
     }
 
-    public int getArgumentsSize() {
+    /**
+     * @return the total slot count of the parameters, counting long and double twice, or 0 if this is not a method descriptor
+     */
+    public int getArgumentsSize()
+    {
         if (sort != METHOD) return 0;
         return DescriptorUtil.countParameterSlots(descriptor);
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public int getSize() {
+    /**
+     * @return the number of JVM stack or local slots this type occupies - 2 for long and double, 0 for void, else 1
+     */
+    public int getSize()
+    {
         if (sort == LONG || sort == DOUBLE) return 2;
         if (sort == VOID) return 0;
         return 1;
     }
 
-    public int getLoadOpcode() {
-        switch (sort) {
+    /**
+     * Picks the local-load opcode that matches this type.
+     * @return ILOAD, LLOAD, FLOAD, DLOAD or ALOAD
+     * @throws IllegalStateException if the type is void or a method descriptor
+     */
+    public int getLoadOpcode()
+    {
+        switch (sort)
+        {
             case BOOLEAN:
             case BYTE:
             case CHAR:
@@ -188,8 +292,15 @@ public class TypeDescriptor {
         }
     }
 
-    public int getStoreOpcode() {
-        switch (sort) {
+    /**
+     * Picks the local-store opcode that matches this type.
+     * @return ISTORE, LSTORE, FSTORE, DSTORE or ASTORE
+     * @throws IllegalStateException if the type is void or a method descriptor
+     */
+    public int getStoreOpcode()
+    {
+        switch (sort)
+        {
             case BOOLEAN:
             case BYTE:
             case CHAR:
@@ -210,8 +321,15 @@ public class TypeDescriptor {
         }
     }
 
-    public int getReturnOpcode() {
-        switch (sort) {
+    /**
+     * Picks the return opcode that matches this type.
+     * @return RETURN, IRETURN, LRETURN, FRETURN, DRETURN or ARETURN
+     * @throws IllegalStateException if this is a method descriptor
+     */
+    public int getReturnOpcode()
+    {
+        switch (sort)
+        {
             case VOID:
                 return AccessFlags.RETURN;
             case BOOLEAN:
@@ -234,16 +352,19 @@ public class TypeDescriptor {
         }
     }
 
-    private static String getArrayElementType(String desc) {
+    private static String getArrayElementType(String desc)
+    {
         int dims = 0;
-        while (dims < desc.length() && desc.charAt(dims) == '[') {
+        while (dims < desc.length() && desc.charAt(dims) == '[')
+        {
             dims++;
         }
         return desc.substring(dims);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TypeDescriptor that = (TypeDescriptor) o;
@@ -251,12 +372,14 @@ public class TypeDescriptor {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(descriptor);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return descriptor;
     }
 }

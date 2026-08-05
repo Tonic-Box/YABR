@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * it. The node now blanket-consumes the same-start sibling scaffolding for a finally that carries its own
  * try, and recovers the whole construct with the return in place.
  */
-class FinallyWithNestedTryReturnFidelityTest {
+class FinallyWithNestedTryReturnFidelityTest
+{
 
     private static final String SOURCE =
             "import java.io.IOException;\n"
@@ -53,30 +54,30 @@ class FinallyWithNestedTryReturnFidelityTest {
     private static String d1;
 
     @BeforeAll
-    static void compileAndDecompile() throws Exception {
+    static void compileAndDecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("fin-nested-try");
         Path src = dir.resolve("FinNestedTry.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("FinNestedTry.class")));
         d1 = ClassDecompiler.decompile(cf);
     }
 
     @Test
-    void trailingReturnSurvives() {
-        assertTrue(d1.contains("return hash"),
-                "the method's trailing return must not be dropped:\n" + d1);
+    void trailingReturnSurvives()
+    {
+        assertTrue(d1.contains("return hash"), "the method's trailing return must not be dropped:\n" + d1);
     }
 
     @Test
-    void finallyKeepsItsGuardedClose() {
+    void finallyKeepsItsGuardedClose()
+    {
         int finallyAt = d1.indexOf("finally");
         assertTrue(finallyAt > 0, "the finally clause must be present:\n" + d1);
-        assertTrue(d1.indexOf("close", finallyAt) > 0,
-                "the guarded close must live in the finally clause:\n" + d1);
+        assertTrue(d1.indexOf("close", finallyAt) > 0, "the guarded close must live in the finally clause:\n" + d1);
     }
 }

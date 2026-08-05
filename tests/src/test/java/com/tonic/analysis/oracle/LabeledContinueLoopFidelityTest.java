@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * decompile-idempotence assertion is deliberately omitted here: this shape also carries a constant-equality
  * guard - {@code v == 5} - whose orientation belongs to the switch reconstructor, an orthogonal concern.)
  */
-class LabeledContinueLoopFidelityTest {
+class LabeledContinueLoopFidelityTest
+{
 
     private static final String SOURCE =
             "public class LabeledCont {\n"
@@ -61,14 +62,14 @@ class LabeledContinueLoopFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRoundTrip() throws Exception {
+    static void compileAndRoundTrip() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("labeled-cont");
         Path src = dir.resolve("LabeledCont.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("LabeledCont.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -79,16 +80,20 @@ class LabeledContinueLoopFidelityTest {
     }
 
     @Test
-    void labeledContinueAndBreakSurvive() {
+    void labeledContinueAndBreakSurvive()
+    {
         assertTrue(d1.contains("continue outer") || d1.contains("continue label"),
                 "the labeled continue to the enclosing loop must survive:\n" + d1);
         assertTrue(d1.contains("break"), "the inner loop's break must survive:\n" + d1);
     }
 
     @Test
-    void behaviorSurvivesTheRoundTrip() throws Exception {
-        for (int rows = 0; rows < 6; rows++) {
-            for (int cols = 0; cols < 6; cols++) {
+    void behaviorSurvivesTheRoundTrip() throws Exception
+    {
+        for (int rows = 0; rows < 6; rows++)
+        {
+            for (int cols = 0; cols < 6; cols++)
+            {
                 assertEquals(reference(rows, cols),
                         recompiledClass.getDeclaredMethod("scan", int.class, int.class).invoke(null, rows, cols),
                         "every path (labeled continue, break, fall-through) must match at rows=" + rows
@@ -97,20 +102,27 @@ class LabeledContinueLoopFidelityTest {
         }
     }
 
-    /** A faithful re-implementation of the fixture's {@code scan}, to check the recompiled behavior against. */
-    private static int reference(int rows, int cols) {
+    /**
+     * A faithful re-implementation of the fixture's {@code scan}, to check the recompiled behavior against.
+     */
+    private static int reference(int rows, int cols)
+    {
         int total = 0;
         int r = 0;
         outer:
-        while (r < rows) {
+        while (r < rows)
+        {
             int i = 0;
-            while (i < cols) {
+            while (i < cols)
+            {
                 int v = (r * 7 + i * 3) % 11 - 3;
-                if (v < 0) {
+                if (v < 0)
+                {
                     r++;
                     continue outer;
                 }
-                if (v == 5) {
+                if (v == 5)
+                {
                     break;
                 }
                 total += v;

@@ -3,15 +3,16 @@ package com.tonic.renamer.mapping;
 /**
  * Interface for all rename mapping types.
  */
-public interface RenameMapping {
+public interface RenameMapping
+{
 
     /**
-     * Gets the old (original) name being renamed.
+     * @return the old (original) name being renamed
      */
     String getOldName();
 
     /**
-     * Gets the new name to rename to.
+     * @return the new name to rename to
      */
     String getNewName();
 }

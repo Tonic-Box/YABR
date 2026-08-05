@@ -17,23 +17,27 @@ import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class RenameValidatorTest {
+class RenameValidatorTest
+{
 
     private ClassPool classPool;
     private MappingStore mappings;
     private RenameValidator validator;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         classPool = TestUtils.emptyPool();
         mappings = new MappingStore();
     }
 
     @Nested
-    class ClassValidationTests {
+    class ClassValidationTests
+    {
 
         @Test
-        void validClassMappingPasses() throws IOException {
+        void validClassMappingPasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/OldClass", access);
 
@@ -45,18 +49,19 @@ class RenameValidatorTest {
         }
 
         @Test
-        void rejectsNonExistentClass() {
+        void rejectsNonExistentClass()
+        {
             mappings.addClassMapping(new ClassMapping("com/example/NonExistent", "com/example/New"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Class not found")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Class not found")));
         }
 
         @Test
-        void rejectsInvalidClassName() throws IOException {
+        void rejectsInvalidClassName() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/OldClass", access);
 
@@ -65,12 +70,12 @@ class RenameValidatorTest {
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Invalid class name")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Invalid class name")));
         }
 
         @Test
-        void rejectsDuplicateTargetNames() throws IOException {
+        void rejectsDuplicateTargetNames() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/Class1", access);
             classPool.createNewClass("com/example/Class2", access);
@@ -81,12 +86,12 @@ class RenameValidatorTest {
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Duplicate target class name")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Duplicate target class name")));
         }
 
         @Test
-        void rejectsConflictWithExistingClass() throws IOException {
+        void rejectsConflictWithExistingClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/OldClass", access);
             classPool.createNewClass("com/example/Existing", access);
@@ -96,12 +101,12 @@ class RenameValidatorTest {
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Class name conflict")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Class name conflict")));
         }
 
         @Test
-        void allowsRenamingToClassThatIsAlsoBeingRenamed() throws IOException {
+        void allowsRenamingToClassThatIsAlsoBeingRenamed() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/Class1", access);
             classPool.createNewClass("com/example/Class2", access);
@@ -116,17 +121,17 @@ class RenameValidatorTest {
     }
 
     @Nested
-    class MethodValidationTests {
+    class MethodValidationTests
+    {
 
         @Test
-        void validMethodMappingPasses() throws IOException {
+        void validMethodMappingPasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Service", access);
             classFile.createNewMethodWithDescriptor(access, "process", "(I)V");
 
-            mappings.addMethodMapping(new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle"
-            ));
+            mappings.addMethodMapping(new MethodMapping("com/example/Service", "process", "(I)V", "handle"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
@@ -134,71 +139,64 @@ class RenameValidatorTest {
         }
 
         @Test
-        void rejectsMethodInNonExistentClass() {
-            mappings.addMethodMapping(new MethodMapping(
-                "com/example/NonExistent", "method", "()V", "renamed"
-            ));
+        void rejectsMethodInNonExistentClass()
+        {
+            mappings.addMethodMapping(new MethodMapping("com/example/NonExistent", "method", "()V", "renamed"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Class not found for method")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Class not found for method")));
         }
 
         @Test
-        void rejectsNonExistentMethod() throws IOException {
+        void rejectsNonExistentMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/Service", access);
 
-            mappings.addMethodMapping(new MethodMapping(
-                "com/example/Service", "nonexistent", "()V", "renamed"
-            ));
+            mappings.addMethodMapping(new MethodMapping("com/example/Service", "nonexistent", "()V", "renamed"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Method not found")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Method not found")));
         }
 
         @Test
-        void rejectsInvalidMethodName() throws IOException {
+        void rejectsInvalidMethodName() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Service", access);
             classFile.createNewMethodWithDescriptor(access, "process", "()V");
 
-            mappings.addMethodMapping(new MethodMapping(
-                "com/example/Service", "process", "()V", "invalid-name"
-            ));
+            mappings.addMethodMapping(new MethodMapping("com/example/Service", "process", "()V", "invalid-name"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Invalid method name")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Invalid method name")));
         }
 
         @Test
-        void rejectsNameConflictInSameClass() throws IOException {
+        void rejectsNameConflictInSameClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Service", access);
             classFile.createNewMethodWithDescriptor(access, "process", "()V");
             classFile.createNewMethodWithDescriptor(access, "handle", "()V");
 
-            mappings.addMethodMapping(new MethodMapping(
-                "com/example/Service", "process", "()V", "handle"
-            ));
+            mappings.addMethodMapping(new MethodMapping("com/example/Service", "process", "()V", "handle"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Method name conflict")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Method name conflict")));
         }
 
         @Test
-        void allowsRenamingMethodToItsOwnName() throws IOException {
+        void allowsRenamingMethodToItsOwnName() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Service", access);
             classFile.createNewMethodWithDescriptor(access, "process", "()V");
@@ -211,17 +209,17 @@ class RenameValidatorTest {
     }
 
     @Nested
-    class FieldValidationTests {
+    class FieldValidationTests
+    {
 
         @Test
-        void validFieldMappingPasses() throws IOException {
+        void validFieldMappingPasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Model", access);
             classFile.createNewField(access, "data", "Ljava/lang/String;", Collections.emptyList());
 
-            mappings.addFieldMapping(new FieldMapping(
-                "com/example/Model", "data", "Ljava/lang/String;", "content"
-            ));
+            mappings.addFieldMapping(new FieldMapping("com/example/Model", "data", "Ljava/lang/String;", "content"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
@@ -229,75 +227,69 @@ class RenameValidatorTest {
         }
 
         @Test
-        void rejectsFieldInNonExistentClass() {
-            mappings.addFieldMapping(new FieldMapping(
-                "com/example/NonExistent", "field", "I", "renamed"
-            ));
+        void rejectsFieldInNonExistentClass()
+        {
+            mappings.addFieldMapping(new FieldMapping("com/example/NonExistent", "field", "I", "renamed"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Class not found for field")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Class not found for field")));
         }
 
         @Test
-        void rejectsNonExistentField() throws IOException {
+        void rejectsNonExistentField() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/Model", access);
 
-            mappings.addFieldMapping(new FieldMapping(
-                "com/example/Model", "nonexistent", "I", "renamed"
-            ));
+            mappings.addFieldMapping(new FieldMapping("com/example/Model", "nonexistent", "I", "renamed"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Field not found")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Field not found")));
         }
 
         @Test
-        void rejectsInvalidFieldName() throws IOException {
+        void rejectsInvalidFieldName() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Model", access);
             classFile.createNewField(access, "data", "I", Collections.emptyList());
 
-            mappings.addFieldMapping(new FieldMapping(
-                "com/example/Model", "data", "I", "invalid-name"
-            ));
+            mappings.addFieldMapping(new FieldMapping("com/example/Model", "data", "I", "invalid-name"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Invalid field name")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Invalid field name")));
         }
 
         @Test
-        void rejectsFieldNameConflict() throws IOException {
+        void rejectsFieldNameConflict() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile classFile = classPool.createNewClass("com/example/Model", access);
             classFile.createNewField(access, "data", "I", Collections.emptyList());
             classFile.createNewField(access, "content", "I", Collections.emptyList());
 
-            mappings.addFieldMapping(new FieldMapping(
-                "com/example/Model", "data", "I", "content"
-            ));
+            mappings.addFieldMapping(new FieldMapping("com/example/Model", "data", "I", "content"));
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();
             assertFalse(result.isValid());
-            assertTrue(result.getErrors().stream()
-                .anyMatch(e -> e.contains("Field name conflict")));
+            assertTrue(result.getErrors().stream() .anyMatch(e -> e.contains("Field name conflict")));
         }
     }
 
     @Nested
-    class CircularRenameDetectionTests {
+    class CircularRenameDetectionTests
+    {
 
         @Test
-        void detectsSimpleCircularRename() throws IOException {
+        void detectsSimpleCircularRename() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/ClassA", access);
             classPool.createNewClass("com/example/ClassB", access);
@@ -308,12 +300,12 @@ class RenameValidatorTest {
 
             ValidationResult result = validator.validate();
             assertTrue(result.hasWarnings());
-            assertTrue(result.getWarnings().stream()
-                .anyMatch(w -> w.contains("Circular class rename")));
+            assertTrue(result.getWarnings().stream() .anyMatch(w -> w.contains("Circular class rename")));
         }
 
         @Test
-        void detectsChainedRename() throws IOException {
+        void detectsChainedRename() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classPool.createNewClass("com/example/ClassA", access);
             classPool.createNewClass("com/example/ClassB", access);
@@ -325,16 +317,17 @@ class RenameValidatorTest {
 
             ValidationResult result = validator.validate();
             assertTrue(result.hasWarnings());
-            assertTrue(result.getWarnings().stream()
-                .anyMatch(w -> w.contains("Chained class rename")));
+            assertTrue(result.getWarnings().stream() .anyMatch(w -> w.contains("Chained class rename")));
         }
     }
 
     @Nested
-    class EmptyMappingsTests {
+    class EmptyMappingsTests
+    {
 
         @Test
-        void emptyMappingsAreValid() {
+        void emptyMappingsAreValid()
+        {
             validator = new RenameValidator(classPool, mappings);
 
             ValidationResult result = validator.validate();

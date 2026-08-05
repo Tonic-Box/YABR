@@ -16,11 +16,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherArrayTest {
+class OpcodeDispatcherArrayTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -28,13 +30,17 @@ class OpcodeDispatcherArrayTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -42,10 +48,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class IntArrayTests {
+    class IntArrayTests
+    {
 
         @Test
-        void testNewIntArray() throws IOException {
+        void testNewIntArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -61,7 +69,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testIAStoreAndLoad() throws IOException {
+        void testIAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(3)
@@ -82,7 +91,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testIAStoreMultipleElements() throws IOException {
+        void testIAStoreMultipleElements() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -111,7 +121,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testIntArrayLength() throws IOException {
+        void testIntArrayLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(10)
@@ -128,10 +139,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class LongArrayTests {
+    class LongArrayTests
+    {
 
         @Test
-        void testNewLongArray() throws IOException {
+        void testNewLongArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(7)
@@ -147,7 +160,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testLAStoreAndLoad() throws IOException {
+        void testLAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()J")
                     .iconst(3)
@@ -168,7 +182,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testLAStoreMultipleElements() throws IOException {
+        void testLAStoreMultipleElements() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()J")
                     .iconst(5)
@@ -194,10 +209,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class FloatArrayTests {
+    class FloatArrayTests
+    {
 
         @Test
-        void testNewFloatArray() throws IOException {
+        void testNewFloatArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(4)
@@ -213,7 +230,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testFAStoreAndLoad() throws IOException {
+        void testFAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()F")
                     .iconst(5)
@@ -234,7 +252,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testFAStoreMultipleElements() throws IOException {
+        void testFAStoreMultipleElements() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()F")
                     .iconst(4)
@@ -264,10 +283,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class DoubleArrayTests {
+    class DoubleArrayTests
+    {
 
         @Test
-        void testNewDoubleArray() throws IOException {
+        void testNewDoubleArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(6)
@@ -283,7 +304,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testDAStoreAndLoad() throws IOException {
+        void testDAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()D")
                     .iconst(3)
@@ -304,7 +326,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testDAStoreMultipleElements() throws IOException {
+        void testDAStoreMultipleElements() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()D")
                     .iconst(4)
@@ -330,10 +353,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class ByteArrayTests {
+    class ByteArrayTests
+    {
 
         @Test
-        void testNewByteArray() throws IOException {
+        void testNewByteArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(8)
@@ -349,7 +374,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testBAStoreAndLoad() throws IOException {
+        void testBAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -370,7 +396,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testBAStoreNegativeValue() throws IOException {
+        void testBAStoreNegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(3)
@@ -391,7 +418,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testBAStoreMultipleElements() throws IOException {
+        void testBAStoreMultipleElements() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -421,10 +449,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class CharArrayTests {
+    class CharArrayTests
+    {
 
         @Test
-        void testNewCharArray() throws IOException {
+        void testNewCharArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(10)
@@ -440,7 +470,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testCAStoreAndLoad() throws IOException {
+        void testCAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -461,7 +492,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testCAStoreUnicodeValue() throws IOException {
+        void testCAStoreUnicodeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(3)
@@ -483,10 +515,12 @@ class OpcodeDispatcherArrayTest {
     }
 
     @Nested
-    class ShortArrayTests {
+    class ShortArrayTests
+    {
 
         @Test
-        void testNewShortArray() throws IOException {
+        void testNewShortArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(12)
@@ -502,7 +536,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testSAStoreAndLoad() throws IOException {
+        void testSAStoreAndLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)
@@ -523,7 +558,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testSAStoreNegativeValue() throws IOException {
+        void testSAStoreNegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(4)
@@ -544,7 +580,8 @@ class OpcodeDispatcherArrayTest {
         }
 
         @Test
-        void testSAStoreMultipleElements() throws IOException {
+        void testSAStoreMultipleElements() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(5)

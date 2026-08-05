@@ -7,45 +7,70 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a generic attribute for unknown attribute types.
- * It stores the raw data as a byte array.
+ * A fallback attribute for unrecognized attribute names, holding the raw info bytes.
  */
-public class GenericAttribute extends Attribute {
+public class GenericAttribute extends Attribute
+{
     private final byte[] info;
 
-    public GenericAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public GenericAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
         this.info = new byte[length];
     }
 
-    public GenericAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public GenericAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
         this.info = new byte[length];
     }
 
-    public byte[] getInfo() {
+    /**
+     * @return the info
+     */
+    public byte[] getInfo()
+    {
         return info;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
-        if (length > 0) {
+    public void read(ClassFile classFile, int length)
+    {
+        if (length > 0)
+        {
             classFile.readBytes(info, 0, length);
         }
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.write(info);
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         this.length = info.length;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "GenericAttribute{name='" + name + "', infoLength=" + info.length + "}";
     }
 }

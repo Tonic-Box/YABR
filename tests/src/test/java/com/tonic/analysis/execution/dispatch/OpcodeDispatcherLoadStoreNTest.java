@@ -16,11 +16,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherLoadStoreNTest {
+class OpcodeDispatcherLoadStoreNTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -28,13 +30,17 @@ class OpcodeDispatcherLoadStoreNTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -42,9 +48,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class ILoadNTests {
+    class ILoadNTests
+    {
         @Test
-        void testILoad0() throws IOException {
+        void testILoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                     .publicStaticMethod("test", "(I)I")
                         .iload_0()
@@ -56,7 +64,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testILoad1() throws IOException {
+        void testILoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test2")
                     .publicStaticMethod("test", "(II)I")
                         .iload_1()
@@ -68,7 +77,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testILoad2() throws IOException {
+        void testILoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test3")
                     .publicStaticMethod("test", "(III)I")
                         .iload_2()
@@ -80,7 +90,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testILoad3() throws IOException {
+        void testILoad3() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test4")
                     .publicStaticMethod("test", "(IIII)I")
                         .iload_3()
@@ -93,9 +104,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class LLoadNTests {
+    class LLoadNTests
+    {
         @Test
-        void testLLoad0() throws IOException {
+        void testLLoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestL0")
                     .publicStaticMethod("test", "(J)J")
                         .lload_0()
@@ -107,7 +120,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testLLoad2() throws IOException {
+        void testLLoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestL2")
                     .publicStaticMethod("test", "(JJ)J")
                         .lload_2()
@@ -120,9 +134,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class FLoadNTests {
+    class FLoadNTests
+    {
         @Test
-        void testFLoad0() throws IOException {
+        void testFLoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestF0")
                     .publicStaticMethod("test", "(F)F")
                         .fload_0()
@@ -134,7 +150,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testFLoad1() throws IOException {
+        void testFLoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestF1")
                     .publicStaticMethod("test", "(FF)F")
                         .fload_1()
@@ -147,9 +164,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class DLoadNTests {
+    class DLoadNTests
+    {
         @Test
-        void testDLoad0() throws IOException {
+        void testDLoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestD0")
                     .publicStaticMethod("test", "(D)D")
                         .dload_0()
@@ -161,7 +180,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testDLoad2() throws IOException {
+        void testDLoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestD2")
                     .publicStaticMethod("test", "(DD)D")
                         .dload_2()
@@ -174,9 +194,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class ALoadNTests {
+    class ALoadNTests
+    {
         @Test
-        void testALoad0Null() throws IOException {
+        void testALoad0Null() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestA0")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)Ljava/lang/Object;")
                         .aload_0()
@@ -189,9 +211,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class IStoreNTests {
+    class IStoreNTests
+    {
         @Test
-        void testIStore0() throws IOException {
+        void testIStore0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIS0")
                     .publicStaticMethod("test", "(I)I")
                         .iconst(99)
@@ -205,7 +229,8 @@ class OpcodeDispatcherLoadStoreNTest {
         }
 
         @Test
-        void testIStore1() throws IOException {
+        void testIStore1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIS1")
                     .publicStaticMethod("test", "(II)I")
                         .iconst(88)
@@ -220,9 +245,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class LStoreNTests {
+    class LStoreNTests
+    {
         @Test
-        void testLStore0() throws IOException {
+        void testLStore0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLS0")
                     .publicStaticMethod("test", "(J)J")
                         .lconst(999L)
@@ -237,9 +264,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class FStoreNTests {
+    class FStoreNTests
+    {
         @Test
-        void testFStore0() throws IOException {
+        void testFStore0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestFS0")
                     .publicStaticMethod("test", "(F)F")
                         .fconst(9.9f)
@@ -254,9 +283,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class DStoreNTests {
+    class DStoreNTests
+    {
         @Test
-        void testDStore0() throws IOException {
+        void testDStore0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestDS0")
                     .publicStaticMethod("test", "(D)D")
                         .dconst(9.99)
@@ -271,9 +302,11 @@ class OpcodeDispatcherLoadStoreNTest {
     }
 
     @Nested
-    class AStoreNTests {
+    class AStoreNTests
+    {
         @Test
-        void testAStore0Null() throws IOException {
+        void testAStore0Null() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestAS0")
                     .publicStaticMethod("test", "(Ljava/lang/Object;)Ljava/lang/Object;")
                         .aconst_null()

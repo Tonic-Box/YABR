@@ -5,7 +5,12 @@ import com.tonic.analysis.cpg.edge.CPGEdgeType;
 
 import java.util.*;
 
-public abstract class CPGNode {
+/**
+ * Base class for CPG nodes: an id, a node type, a property map, and the incident edges;
+ * identity is the id alone.
+ */
+public abstract class CPGNode
+{
 
     private final long id;
     private final CPGNodeType nodeType;
@@ -17,187 +22,353 @@ public abstract class CPGNode {
     private boolean tainted;
     private String taintLabel;
 
-    protected CPGNode(long id, CPGNodeType nodeType) {
+    protected CPGNode(long id, CPGNodeType nodeType)
+    {
         this.id = id;
         this.nodeType = nodeType;
     }
 
-    public long getId() {
+    /**
+     * @return the id
+     */
+    public long getId()
+    {
         return id;
     }
 
-    public CPGNodeType getNodeType() {
+    /**
+     * @return the node type
+     */
+    public CPGNodeType getNodeType()
+    {
         return nodeType;
     }
 
-    public Map<String, Object> getProperties() {
+    /**
+     * @return the properties
+     */
+    public Map<String, Object> getProperties()
+    {
         return properties;
     }
 
-    public Set<CPGEdge> getOutgoingEdges() {
+    /**
+     * @return the outgoing edges
+     */
+    public Set<CPGEdge> getOutgoingEdges()
+    {
         return outgoingEdges;
     }
 
-    public Set<CPGEdge> getIncomingEdges() {
+    /**
+     * @return the incoming edges
+     */
+    public Set<CPGEdge> getIncomingEdges()
+    {
         return incomingEdges;
     }
 
-    public boolean isTainted() {
+    /**
+     * @return whether tainted
+     */
+    public boolean isTainted()
+    {
         return tainted;
     }
 
-    public String getTaintLabel() {
+    /**
+     * @return the taint label
+     */
+    public String getTaintLabel()
+    {
         return taintLabel;
     }
 
-    public void setTainted(boolean tainted) {
+    /**
+     * Marks or clears this node as taint-reached.
+     * @param tainted whether the node is tainted
+     */
+    public void setTainted(boolean tainted)
+    {
         this.tainted = tainted;
     }
 
-    public void setTaintLabel(String taintLabel) {
+    /**
+     * Records which taint source reached this node.
+     * @param taintLabel the taint label
+     */
+    public void setTaintLabel(String taintLabel)
+    {
         this.taintLabel = taintLabel;
     }
 
+    /**
+     * @return a short human-readable display label
+     */
     public abstract String getLabel();
 
+    /**
+     * @param <T> the expected underlying type
+     * @return the wrapped IR or analysis object
+     */
     public abstract <T> T getUnderlying();
 
-    public Object getProperty(String key) {
+    /**
+     * Reads a property value.
+     * @param key the property key
+     * @return the value, or null if absent
+     */
+    public Object getProperty(String key)
+    {
         return properties.get(key);
     }
 
-    public void setProperty(String key, Object value) {
+    /**
+     * Sets a property value.
+     * @param key the property key
+     * @param value the value to store
+     */
+    public void setProperty(String key, Object value)
+    {
         properties.put(key, value);
     }
 
-    public boolean hasProperty(String key) {
+    /**
+     * Tests whether a property is present.
+     * @param key the property key
+     * @return whether the property exists
+     */
+    public boolean hasProperty(String key)
+    {
         return properties.containsKey(key);
     }
 
-    public void removeProperty(String key) {
+    /**
+     * Removes a property.
+     * @param key the property key
+     */
+    public void removeProperty(String key)
+    {
         properties.remove(key);
     }
 
-    public void addOutgoingEdge(CPGEdge edge) {
+    /**
+     * Registers an edge leaving this node.
+     * @param edge the edge to add
+     */
+    public void addOutgoingEdge(CPGEdge edge)
+    {
         outgoingEdges.add(edge);
     }
 
-    public void addIncomingEdge(CPGEdge edge) {
+    /**
+     * Registers an edge entering this node.
+     * @param edge the edge to add
+     */
+    public void addIncomingEdge(CPGEdge edge)
+    {
         incomingEdges.add(edge);
     }
 
-    public void removeOutgoingEdge(CPGEdge edge) {
+    /**
+     * Unregisters an edge leaving this node.
+     * @param edge the edge to remove
+     */
+    public void removeOutgoingEdge(CPGEdge edge)
+    {
         outgoingEdges.remove(edge);
     }
 
-    public void removeIncomingEdge(CPGEdge edge) {
+    /**
+     * Unregisters an edge entering this node.
+     * @param edge the edge to remove
+     */
+    public void removeIncomingEdge(CPGEdge edge)
+    {
         incomingEdges.remove(edge);
     }
 
-    public Set<CPGEdge> getEdges(CPGEdgeType type) {
+    /**
+     * Collects incident edges of one type in either direction.
+     * @param type the edge type
+     * @return the matching edges
+     */
+    public Set<CPGEdge> getEdges(CPGEdgeType type)
+    {
         Set<CPGEdge> result = new LinkedHashSet<>();
-        for (CPGEdge edge : outgoingEdges) {
-            if (edge.getType() == type) {
+        for (CPGEdge edge : outgoingEdges)
+        {
+            if (edge.getType() == type)
+            {
                 result.add(edge);
             }
         }
-        for (CPGEdge edge : incomingEdges) {
-            if (edge.getType() == type) {
+        for (CPGEdge edge : incomingEdges)
+        {
+            if (edge.getType() == type)
+            {
                 result.add(edge);
             }
         }
         return result;
     }
 
-    public Set<CPGEdge> getOutgoingEdges(CPGEdgeType type) {
+    /**
+     * Collects outgoing edges of one type.
+     * @param type the edge type
+     * @return the matching edges
+     */
+    public Set<CPGEdge> getOutgoingEdges(CPGEdgeType type)
+    {
         Set<CPGEdge> result = new LinkedHashSet<>();
-        for (CPGEdge edge : outgoingEdges) {
-            if (edge.getType() == type) {
+        for (CPGEdge edge : outgoingEdges)
+        {
+            if (edge.getType() == type)
+            {
                 result.add(edge);
             }
         }
         return result;
     }
 
-    public Set<CPGEdge> getIncomingEdges(CPGEdgeType type) {
+    /**
+     * Collects incoming edges of one type.
+     * @param type the edge type
+     * @return the matching edges
+     */
+    public Set<CPGEdge> getIncomingEdges(CPGEdgeType type)
+    {
         Set<CPGEdge> result = new LinkedHashSet<>();
-        for (CPGEdge edge : incomingEdges) {
-            if (edge.getType() == type) {
+        for (CPGEdge edge : incomingEdges)
+        {
+            if (edge.getType() == type)
+            {
                 result.add(edge);
             }
         }
         return result;
     }
 
-    public List<CPGNode> cfgSuccessors() {
+    /**
+     * Follows outgoing control-flow edges.
+     * @return the CFG successor nodes
+     */
+    public List<CPGNode> cfgSuccessors()
+    {
         List<CPGNode> successors = new ArrayList<>();
-        for (CPGEdge edge : outgoingEdges) {
-            if (edge.getType().isCFGEdge()) {
+        for (CPGEdge edge : outgoingEdges)
+        {
+            if (edge.getType().isCFGEdge())
+            {
                 successors.add(edge.getTarget());
             }
         }
         return successors;
     }
 
-    public List<CPGNode> cfgPredecessors() {
+    /**
+     * Follows incoming control-flow edges.
+     * @return the CFG predecessor nodes
+     */
+    public List<CPGNode> cfgPredecessors()
+    {
         List<CPGNode> predecessors = new ArrayList<>();
-        for (CPGEdge edge : incomingEdges) {
-            if (edge.getType().isCFGEdge()) {
+        for (CPGEdge edge : incomingEdges)
+        {
+            if (edge.getType().isCFGEdge())
+            {
                 predecessors.add(edge.getSource());
             }
         }
         return predecessors;
     }
 
-    public Optional<CPGNode> astParent() {
-        for (CPGEdge edge : incomingEdges) {
-            if (edge.getType() == CPGEdgeType.AST_CHILD) {
+    /**
+     * Follows the incoming AST child edge to the parent.
+     * @return the AST parent node, if any
+     */
+    public Optional<CPGNode> astParent()
+    {
+        for (CPGEdge edge : incomingEdges)
+        {
+            if (edge.getType() == CPGEdgeType.AST_CHILD)
+            {
                 return Optional.of(edge.getSource());
             }
         }
         return Optional.empty();
     }
 
-    public List<CPGNode> astChildren() {
+    /**
+     * Follows outgoing AST child edges.
+     * @return the AST child nodes
+     */
+    public List<CPGNode> astChildren()
+    {
         List<CPGNode> children = new ArrayList<>();
-        for (CPGEdge edge : outgoingEdges) {
-            if (edge.getType() == CPGEdgeType.AST_CHILD) {
+        for (CPGEdge edge : outgoingEdges)
+        {
+            if (edge.getType() == CPGEdgeType.AST_CHILD)
+            {
                 children.add(edge.getTarget());
             }
         }
         return children;
     }
 
-    public Set<CPGNode> dataDependencies() {
+    /**
+     * Follows incoming data-flow edges to the values this node depends on.
+     * @return the data dependency sources
+     */
+    public Set<CPGNode> dataDependencies()
+    {
         Set<CPGNode> deps = new LinkedHashSet<>();
-        for (CPGEdge edge : incomingEdges) {
-            if (edge.getType().isDataFlowEdge()) {
+        for (CPGEdge edge : incomingEdges)
+        {
+            if (edge.getType().isDataFlowEdge())
+            {
                 deps.add(edge.getSource());
             }
         }
         return deps;
     }
 
-    public Set<CPGNode> controlDependencies() {
+    /**
+     * Follows incoming control-dependence edges to the nodes controlling this one.
+     * @return the control dependency sources
+     */
+    public Set<CPGNode> controlDependencies()
+    {
         Set<CPGNode> deps = new LinkedHashSet<>();
-        for (CPGEdge edge : incomingEdges) {
-            if (edge.getType().isControlDependenceEdge()) {
+        for (CPGEdge edge : incomingEdges)
+        {
+            if (edge.getType().isControlDependenceEdge())
+            {
                 deps.add(edge.getSource());
             }
         }
         return deps;
     }
 
-    public int getInDegree() {
+    /**
+     * @return the number of incoming edges
+     */
+    public int getInDegree()
+    {
         return incomingEdges.size();
     }
 
-    public int getOutDegree() {
+    /**
+     * @return the number of outgoing edges
+     */
+    public int getOutDegree()
+    {
         return outgoingEdges.size();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CPGNode cpgNode = (CPGNode) o;
@@ -205,12 +376,14 @@ public abstract class CPGNode {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Long.hashCode(id);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("CPGNode[%d: %s - %s]", id, nodeType.getShortName(), getLabel());
     }
 }

@@ -10,17 +10,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ResolutionCacheTest {
+class ResolutionCacheTest
+{
 
     private ResolutionCache cache;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         cache = new ResolutionCache();
     }
 
     @Test
-    void getClassCachesResult() throws Exception {
+    void getClassCachesResult() throws Exception
+    {
         ClassFile cf = TestUtils.createMinimalClass("com/test/TestClass");
         AtomicInteger supplierCalls = new AtomicInteger(0);
 
@@ -40,7 +43,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void getMethodCachesResult() {
+    void getMethodCachesResult()
+    {
         ResolvedMethod method = new ResolvedMethod(null, null, ResolvedMethod.InvokeKind.STATIC);
         AtomicInteger supplierCalls = new AtomicInteger(0);
 
@@ -60,7 +64,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void getFieldCachesResult() {
+    void getFieldCachesResult()
+    {
         ResolvedField field = new ResolvedField(null, null);
         AtomicInteger supplierCalls = new AtomicInteger(0);
 
@@ -80,7 +85,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void getAssignabilityCachesResult() {
+    void getAssignabilityCachesResult()
+    {
         AtomicInteger supplierCalls = new AtomicInteger(0);
 
         Boolean result1 = cache.getAssignability("key1", () -> {
@@ -99,7 +105,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void clearEmptiesAllCaches() throws Exception {
+    void clearEmptiesAllCaches() throws Exception
+    {
         ClassFile cf = TestUtils.createMinimalClass("com/test/TestClass");
         ResolvedMethod method = new ResolvedMethod(null, null, ResolvedMethod.InvokeKind.STATIC);
         ResolvedField field = new ResolvedField(null, null);
@@ -117,7 +124,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void sizeCountsAllEntries() throws Exception {
+    void sizeCountsAllEntries() throws Exception
+    {
         ClassFile cf = TestUtils.createMinimalClass("com/test/TestClass");
         ResolvedMethod method = new ResolvedMethod(null, null, ResolvedMethod.InvokeKind.STATIC);
         ResolvedField field = new ResolvedField(null, null);
@@ -138,7 +146,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void differentKeysStoredSeparately() throws Exception {
+    void differentKeysStoredSeparately() throws Exception
+    {
         ClassFile cf1 = TestUtils.createMinimalClass("com/test/Class1");
         ClassFile cf2 = TestUtils.createMinimalClass("com/test/Class2");
 
@@ -154,24 +163,31 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void concurrentAccessThreadSafe() throws Exception {
+    void concurrentAccessThreadSafe() throws Exception
+    {
         ClassFile cf = TestUtils.createMinimalClass("com/test/TestClass");
         AtomicInteger supplierCalls = new AtomicInteger(0);
         int threadCount = 10;
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(threadCount);
 
-        for (int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < threadCount; i++)
+        {
             new Thread(() -> {
-                try {
+                try
+                {
                     startLatch.await();
                     cache.getClass("concurrent", () -> {
                         supplierCalls.incrementAndGet();
                         return cf;
                     });
-                } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e)
+                {
                     Thread.currentThread().interrupt();
-                } finally {
+                }
+                finally
+                {
                     doneLatch.countDown();
                 }
             }).start();
@@ -184,7 +200,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void nullValuesNotCached() {
+    void nullValuesNotCached()
+    {
         AtomicInteger supplierCalls = new AtomicInteger(0);
 
         ClassFile result1 = cache.getClass("null", () -> {
@@ -202,7 +219,8 @@ class ResolutionCacheTest {
     }
 
     @Test
-    void cachePersistsAcrossOperations() throws Exception {
+    void cachePersistsAcrossOperations() throws Exception
+    {
         ClassFile cf = TestUtils.createMinimalClass("com/test/TestClass");
         cache.getClass("key", () -> cf);
 

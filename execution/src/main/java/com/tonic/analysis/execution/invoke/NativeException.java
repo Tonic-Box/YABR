@@ -1,20 +1,35 @@
 package com.tonic.analysis.execution.invoke;
 
-public class NativeException extends Exception {
+/**
+ * Exception raised by a native-method handler, carrying the internal name of the guest exception class to materialize.
+ */
+public class NativeException extends Exception
+{
 
     private final String exceptionClass;
 
-    public NativeException(String exceptionClass, String message) {
+    /**
+     * Creates an exception to be materialized as the given guest class.
+     * @param exceptionClass internal name of the guest exception class
+     * @param message the detail message, may be null
+     */
+    public NativeException(String exceptionClass, String message)
+    {
         super(message);
         this.exceptionClass = exceptionClass;
     }
 
-    public String getExceptionClass() {
+    /**
+     * @return the exception class
+     */
+    public String getExceptionClass()
+    {
         return exceptionClass;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "NativeException{" +
                "exceptionClass='" + exceptionClass + '\'' +
                ", message='" + getMessage() + '\'' +

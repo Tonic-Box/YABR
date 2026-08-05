@@ -17,17 +17,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code if_icmp} branch chain (javac does not turn plain ifs into a tableswitch).
  * The structural analyzer must reconstruct it as a {@code switch}.
  */
-class ComparisonChainSwitchTest {
+class ComparisonChainSwitchTest
+{
 
     @Test
-    void ifChainOnIntBecomesSwitch() throws Exception {
+    void ifChainOnIntBecomesSwitch() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
+        if (compiler == null)
+        {
             return; // no JDK compiler available in this runtime; skip
         }
 
         Path dir = Files.createTempDirectory("yabr-cc");
-        try {
+        try
+        {
             String src =
                 "public class Dispatch {\n" +
                 "  static int d(int x) {\n" +
@@ -48,13 +52,17 @@ class ComparisonChainSwitchTest {
             String out = new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
 
             assertTrue(out.contains("switch ("), "expected a reconstructed switch, got:\n" + out);
-            for (String label : new String[]{"case 10:", "case 20:", "case 30:", "case 40:"}) {
+            for (String label : new String[]{"case 10:", "case 20:", "case 30:", "case 40:"})
+            {
                 assertTrue(out.contains(label), "missing " + label + " in:\n" + out);
             }
             // The dispatch should no longer be a residual if-chain on x.
             assertFalse(out.contains("if (x == 20)"), "switch not fully reconstructed:\n" + out);
-        } finally {
-            try (var paths = Files.walk(dir)) {
+        }
+        finally
+        {
+            try (var paths = Files.walk(dir))
+            {
                 paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                     try { Files.deleteIfExists(p); } catch (Exception ignored) {}
                 });

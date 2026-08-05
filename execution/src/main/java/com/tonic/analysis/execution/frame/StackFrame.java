@@ -12,7 +12,11 @@ import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.table.LineNumberTableEntry;
 import com.tonic.util.Logger;
 
-public final class StackFrame {
+/**
+ * One interpreter activation: a method's operand stack, locals, program counter, and completion state.
+ */
+public final class StackFrame
+{
 
     private final MethodEntry method;
     private final CodeWriter code;
@@ -23,15 +27,24 @@ public final class StackFrame {
     private ConcreteValue returnValue;
     private ObjectInstance exception;
 
-    public StackFrame(MethodEntry method, ConcreteValue[] args) {
-        if (method == null) {
+    /**
+     * Creates a frame for a method invocation with the given arguments bound to locals.
+     * @param method the method to execute
+     * @param args argument values placed into the leading local slots
+     * @throws IllegalArgumentException if the method is null or has no code attribute
+     */
+    public StackFrame(MethodEntry method, ConcreteValue[] args)
+    {
+        if (method == null)
+        {
             throw new IllegalArgumentException("Method cannot be null");
         }
 
         this.method = method;
 
         CodeAttribute codeAttr = method.getCodeAttribute();
-        if (codeAttr == null) {
+        if (codeAttr == null)
+        {
             throw new IllegalArgumentException("Method has no code attribute (abstract/native): " +
                 method.getOwnerName() + "." + method.getName() + method.getDesc());
         }
@@ -46,65 +59,122 @@ public final class StackFrame {
         this.exception = null;
     }
 
-    public MethodEntry getMethod() {
+    /**
+     * @return the method
+     */
+    public MethodEntry getMethod()
+    {
         return method;
     }
 
-    public CodeWriter getCode() {
+    /**
+     * @return the code
+     */
+    public CodeWriter getCode()
+    {
         return code;
     }
 
-    public ConcreteStack getStack() {
+    /**
+     * @return the stack
+     */
+    public ConcreteStack getStack()
+    {
         return stack;
     }
 
-    public ConcreteLocals getLocals() {
+    /**
+     * @return the locals
+     */
+    public ConcreteLocals getLocals()
+    {
         return locals;
     }
 
-    public boolean isCompleted() {
+    /**
+     * @return whether completed
+     */
+    public boolean isCompleted()
+    {
         return completed;
     }
 
-    public ObjectInstance getException() {
+    /**
+     * @return the exception
+     */
+    public ObjectInstance getException()
+    {
         return exception;
     }
 
-    public int getPC() {
+    /**
+     * @return the current program counter
+     */
+    public int getPC()
+    {
         return pc;
     }
 
-    public void setPC(int pc) {
-        if (pc < 0) {
+    /**
+     * Moves the program counter to an absolute bytecode offset.
+     * @param pc the target offset
+     * @throws IllegalArgumentException if the offset is negative or beyond the bytecode length
+     */
+    public void setPC(int pc)
+    {
+        if (pc < 0)
+        {
             throw new IllegalArgumentException("PC cannot be negative: " + pc);
         }
         int codeLength = code.getBytecodeSize();
-        if (pc > codeLength) {
+        if (pc > codeLength)
+        {
             throw new IllegalArgumentException("PC exceeds bytecode length: " + pc + " > " + codeLength);
         }
         this.pc = pc;
     }
 
-    public void advancePC(int delta) {
-        if (delta < 0) {
+    /**
+     * Advances the program counter past the current instruction.
+     * @param delta the number of bytes to advance
+     * @throws IllegalArgumentException if the delta is negative
+     */
+    public void advancePC(int delta)
+    {
+        if (delta < 0)
+        {
             throw new IllegalArgumentException("PC delta cannot be negative: " + delta);
         }
         this.pc += delta;
     }
 
-    public Instruction getCurrentInstruction() {
+    /**
+     * Looks up the instruction at the current program counter.
+     * @return the instruction at the PC, or null if none exists there
+     */
+    public Instruction getCurrentInstruction()
+    {
         return getInstructionAt(pc);
     }
 
-    public Instruction getInstructionAt(int offset) {
+    /**
+     * Looks up the instruction starting at a bytecode offset.
+     * @param offset the bytecode offset to find
+     * @return the instruction at that offset, or null if none starts there
+     */
+    public Instruction getInstructionAt(int offset)
+    {
         return code.getInstructions().spliterator().tryAdvance(instr -> {})
             ? findInstructionAtOffset(offset)
             : null;
     }
 
-    private Instruction findInstructionAtOffset(int offset) {
-        for (Instruction instr : code.getInstructions()) {
-            if (instr.getOffset() == offset) {
+    private Instruction findInstructionAtOffset(int offset)
+    {
+        for (Instruction instr : code.getInstructions())
+        {
+            if (instr.getOffset() == offset)
+            {
                 return instr;
             }
         }
@@ -113,64 +183,107 @@ public final class StackFrame {
         return null;
     }
 
-    public boolean hasMoreInstructions() {
+    /**
+     * Checks whether execution can continue in this frame.
+     * @return true if an instruction exists at the PC and the frame is not completed
+     */
+    public boolean hasMoreInstructions()
+    {
         return getCurrentInstruction() != null && !completed;
     }
 
-    public void complete(ConcreteValue returnValue) {
-        if (completed) {
+    /**
+     * Marks the frame as normally completed.
+     * @param returnValue the method's return value, or null for void
+     * @throws IllegalStateException if the frame is already completed
+     */
+    public void complete(ConcreteValue returnValue)
+    {
+        if (completed)
+        {
             throw new IllegalStateException("Frame already completed");
         }
         this.completed = true;
         this.returnValue = returnValue;
     }
 
-    public void completeExceptionally(ObjectInstance exception) {
-        if (completed) {
+    /**
+     * Marks the frame as completed by a thrown exception.
+     * @param exception the exception object terminating the frame
+     * @throws IllegalStateException if the frame is already completed
+     * @throws IllegalArgumentException if the exception is null
+     */
+    public void completeExceptionally(ObjectInstance exception)
+    {
+        if (completed)
+        {
             throw new IllegalStateException("Frame already completed");
         }
-        if (exception == null) {
+        if (exception == null)
+        {
             throw new IllegalArgumentException("Exception cannot be null");
         }
         this.completed = true;
         this.exception = exception;
     }
 
-    public ConcreteValue getReturnValue() {
-        if (!completed) {
+    /**
+     * Retrieves the return value of a completed frame.
+     * @return the return value, or null for void
+     * @throws IllegalStateException if the frame has not completed
+     */
+    public ConcreteValue getReturnValue()
+    {
+        if (!completed)
+        {
             throw new IllegalStateException("Frame not yet completed");
         }
         return returnValue;
     }
 
-    public String getMethodSignature() {
+    /**
+     * @return the owner, name, and descriptor as one signature string
+     */
+    public String getMethodSignature()
+    {
         return method.getOwnerName() + "." + method.getName() + method.getDesc();
     }
 
-    public int getLineNumber() {
+    /**
+     * Maps the current PC to a source line via the LineNumberTable attribute.
+     * @return the source line for the PC, or -1 if no table entry covers it
+     */
+    public int getLineNumber()
+    {
         CodeAttribute codeAttr = method.getCodeAttribute();
-        if (codeAttr == null) {
+        if (codeAttr == null)
+        {
             return -1;
         }
 
         LineNumberTableAttribute lineTable = null;
-        for (var attr : codeAttr.getAttributes()) {
-            if (attr instanceof LineNumberTableAttribute) {
+        for (var attr : codeAttr.getAttributes())
+        {
+            if (attr instanceof LineNumberTableAttribute)
+            {
                 lineTable = (LineNumberTableAttribute) attr;
                 break;
             }
         }
 
-        if (lineTable == null || lineTable.getLineNumberTable().isEmpty()) {
+        if (lineTable == null || lineTable.getLineNumberTable().isEmpty())
+        {
             return -1;
         }
 
         int bestLine = -1;
         int bestPc = -1;
 
-        for (LineNumberTableEntry entry : lineTable.getLineNumberTable()) {
+        for (LineNumberTableEntry entry : lineTable.getLineNumberTable())
+        {
             int startPc = entry.getStartPc();
-            if (startPc <= pc && startPc > bestPc) {
+            if (startPc <= pc && startPc > bestPc)
+            {
                 bestPc = startPc;
                 bestLine = entry.getLineNumber();
             }
@@ -180,7 +293,8 @@ public final class StackFrame {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "StackFrame{" +
                 "method=" + getMethodSignature() +
                 ", pc=" + pc +

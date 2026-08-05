@@ -20,15 +20,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * must treat that incoming as bottom and keep the array type rather than widening to Object; a widened
  * phi makes the following aastore store into a non-array-typed value.
  */
-class NullArrayPhiTest {
+class NullArrayPhiTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void nullMergedWithArrayKeepsArrayType() throws Exception {
+    void nullMergedWithArrayKeepsArrayType() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("NullArrayPhi");
         MethodEntry method = cf.getMethods().stream()
                 .filter(m -> m.getName().equals("build"))
@@ -38,16 +41,20 @@ class NullArrayPhiTest {
         IRMethod ir = new SSA(cf.getConstPool()).lift(method);
 
         boolean sawArrayPhi = false;
-        for (IRBlock block : ir.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 boolean hasArray = false;
-                for (Value v : phi.getIncomingValues().values()) {
-                    if (v != null && v.getType() != null
-                            && "[Ljava/lang/String;".equals(v.getType().getDescriptor())) {
+                for (Value v : phi.getIncomingValues().values())
+                {
+                    if (v != null && v.getType() != null && "[Ljava/lang/String;".equals(v.getType().getDescriptor()))
+                    {
                         hasArray = true;
                     }
                 }
-                if (hasArray) {
+                if (hasArray)
+                {
                     sawArrayPhi = true;
                     assertEquals("[Ljava/lang/String;", phi.getResult().getType().getDescriptor(),
                             "a null-with-array phi must keep the array type, not widen to Object");

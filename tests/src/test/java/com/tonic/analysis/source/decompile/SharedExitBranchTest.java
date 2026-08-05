@@ -17,18 +17,20 @@ import java.util.Comparator;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * A bounds check compiled with a shared exit block — {@code if (i < 0) throw; if (i >= n) throw;}
- * where both guards jump to one throw block — must not lose its second comparison during
+ * A bounds check compiled with a shared exit block - {@code if (i < 0) throw; if (i >= n) throw;}
+ * where both guards jump to one throw block - must not lose its second comparison during
  * structural recovery. An exit block (throw / void-return) is terminal and can never be a
  * control-flow merge; treating it as one made the inner branch collapse to empty and vanish.
- * <p>
+ *
  * The buggy output ({@code if (i >= 0) return; throw;}) is valid Java that recompiles cleanly, so
  * these tests assert structure and runtime behavior rather than mere recompilation.
  */
-class SharedExitBranchTest {
+class SharedExitBranchTest
+{
 
     @Test
-    void sharedThrowBoundsCheckKeepsBothComparisons() throws Exception {
+    void sharedThrowBoundsCheckKeepsBothComparisons() throws Exception
+    {
         String src =
             "public class Bounds {\n" +
             "  static int[] a = new int[100];\n" +
@@ -40,15 +42,15 @@ class SharedExitBranchTest {
             "}\n";
         String out = decompile("Bounds", src);
         // The upper-bound comparison must survive (the bug dropped it entirely). The two guards
-        // may be recovered either nested or OR-combined into one throw — both are faithful — so
+        // may be recovered either nested or OR-combined into one throw - both are faithful - so
         // assert on the surviving comparison, not the throw count.
-        assertTrue(out.contains(".length"),
-            "the upper-bound comparison (a.length) must survive:\n" + out);
+        assertTrue(out.contains(".length"), "the upper-bound comparison (a.length) must survive:\n" + out);
         assertRecompiles("Bounds", out);
     }
 
     @Test
-    void sharedThrowBoundsCheckBehavesIdentically() throws Exception {
+    void sharedThrowBoundsCheckBehavesIdentically() throws Exception
+    {
         String src =
             "public class Bounds2 {\n" +
             "  static int[] a = new int[100];\n" +
@@ -62,7 +64,8 @@ class SharedExitBranchTest {
     }
 
     @Test
-    void valueMergeReturnStaysSingleReturn() throws Exception {
+    void valueMergeReturnStaysSingleReturn() throws Exception
+    {
         String src =
             "public class Merge {\n" +
             "  static int f(boolean c) {\n" +
@@ -78,32 +81,40 @@ class SharedExitBranchTest {
         assertBehaviorPreserved("Merge", src, "f", new boolean[]{true, false});
     }
 
-    // --- helpers ---
+    // helpers
 
-    private String decompile(String className, String src) throws Exception {
+    private String decompile(String className, String src) throws Exception
+    {
         JavaCompiler compiler = requireCompiler();
         Path dir = Files.createTempDirectory("yabr-shared");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, src);
             assertEquals(0, compiler.run(null, null, null, "-g", "-d", dir.toString(), srcFile.toString()),
                 "javac of source fixture failed");
             byte[] bytes = Files.readAllBytes(dir.resolve(className + ".class"));
             return new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private void assertRecompiles(String className, String decompiled) throws Exception {
+    private void assertRecompiles(String className, String decompiled) throws Exception
+    {
         JavaCompiler compiler = requireCompiler();
         Path dir = Files.createTempDirectory("yabr-shared-rc");
-        try {
+        try
+        {
             Files.writeString(dir.resolve(className + ".java"), decompiled);
             assertEquals(0, compiler.run(null, null, null, "-d", dir.toString(),
                     dir.resolve(className + ".java").toString()),
                 "decompiled output did not recompile:\n" + decompiled);
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
@@ -113,11 +124,13 @@ class SharedExitBranchTest {
      * named static method over the given inputs and asserts identical results (return value or
      * thrown exception type) for every input.
      */
-    private void assertBehaviorPreserved(String className, String src, String method, Object inputs) throws Exception {
+    private void assertBehaviorPreserved(String className, String src, String method, Object inputs) throws Exception
+    {
         JavaCompiler compiler = requireCompiler();
         Path origDir = Files.createTempDirectory("yabr-beh-orig");
         Path rcDir = Files.createTempDirectory("yabr-beh-rc");
-        try {
+        try
+        {
             Path srcFile = origDir.resolve(className + ".java");
             Files.writeString(srcFile, src);
             assertEquals(0, compiler.run(null, null, null, "-g", "-d", origDir.toString(), srcFile.toString()),
@@ -132,7 +145,8 @@ class SharedExitBranchTest {
 
             int n = java.lang.reflect.Array.getLength(inputs);
             try (URLClassLoader origCl = new URLClassLoader(new URL[]{origDir.toUri().toURL()});
-                 URLClassLoader rcCl = new URLClassLoader(new URL[]{rcDir.toUri().toURL()})) {
+                 URLClassLoader rcCl = new URLClassLoader(new URL[]{rcDir.toUri().toURL()}))
+                 {
                 Class<?> origClass = origCl.loadClass(className);
                 Class<?> rcClass = rcCl.loadClass(className);
                 Class<?> paramType = java.lang.reflect.Array.get(inputs, 0) instanceof Boolean ? boolean.class : int.class;
@@ -140,7 +154,8 @@ class SharedExitBranchTest {
                 Method rcM = rcClass.getDeclaredMethod(method, paramType);
                 origM.setAccessible(true);
                 rcM.setAccessible(true);
-                for (int i = 0; i < n; i++) {
+                for (int i = 0; i < n; i++)
+                {
                     Object arg = java.lang.reflect.Array.get(inputs, i);
                     String origResult = invokeToString(origM, arg);
                     String rcResult = invokeToString(rcM, arg);
@@ -148,40 +163,54 @@ class SharedExitBranchTest {
                         "behavior diverged for " + method + "(" + arg + "):\n" + decompiled);
                 }
             }
-        } finally {
+        }
+        finally
+        {
             deleteTree(origDir);
             deleteTree(rcDir);
         }
     }
 
-    private String invokeToString(Method m, Object arg) {
-        try {
+    private String invokeToString(Method m, Object arg)
+    {
+        try
+        {
             return "value:" + m.invoke(null, arg);
-        } catch (InvocationTargetException e) {
+        }
+        catch (InvocationTargetException e)
+        {
             return "throw:" + e.getCause().getClass().getName();
-        } catch (IllegalAccessException e) {
+        }
+        catch (IllegalAccessException e)
+        {
             return "error:" + e;
         }
     }
 
-    private int countOccurrences(String haystack, String needle) {
+    private int countOccurrences(String haystack, String needle)
+    {
         int count = 0;
-        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) {
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length()))
+        {
             count++;
         }
         return count;
     }
 
-    private JavaCompiler requireCompiler() {
+    private JavaCompiler requireCompiler()
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
+        if (compiler == null)
+        {
             throw new org.opentest4j.TestAbortedException("no system Java compiler available");
         }
         return compiler;
     }
 
-    private void deleteTree(Path dir) throws Exception {
-        try (var paths = Files.walk(dir)) {
+    private void deleteTree(Path dir) throws Exception
+    {
+        try (var paths = Files.walk(dir))
+        {
             paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try { Files.deleteIfExists(p); } catch (Exception ignored) {}
             });

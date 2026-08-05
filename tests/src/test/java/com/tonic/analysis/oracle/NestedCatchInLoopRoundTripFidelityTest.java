@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * unprocessed so the loop's own walk recovers it. Asserts a full round-trip fixed point (the nested catch
  * survives both decompiles) and correct execution (the caught exception is swallowed and the loop resumes).
  */
-class NestedCatchInLoopRoundTripFidelityTest {
+class NestedCatchInLoopRoundTripFidelityTest
+{
 
     private static final String SOURCE =
             "public class OuterNestedCatch {\n"
@@ -66,14 +67,14 @@ class NestedCatchInLoopRoundTripFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("outer-nested-catch");
         Path src = dir.resolve("OuterNestedCatch.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("OuterNestedCatch.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -85,7 +86,8 @@ class NestedCatchInLoopRoundTripFidelityTest {
     }
 
     @Test
-    void nestedCatchSurvivesBothDecompiles() {
+    void nestedCatchSurvivesBothDecompiles()
+    {
         assertTrue(d1.contains("catch (Exception"),
                 "the nested catch inside the loop must be recovered on the first decompile:\n" + d1);
         assertTrue(d2.contains("catch (Exception"),
@@ -93,7 +95,8 @@ class NestedCatchInLoopRoundTripFidelityTest {
     }
 
     @Test
-    void theCaughtExceptionIsSwallowedNotPropagated() throws Exception {
+    void theCaughtExceptionIsSwallowedNotPropagated() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         // n=1; n=2 throws, caught by the inner catch (loop continues); n=3; n=4 -> done -> return 4.
         // If the inner catch were dropped the throw would reach the outer catch -> onError() -> -100.

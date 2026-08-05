@@ -20,10 +20,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rather than a bare {@code Frame} CONSTANT_Class - which fails to link with {@code ClassNotFoundException: Frame}.
  * {@code ASTLowerer} previously used the raw {@code SourceType.toIRType()} for parameter types and the descriptor.
  */
-public class ParameterTypeResolutionTest {
+public class ParameterTypeResolutionTest
+{
 
     @Test
-    void wildcardImportedParamTypeResolvedInIr() throws Exception {
+    void wildcardImportedParamTypeResolvedInIr() throws Exception
+    {
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.createNewClass("test/User", 0x0001);
 

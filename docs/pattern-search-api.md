@@ -170,7 +170,8 @@ List<SearchResult> nullDerefs = search.findPotentialNullDereferences();
 Each `SearchResult` contains:
 
 ```java
-for (SearchResult result : results) {
+for (SearchResult result : results)
+{
     // Location information
     String className = result.getClassName();
     String methodName = result.getMethodName();

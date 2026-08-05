@@ -21,18 +21,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for MethodRecoverer functionality.
  * Covers recovering AST from bytecode methods with various control flow structures.
  */
-class MethodRecovererTest {
+class MethodRecovererTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Recovery Tests ==========
+    // Basic Recovery Tests
 
     @Test
-    void recoverEmptyVoidMethod() throws IOException {
+    void recoverEmptyVoidMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("empty", "()V")
                 .vreturn()
@@ -49,7 +52,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverSimpleReturnMethod() throws IOException {
+    void recoverSimpleReturnMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("getNumber", "()I")
                 .iconst(42)
@@ -70,7 +74,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithLocalVariable() throws IOException {
+    void recoverMethodWithLocalVariable() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("useLocal", "()I")
                 .iconst(10)
@@ -90,7 +95,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithParameter() throws IOException {
+    void recoverMethodWithParameter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("identity", "(I)I")
                 .iload(0)
@@ -107,10 +113,11 @@ class MethodRecovererTest {
         assertTrue(body.getStatements().size() >= 1);
     }
 
-    // ========== Arithmetic Operations Tests ==========
+    // Arithmetic Operations Tests
 
     @Test
-    void recoverAdditionMethod() throws IOException {
+    void recoverAdditionMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("add", "(II)I")
                 .iload(0)
@@ -130,7 +137,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverSubtractionMethod() throws IOException {
+    void recoverSubtractionMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("subtract", "(II)I")
                 .iload(0)
@@ -150,7 +158,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMultiplicationMethod() throws IOException {
+    void recoverMultiplicationMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("multiply", "(II)I")
                 .iload(0)
@@ -169,10 +178,11 @@ class MethodRecovererTest {
         assertFalse(body.getStatements().isEmpty());
     }
 
-    // ========== Control Flow Tests ==========
+    // Control Flow Tests
 
     @Test
-    void recoverSimpleIfStatement() throws IOException {
+    void recoverSimpleIfStatement() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("testIf", "(I)I")
                 .iload(0)
@@ -192,7 +202,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithMultipleStatements() throws IOException {
+    void recoverMethodWithMultipleStatements() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("multi", "(II)I")
                 .iload(0)
@@ -216,7 +227,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithLocalStores() throws IOException {
+    void recoverMethodWithLocalStores() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("stores", "()I")
                 .iconst(5)
@@ -239,10 +251,11 @@ class MethodRecovererTest {
         assertFalse(body.getStatements().isEmpty());
     }
 
-    // ========== Analysis Phase Tests ==========
+    // Analysis Phase Tests
 
     @Test
-    void analyzeCreatesRequiredAnalyses() throws IOException {
+    void analyzeCreatesRequiredAnalyses() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("simple", "()V")
                 .vreturn()
@@ -261,7 +274,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void initializeRecoveryCreatesComponents() throws IOException {
+    void initializeRecoveryCreatesComponents() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("simple", "()V")
                 .vreturn()
@@ -282,7 +296,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverCallsAnalyzeAutomatically() throws IOException {
+    void recoverCallsAnalyzeAutomatically() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("auto", "()V")
                 .vreturn()
@@ -299,10 +314,11 @@ class MethodRecovererTest {
         assertNotNull(recoverer.getStatementRecoverer());
     }
 
-    // ========== Static Convenience Method Tests ==========
+    // Static Convenience Method Tests
 
     @Test
-    void staticRecoverMethodWorks() throws IOException {
+    void staticRecoverMethodWorks() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("staticTest", "()I")
                 .iconst(99)
@@ -319,7 +335,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void staticRecoverMethodWithStrategy() throws IOException {
+    void staticRecoverMethodWithStrategy() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("strategyTest", "()V")
                 .vreturn()
@@ -328,19 +345,16 @@ class MethodRecovererTest {
         MethodEntry method = cf.getMethods().get(0);
         IRMethod ir = TestUtils.liftMethod(method);
 
-        BlockStmt body = MethodRecoverer.recoverMethod(
-            ir,
-            method,
-            NameRecoveryStrategy.PREFER_DEBUG_INFO
-        );
+        BlockStmt body = MethodRecoverer.recoverMethod(ir, method, NameRecoveryStrategy.PREFER_DEBUG_INFO);
 
         assertNotNull(body);
     }
 
-    // ========== Complex Methods Tests ==========
+    // Complex Methods Tests
 
     @Test
-    void recoverMethodWithMultipleLocals() throws IOException {
+    void recoverMethodWithMultipleLocals() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("multiLocal", "(II)I")
                 .iload(0)
@@ -364,7 +378,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithNestedExpressions() throws IOException {
+    void recoverMethodWithNestedExpressions() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("nested", "(III)I")
                 .iload(0)
@@ -385,10 +400,11 @@ class MethodRecovererTest {
         assertFalse(body.getStatements().isEmpty());
     }
 
-    // ========== Name Recovery Tests ==========
+    // Name Recovery Tests
 
     @Test
-    void nameRecoveryStrategyDefault() throws IOException {
+    void nameRecoveryStrategyDefault() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("named", "()V")
                 .vreturn()
@@ -403,7 +419,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void nameRecoveryStrategyCustom() throws IOException {
+    void nameRecoveryStrategyCustom() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("custom", "()V")
                 .vreturn()
@@ -412,19 +429,16 @@ class MethodRecovererTest {
         MethodEntry method = cf.getMethods().get(0);
         IRMethod ir = TestUtils.liftMethod(method);
 
-        MethodRecoverer recoverer = new MethodRecoverer(
-            ir,
-            method,
-            NameRecoveryStrategy.ALWAYS_SYNTHETIC
-        );
+        MethodRecoverer recoverer = new MethodRecoverer(ir, method, NameRecoveryStrategy.ALWAYS_SYNTHETIC);
 
         assertEquals(NameRecoveryStrategy.ALWAYS_SYNTHETIC, recoverer.getNameStrategy());
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void recoverMethodWithDivision() throws IOException {
+    void recoverMethodWithDivision() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("divide", "(II)I")
                 .iload(0)
@@ -444,7 +458,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void multipleRecoverCallsProduceSameResult() throws IOException {
+    void multipleRecoverCallsProduceSameResult() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("idempotent", "()I")
                 .iconst(5)
@@ -464,7 +479,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithRemainder() throws IOException {
+    void recoverMethodWithRemainder() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("remainder", "(II)I")
                 .iload(0)
@@ -484,7 +500,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void recoverMethodWithNegation() throws IOException {
+    void recoverMethodWithNegation() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("negate", "(I)I")
                 .iload(0)
@@ -503,7 +520,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void getIRMethod() throws IOException {
+    void getIRMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("test", "()V")
                 .vreturn()
@@ -518,7 +536,8 @@ class MethodRecovererTest {
     }
 
     @Test
-    void getSourceMethod() throws IOException {
+    void getSourceMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("test", "()V")
                 .vreturn()

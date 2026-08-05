@@ -27,18 +27,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * frame) are re-lowering-pipeline noise on complex classes, not recovery drops, and are ignored - so this
  * stays a clean signal without the differential the removed engine flag once gave.
  *
- * <p>Classes the re-lowering pipeline cannot rebuild (throws) are a pipeline limitation, not a drop, and
+ *Classes the re-lowering pipeline cannot rebuild (throws) are a pipeline limitation, not a drop, and
  * are skipped. Unlike the behavioural recovery-equivalence oracle (per-method symbolic execution, hours
  * over a large jar), this only decompiles + re-lowers + verifies, so it runs in minutes. Opt-in: pass
  * {@code -Dverify.sweep.jar=<path>}; with no property the test skips (the jar is kept out of the suite).
  */
-class VerifySweepTest {
+class VerifySweepTest
+{
 
     @Test
-    void recoveredSourceHasNoControlFlowDrops() throws Exception {
+    void recoveredSourceHasNoControlFlowDrops() throws Exception
+    {
         String jarProp = System.getProperty("verify.sweep.jar");
-        Assumptions.assumeTrue(jarProp != null,
-                "set -Dverify.sweep.jar=<path-to-jar> to run the verify sweep");
+        Assumptions.assumeTrue(jarProp != null, "set -Dverify.sweep.jar=<path-to-jar> to run the verify sweep");
         Path jar = Path.of(jarProp);
         Assumptions.assumeTrue(Files.exists(jar), "verify.sweep.jar not found: " + jarProp);
 
@@ -47,28 +48,35 @@ class VerifySweepTest {
 
         Set<String> drops = new TreeSet<>();
         int graded = 0, pipelineSkipped = 0;
-        for (ClassFile cf : cfs) {
+        for (ClassFile cf : cfs)
+        {
             String name = cf.getClassName();
             boolean recompiled;
-            try {
+            try
+            {
                 String source = ClassDecompiler.decompile(cf);
                 recompiled = TestUtils.recompileSource(cf, pool, source, name);
-            } catch (Throwable t) {
+            }
+            catch (Throwable t)
+            {
                 pipelineSkipped++; // decompile or re-lower could not handle this class - not a recovery drop
                 continue;
             }
-            if (!recompiled) {
+            if (!recompiled)
+            {
                 continue; // non-class type (enum/interface/annotation) - out of scope
             }
             graded++;
-            if (TestUtils.hasControlFlowDrop(cf, pool)) {
+            if (TestUtils.hasControlFlowDrop(cf, pool))
+            {
                 drops.add(name);
             }
         }
 
         System.out.println("[verify-sweep] graded=" + graded + " pipeline-skipped=" + pipelineSkipped
                 + " control-flow-drops=" + drops.size());
-        for (String c : drops) {
+        for (String c : drops)
+        {
             System.out.println("  DROP (falls off end / path does not return): " + c);
         }
         assertTrue(drops.isEmpty(),
@@ -76,18 +84,25 @@ class VerifySweepTest {
                         + "return after re-lowering:\n" + drops);
     }
 
-    private static List<ClassFile> load(Path jar, ClassPool pool) throws Exception {
+    private static List<ClassFile> load(Path jar, ClassPool pool) throws Exception
+    {
         List<ClassFile> cfs = new ArrayList<>();
-        try (JarInputStream jis = new JarInputStream(Files.newInputStream(jar))) {
+        try (JarInputStream jis = new JarInputStream(Files.newInputStream(jar)))
+        {
             JarEntry e;
-            while ((e = jis.getNextJarEntry()) != null) {
+            while ((e = jis.getNextJarEntry()) != null)
+            {
                 String n = e.getName();
-                if (!n.endsWith(".class") || n.contains("module-info") || n.contains("package-info")) {
+                if (!n.endsWith(".class") || n.contains("module-info") || n.contains("package-info"))
+                {
                     continue;
                 }
-                try {
+                try
+                {
                     cfs.add(pool.loadClass(new ByteArrayInputStream(jis.readAllBytes())));
-                } catch (Throwable ignored) {
+                }
+                catch (Throwable ignored)
+                {
                     // unparseable entry - not this sweep's concern
                 }
             }

@@ -7,32 +7,37 @@ import java.io.IOException;
  * Represents a SameFrame in the StackMapTable attribute.
  * Used when the frame has the same locals as the previous frame and an empty stack.
  */
-public class SameFrame extends StackMapFrame {
+public class SameFrame extends StackMapFrame
+{
     /**
      * Constructs a SameFrame.
-     *
      * @param frameType the frame type identifier
      */
-    public SameFrame(int frameType) {
+    public SameFrame(int frameType)
+    {
         super(frameType);
     }
 
     @Override
-    protected void writeFrameData(DataOutputStream dos) throws IOException {
+    protected void writeFrameData(DataOutputStream dos) throws IOException
+    {
     }
 
     @Override
-    public int getOffsetDelta() {
+    public int getOffsetDelta()
+    {
         return frameType;
     }
 
     @Override
-    public int getLength() {
+    public int getLength()
+    {
         return 1;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "SameFrame{frameType=" + frameType + "}";
     }
 }

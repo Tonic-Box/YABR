@@ -1,9 +1,23 @@
 package com.tonic.analysis.verifier;
 
-public final class VerifierConfig {
+/**
+ * Immutable settings for the {@link Verifier}: which passes run, the error mode, and the error cap.
+ */
+public final class VerifierConfig
+{
 
-    public enum ErrorMode {
+    /**
+     * How the verifier reacts to errors: stop at the first or collect up to the cap.
+     */
+    public enum ErrorMode
+    {
+        /**
+         * Abandon verification at the first error, reporting only that one.
+         */
         FAIL_FAST,
+        /**
+         * Keep verifying after an error, gathering findings until the configured cap is reached.
+         */
         COLLECT_ALL
     }
 
@@ -15,7 +29,8 @@ public final class VerifierConfig {
     private final int maxErrors;
     private final boolean treatWarningsAsErrors;
 
-    private VerifierConfig(Builder builder) {
+    private VerifierConfig(Builder builder)
+    {
         this.errorMode = builder.errorMode;
         this.verifyStackMapTable = builder.verifyStackMapTable;
         this.strictTypeChecking = builder.strictTypeChecking;
@@ -25,51 +40,101 @@ public final class VerifierConfig {
         this.treatWarningsAsErrors = builder.treatWarningsAsErrors;
     }
 
-    public ErrorMode getErrorMode() {
+    /**
+     * @return the error mode
+     */
+    public ErrorMode getErrorMode()
+    {
         return errorMode;
     }
 
-    public boolean isVerifyStackMapTable() {
+    /**
+     * @return whether verify stack map table
+     */
+    public boolean isVerifyStackMapTable()
+    {
         return verifyStackMapTable;
     }
 
-    public boolean isStrictTypeChecking() {
+    /**
+     * @return whether strict type checking
+     */
+    public boolean isStrictTypeChecking()
+    {
         return strictTypeChecking;
     }
 
-    public boolean isVerifyControlFlow() {
+    /**
+     * @return whether verify control flow
+     */
+    public boolean isVerifyControlFlow()
+    {
         return verifyControlFlow;
     }
 
-    public boolean isVerifyStructure() {
+    /**
+     * @return whether verify structure
+     */
+    public boolean isVerifyStructure()
+    {
         return verifyStructure;
     }
 
-    public int getMaxErrors() {
+    /**
+     * @return the max errors
+     */
+    public int getMaxErrors()
+    {
         return maxErrors;
     }
 
-    public boolean isTreatWarningsAsErrors() {
+    /**
+     * @return whether treat warnings as errors
+     */
+    public boolean isTreatWarningsAsErrors()
+    {
         return treatWarningsAsErrors;
     }
 
-    public static VerifierConfig defaults() {
+    /**
+     * Creates the default configuration: all passes on, COLLECT_ALL, up to 100 errors.
+     * @return the default configuration
+     */
+    public static VerifierConfig defaults()
+    {
         return new Builder().build();
     }
 
-    public static Builder builder() {
+    /**
+     * Creates a builder for a configuration.
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public boolean isFailFast() {
+    /**
+     * @return true if the error mode is FAIL_FAST
+     */
+    public boolean isFailFast()
+    {
         return errorMode == ErrorMode.FAIL_FAST;
     }
 
-    public boolean isCollectAll() {
+    /**
+     * @return true if the error mode is COLLECT_ALL
+     */
+    public boolean isCollectAll()
+    {
         return errorMode == ErrorMode.COLLECT_ALL;
     }
 
-    public static final class Builder {
+    /**
+     * Builder for a {@link VerifierConfig}; all passes default to enabled with COLLECT_ALL and 100 errors.
+     */
+    public static final class Builder
+    {
         private ErrorMode errorMode = ErrorMode.COLLECT_ALL;
         private boolean verifyStackMapTable = true;
         private boolean strictTypeChecking = true;
@@ -78,58 +143,116 @@ public final class VerifierConfig {
         private int maxErrors = 100;
         private boolean treatWarningsAsErrors = false;
 
-        public Builder errorMode(ErrorMode errorMode) {
+        /**
+         * Sets the error mode, defaulting null to COLLECT_ALL.
+         * @param errorMode the mode, or null
+         * @return this builder
+         */
+        public Builder errorMode(ErrorMode errorMode)
+        {
             this.errorMode = errorMode != null ? errorMode : ErrorMode.COLLECT_ALL;
             return this;
         }
 
-        public Builder failFast() {
+        /**
+         * Selects FAIL_FAST error mode.
+         * @return this builder
+         */
+        public Builder failFast()
+        {
             this.errorMode = ErrorMode.FAIL_FAST;
             return this;
         }
 
-        public Builder collectAll() {
+        /**
+         * Selects COLLECT_ALL error mode.
+         * @return this builder
+         */
+        public Builder collectAll()
+        {
             this.errorMode = ErrorMode.COLLECT_ALL;
             return this;
         }
 
-        public Builder verifyStackMapTable(boolean verify) {
+        /**
+         * Enables or disables the StackMapTable comparison pass.
+         * @param verify true to run the pass
+         * @return this builder
+         */
+        public Builder verifyStackMapTable(boolean verify)
+        {
             this.verifyStackMapTable = verify;
             return this;
         }
 
-        public Builder strictTypeChecking(boolean strict) {
+        /**
+         * Enables or disables the type-checking pass.
+         * @param strict true to run the pass
+         * @return this builder
+         */
+        public Builder strictTypeChecking(boolean strict)
+        {
             this.strictTypeChecking = strict;
             return this;
         }
 
-        public Builder verifyControlFlow(boolean verify) {
+        /**
+         * Enables or disables the control-flow and exception-table pass.
+         * @param verify true to run the pass
+         * @return this builder
+         */
+        public Builder verifyControlFlow(boolean verify)
+        {
             this.verifyControlFlow = verify;
             return this;
         }
 
-        public Builder verifyStructure(boolean verify) {
+        /**
+         * Enables or disables the structural (opcode/operand) pass.
+         * @param verify true to run the pass
+         * @return this builder
+         */
+        public Builder verifyStructure(boolean verify)
+        {
             this.verifyStructure = verify;
             return this;
         }
 
-        public Builder maxErrors(int max) {
+        /**
+         * Caps how many errors are collected, clamped to at least 1.
+         * @param max the error cap
+         * @return this builder
+         */
+        public Builder maxErrors(int max)
+        {
             this.maxErrors = Math.max(1, max);
             return this;
         }
 
-        public Builder treatWarningsAsErrors(boolean treat) {
+        /**
+         * Controls whether warnings should be treated as verification errors.
+         * @param treat true to escalate warnings
+         * @return this builder
+         */
+        public Builder treatWarningsAsErrors(boolean treat)
+        {
             this.treatWarningsAsErrors = treat;
             return this;
         }
 
-        public VerifierConfig build() {
+        /**
+         * Builds the immutable configuration.
+         * @return the configuration
+         */
+        public VerifierConfig build()
+        {
             return new VerifierConfig(this);
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "VerifierConfig{" +
                "errorMode=" + errorMode +
                ", verifyStackMapTable=" + verifyStackMapTable +

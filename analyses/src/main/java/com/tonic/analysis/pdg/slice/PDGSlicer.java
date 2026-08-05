@@ -7,40 +7,81 @@ import com.tonic.analysis.pdg.node.PDGNode;
 import java.util.*;
 import java.util.function.Predicate;
 
-public class PDGSlicer {
+/**
+ * Intraprocedural slicer over a program dependence graph; interprocedural edges are never
+ * followed, and control or data dependences can each be switched off.
+ */
+public class PDGSlicer
+{
 
     private final PDG pdg;
     private boolean includeControlDependencies = true;
     private boolean includeDataDependencies = true;
 
-    public PDGSlicer(PDG pdg) {
+    /**
+     * Creates a slicer following both control and data dependences.
+     * @param pdg the graph to slice
+     */
+    public PDGSlicer(PDG pdg)
+    {
         this.pdg = pdg;
     }
 
-    public PDG getPdg() {
+    /**
+     * @return the pdg
+     */
+    public PDG getPdg()
+    {
         return pdg;
     }
 
-    public boolean isIncludeControlDependencies() {
+    /**
+     * @return whether include control dependencies
+     */
+    public boolean isIncludeControlDependencies()
+    {
         return includeControlDependencies;
     }
 
-    public boolean isIncludeDataDependencies() {
+    /**
+     * @return whether include data dependencies
+     */
+    public boolean isIncludeDataDependencies()
+    {
         return includeDataDependencies;
     }
 
-    public PDGSlicer withControlDependencies(boolean include) {
+    /**
+     * Sets whether control dependence edges are traversed.
+     * @param include whether to follow control dependences
+     * @return this slicer
+     */
+    public PDGSlicer withControlDependencies(boolean include)
+    {
         this.includeControlDependencies = include;
         return this;
     }
 
-    public PDGSlicer withDataDependencies(boolean include) {
+    /**
+     * Sets whether data dependence edges are traversed.
+     * @param include whether to follow data dependences
+     * @return this slicer
+     */
+    public PDGSlicer withDataDependencies(boolean include)
+    {
         this.includeDataDependencies = include;
         return this;
     }
 
-    public SliceResult backwardSlice(PDGNode criterion) {
-        if (criterion == null) {
+    /**
+     * Slices backwards from a single node.
+     * @param criterion the slicing criterion, may be null
+     * @return the nodes and edges that can affect the criterion, empty if it is null
+     */
+    public SliceResult backwardSlice(PDGNode criterion)
+    {
+        if (criterion == null)
+        {
             return new SliceResult(SliceResult.SliceType.BACKWARD, Collections.emptySet());
         }
         Set<PDGNode> criterionSet = new LinkedHashSet<>();
@@ -48,25 +89,36 @@ public class PDGSlicer {
         return backwardSlice(criterionSet);
     }
 
-    public SliceResult backwardSlice(Set<PDGNode> criterion) {
+    /**
+     * Walks incoming edges transitively from every criterion node.
+     * @param criterion the slicing criteria
+     * @return the nodes and edges that can affect the criteria
+     */
+    public SliceResult backwardSlice(Set<PDGNode> criterion)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.BACKWARD, criterion);
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<PDGNode> worklist = new ArrayDeque<>(criterion);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
-            if (!visited.add(current)) {
+            if (!visited.add(current))
+            {
                 continue;
             }
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getIncomingEdges()) {
-                if (shouldFollowEdge(edge)) {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
+                if (shouldFollowEdge(edge))
+                {
                     result.addEdge(edge);
                     PDGNode source = edge.getSource();
-                    if (!visited.contains(source)) {
+                    if (!visited.contains(source))
+                    {
                         worklist.add(source);
                     }
                 }
@@ -76,31 +128,48 @@ public class PDGSlicer {
         return result;
     }
 
-    public SliceResult forwardSlice(PDGNode criterion) {
+    /**
+     * Slices forwards from a single node.
+     * @param criterion the slicing criterion
+     * @return the nodes and edges the criterion can affect
+     */
+    public SliceResult forwardSlice(PDGNode criterion)
+    {
         Set<PDGNode> criterionSet = new LinkedHashSet<>();
         criterionSet.add(criterion);
         return forwardSlice(criterionSet);
     }
 
-    public SliceResult forwardSlice(Set<PDGNode> criterion) {
+    /**
+     * Walks outgoing edges transitively from every criterion node.
+     * @param criterion the slicing criteria
+     * @return the nodes and edges the criteria can affect
+     */
+    public SliceResult forwardSlice(Set<PDGNode> criterion)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.FORWARD, criterion);
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<PDGNode> worklist = new ArrayDeque<>(criterion);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
-            if (!visited.add(current)) {
+            if (!visited.add(current))
+            {
                 continue;
             }
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getOutgoingEdges()) {
-                if (shouldFollowEdge(edge)) {
+            for (PDGEdge edge : current.getOutgoingEdges())
+            {
+                if (shouldFollowEdge(edge))
+                {
                     result.addEdge(edge);
                     PDGNode target = edge.getTarget();
-                    if (!visited.contains(target)) {
+                    if (!visited.contains(target))
+                    {
                         worklist.add(target);
                     }
                 }
@@ -110,42 +179,69 @@ public class PDGSlicer {
         return result;
     }
 
-    public SliceResult chop(PDGNode source, PDGNode sink) {
+    /**
+     * Intersects the forward slice of a source with the backward slice of a sink.
+     * @param source the node to slice forward from
+     * @param sink the node to slice backward from
+     * @return the nodes on some dependence path from source to sink
+     */
+    public SliceResult chop(PDGNode source, PDGNode sink)
+    {
         SliceResult forward = forwardSlice(source);
         SliceResult backward = backwardSlice(sink);
         return forward.intersect(backward);
     }
 
-    public SliceResult chop(Set<PDGNode> sources, Set<PDGNode> sinks) {
+    /**
+     * Intersects the forward slice of the sources with the backward slice of the sinks.
+     * @param sources the nodes to slice forward from
+     * @param sinks the nodes to slice backward from
+     * @return the nodes on some dependence path from a source to a sink
+     */
+    public SliceResult chop(Set<PDGNode> sources, Set<PDGNode> sinks)
+    {
         SliceResult forward = forwardSlice(sources);
         SliceResult backward = backwardSlice(sinks);
         return forward.intersect(backward);
     }
 
-    public SliceResult backwardSliceWithFilter(PDGNode criterion, Predicate<PDGNode> filter) {
+    /**
+     * Slices backwards, stopping the walk at any node the filter rejects.
+     * @param criterion the slicing criterion
+     * @param filter predicate a node must satisfy to be kept and traversed through
+     * @return the accepted nodes and the edges between them
+     */
+    public SliceResult backwardSliceWithFilter(PDGNode criterion, Predicate<PDGNode> filter)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.BACKWARD, Set.of(criterion));
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<PDGNode> worklist = new ArrayDeque<>();
         worklist.add(criterion);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
-            if (!visited.add(current)) {
+            if (!visited.add(current))
+            {
                 continue;
             }
 
-            if (!filter.test(current)) {
+            if (!filter.test(current))
+            {
                 continue;
             }
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getIncomingEdges()) {
-                if (shouldFollowEdge(edge)) {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
+                if (shouldFollowEdge(edge))
+                {
                     result.addEdge(edge);
                     PDGNode source = edge.getSource();
-                    if (!visited.contains(source)) {
+                    if (!visited.contains(source))
+                    {
                         worklist.add(source);
                     }
                 }
@@ -155,30 +251,43 @@ public class PDGSlicer {
         return result;
     }
 
-    public SliceResult forwardSliceWithFilter(PDGNode criterion, Predicate<PDGNode> filter) {
+    /**
+     * Slices forwards, stopping the walk at any node the filter rejects.
+     * @param criterion the slicing criterion
+     * @param filter predicate a node must satisfy to be kept and traversed through
+     * @return the accepted nodes and the edges between them
+     */
+    public SliceResult forwardSliceWithFilter(PDGNode criterion, Predicate<PDGNode> filter)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.FORWARD, Set.of(criterion));
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<PDGNode> worklist = new ArrayDeque<>();
         worklist.add(criterion);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
-            if (!visited.add(current)) {
+            if (!visited.add(current))
+            {
                 continue;
             }
 
-            if (!filter.test(current)) {
+            if (!filter.test(current))
+            {
                 continue;
             }
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getOutgoingEdges()) {
-                if (shouldFollowEdge(edge)) {
+            for (PDGEdge edge : current.getOutgoingEdges())
+            {
+                if (shouldFollowEdge(edge))
+                {
                     result.addEdge(edge);
                     PDGNode target = edge.getTarget();
-                    if (!visited.contains(target)) {
+                    if (!visited.contains(target))
+                    {
                         worklist.add(target);
                     }
                 }
@@ -188,35 +297,67 @@ public class PDGSlicer {
         return result;
     }
 
-    public SliceResult backwardSliceControlOnly(PDGNode criterion) {
+    /**
+     * Slices backwards over control dependences only, leaving this slicer's settings untouched.
+     * @param criterion the slicing criterion
+     * @return the control-only backward slice
+     */
+    public SliceResult backwardSliceControlOnly(PDGNode criterion)
+    {
         return new PDGSlicer(pdg)
             .withControlDependencies(true)
             .withDataDependencies(false)
             .backwardSlice(criterion);
     }
 
-    public SliceResult backwardSliceDataOnly(PDGNode criterion) {
+    /**
+     * Slices backwards over data dependences only, leaving this slicer's settings untouched.
+     * @param criterion the slicing criterion
+     * @return the data-only backward slice
+     */
+    public SliceResult backwardSliceDataOnly(PDGNode criterion)
+    {
         return new PDGSlicer(pdg)
             .withControlDependencies(false)
             .withDataDependencies(true)
             .backwardSlice(criterion);
     }
 
-    public SliceResult forwardSliceControlOnly(PDGNode criterion) {
+    /**
+     * Slices forwards over control dependences only, leaving this slicer's settings untouched.
+     * @param criterion the slicing criterion
+     * @return the control-only forward slice
+     */
+    public SliceResult forwardSliceControlOnly(PDGNode criterion)
+    {
         return new PDGSlicer(pdg)
             .withControlDependencies(true)
             .withDataDependencies(false)
             .forwardSlice(criterion);
     }
 
-    public SliceResult forwardSliceDataOnly(PDGNode criterion) {
+    /**
+     * Slices forwards over data dependences only, leaving this slicer's settings untouched.
+     * @param criterion the slicing criterion
+     * @return the data-only forward slice
+     */
+    public SliceResult forwardSliceDataOnly(PDGNode criterion)
+    {
         return new PDGSlicer(pdg)
             .withControlDependencies(false)
             .withDataDependencies(true)
             .forwardSlice(criterion);
     }
 
-    public List<List<PDGNode>> findAllPaths(PDGNode source, PDGNode target, int maxDepth) {
+    /**
+     * Enumerates the simple dependence paths from source to target by depth-first search.
+     * @param source the start node
+     * @param target the end node
+     * @param maxDepth the maximum number of edges a path may use
+     * @return every path found, each as a node list from source to target
+     */
+    public List<List<PDGNode>> findAllPaths(PDGNode source, PDGNode target, int maxDepth)
+    {
         List<List<PDGNode>> allPaths = new ArrayList<>();
         List<PDGNode> currentPath = new ArrayList<>();
         Set<PDGNode> visited = new HashSet<>();
@@ -226,21 +367,26 @@ public class PDGSlicer {
         return allPaths;
     }
 
-    private void findPathsDFS(PDGNode current, PDGNode target,
-                              List<PDGNode> currentPath, Set<PDGNode> visited,
-                              List<List<PDGNode>> allPaths, int remainingDepth) {
+    private void findPathsDFS(PDGNode current, PDGNode target, List<PDGNode> currentPath, Set<PDGNode> visited, List<List<PDGNode>> allPaths, int remainingDepth)
+    {
         if (remainingDepth < 0) return;
 
         currentPath.add(current);
         visited.add(current);
 
-        if (current.equals(target)) {
+        if (current.equals(target))
+        {
             allPaths.add(new ArrayList<>(currentPath));
-        } else {
-            for (PDGEdge edge : current.getOutgoingEdges()) {
-                if (shouldFollowEdge(edge)) {
+        }
+        else
+        {
+            for (PDGEdge edge : current.getOutgoingEdges())
+            {
+                if (shouldFollowEdge(edge))
+                {
                     PDGNode next = edge.getTarget();
-                    if (!visited.contains(next)) {
+                    if (!visited.contains(next))
+                    {
                         findPathsDFS(next, target, currentPath, visited, allPaths, remainingDepth - 1);
                     }
                 }
@@ -251,16 +397,26 @@ public class PDGSlicer {
         visited.remove(current);
     }
 
-    public boolean isReachable(PDGNode source, PDGNode target) {
+    /**
+     * Tests whether target appears in the forward slice of source.
+     * @param source the start node
+     * @param target the node to look for
+     * @return whether a dependence path runs from source to target
+     */
+    public boolean isReachable(PDGNode source, PDGNode target)
+    {
         SliceResult forward = forwardSlice(source);
         return forward.contains(target);
     }
 
-    private boolean shouldFollowEdge(PDGEdge edge) {
-        if (edge.isControlDependence() && !includeControlDependencies) {
+    private boolean shouldFollowEdge(PDGEdge edge)
+    {
+        if (edge.isControlDependence() && !includeControlDependencies)
+        {
             return false;
         }
-        if (edge.isDataDependence() && !includeDataDependencies) {
+        if (edge.isDataDependence() && !includeDataDependencies)
+        {
             return false;
         }
         return !edge.isInterprocedural();

@@ -4,46 +4,85 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.util.Modifiers;
 
-public class ResolvedMethod {
+/**
+ * A resolved method reference paired with its declaring class and invoke kind.
+ */
+public class ResolvedMethod
+{
 
+    /**
+     * Dispatch style the resolved method should be invoked with.
+     */
     public enum InvokeKind { STATIC, VIRTUAL, SPECIAL, INTERFACE }
 
     private final MethodEntry method;
     private final ClassFile declaringClass;
     private final InvokeKind kind;
 
-    public ResolvedMethod(MethodEntry method, ClassFile declaringClass, InvokeKind kind) {
+    /**
+     * Creates a resolved method.
+     * @param method the matched method entry
+     * @param declaringClass the class that declares it
+     * @param kind the dispatch style to use
+     */
+    public ResolvedMethod(MethodEntry method, ClassFile declaringClass, InvokeKind kind)
+    {
         this.method = method;
         this.declaringClass = declaringClass;
         this.kind = kind;
     }
 
-    public MethodEntry getMethod() {
+    /**
+     * @return the method
+     */
+    public MethodEntry getMethod()
+    {
         return method;
     }
 
-    public ClassFile getDeclaringClass() {
+    /**
+     * @return the declaring class
+     */
+    public ClassFile getDeclaringClass()
+    {
         return declaringClass;
     }
 
-    public InvokeKind getKind() {
+    /**
+     * @return the kind
+     */
+    public InvokeKind getKind()
+    {
         return kind;
     }
 
-    public boolean isStatic() {
+    /**
+     * @return true if the method has the static modifier
+     */
+    public boolean isStatic()
+    {
         return (method.getAccess() & Modifiers.STATIC) != 0;
     }
 
-    public boolean isNative() {
+    /**
+     * @return true if the method has the native modifier
+     */
+    public boolean isNative()
+    {
         return (method.getAccess() & Modifiers.NATIVE) != 0;
     }
 
-    public boolean isAbstract() {
+    /**
+     * @return true if the method has the abstract modifier
+     */
+    public boolean isAbstract()
+    {
         return (method.getAccess() & Modifiers.ABSTRACT) != 0;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ResolvedMethod{" +
                 "method=" + method.getOwnerName() + "." + method.getName() + method.getDesc() +
                 ", kind=" + kind +

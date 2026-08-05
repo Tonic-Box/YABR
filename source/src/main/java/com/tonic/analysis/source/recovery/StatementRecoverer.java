@@ -35,9 +35,11 @@ import com.tonic.util.Logger;
 import java.util.*;
 
 /**
- * Recovers Statement AST nodes from IR blocks using structural analysis.
+ * Recovers Statement AST nodes from IR blocks, offering each region to the reaching-condition
+ * structurer first and falling back to the legacy walk for shapes it declines.
  */
-public class StatementRecoverer implements RegionRecoveryBridge {
+public class StatementRecoverer implements RegionRecoveryBridge
+{
 
     private final ControlFlowContext context;
     private final StructuralAnalyzer analyzer;
@@ -51,15 +53,31 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      */
     private final ReachingConditionStructurer rcsStructurer;
 
-    /** The pool enum constants resolve from when a switch dispatches on {@code ordinal()} directly. */
+    /**
+     * The pool enum constants resolve from when a switch dispatches on {@code ordinal()} directly.
+     */
     private ClassPool enumClassPool;
 
-    public void setEnumClassPool(ClassPool pool) {
+    /**
+     * Sets the pool enum constants resolve from for switches that dispatch on ordinal() directly.
+     *
+     * @param pool the class pool, or null to resolve nothing
+     */
+    public void setEnumClassPool(ClassPool pool)
+    {
         this.enumClassPool = pool;
     }
 
-    public StatementRecoverer(ControlFlowContext context, StructuralAnalyzer analyzer,
-                              ExpressionRecoverer exprRecoverer) {
+    /**
+     * Creates a recoverer and pre-declares the method parameters so stores to them recover as
+     * assignments rather than declarations.
+     *
+     * @param context the per-method recovery state
+     * @param analyzer supplies the structural analysis of the control flow
+     * @param exprRecoverer recovers the expressions inside the statements
+     */
+    public StatementRecoverer(ControlFlowContext context, StructuralAnalyzer analyzer, ExpressionRecoverer exprRecoverer)
+    {
         this.context = context;
         this.analyzer = analyzer;
         this.exprRecoverer = exprRecoverer;
@@ -71,46 +89,56 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     @Override
-    public void markRegionBlockProcessed(IRBlock block, List<Statement> statements) {
+    public void markRegionBlockProcessed(IRBlock block, List<Statement> statements)
+    {
         context.setStatements(block, statements);
         context.markProcessed(block);
     }
 
     @Override
-    public List<Statement> processedReturnStatements(IRBlock block) {
-        if (!context.isProcessed(block) || !isReturnBlock(block)) {
+    public List<Statement> processedReturnStatements(IRBlock block)
+    {
+        if (!context.isProcessed(block) || !isReturnBlock(block))
+        {
             return Collections.emptyList();
         }
         return context.getStatements(block);
     }
 
     @Override
-    public boolean isRegionBlockProcessed(IRBlock block) {
+    public boolean isRegionBlockProcessed(IRBlock block)
+    {
         return context.isProcessed(block);
     }
 
     @Override
-    public boolean tryCollapseTernaryDiamond(IRBlock branch) {
+    public boolean tryCollapseTernaryDiamond(IRBlock branch)
+    {
         IRInstruction term = branch.getTerminator();
-        if (!(term instanceof BranchInstruction)) {
+        if (!(term instanceof BranchInstruction))
+        {
             return false;
         }
         BranchInstruction br = (BranchInstruction) term;
         IRBlock thenBlock = br.getTrueTarget();
         IRBlock elseBlock = br.getFalseTarget();
-        if (thenBlock == null || elseBlock == null || thenBlock == elseBlock) {
+        if (thenBlock == null || elseBlock == null || thenBlock == elseBlock)
+        {
             return false;
         }
         // Both arms must be reached only from this branch and flow to one common merge block.
-        if (!isSolePredecessor(branch, thenBlock) || !isSolePredecessor(branch, elseBlock)) {
+        if (!isSolePredecessor(branch, thenBlock) || !isSolePredecessor(branch, elseBlock))
+        {
             return false;
         }
         IRBlock merge = soleSuccessor(thenBlock);
-        if (merge == null || merge != soleSuccessor(elseBlock)) {
+        if (merge == null || merge != soleSuccessor(elseBlock))
+        {
             return false;
         }
         PhiInstruction ternaryPhi = findTernaryPhi(thenBlock, elseBlock, merge);
-        if (ternaryPhi == null) {
+        if (ternaryPhi == null)
+        {
             return false;
         }
         // Only collapse a stack phi consumed directly by an expression (e.g. a call argument or a bare return
@@ -120,7 +148,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // reads the local, orphaning the arms' work and forcing the whole method into a dispatch loop. A phi
         // feeding another phi (a nested merge) likewise cannot be consumed here.
         if (armStoresToLocal(thenBlock) || armStoresToLocal(elseBlock)
-                || hasStoreLocalUse(ternaryPhi.getResult()) || getPhiUsingValue(ternaryPhi.getResult()) != null) {
+                || hasStoreLocalUse(ternaryPhi.getResult()) || getPhiUsingValue(ternaryPhi.getResult()) != null)
+        {
             return false;
         }
         Expression condition = recoverCondition(branch, false);
@@ -130,22 +159,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return true;
     }
 
-    /** True when {@code block} stores a value into a local slot - the diamond value flows through a variable. */
-    private boolean armStoresToLocal(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof StoreLocalInstruction) {
+    /**
+     * True when {@code block} stores a value into a local slot - the diamond value flows through a variable.
+     */
+    private boolean armStoresToLocal(IRBlock block)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isSolePredecessor(IRBlock pred, IRBlock block) {
+    private boolean isSolePredecessor(IRBlock pred, IRBlock block)
+    {
         Set<IRBlock> preds = block.getPredecessors();
         return preds.size() == 1 && preds.contains(pred);
     }
 
-    private IRBlock soleSuccessor(IRBlock block) {
+    private IRBlock soleSuccessor(IRBlock block)
+    {
         Set<IRBlock> succs = block.getSuccessors();
         return succs.size() == 1 ? succs.iterator().next() : null;
     }
@@ -155,29 +191,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
 
     @Override
-    public SwitchDescriptor decodeSwitch(IRBlock switchBlock) {
-        if (!(switchBlock.getTerminator() instanceof SwitchInstruction)) {
+    public SwitchDescriptor decodeSwitch(IRBlock switchBlock)
+    {
+        if (!(switchBlock.getTerminator() instanceof SwitchInstruction))
+        {
             return null;
         }
         RegionInfo info = analyzer.getRegionInfo(switchBlock);
-        if (info == null || info.getType() != ControlFlowContext.StructuredRegion.SWITCH) {
+        if (info == null || info.getType() != ControlFlowContext.StructuredRegion.SWITCH)
+        {
             return null;
         }
         SwitchInstruction sw = (SwitchInstruction) switchBlock.getTerminator();
         Value key = sw.getKey();
         StringSwitchInfo stringInfo = detectStringSwitch(switchBlock);
-        if (stringInfo != null) {
+        if (stringInfo != null)
+        {
             return decodeStringSwitchDescriptor(switchBlock, stringInfo);
         }
 
         Expression selector = exprRecoverer.recoverOperand(key);
         EnumSwitchInfo enumInfo = detectEnumSwitchPattern(selector);
         boolean enumNamesResolved = false;
-        if (enumInfo != null) {
-            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo)) {
+        if (enumInfo != null)
+        {
+            if (enumInfo.enumClassName != null && allEnumCasesResolve(info, enumInfo))
+            {
                 selector = enumInfo.enumVariable;
                 enumNamesResolved = true;
-            } else if (enumInfo.rawOrdinals) {
+            }
+            else if (enumInfo.rawOrdinals)
+            {
                 selector = enumInfo.ordinalExpression;
             }
             // A $SwitchMap$ dispatch whose mapping did not resolve keeps the array access: the case keys
@@ -188,17 +232,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         IRBlock mergeBlock = findSwitchMerge(info);
 
         Map<IRBlock, List<Integer>> targetToCases = new LinkedHashMap<>();
-        for (Map.Entry<Integer, IRBlock> entry : info.getSwitchCases().entrySet()) {
+        for (Map.Entry<Integer, IRBlock> entry : info.getSwitchCases().entrySet())
+        {
             targetToCases.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
         }
 
         Set<IRBlock> caseHeaders = new HashSet<>(targetToCases.keySet());
         IRBlock defaultTarget = info.getDefaultTarget();
         boolean emptyDefault = defaultTarget != null && defaultTarget == mergeBlock;
-        if (defaultTarget != null && !emptyDefault) {
+        if (defaultTarget != null && !emptyDefault)
+        {
             caseHeaders.add(defaultTarget);
         }
-        if (mergeBlock != null) {
+        if (mergeBlock != null)
+        {
             caseHeaders.remove(mergeBlock);
         }
 
@@ -221,23 +268,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean defaultMergedIntoCase = defaultTarget != null && !emptyDefault
                 && targetToCases.containsKey(defaultTarget);
         List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
-        for (Map.Entry<IRBlock, List<Integer>> entry : orderedTargets) {
+        for (Map.Entry<IRBlock, List<Integer>> entry : orderedTargets)
+        {
             IRBlock target = entry.getKey();
             List<Integer> labels = entry.getValue();
             boolean alsoDefault = defaultMergedIntoCase && target == defaultTarget;
-            if (enumNamesResolved) {
+            if (enumNamesResolved)
+            {
                 List<Expression> enumLabels = new ArrayList<>();
-                for (Integer caseValue : labels) {
+                for (Integer caseValue : labels)
+                {
                     String constantName = enumConstantForCase(enumInfo, caseValue);
                     SourceType enumType = new ReferenceSourceType(enumInfo.enumClassName, Collections.emptyList());
                     enumLabels.add(FieldAccessExpr.staticField(enumInfo.enumClassName, constantName, enumType));
                 }
                 cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), enumLabels, alsoDefault, target));
-            } else {
+            }
+            else
+            {
                 cases.add(new SwitchDescriptor.CaseSpec(new ArrayList<>(labels), Collections.emptyList(), alsoDefault, target));
             }
         }
-        if (defaultTarget != null && !defaultMergedIntoCase) {
+        if (defaultTarget != null && !defaultMergedIntoCase)
+        {
             SwitchDescriptor.CaseSpec defaultCase = new SwitchDescriptor.CaseSpec(
                     Collections.emptyList(), Collections.emptyList(), true, emptyDefault ? null : defaultTarget);
             // Place the default at its layout (bytecode-offset) position among the value cases, not blindly
@@ -245,14 +298,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // must sit between the cases it flows from and into, or the fall-through chain is broken and the
             // default's statements are dropped from the intervening path. An empty default (falls to the merge)
             // has no fall-through and stays last.
-            if (emptyDefault) {
+            if (emptyDefault)
+            {
                 cases.add(defaultCase);
-            } else {
+            }
+            else
+            {
                 int defOffset = defaultTarget.getBytecodeOffset();
                 int pos = cases.size();
-                for (int i = 0; i < cases.size(); i++) {
+                for (int i = 0; i < cases.size(); i++)
+                {
                     IRBlock target = cases.get(i).header();
-                    if (target != null && target.getBytecodeOffset() > defOffset) {
+                    if (target != null && target.getBytecodeOffset() > defOffset)
+                    {
                         pos = i;
                         break;
                     }
@@ -264,7 +322,9 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return new SwitchDescriptor(switchBlock, selector, mergeBlock, cases, caseHeaders);
     }
 
-    /** String-switch scaffolds admitted by {@link #decodeStringSwitchDescriptor}, keyed by the hash-dispatch header. */
+    /**
+     * String-switch scaffolds admitted by {@link #decodeStringSwitchDescriptor}, keyed by the hash-dispatch header.
+     */
     private final Map<IRBlock, StringSwitchInfo> stringSwitchScaffolds = new HashMap<>();
 
     /**
@@ -274,27 +334,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * stay outside the engine's region (the model follows the descriptor's case headers, not the raw
      * dispatch edges) and are marked processed when the header's statements are emitted.
      */
-    private SwitchDescriptor decodeStringSwitchDescriptor(IRBlock header, StringSwitchInfo info) {
+    private SwitchDescriptor decodeStringSwitchDescriptor(IRBlock header, StringSwitchInfo info)
+    {
         SwitchInstruction indexSwitch = info.indexSwitch;
         IRBlock merge = stringSwitchExit(info);
 
         Map<Integer, List<String>> indexToLiterals = new LinkedHashMap<>();
-        for (Map.Entry<String, Integer> entry : info.literalToIndex.entrySet()) {
+        for (Map.Entry<String, Integer> entry : info.literalToIndex.entrySet())
+        {
             indexToLiterals.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
         }
         Map<IRBlock, List<Expression>> targetToLabels = new LinkedHashMap<>();
-        for (Map.Entry<Integer, IRBlock> entry : indexSwitch.getCases().entrySet()) {
+        for (Map.Entry<Integer, IRBlock> entry : indexSwitch.getCases().entrySet())
+        {
             List<String> literals = indexToLiterals.get(entry.getKey());
-            if (literals == null) {
+            if (literals == null)
+            {
                 continue;
             }
             List<Expression> labels = targetToLabels.computeIfAbsent(entry.getKey() == null ? null : entry.getValue(),
                     k -> new ArrayList<>());
-            for (String literal : literals) {
+            for (String literal : literals)
+            {
                 labels.add(LiteralExpr.ofString(literal));
             }
         }
-        if (targetToLabels.isEmpty()) {
+        if (targetToLabels.isEmpty())
+        {
             return null;
         }
 
@@ -303,18 +369,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean emptyDefault = defaultTarget != null && defaultTarget == merge;
 
         Set<IRBlock> caseHeaders = new HashSet<>(targetToLabels.keySet());
-        if (defaultTarget != null && !emptyDefault) {
+        if (defaultTarget != null && !emptyDefault)
+        {
             caseHeaders.add(defaultTarget);
         }
-        if (merge != null) {
+        if (merge != null)
+        {
             caseHeaders.remove(merge);
         }
 
         List<SwitchDescriptor.CaseSpec> cases = new ArrayList<>();
-        for (Map.Entry<IRBlock, List<Expression>> entry : targetToLabels.entrySet()) {
+        for (Map.Entry<IRBlock, List<Expression>> entry : targetToLabels.entrySet())
+        {
             cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), entry.getValue(), false, entry.getKey()));
         }
-        if (defaultTarget != null) {
+        if (defaultTarget != null)
+        {
             cases.add(new SwitchDescriptor.CaseSpec(Collections.emptyList(), Collections.emptyList(), true,
                     emptyDefault ? null : defaultTarget));
         }
@@ -324,30 +394,38 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     @Override
-    public List<Statement> recoverSwitchHeaderStatements(IRBlock header) {
+    public List<Statement> recoverSwitchHeaderStatements(IRBlock header)
+    {
         StringSwitchInfo info = stringSwitchScaffolds.get(header);
-        if (info == null) {
+        if (info == null)
+        {
             return recoverSimpleBlock(header);
         }
         // User code before the dispatch scaffolding (the selector's own store and anything above it);
         // the scaffolding proper starts at the hashCode call. Mirrors the walk's string recovery.
         List<Statement> lead = new ArrayList<>();
-        for (IRInstruction instr : header.getInstructions()) {
-            if (instr.isTerminator()) {
+        for (IRInstruction instr : header.getInstructions())
+        {
+            if (instr.isTerminator())
+            {
                 break;
             }
-            if (instr instanceof InvokeInstruction && "hashCode".equals(((InvokeInstruction) instr).getName())) {
+            if (instr instanceof InvokeInstruction && "hashCode".equals(((InvokeInstruction) instr).getName()))
+            {
                 break;
             }
-            if (context.shouldSkipInstruction(instr)) {
+            if (context.shouldSkipInstruction(instr))
+            {
                 continue;
             }
             Statement stmt = recoverInstruction(instr);
-            if (stmt != null) {
+            if (stmt != null)
+            {
                 lead.add(stmt);
             }
         }
-        for (IRBlock block : info.scaffolding) {
+        for (IRBlock block : info.scaffolding)
+        {
             context.markProcessed(block);
             context.setStatements(block, Collections.emptyList());
         }
@@ -359,7 +437,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Pre-declares parameter names so that stores to parameter slots
      * generate assignment statements instead of variable declarations.
      */
-    private void preDeclareParameters() {
+    private void preDeclareParameters()
+    {
         IRMethod method = context.getIrMethod();
         RecoveryContext ctx = context.getExpressionContext();
         List<SSAValue> params = method.getParameters();
@@ -367,20 +446,27 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // actually given - its real LocalVariableTable name when present, else the synthetic "argN" - so a
         // store back to a parameter slot recovers as an assignment, never a self-copy declaration.
         int start = method.isStatic() ? 0 : 1;
-        for (int i = start; i < params.size(); i++) {
+        for (int i = start; i < params.size(); i++)
+        {
             String paramName = ctx.getVariableName(params.get(i));
-            if (paramName != null) {
+            if (paramName != null)
+            {
                 ctx.markDeclared(paramName);
             }
         }
     }
 
-    private void registerPendingNewInstructions(IRMethod method) {
-        for (IRBlock block : method.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof NewInstruction) {
+    private void registerPendingNewInstructions(IRMethod method)
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof NewInstruction)
+                {
                     NewInstruction newInstr = (NewInstruction) instr;
-                    if (newInstr.getResult() != null) {
+                    if (newInstr.getResult() != null)
+                    {
                         context.getExpressionContext().registerPendingNew(
                             newInstr.getResult(), newInstr.getClassName());
                     }
@@ -390,13 +476,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     /**
-     * Recovers statements for the entire method.
+     * Recovers the whole method body, routing through try-with-resources or general exception
+     * handling when the method declares handlers.
+     *
+     * @return the recovered body, or an empty block when the method has no entry
      */
-    public BlockStmt recoverMethod() {
+    public BlockStmt recoverMethod()
+    {
         IRMethod method = context.getIrMethod();
         IRBlock entry = method.getEntryBlock();
 
-        if (entry == null) {
+        if (entry == null)
+        {
             return new BlockStmt(Collections.emptyList());
         }
 
@@ -414,10 +505,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         splitClobberedIncrementReads(method);
 
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
-        if (handlers != null && !handlers.isEmpty()) {
+        if (handlers != null && !handlers.isEmpty())
+        {
             List<Statement> twr = recoverTryWithResources(entry, handlers);
             statements.addAll(Objects.requireNonNullElseGet(twr, () -> recoverWithExceptionHandling(entry, handlers)));
-        } else {
+        }
+        else
+        {
             statements.addAll(recoverBlockSequence(entry, new HashSet<>()));
         }
 
@@ -427,23 +521,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return new BlockStmt(statements);
     }
 
-    private void removeOrphanFinallyRethrows(List<Statement> statements) {
+    private void removeOrphanFinallyRethrows(List<Statement> statements)
+    {
         Set<String> declaredVars = collectDeclaredVariables(statements);
         removeOrphanThrowsRecursive(statements, declaredVars);
     }
 
-    private void removeOrphanThrowsRecursive(List<Statement> statements, Set<String> declaredVars) {
+    private void removeOrphanThrowsRecursive(List<Statement> statements, Set<String> declaredVars)
+    {
         statements.removeIf(stmt -> isOrphanThrow(stmt, declaredVars));
-        for (Statement stmt : statements) {
+        for (Statement stmt : statements)
+        {
             cleanupOrphanThrowsInStatement(stmt, declaredVars);
         }
     }
 
-    private boolean isOrphanThrow(Statement stmt, Set<String> declaredVars) {
-        if (stmt instanceof ThrowStmt) {
+    private boolean isOrphanThrow(Statement stmt, Set<String> declaredVars)
+    {
+        if (stmt instanceof ThrowStmt)
+        {
             ThrowStmt throwStmt = (ThrowStmt) stmt;
             Expression exception = throwStmt.getException();
-            if (exception instanceof VarRefExpr) {
+            if (exception instanceof VarRefExpr)
+            {
                 String varName = ((VarRefExpr) exception).getName();
                 return !declaredVars.contains(varName);
             }
@@ -451,79 +551,117 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private void cleanupOrphanThrowsInStatement(Statement stmt, Set<String> declaredVars) {
-        if (stmt instanceof BlockStmt) {
+    private void cleanupOrphanThrowsInStatement(Statement stmt, Set<String> declaredVars)
+    {
+        if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
             removeOrphanThrowsRecursive(block.getStatements(), declaredVars);
-        } else if (stmt instanceof TryCatchStmt) {
+        }
+        else if (stmt instanceof TryCatchStmt)
+        {
             TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-            if (tryCatch.getTryBlock() instanceof BlockStmt) {
+            if (tryCatch.getTryBlock() instanceof BlockStmt)
+            {
                 BlockStmt tryBlock = (BlockStmt) tryCatch.getTryBlock();
                 removeOrphanThrowsRecursive(tryBlock.getStatements(), declaredVars);
             }
-            for (CatchClause clause : tryCatch.getCatches()) {
+            for (CatchClause clause : tryCatch.getCatches())
+            {
                 Set<String> catchVars = new HashSet<>(declaredVars);
                 catchVars.add(clause.variableName());
-                if (clause.body() instanceof BlockStmt) {
+                if (clause.body() instanceof BlockStmt)
+                {
                     removeOrphanThrowsRecursive(((BlockStmt) clause.body()).getStatements(), catchVars);
                 }
             }
-            if (tryCatch.getFinallyBlock() instanceof BlockStmt) {
+            if (tryCatch.getFinallyBlock() instanceof BlockStmt)
+            {
                 removeOrphanThrowsRecursive(((BlockStmt) tryCatch.getFinallyBlock()).getStatements(), declaredVars);
             }
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
             cleanupOrphanThrowsInStatement(ifStmt.getThenBranch(), declaredVars);
-            if (ifStmt.getElseBranch() != null) {
+            if (ifStmt.getElseBranch() != null)
+            {
                 cleanupOrphanThrowsInStatement(ifStmt.getElseBranch(), declaredVars);
             }
-        } else if (stmt instanceof WhileStmt) {
+        }
+        else if (stmt instanceof WhileStmt)
+        {
             cleanupOrphanThrowsInStatement(((WhileStmt) stmt).getBody(), declaredVars);
-        } else if (stmt instanceof DoWhileStmt) {
+        }
+        else if (stmt instanceof DoWhileStmt)
+        {
             cleanupOrphanThrowsInStatement(((DoWhileStmt) stmt).getBody(), declaredVars);
-        } else if (stmt instanceof ForStmt) {
+        }
+        else if (stmt instanceof ForStmt)
+        {
             cleanupOrphanThrowsInStatement(((ForStmt) stmt).getBody(), declaredVars);
         }
     }
 
-    private Set<String> collectDeclaredVariables(List<Statement> statements) {
+    private Set<String> collectDeclaredVariables(List<Statement> statements)
+    {
         Set<String> declared = new HashSet<>();
-        for (Statement stmt : statements) {
+        for (Statement stmt : statements)
+        {
             collectDeclaredVarsRecursive(stmt, declared);
         }
         return declared;
     }
 
-    private void collectDeclaredVarsRecursive(Statement stmt, Set<String> declared) {
-        if (stmt instanceof VarDeclStmt) {
+    private void collectDeclaredVarsRecursive(Statement stmt, Set<String> declared)
+    {
+        if (stmt instanceof VarDeclStmt)
+        {
             declared.add(((VarDeclStmt) stmt).getName());
-        } else if (stmt instanceof BlockStmt) {
-            for (Statement s : ((BlockStmt) stmt).getStatements()) {
+        }
+        else if (stmt instanceof BlockStmt)
+        {
+            for (Statement s : ((BlockStmt) stmt).getStatements())
+            {
                 collectDeclaredVarsRecursive(s, declared);
             }
-        } else if (stmt instanceof TryCatchStmt) {
+        }
+        else if (stmt instanceof TryCatchStmt)
+        {
             TryCatchStmt tryCatch = (TryCatchStmt) stmt;
             collectDeclaredVarsRecursive(tryCatch.getTryBlock(), declared);
-            for (CatchClause clause : tryCatch.getCatches()) {
+            for (CatchClause clause : tryCatch.getCatches())
+            {
                 declared.add(clause.variableName());
                 collectDeclaredVarsRecursive(clause.body(), declared);
             }
-            if (tryCatch.getFinallyBlock() != null) {
+            if (tryCatch.getFinallyBlock() != null)
+            {
                 collectDeclaredVarsRecursive(tryCatch.getFinallyBlock(), declared);
             }
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
             collectDeclaredVarsRecursive(ifStmt.getThenBranch(), declared);
-            if (ifStmt.getElseBranch() != null) {
+            if (ifStmt.getElseBranch() != null)
+            {
                 collectDeclaredVarsRecursive(ifStmt.getElseBranch(), declared);
             }
-        } else if (stmt instanceof WhileStmt) {
+        }
+        else if (stmt instanceof WhileStmt)
+        {
             collectDeclaredVarsRecursive(((WhileStmt) stmt).getBody(), declared);
-        } else if (stmt instanceof DoWhileStmt) {
+        }
+        else if (stmt instanceof DoWhileStmt)
+        {
             collectDeclaredVarsRecursive(((DoWhileStmt) stmt).getBody(), declared);
-        } else if (stmt instanceof ForStmt) {
+        }
+        else if (stmt instanceof ForStmt)
+        {
             ForStmt forStmt = (ForStmt) stmt;
-            for (Statement initStmt : forStmt.getInit()) {
+            for (Statement initStmt : forStmt.getInit())
+            {
                 collectDeclaredVarsRecursive(initStmt, declared);
             }
             collectDeclaredVarsRecursive(forStmt.getBody(), declared);
@@ -534,14 +672,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Removes duplicate inline finally code that appears after try-catch-finally statements.
      * The JVM inlines finally code for the normal execution path, creating duplicates.
      */
-    private void removeInlineFinallyDuplicates(List<Statement> statements) {
-        for (int i = 0; i < statements.size(); i++) {
+    private void removeInlineFinallyDuplicates(List<Statement> statements)
+    {
+        for (int i = 0; i < statements.size(); i++)
+        {
             Statement stmt = statements.get(i);
-            if (stmt instanceof TryCatchStmt) {
+            if (stmt instanceof TryCatchStmt)
+            {
                 TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-                if (tryCatch.hasFinally() && tryCatch.getFinallyBlock() instanceof BlockStmt) {
+                if (tryCatch.hasFinally() && tryCatch.getFinallyBlock() instanceof BlockStmt)
+                {
                     List<Statement> finallyStmts = ((BlockStmt) tryCatch.getFinallyBlock()).getStatements();
-                    if (!finallyStmts.isEmpty()) {
+                    if (!finallyStmts.isEmpty())
+                    {
                         int removed = removeMatchingStatements(statements, i + 1, finallyStmts);
                         i -= removed;
                     }
@@ -554,24 +697,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Removes statements from the list that match the given pattern statements.
      * Returns the number of statements removed.
      */
-    private int removeMatchingStatements(List<Statement> statements, int startIndex, List<Statement> pattern) {
-        if (startIndex >= statements.size() || pattern.isEmpty()) {
+    private int removeMatchingStatements(List<Statement> statements, int startIndex, List<Statement> pattern)
+    {
+        if (startIndex >= statements.size() || pattern.isEmpty())
+        {
             return 0;
         }
 
         int matchCount = 0;
-        for (int i = 0; i < pattern.size() && startIndex + i < statements.size(); i++) {
+        for (int i = 0; i < pattern.size() && startIndex + i < statements.size(); i++)
+        {
             Statement actual = statements.get(startIndex + i);
             Statement expected = pattern.get(i);
-            if (statementsMatch(actual, expected)) {
+            if (statementsMatch(actual, expected))
+            {
                 matchCount++;
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
 
-        if (matchCount == pattern.size()) {
-            for (int i = 0; i < matchCount; i++) {
+        if (matchCount == pattern.size())
+        {
+            for (int i = 0; i < matchCount; i++)
+            {
                 statements.remove(startIndex);
             }
             return matchCount;
@@ -582,21 +733,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Checks if two statements are semantically equivalent for finally duplicate detection.
      */
-    private boolean statementsMatch(Statement a, Statement b) {
+    private boolean statementsMatch(Statement a, Statement b)
+    {
         if (a == null || b == null) return false;
         if (a.getClass() != b.getClass()) return false;
 
-        if (a instanceof ExprStmt && b instanceof ExprStmt) {
+        if (a instanceof ExprStmt && b instanceof ExprStmt)
+        {
             return expressionsMatch(((ExprStmt) a).getExpression(), ((ExprStmt) b).getExpression());
         }
-        if (a instanceof VarDeclStmt && b instanceof VarDeclStmt) {
+        if (a instanceof VarDeclStmt && b instanceof VarDeclStmt)
+        {
             VarDeclStmt va = (VarDeclStmt) a;
             VarDeclStmt vb = (VarDeclStmt) b;
             if (va.getInitializer() == null && vb.getInitializer() == null) return true;
             if (va.getInitializer() == null || vb.getInitializer() == null) return false;
             return expressionsMatch(va.getInitializer(), vb.getInitializer());
         }
-        if (a instanceof ReturnStmt && b instanceof ReturnStmt) {
+        if (a instanceof ReturnStmt && b instanceof ReturnStmt)
+        {
             Expression ea = ((ReturnStmt) a).getValue();
             Expression eb = ((ReturnStmt) b).getValue();
             if (ea == null && eb == null) return true;
@@ -610,21 +765,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Checks if two expressions are semantically equivalent for finally duplicate detection.
      */
-    private boolean expressionsMatch(Expression a, Expression b) {
+    private boolean expressionsMatch(Expression a, Expression b)
+    {
         if (a == null || b == null) return a == b;
         if (a.getClass() != b.getClass()) return false;
 
-        if (a instanceof BinaryExpr && b instanceof BinaryExpr) {
+        if (a instanceof BinaryExpr && b instanceof BinaryExpr)
+        {
             BinaryExpr ba = (BinaryExpr) a;
             BinaryExpr bb = (BinaryExpr) b;
             return ba.getOperator() == bb.getOperator()
                 && expressionsMatch(ba.getLeft(), bb.getLeft())
                 && expressionsMatch(ba.getRight(), bb.getRight());
         }
-        if (a instanceof VarRefExpr && b instanceof VarRefExpr) {
+        if (a instanceof VarRefExpr && b instanceof VarRefExpr)
+        {
             return ((VarRefExpr) a).getName().equals(((VarRefExpr) b).getName());
         }
-        if (a instanceof LiteralExpr && b instanceof LiteralExpr) {
+        if (a instanceof LiteralExpr && b instanceof LiteralExpr)
+        {
             Object va = ((LiteralExpr) a).getValue();
             Object vb = ((LiteralExpr) b).getValue();
             return Objects.equals(va, vb);
@@ -637,12 +796,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Recovers statements with exception handling structure.
      * Handles both simple and nested try-catch regions.
      */
-    private List<Statement> recoverWithExceptionHandling(IRBlock entry, List<ExceptionHandler> handlers) {
+    private List<Statement> recoverWithExceptionHandling(IRBlock entry, List<ExceptionHandler> handlers)
+    {
         List<Statement> result = new ArrayList<>();
 
         Set<IRBlock> handlerBlocks = new HashSet<>();
-        for (ExceptionHandler handler : handlers) {
-            if (handler.getHandlerBlock() != null) {
+        for (ExceptionHandler handler : handlers)
+        {
+            if (handler.getHandlerBlock() != null)
+            {
                 handlerBlocks.add(handler.getHandlerBlock());
                 collectReachableBlocks(handler.getHandlerBlock(), handlerBlocks);
             }
@@ -652,7 +814,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         ExceptionHandler outerHandler = findOutermostHandler(entry, mergedHandlers);
 
-        if (outerHandler != null) {
+        if (outerHandler != null)
+        {
             // The staging owns every shape it settles; the engine (with try nodes, bounded by the
             // catch-EXCLUSIVE blocks) is its RESCUE when it throws the retired-schema signal - a
             // split protected family strangles the staging's stop set (everything past the FIRST
@@ -661,27 +824,35 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // attachment differs between the two layouts of the same method. FINALLY-bearing
             // methods keep the loud signal - the scaffolding's copy de-duplication has no engine
             // equivalent.
-            try {
+            try
+            {
                 result.addAll(recoverOuterHandlerRegion(entry, outerHandler, handlers, mergedHandlers, handlerBlocks));
-            } catch (RetiredSchemaRecoveryException retired) {
+            }
+            catch (RetiredSchemaRecoveryException retired)
+            {
                 boolean anyFinally = false;
-                for (ExceptionHandler fh : handlers) {
-                    if (handlerRethrows(fh) && !handlerThrowsFreshException(fh) && isFinallyCatchType(fh)) {
+                for (ExceptionHandler fh : handlers)
+                {
+                    if (handlerRethrows(fh) && !handlerThrowsFreshException(fh) && isFinallyCatchType(fh))
+                    {
                         anyFinally = true;
                         break;
                     }
                 }
-                if (anyFinally) {
+                if (anyFinally)
+                {
                     throw retired;
                 }
-                List<Statement> engine = rcsStructurer.tryStructureRegion(
-                        entry, catchExclusiveBlocks(handlers), true);
-                if (engine == null) {
+                List<Statement> engine = rcsStructurer.tryStructureRegion(entry, catchExclusiveBlocks(handlers), true);
+                if (engine == null)
+                {
                     throw retired;
                 }
                 result.addAll(engine);
             }
-        } else {
+        }
+        else
+        {
             // No handler covers the entry: the try begins after a prelude, so a reachable unprocessed try
             // exists by construction and the reaching-condition engine alone can never own the region - it
             // is not offered here. (Offering it bounded by the handler-REACHABLE set is a miscompile: a
@@ -691,10 +862,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // normal flow can never reach - while the legacy walk keeps the historical reachable set, whose
             // loose stop semantics it is built around.
             List<Statement> structured = recoverSequentialTryStages(entry, catchExclusiveBlocks(handlers));
-            if (structured == null) {
+            if (structured == null)
+            {
                 structured = rcsStructurer.tryStructureRegion(entry, new HashSet<>(), true);
             }
-            if (structured == null) {
+            if (structured == null)
+            {
                 throw retiredSchemaRecovery("handler-prelude", entry);
             }
             result.addAll(structured);
@@ -711,25 +884,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * merged handler lists, and {@code handlerBlocks} the handler-reachable stop set for the walking
      * recoveries.
      */
-    private List<Statement> recoverOuterHandlerRegion(IRBlock entry, ExceptionHandler outerHandler,
-                                                      List<ExceptionHandler> handlers,
-                                                      List<ExceptionHandler> mergedHandlers,
-                                                      Set<IRBlock> handlerBlocks) {
+    private List<Statement> recoverOuterHandlerRegion(IRBlock entry, ExceptionHandler outerHandler, List<ExceptionHandler> handlers, List<ExceptionHandler> mergedHandlers, Set<IRBlock> handlerBlocks)
+    {
         List<ExceptionHandler> outerHandlers = new ArrayList<>();
         List<ExceptionHandler> innerHandlers = new ArrayList<>();
 
         int outerTryEndOffset = outerHandler.getTryEnd() != null
                 ? outerHandler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
-        for (ExceptionHandler h : mergedHandlers) {
+        for (ExceptionHandler h : mergedHandlers)
+        {
             // A handler over the identical try range is a sibling catch clause on the same try
             // (try { } catch (A) { } catch (B) { }), not a nested one. Only a handler over a strict
             // sub-range is genuinely nested; classifying a sibling as inner would rebuild it as a
             // nested try and drop the shared try body.
-            if (h.getHandlerBlock() == outerHandler.getHandlerBlock()
-                    || sameTryRange(h, outerHandler)) {
+            if (h.getHandlerBlock() == outerHandler.getHandlerBlock() || sameTryRange(h, outerHandler))
+            {
                 outerHandlers.add(h);
-            } else if (h.getTryStart() == null
-                    || h.getTryStart().getBytecodeOffset() < outerTryEndOffset) {
+            }
+            else if (h.getTryStart() == null || h.getTryStart().getBytecodeOffset() < outerTryEndOffset)
+            {
                 // Only a handler whose protected range begins before the outer try's end is nested in the
                 // try BODY. One at or past the end is a try inside the catch clause, or in the continuation
                 // after the whole try/catch; leaving it out of innerHandlers keeps it unprocessed so the
@@ -740,8 +913,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
         Set<IRBlock> outerHandlerBlocks = new HashSet<>();
-        for (ExceptionHandler h : outerHandlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : outerHandlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 outerHandlerBlocks.add(h.getHandlerBlock());
             }
         }
@@ -749,10 +924,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> stopBlocks = new HashSet<>(handlerBlocks);
 
         IRMethod irMethod = context.getIrMethod();
-        if (outerHandler.getTryEnd() != null) {
+        if (outerHandler.getTryEnd() != null)
+        {
             int tryEndOffset = outerHandler.getTryEnd().getBytecodeOffset();
-            for (IRBlock block : irMethod.getBlocks()) {
-                if (block.getBytecodeOffset() >= tryEndOffset) {
+            for (IRBlock block : irMethod.getBlocks())
+            {
+                if (block.getBytecodeOffset() >= tryEndOffset)
+                {
                     stopBlocks.add(block);
                 }
             }
@@ -766,7 +944,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         IRBlock tryStart = outerHandler.getTryStart();
         List<Statement> preTryStmts = new ArrayList<>();
-        if (tryStart != null && tryStart != entry) {
+        if (tryStart != null && tryStart != entry)
+        {
             // The offset-based stops exist to bound the TRY region; the prefix owns a post-try-offset
             // block only IT reaches (a guard jumping forward past the try to a shared throw). Stopping
             // the prefix there dropped the guard branches entirely and the target block then surfaced
@@ -776,16 +955,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             Deque<IRBlock> work = new ArrayDeque<>();
             work.add(tryStart);
             work.addAll(handlerBlocks);
-            while (!work.isEmpty()) {
+            while (!work.isEmpty())
+            {
                 IRBlock b = work.poll();
-                if (b == null || !reachableFromTry.add(b)) {
+                if (b == null || !reachableFromTry.add(b))
+                {
                     continue;
                 }
                 work.addAll(b.getSuccessors());
             }
             Set<IRBlock> preTryStop = new HashSet<>(handlerBlocks);
-            for (IRBlock stop : stopBlocks) {
-                if (reachableFromTry.contains(stop)) {
+            for (IRBlock stop : stopBlocks)
+            {
+                if (reachableFromTry.contains(stop))
+                {
                     preTryStop.add(stop);
                 }
             }
@@ -795,8 +978,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         IRBlock startBlock = (tryStart != null) ? tryStart : entry;
         boolean hasFinally = false;
-        for (ExceptionHandler h : outerHandlers) {
-            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)) {
+        for (ExceptionHandler h : outerHandlers)
+        {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h))
+            {
                 hasFinally = true;
                 break;
             }
@@ -804,7 +989,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean savedExtendedDedup = extendedFinallyDedup;
         extendedFinallyDedup = true;
         boolean finallyDeduped;
-        try {
+        try
+        {
             // A finally whose body carries a LOOP inlines branchy copies that only the CFG-level subgraph
             // de-duplication can excise (the statement-level folds cannot match their restructured shapes),
             // and javac splits its protected range around a nested user catch - so the range de-dup must run
@@ -819,18 +1005,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // A finally NESTED under this construct (the outer handler is a plain catch) gets the same
             // eager excision - opportunistic and all-or-nothing, so a shape not fully accounted for is
             // left untouched for the nested recovery.
-            if (regionHasNestedFinally(innerHandlers)) {
+            if (regionHasNestedFinally(innerHandlers))
+            {
                 dedupStraightLineFinally(innerHandlers, false);
             }
-        } finally {
+        }
+        finally
+        {
             extendedFinallyDedup = savedExtendedDedup;
         }
         // Either excision above retires the copies' mirrored handlers from the method table; this list was
         // built beforehand and would rebuild empty constructs around the excised blocks (and stop the
         // clause walks at their stale range starts).
-        if (!innerHandlers.isEmpty()) {
+        if (!innerHandlers.isEmpty())
+        {
             Set<IRBlock> liveHandlerBlocks = new HashSet<>();
-            for (ExceptionHandler lh : context.getIrMethod().getExceptionHandlers()) {
+            for (ExceptionHandler lh : context.getIrMethod().getExceptionHandlers())
+            {
                 liveHandlerBlocks.add(lh.getHandlerBlock());
             }
             innerHandlers.removeIf(h -> h.getHandlerBlock() != null
@@ -843,9 +1034,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the accurate boundary; the continuation recovery below resumes exactly there. For a javac
         // layout the join lies past the merged end and is already a stop, so this is a no-op.
         Set<IRBlock> dedupJoins = new HashSet<>();
-        if (finallyDeduped && outerHandler.getTryStart() != null) {
+        if (finallyDeduped && outerHandler.getTryStart() != null)
+        {
             int windowLo = outerHandler.getTryStart().getBytecodeOffset();
-            for (Map.Entry<IRBlock, IRBlock> e : excisedCopyExits.entrySet()) {
+            for (Map.Entry<IRBlock, IRBlock> e : excisedCopyExits.entrySet())
+            {
                 int rootOff = e.getKey().getBytecodeOffset();
                 IRBlock exit = e.getValue();
                 // The copy ROOT may sit at or past the merged range end (a relowered layout parks
@@ -854,7 +1047,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 if (rootOff < windowLo
                         || exit.getBytecodeOffset() >= outerTryEndOffset
                         || exit.getBytecodeOffset() < windowLo
-                        || context.isProcessed(exit)) {
+                        || context.isProcessed(exit))
+                {
                     continue;
                 }
                 // A return/throw exit is a stash-reload boundary terminal the body walk owns (javac
@@ -864,20 +1058,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 IRInstruction exitTerm = exit.getTerminator();
                 if (exitTerm instanceof ReturnInstruction
                         || (exitTerm instanceof SimpleInstruction
-                            && ((SimpleInstruction) exitTerm).getOp() == SimpleOp.ATHROW)) {
+                            && ((SimpleInstruction) exitTerm).getOp() == SimpleOp.ATHROW))
+                {
                     continue;
                 }
                 boolean inOwnRange = false;
-                for (ExceptionHandler h : handlers) {
+                for (ExceptionHandler h : handlers)
+                {
                     if (outerHandlerBlocks.contains(h.getHandlerBlock())
                             && h.getTryStart() != null && h.getTryEnd() != null
                             && exit.getBytecodeOffset() >= h.getTryStart().getBytecodeOffset()
-                            && exit.getBytecodeOffset() < h.getTryEnd().getBytecodeOffset()) {
+                            && exit.getBytecodeOffset() < h.getTryEnd().getBytecodeOffset())
+                    {
                         inOwnRange = true;
                         break;
                     }
                 }
-                if (inOwnRange) {
+                if (inOwnRange)
+                {
                     continue;
                 }
                 dedupJoins.add(exit);
@@ -885,24 +1083,34 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // Only an UNAMBIGUOUS join bounds the body: a fused construct excises one copy per
             // switch arm, and its several exits are arm-interior code - making them stops would cut
             // the arms mid-way. The continuation preference below already requires uniqueness.
-            if (dedupJoins.size() == 1) {
+            if (dedupJoins.size() == 1)
+            {
                 stopBlocks.add(dedupJoins.iterator().next());
-            } else {
+            }
+            else
+            {
                 dedupJoins.clear();
             }
         }
         List<Statement> tryStmts;
-        if (!innerHandlers.isEmpty()) {
+        if (!innerHandlers.isEmpty())
+        {
             tryStmts = recoverWithNestedHandlers(startBlock, innerHandlers, stopBlocks);
-        } else if (hasFinally && detectSynchronizedLock(outerHandler) != null) {
+        }
+        else if (hasFinally && detectSynchronizedLock(outerHandler) != null)
+        {
             // A synchronized block's monitor instructions (the enter dominating the region and every inlined
             // monitorexit on the body's exits, plus the catch-all release/rethrow) are dropped during
             // statement recovery, so the body has no finally to emit and needs no copy de-duplication; hand
             // it to the engine directly instead of the legacy walk. It is wrapped in SynchronizedStmt below.
             tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
-        } else if (hasFinally && !finallyDeduped) {
+        }
+        else if (hasFinally && !finallyDeduped)
+        {
             tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
-        } else if (hasFinally) {
+        }
+        else if (hasFinally)
+        {
             // A de-duplicated finally that WRITES A LOCAL must not let the try body absorb a boundary
             // terminal past its stops: the finally runs between the body and that terminal, so pulling it
             // inside the try would move its evaluation before the finally's write (wrong when the terminal
@@ -912,12 +1120,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // needless escaped-local spill.
             boolean suppress = finallyWritesLocal(outerHandlers);
             rcsStructurer.setSuppressBoundaryTerminalAbsorption(suppress);
-            try {
+            try
+            {
                 tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
-            } finally {
+            }
+            finally
+            {
                 rcsStructurer.setSuppressBoundaryTerminalAbsorption(false);
             }
-        } else {
+        }
+        else
+        {
             tryStmts = recoverRegionHandoff(startBlock, stopBlocks);
         }
         BlockStmt tryBlock = new BlockStmt(tryStmts);
@@ -926,28 +1139,36 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // Build clauses from the original (pre-merge) handlers sharing the outer handler block, so a
         // multi-catch's several exception-table entries coalesce into one `catch (A | B e)` clause.
         List<ExceptionHandler> outerRegionHandlers = new ArrayList<>();
-        for (ExceptionHandler h : handlers) {
-            if (outerHandlerBlocks.contains(h.getHandlerBlock())) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (outerHandlerBlocks.contains(h.getHandlerBlock()))
+            {
                 outerRegionHandlers.add(h);
             }
         }
         List<CatchClause> catchClauses = buildCatchClauses(outerRegionHandlers);
 
-        if (!catchClauses.isEmpty()) {
+        if (!catchClauses.isEmpty())
+        {
             BlockStmt finallyBlock = null;
             List<CatchClause> filteredCatches = new ArrayList<>();
             Set<String> finallyExceptionVars = new HashSet<>();
 
-            for (CatchClause clause : catchClauses) {
-                if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
+            for (CatchClause clause : catchClauses)
+            {
+                if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause))
+                {
                     finallyBlock = extractFinallyBody(clause);
                     finallyExceptionVars.add(clause.variableName());
-                } else {
+                }
+                else
+                {
                     filteredCatches.add(clause);
                 }
             }
 
-            if (!finallyExceptionVars.isEmpty()) {
+            if (!finallyExceptionVars.isEmpty())
+            {
                 tryStmts = filterOrphanFinallyThrows(tryStmts, finallyExceptionVars);
 
                 List<Statement> finallyStmts = finallyBlock.getStatements();
@@ -961,11 +1182,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // NOT after a CFG-level de-duplication: the copies are already excised and the continuation
                 // is recovered after the region below - pulling it into the try would move its evaluation
                 // before the finally (wrong when the finally writes an operand the continuation reads).
-                if (!finallyDeduped && outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null) {
+                if (!finallyDeduped && outerHandler.getTryEnd() != null && outerHandler.getHandlerBlock() != null)
+                {
                     List<Statement> gapStmts = recoverFinallyGap(
                         outerHandler.getTryEnd(), outerHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
 
-                    if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
+                    if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts)))
+                    {
                         tryStmts = new ArrayList<>(tryStmts);
                         tryStmts.addAll(gapStmts);
                     }
@@ -976,11 +1199,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
             Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(outerHandler) : null;
             Statement region;
-            if (syncLock != null) {
+            if (syncLock != null)
+            {
                 SynchronizedStmt sync = new SynchronizedStmt(recoverLockExpr(syncLock), tryBlock);
                 stampFromBody(sync, tryBlock);
                 region = sync;
-            } else {
+            }
+            else
+            {
                 TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, filteredCatches, finallyBlock);
                 stampFromBody(tryCatch, tryBlock);
                 region = tryCatch;
@@ -988,10 +1214,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             result.add(region);
             // A region whose catch (or sync body) falls through continues at the join after
             // the protected range; without walking it the method's tail is silently dropped.
-            if (!isTerminatingRecoveredTry(region)) {
+            if (!isTerminatingRecoveredTry(region))
+            {
                 Set<IRBlock> consumed = new HashSet<>();
-                for (ExceptionHandler h : outerRegionHandlers) {
-                    if (h.getHandlerBlock() != null) {
+                for (ExceptionHandler h : outerRegionHandlers)
+                {
+                    if (h.getHandlerBlock() != null)
+                    {
                         collectCatchConsumedBlocks(h, consumed);
                     }
                 }
@@ -999,24 +1228,31 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // block the offset scan finds past the merged end (that can be the middle of a loop
                 // the join's own structure contains). Only an unambiguous unprocessed join is taken.
                 IRBlock continuation = null;
-                for (IRBlock j : dedupJoins) {
-                    if (context.isProcessed(j)) {
+                for (IRBlock j : dedupJoins)
+                {
+                    if (context.isProcessed(j))
+                    {
                         continue;
                     }
-                    if (continuation != null) {
+                    if (continuation != null)
+                    {
                         continuation = null;
                         break;
                     }
                     continuation = j;
                 }
-                if (continuation == null) {
+                if (continuation == null)
+                {
                     continuation = findBlockAfterTryCatch(outerHandler, consumed);
                 }
-                if (continuation != null && !context.isProcessed(continuation)) {
+                if (continuation != null && !context.isProcessed(continuation))
+                {
                     result.addAll(recoverRegionHandoff(continuation, new HashSet<>()));
                 }
             }
-        } else {
+        }
+        else
+        {
             result.addAll(tryStmts);
         }
 
@@ -1028,28 +1264,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * This handles the case where a try region is split into multiple exception table entries
      * due to return statements within the try block.
      */
-    private List<ExceptionHandler> mergeHandlersWithSameTarget(List<ExceptionHandler> handlers) {
+    private List<ExceptionHandler> mergeHandlersWithSameTarget(List<ExceptionHandler> handlers)
+    {
         Map<IRBlock, List<ExceptionHandler>> byHandlerBlock = new LinkedHashMap<>();
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             byHandlerBlock.computeIfAbsent(h.getHandlerBlock(), k -> new ArrayList<>()).add(h);
         }
 
         List<ExceptionHandler> merged = new ArrayList<>();
-        for (List<ExceptionHandler> group : byHandlerBlock.values()) {
-            if (group.size() == 1) {
+        for (List<ExceptionHandler> group : byHandlerBlock.values())
+        {
+            if (group.size() == 1)
+            {
                 merged.add(group.get(0));
-            } else {
+            }
+            else
+            {
                 IRBlock earliestStart = null;
                 IRBlock latestEnd = null;
                 int minOffset = Integer.MAX_VALUE;
                 int maxOffset = Integer.MIN_VALUE;
 
-                for (ExceptionHandler h : group) {
-                    if (h.getTryStart() != null && h.getTryStart().getBytecodeOffset() < minOffset) {
+                for (ExceptionHandler h : group)
+                {
+                    if (h.getTryStart() != null && h.getTryStart().getBytecodeOffset() < minOffset)
+                    {
                         minOffset = h.getTryStart().getBytecodeOffset();
                         earliestStart = h.getTryStart();
                     }
-                    if (h.getTryEnd() != null && h.getTryEnd().getBytecodeOffset() > maxOffset) {
+                    if (h.getTryEnd() != null && h.getTryEnd().getBytecodeOffset() > maxOffset)
+                    {
                         maxOffset = h.getTryEnd().getBytecodeOffset();
                         latestEnd = h.getTryEnd();
                     }
@@ -1067,26 +1312,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return merged;
     }
 
-    /** Whether two handlers protect the identical try range (making them sibling catch clauses). */
-    private static boolean sameTryRange(ExceptionHandler a, ExceptionHandler b) {
+    /**
+     * Whether two handlers protect the identical try range (making them sibling catch clauses).
+     */
+    private static boolean sameTryRange(ExceptionHandler a, ExceptionHandler b)
+    {
         return tryOffset(a.getTryStart()) == tryOffset(b.getTryStart())
                 && tryOffset(a.getTryEnd()) == tryOffset(b.getTryEnd());
     }
 
-    private static int tryOffset(IRBlock block) {
+    private static int tryOffset(IRBlock block)
+    {
         return block != null ? block.getBytecodeOffset() : -1;
     }
 
-    private ExceptionHandler findOutermostHandler(IRBlock entry, List<ExceptionHandler> handlers) {
+    private ExceptionHandler findOutermostHandler(IRBlock entry, List<ExceptionHandler> handlers)
+    {
         ExceptionHandler outermost = null;
         int maxCoverage = -1;
 
-        for (ExceptionHandler handler : handlers) {
+        for (ExceptionHandler handler : handlers)
+        {
             int startOffset = handler.getTryStart().getBytecodeOffset();
             int endOffset = handler.getTryEnd() != null ? handler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
             int coverage = endOffset - startOffset;
 
-            if (startOffset <= entry.getBytecodeOffset() && coverage > maxCoverage) {
+            if (startOffset <= entry.getBytecodeOffset() && coverage > maxCoverage)
+            {
                 maxCoverage = coverage;
                 outermost = handler;
             }
@@ -1099,23 +1351,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Recovers statements with nested exception handlers.
      * The inner handlers may start at blocks different from the entry block.
      */
-    private List<Statement> recoverWithNestedHandlers(IRBlock start, List<ExceptionHandler> innerHandlers, Set<IRBlock> stopBlocks) {
+    private List<Statement> recoverWithNestedHandlers(IRBlock start, List<ExceptionHandler> innerHandlers, Set<IRBlock> stopBlocks)
+    {
         Set<IRBlock> allHandlerBlocks = new HashSet<>();
-        for (ExceptionHandler h : innerHandlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : innerHandlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 allHandlerBlocks.add(h.getHandlerBlock());
             }
         }
 
         List<ExceptionHandler> normalHandlers = new ArrayList<>();
-        for (ExceptionHandler h : innerHandlers) {
-            if (!allHandlerBlocks.contains(h.getTryStart())) {
+        for (ExceptionHandler h : innerHandlers)
+        {
+            if (!allHandlerBlocks.contains(h.getTryStart()))
+            {
                 normalHandlers.add(h);
             }
         }
 
         Set<IRBlock> innerTryStarts = new HashSet<>();
-        for (ExceptionHandler h : normalHandlers) {
+        for (ExceptionHandler h : normalHandlers)
+        {
             innerTryStarts.add(h.getTryStart());
         }
 
@@ -1125,44 +1383,53 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Recursive helper that recovers blocks and emits inner try-catch statements.
      */
-    private List<Statement> recoverWithInnerTryCatch(IRBlock current, List<ExceptionHandler> innerHandlers,
-                                                      Set<IRBlock> innerTryStarts, Set<IRBlock> stopBlocks,
-                                                      Set<IRBlock> visited) {
+    private List<Statement> recoverWithInnerTryCatch(IRBlock current, List<ExceptionHandler> innerHandlers, Set<IRBlock> innerTryStarts, Set<IRBlock> stopBlocks, Set<IRBlock> visited)
+    {
         List<Statement> result = new ArrayList<>();
 
         Set<IRBlock> combinedStops = new HashSet<>(stopBlocks);
         combinedStops.addAll(innerTryStarts);
 
-        while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
-            if (System.getProperty("yabr.trace.walk") != null) {
+        while (current != null && !visited.contains(current) && !stopBlocks.contains(current))
+        {
+            if (System.getProperty("yabr.trace.walk") != null)
+            {
                 System.err.println("[WALK] at=" + current.getBytecodeOffset()
                         + " processed=" + context.isProcessed(current)
                         + " info=" + (analyzer.getRegionInfo(current) == null ? "null"
                             : analyzer.getRegionInfo(current).getType()));
             }
-            if (!innerTryStarts.contains(current)) {
+            if (!innerTryStarts.contains(current))
+            {
                 visited.add(current);
             }
 
             ExceptionHandler innerHandler = findHandlerStartingAt(current, innerHandlers);
 
-            if (innerHandler != null) {
+            if (innerHandler != null)
+            {
                 List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
                 List<ExceptionHandler> remainingHandlers = new ArrayList<>();
 
                 TryRegion targetRegion = createTryRegion(innerHandler);
-                for (ExceptionHandler h : innerHandlers) {
+                for (ExceptionHandler h : innerHandlers)
+                {
                     TryRegion handlerRegion = createTryRegion(h);
-                    if (targetRegion != null && targetRegion.equals(handlerRegion)) {
+                    if (targetRegion != null && targetRegion.equals(handlerRegion))
+                    {
                         sameRegionHandlers.add(h);
-                    } else {
+                    }
+                    else
+                    {
                         remainingHandlers.add(h);
                     }
                 }
 
                 Set<IRBlock> innerHandlerBlocks = new HashSet<>();
-                for (ExceptionHandler h : sameRegionHandlers) {
-                    if (h.getHandlerBlock() != null) {
+                for (ExceptionHandler h : sameRegionHandlers)
+                {
+                    if (h.getHandlerBlock() != null)
+                    {
                         innerHandlerBlocks.add(h.getHandlerBlock());
                     }
                 }
@@ -1171,34 +1438,44 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 innerStopBlocks.addAll(innerHandlerBlocks);
 
                 boolean innerHasFinally = false;
-                for (ExceptionHandler h : sameRegionHandlers) {
-                    if (handlerRethrows(h)) {
+                for (ExceptionHandler h : sameRegionHandlers)
+                {
+                    if (handlerRethrows(h))
+                    {
                         innerHasFinally = true;
                         break;
                     }
                 }
-                if (innerHasFinally) {
+                if (innerHasFinally)
+                {
                     boolean savedExtendedInner = extendedFinallyDedup;
                     extendedFinallyDedup = true;
-                    try {
+                    try
+                    {
                         dedupStraightLineFinally(sameRegionHandlers);
-                    } finally {
+                    }
+                    finally
+                    {
                         extendedFinallyDedup = savedExtendedInner;
                     }
                 }
 
                 IRBlock innerTryEnd = innerHandler.getTryEnd();
-                if (innerTryEnd != null) {
+                if (innerTryEnd != null)
+                {
                     // The block at the try's exclusive end offset holds javac's inlined finally copy on the
                     // normal-exit path. It belongs after the try/finally, not inside the try body; without this
                     // stop the body walk absorbs that copy and the finally body executes twice (e.g. a doubled
                     // lock.unlock()). The dedup above excises the copy from that block, and the continuation
                     // logic below skips it via the try-end.
-                    if (innerHasFinally) {
+                    if (innerHasFinally)
+                    {
                         innerStopBlocks.add(innerTryEnd);
                     }
-                    for (IRBlock succ : innerTryEnd.getSuccessors()) {
-                        if (!innerHandlerBlocks.contains(succ)) {
+                    for (IRBlock succ : innerTryEnd.getSuccessors())
+                    {
+                        if (!innerHandlerBlocks.contains(succ))
+                        {
                             innerStopBlocks.add(succ);
                         }
                     }
@@ -1207,46 +1484,60 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // Claim this region's handlers before recovering the body: a body construct sharing the
                 // try's start block would otherwise be node-ified by the engine offers as a fresh try -
                 // the very construct this arm is recovering - entangling the offer with its own caller.
-                for (ExceptionHandler h : sameRegionHandlers) {
+                for (ExceptionHandler h : sameRegionHandlers)
+                {
                     processedTryHandlers.add(h);
-                    if (h.getHandlerBlock() != null) {
+                    if (h.getHandlerBlock() != null)
+                    {
                         processedHandlerBlocks.add(h.getHandlerBlock());
                     }
                 }
                 List<Statement> tryStmts;
-                if (!remainingHandlers.isEmpty()) {
+                if (!remainingHandlers.isEmpty())
+                {
                     Set<IRBlock> remainingTryStarts = new HashSet<>();
-                    for (ExceptionHandler h : remainingHandlers) {
+                    for (ExceptionHandler h : remainingHandlers)
+                    {
                         remainingTryStarts.add(h.getTryStart());
                     }
                     tryStmts = recoverWithInnerTryCatch(current, remainingHandlers, remainingTryStarts, innerStopBlocks, new HashSet<>());
-                } else {
+                }
+                else
+                {
                     tryStmts = recoverBlocksForTry(current, innerStopBlocks, new HashSet<>());
                 }
                 BlockStmt tryBlock = new BlockStmt(tryStmts);
 
                 List<CatchClause> catchClauses = new ArrayList<>();
-                for (ExceptionHandler h : sameRegionHandlers) {
+                for (ExceptionHandler h : sameRegionHandlers)
+                {
                     CatchClause catchClause = recoverCatchClause(h);
-                    if (catchClause != null) {
+                    if (catchClause != null)
+                    {
                         catchClauses.add(catchClause);
                     }
                 }
 
-                if (!catchClauses.isEmpty()) {
+                if (!catchClauses.isEmpty())
+                {
                     BlockStmt finallyBlock = null;
                     List<CatchClause> filteredCatches = new ArrayList<>();
-                    for (CatchClause clause : catchClauses) {
-                        if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
+                    for (CatchClause clause : catchClauses)
+                    {
+                        if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause))
+                        {
                             finallyBlock = extractFinallyBody(clause);
-                        } else {
+                        }
+                        else
+                        {
                             filteredCatches.add(clause);
                         }
                     }
                     // javac also inlines the finally before each early return/throw inside the try; strip those
                     // copies so the finally body appears only in the finally block, never a second time on an
                     // early-exit path.
-                    if (finallyBlock != null) {
+                    if (finallyBlock != null)
+                    {
                         tryStmts = filterInlinedFinallyFromTryStatements(tryStmts, finallyBlock.getStatements());
                         tryBlock = new BlockStmt(tryStmts);
                         filteredCatches = filterInlinedFinallyFromCatches(filteredCatches, finallyBlock.getStatements());
@@ -1257,16 +1548,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     // A try whose every path returns or throws has no continuation on this walk:
                     // walking the try-end successors would re-emit the stashed return (or whatever
                     // block follows) as unreachable code after the construct.
-                    if (isTerminatingRecoveredTry(tryCatch)) {
+                    if (isTerminatingRecoveredTry(tryCatch))
+                    {
                         current = null;
                         continue;
                     }
-                } else {
+                }
+                else
+                {
                     result.addAll(tryStmts);
                 }
 
                 IRBlock tryEnd = innerHandler.getTryEnd();
-                if (tryEnd != null) {
+                if (tryEnd != null)
+                {
                     visited.add(tryEnd);
                     // The block at the try end can be an EXCISED copy of the finally whose exit merely
                     // reloads a return value stashed inside the try - javac's layout for a return-exit,
@@ -1275,46 +1570,59 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     // fall-through path would wrongly adopt; the real fall-through continues elsewhere.
                     if (excisedCopyExits.containsKey(tryEnd)
                             && isStashReloadReturn(excisedCopyExits.get(tryEnd), tryRangeBlocks(innerHandler))
-                            && containsReturn(tryStmts)) {
+                            && containsReturn(tryStmts))
+                    {
                         current = null;
                         continue;
                     }
                     IRBlock next = null;
-                    for (IRBlock succ : tryEnd.getSuccessors()) {
-                        if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
-                            if (innerTryStarts.contains(succ)) {
+                    for (IRBlock succ : tryEnd.getSuccessors())
+                    {
+                        if (!visited.contains(succ) && !stopBlocks.contains(succ))
+                        {
+                            if (innerTryStarts.contains(succ))
+                            {
                                 next = succ;
                                 break;
                             }
-                            if (!combinedStops.contains(succ) && next == null) {
+                            if (!combinedStops.contains(succ) && next == null)
+                            {
                                 next = succ;
                             }
                         }
                     }
                     current = next;
-                } else {
+                }
+                else
+                {
                     current = null;
                 }
                 continue;
             }
 
-            if (context.isProcessed(current)) {
+            if (context.isProcessed(current))
+            {
                 result.addAll(context.getStatements(current));
                 IRBlock next = null;
                 DominatorTree walkDt = context.getDominatorTree();
-                for (IRBlock succ : current.getSuccessors()) {
+                for (IRBlock succ : current.getSuccessors())
+                {
                     // A back edge leads into an enclosing loop's already-emitted body; following it
                     // would re-add that body's cached statements (an iterator advance duplicated
                     // inside the try). The loop's own emission owns the iteration - stop here.
-                    if (walkDt != null && walkDt.dominates(succ, current)) {
+                    if (walkDt != null && walkDt.dominates(succ, current))
+                    {
                         continue;
                     }
-                    if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
-                        if (innerTryStarts.contains(succ)) {
+                    if (!visited.contains(succ) && !stopBlocks.contains(succ))
+                    {
+                        if (innerTryStarts.contains(succ))
+                        {
                             next = succ;
                             break;
                         }
-                        if (!combinedStops.contains(succ) && next == null) {
+                        if (!combinedStops.contains(succ) && next == null)
+                        {
                             next = succ;
                         }
                     }
@@ -1324,12 +1632,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
 
             RegionInfo info = analyzer.getRegionInfo(current);
-            if (info == null) {
-                if (current.getTerminator() instanceof SwitchInstruction) {
+            if (info == null)
+            {
+                if (current.getTerminator() instanceof SwitchInstruction)
+                {
                     // Same contract as the try-body walk: an unclassifiable dispatch is offered as
                     // a terminal region or declined loudly, never fallen through.
                     OfferResult offered = offerTerminalRegion(current, new HashSet<>(combinedStops));
-                    if (offered != null) {
+                    if (offered != null)
+                    {
                         result.addAll(offered.statements);
                         current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
                                 && (!context.isProcessed(offered.continuation)
@@ -1344,18 +1655,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 context.markProcessed(current);
                 IRBlock next = null;
                 DominatorTree seqDt = context.getDominatorTree();
-                for (IRBlock succ : current.getSuccessors()) {
+                for (IRBlock succ : current.getSuccessors())
+                {
                     // A back edge is the enclosing loop's iteration, owned by the loop's own
                     // emission; walking through it drifts into already-emitted body code.
-                    if (seqDt != null && seqDt.dominates(succ, current)) {
+                    if (seqDt != null && seqDt.dominates(succ, current))
+                    {
                         continue;
                     }
-                    if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
-                        if (innerTryStarts.contains(succ)) {
+                    if (!visited.contains(succ) && !stopBlocks.contains(succ))
+                    {
+                        if (innerTryStarts.contains(succ))
+                        {
                             next = succ;
                             break;
                         }
-                        if (!combinedStops.contains(succ) && next == null) {
+                        if (!combinedStops.contains(succ) && next == null)
+                        {
                             next = succ;
                         }
                     }
@@ -1372,7 +1688,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // as the decline fallback.
             IRBlock rcsBound = null;
             boolean terminalRegion = false;
-            switch (info.getType()) {
+            switch (info.getType())
+            {
                 case IF_THEN:
                 case IF_THEN_ELSE:
                 // A guard clause is an if with an early-exit arm; its merge is the continuation
@@ -1399,9 +1716,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 default:
                     break;
             }
-            if (terminalRegion) {
+            if (terminalRegion)
+            {
                 OfferResult offered = offerTerminalRegion(current, new HashSet<>(combinedStops));
-                if (offered != null) {
+                if (offered != null)
+                {
                     result.addAll(offered.statements);
                     current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
                             && (!context.isProcessed(offered.continuation)
@@ -1409,11 +1728,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     continue;
                 }
             }
-            if (rcsBound != null && !visited.contains(rcsBound)) {
+            if (rcsBound != null && !visited.contains(rcsBound))
+            {
                 Set<IRBlock> boundedStops = new HashSet<>(combinedStops);
                 boundedStops.add(rcsBound);
                 List<Statement> structuredRegion = offerRegionToEngine(current, boundedStops, rcsBound);
-                if (structuredRegion != null) {
+                if (structuredRegion != null)
+                {
                     result.addAll(structuredRegion);
                     current = stopBlocks.contains(rcsBound)
                             || (context.isProcessed(rcsBound) && !isTerminalTail(rcsBound)) ? null : rcsBound;
@@ -1421,7 +1742,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
             }
 
-            switch (info.getType()) {
+            switch (info.getType())
+            {
                 case IF_THEN:
                     throw retiredSchemaRecovery("if-then", current);
                 case IF_THEN_ELSE:
@@ -1436,19 +1758,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     throw retiredSchemaRecovery("guard", current);
                 case SWITCH:
                     throw retiredSchemaRecovery("switch", current);
-                default: {
+                default:
+                {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
                     result.addAll(blockStmts);
                     context.setStatements(current, blockStmts);
                     context.markProcessed(current);
                     IRBlock next = null;
-                    for (IRBlock succ : current.getSuccessors()) {
-                        if (!visited.contains(succ) && !stopBlocks.contains(succ)) {
-                            if (innerTryStarts.contains(succ)) {
+                    for (IRBlock succ : current.getSuccessors())
+                    {
+                        if (!visited.contains(succ) && !stopBlocks.contains(succ))
+                        {
+                            if (innerTryStarts.contains(succ))
+                            {
                                 next = succ;
                                 break;
                             }
-                            if (!combinedStops.contains(succ) && next == null) {
+                            if (!combinedStops.contains(succ) && next == null)
+                            {
                                 next = succ;
                             }
                         }
@@ -1465,17 +1792,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Finds a handler that starts at the given block.
      */
-    private ExceptionHandler findHandlerStartingAt(IRBlock block, List<ExceptionHandler> handlers) {
-        for (ExceptionHandler handler : handlers) {
-            if (handler.getTryStart() == block) {
+    private ExceptionHandler findHandlerStartingAt(IRBlock block, List<ExceptionHandler> handlers)
+    {
+        for (ExceptionHandler handler : handlers)
+        {
+            if (handler.getTryStart() == block)
+            {
                 return handler;
             }
         }
         return null;
     }
 
-    private TryRegion createTryRegion(ExceptionHandler handler) {
-        if (handler == null || handler.getTryStart() == null) {
+    private TryRegion createTryRegion(ExceptionHandler handler)
+    {
+        if (handler == null || handler.getTryStart() == null)
+        {
             return null;
         }
         return new TryRegion(handler.getTryStart(), handler.getTryEnd());
@@ -1485,8 +1817,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * The caught type for one exception-table entry: {@code java/lang/Throwable} for a catch-all, otherwise
      * the declared catch type. Used to assemble the type list of a reconstructed multi-catch clause.
      */
-    private SourceType catchTypeOf(ExceptionHandler handler) {
-        if (handler.isCatchAll()) {
+    private SourceType catchTypeOf(ExceptionHandler handler)
+    {
+        if (handler.isCatchAll())
+        {
             return new ReferenceSourceType("java/lang/Throwable", Collections.emptyList());
         }
         return new ReferenceSourceType(handler.getCatchType().getInternalName(), Collections.emptyList());
@@ -1498,29 +1832,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * handler block reached by several exception-table entries; duplicate types (a region split into several
      * entries by intervening returns) collapse to a single type.
      */
-    private List<CatchClause> buildCatchClauses(List<ExceptionHandler> regionHandlers) {
+    private List<CatchClause> buildCatchClauses(List<ExceptionHandler> regionHandlers)
+    {
         Map<IRBlock, List<ExceptionHandler>> byBlock = new LinkedHashMap<>();
-        for (ExceptionHandler h : regionHandlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : regionHandlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 byBlock.computeIfAbsent(h.getHandlerBlock(), k -> new ArrayList<>()).add(h);
             }
         }
 
         List<CatchClause> clauses = new ArrayList<>();
-        for (List<ExceptionHandler> group : byBlock.values()) {
+        for (List<ExceptionHandler> group : byBlock.values())
+        {
             CatchClause clause = recoverCatchClause(group.get(0));
-            if (clause == null) {
+            if (clause == null)
+            {
                 continue;
             }
             List<SourceType> types = new ArrayList<>();
             Set<String> seen = new HashSet<>();
-            for (ExceptionHandler h : group) {
+            for (ExceptionHandler h : group)
+            {
                 SourceType type = catchTypeOf(h);
-                if (seen.add(((ReferenceSourceType) type).getInternalName())) {
+                if (seen.add(((ReferenceSourceType) type).getInternalName()))
+                {
                     types.add(type);
                 }
             }
-            if (types.size() > 1) {
+            if (types.size() > 1)
+            {
                 clause = CatchClause.multiCatch(types, clause.variableName(), clause.body());
             }
             clauses.add(clause);
@@ -1535,19 +1877,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * the handler is not a monitor-release. The monitor instructions themselves are dropped during statement
      * recovery, so the region's recovered body is exactly the synchronized body.
      */
-    private Value detectSynchronizedLock(ExceptionHandler handler) {
-        if (handler == null || !handler.isCatchAll() || handler.getHandlerBlock() == null) {
+    private Value detectSynchronizedLock(ExceptionHandler handler)
+    {
+        if (handler == null || !handler.isCatchAll() || handler.getHandlerBlock() == null)
+        {
             return null;
         }
-        if (!blockContainsMonitorExit(handler.getHandlerBlock())) {
+        if (!blockContainsMonitorExit(handler.getHandlerBlock()))
+        {
             return null;
         }
         return findMonitorEnterLock(handler.getTryStart());
     }
 
-    private boolean blockContainsMonitorExit(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.MONITOREXIT) {
+    private boolean blockContainsMonitorExit(IRBlock block)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.MONITOREXIT)
+            {
                 return true;
             }
         }
@@ -1559,16 +1907,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * recovery consumes, so a lock materialized under that slot's name would reference a variable that
      * is never emitted - recover through the materialization to the defining expression instead.
      */
-    private Expression recoverLockExpr(Value syncLock) {
+    private Expression recoverLockExpr(Value syncLock)
+    {
         Expression expr = exprRecoverer.recoverOperand(syncLock);
-        if (expr instanceof VarRefExpr && syncLock instanceof SSAValue) {
+        if (expr instanceof VarRefExpr && syncLock instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) syncLock;
             String name = ((VarRefExpr) expr).getName();
             if (ssa.getDefinition() != null
                     && !context.getExpressionContext().isDeclared(name)
-                    && !isParameterOrThisRef(ssa)) {
+                    && !isParameterOrThisRef(ssa))
+            {
                 Expression direct = exprRecoverer.recover(ssa.getDefinition());
-                if (direct != null) {
+                if (direct != null)
+                {
                     return direct;
                 }
             }
@@ -1576,20 +1928,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return expr;
     }
 
-    private Value findMonitorEnterLock(IRBlock tryStart) {
-        if (tryStart == null) {
+    private Value findMonitorEnterLock(IRBlock tryStart)
+    {
+        if (tryStart == null)
+        {
             return null;
         }
         Set<IRBlock> visited = new HashSet<>();
         Deque<IRBlock> work = new ArrayDeque<>(tryStart.getPredecessors());
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock block = work.poll();
-            if (!visited.add(block)) {
+            if (!visited.add(block))
+            {
                 continue;
             }
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 if (instr instanceof SimpleInstruction
-                        && ((SimpleInstruction) instr).getOp() == SimpleOp.MONITORENTER) {
+                        && ((SimpleInstruction) instr).getOp() == SimpleOp.MONITORENTER)
+                {
                     return ((SimpleInstruction) instr).getOperand();
                 }
             }
@@ -1613,17 +1971,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * hoisted (an earlier terminating if already dominates everything after it); a non-terminating then-arm,
      * or an if without an else, is left as is.
      */
-    private List<Statement> hoistTerminalThenElse(List<Statement> stmts) {
-        if (stmts.isEmpty()) {
+    private List<Statement> hoistTerminalThenElse(List<Statement> stmts)
+    {
+        if (stmts.isEmpty())
+        {
             return stmts;
         }
         Statement last = stmts.get(stmts.size() - 1);
-        if (!(last instanceof IfStmt)) {
+        if (!(last instanceof IfStmt))
+        {
             return stmts;
         }
         IfStmt ifs = (IfStmt) last;
         if (!ifs.hasElse() || ifs.getElseBranch() == null
-                || !isTerminatingBlock(new BlockStmt(flattenToStatements(ifs.getThenBranch())))) {
+                || !isTerminatingBlock(new BlockStmt(flattenToStatements(ifs.getThenBranch()))))
+        {
             return stmts;
         }
         List<Statement> out = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
@@ -1634,26 +1996,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return out;
     }
 
-    private CatchClause recoverCatchClause(ExceptionHandler handler) {
+    private CatchClause recoverCatchClause(ExceptionHandler handler)
+    {
         IRBlock handlerBlock = handler.getHandlerBlock();
-        if (handlerBlock == null) {
+        if (handlerBlock == null)
+        {
             return null;
         }
         CatchClause cached = recoveredClauses.get(handlerBlock);
-        if (cached != null) {
+        if (cached != null)
+        {
             return cached;
         }
 
         ReferenceSourceType exceptionType;
-        if (handler.isCatchAll()) {
+        if (handler.isCatchAll())
+        {
             exceptionType = new ReferenceSourceType("java/lang/Throwable", Collections.emptyList());
-        } else {
+        }
+        else
+        {
             String typeName = handler.getCatchType().getInternalName();
             exceptionType = new ReferenceSourceType(typeName, Collections.emptyList());
         }
 
         String exceptionVarName = findExceptionVariableName(handlerBlock);
-        if (exceptionVarName == null) {
+        if (exceptionVarName == null)
+        {
             String simpleName;
             simpleName = exceptionType.getSimpleName().toLowerCase();
             exceptionVarName = simpleName.charAt(0) + "_ex";
@@ -1665,23 +2034,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         List<Statement> handlerStmts = new ArrayList<>();
 
-        for (IRInstruction instr : handlerBlock.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : handlerBlock.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 continue;
             }
 
-            if (instr instanceof StoreLocalInstruction) {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                if (store.getValue() instanceof SSAValue) {
+                if (store.getValue() instanceof SSAValue)
+                {
                     SSAValue ssaValue = (SSAValue) store.getValue();
-                    if (exceptionValues.contains(ssaValue)) {
+                    if (exceptionValues.contains(ssaValue))
+                    {
                         continue;
                     }
                 }
             }
 
             Statement stmt = recoverInstruction(instr);
-            if (stmt != null) {
+            if (stmt != null)
+            {
                 handlerStmts.add(stmt);
             }
         }
@@ -1700,20 +2075,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // structured form to end in its rethrow; any other structured clause only needs to be non-empty.
         boolean rethrowCarrier = handler.isCatchAll() && handlerRethrows(handler);
         boolean finallyPresent = false;
-        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
-            if (eh.isCatchAll() && eh.getHandlerBlock() != handlerBlock && handlerRethrows(eh)) {
+        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers())
+        {
+            if (eh.isCatchAll() && eh.getHandlerBlock() != handlerBlock && handlerRethrows(eh))
+            {
                 finallyPresent = true;
                 break;
             }
         }
         if ((handler.isCatchAll() || handlerRethrows(handler) || !finallyPresent)
-                && handlerSubtreeBranches(handlerBlock)) {
+                && handlerSubtreeBranches(handlerBlock))
+        {
             DominatorTree hdt = context.getDominatorTree();
-            if (hdt != null) {
+            if (hdt != null)
+            {
                 Set<IRBlock> catchBody = new HashSet<>();
                 catchBody.add(handlerBlock);
-                for (IRBlock b : context.getIrMethod().getBlocks()) {
-                    if (hdt.dominates(handlerBlock, b)) {
+                for (IRBlock b : context.getIrMethod().getBlocks())
+                {
+                    if (hdt.dominates(handlerBlock, b))
+                    {
                         catchBody.add(b);
                     }
                 }
@@ -1721,8 +2102,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // successors: a clause ending in a return has no exit successor, and the walk's sequential
                 // fallback would otherwise run past the clause into sibling handlers or the method tail.
                 Set<IRBlock> bodyStops = new HashSet<>();
-                for (IRBlock b : context.getIrMethod().getBlocks()) {
-                    if (!catchBody.contains(b)) {
+                for (IRBlock b : context.getIrMethod().getBlocks())
+                {
+                    if (!catchBody.contains(b))
+                    {
                         bodyStops.add(b);
                     }
                 }
@@ -1730,8 +2113,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // this same handler block; the walk below would otherwise treat one as an unprocessed try
                 // starting inside the clause and re-enter try recovery on the clause's own body. This
                 // clause recovery IS those entries' recovery - consume them first.
-                for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
-                    if (eh.getHandlerBlock() == handlerBlock) {
+                for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers())
+                {
+                    if (eh.getHandlerBlock() == handlerBlock)
+                    {
                         processedTryHandlers.add(eh);
                     }
                 }
@@ -1740,25 +2125,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // belongs to a construct still being recovered outside-in, and decoding it here meets
                 // a mid-family range start no node model owns. Mask such entries for this walk only.
                 Set<ExceptionHandler> enclosingProtections = new HashSet<>();
-                for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
+                for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers())
+                {
                     if (eh.getHandlerBlock() != null && eh.getHandlerBlock() != handlerBlock
                             && eh.getTryStart() != null
                             && catchBody.contains(eh.getTryStart())
                             && !catchBody.contains(eh.getHandlerBlock())
-                            && !processedTryHandlers.contains(eh)) {
+                            && !processedTryHandlers.contains(eh))
+                    {
                         enclosingProtections.add(eh);
                         processedTryHandlers.add(eh);
                     }
                 }
                 List<Statement> structured;
-                try {
+                try
+                {
                     structured = recoverBlockSequence(handlerBlock, bodyStops);
-                } finally {
+                }
+                finally
+                {
                     processedTryHandlers.removeAll(enclosingProtections);
                 }
                 List<Statement> filtered = new ArrayList<>();
-                for (Statement st : structured) {
-                    if (st instanceof VarDeclStmt && ((VarDeclStmt) st).getName().equals(exceptionVarName)) {
+                for (Statement st : structured)
+                {
+                    if (st instanceof VarDeclStmt && ((VarDeclStmt) st).getName().equals(exceptionVarName))
+                    {
                         continue;
                     }
                     filtered.add(st);
@@ -1768,7 +2160,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // terminating then-arm's else to a sibling so the rethrow becomes the clause's trailing throw
                 // (the shape the accept below and extractFinallyBody both key on), turning the body into
                 // `if (c) return ...; throw e`. Straight-line handlers are unchanged (no trailing if/else).
-                if (rethrowCarrier) {
+                if (rethrowCarrier)
+                {
                     filtered = hoistTerminalThenElse(filtered);
                 }
                 // A rethrow carrier must END in its rethrow - but a clause whose body CARRIES CONTROL
@@ -1777,7 +2170,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 boolean accept = rethrowCarrier
                         ? (!filtered.isEmpty() && endsInRethrow(filtered.get(filtered.size() - 1)))
                         : !filtered.isEmpty();
-                if (accept) {
+                if (accept)
+                {
                     appendSharedReturnFallThrough(filtered, handlerBlock);
                     CatchClause structuredClause = CatchClause.of(exceptionType, exceptionVarName, new BlockStmt(filtered));
                     recoveredClauses.putIfAbsent(handlerBlock, structuredClause);
@@ -1786,7 +2180,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
         boolean isGoto = false;
-        if (handlerTerminator instanceof SimpleInstruction) {
+        if (handlerTerminator instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) handlerTerminator;
             isGoto = (simple.getOp() == SimpleOp.GOTO);
         }
@@ -1796,8 +2191,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // The one exception is a catch whose body contains its own nested TRY: the handler stores the exception
         // and gotos into that try, so the try-start (dominated by the handler block) must be recovered, or the
         // rest of the catch - including the caught exception variable's uses - is dropped.
-        if (!isGoto || handler.isCatchAll() || catchBodyHasNestedTry(handlerBlock)
-                || gotoStaysInCatch(handlerBlock)) {
+        if (!isGoto || handler.isCatchAll() || catchBodyHasNestedTry(handlerBlock) || gotoStaysInCatch(handlerBlock))
+        {
             Set<IRBlock> visitedHandlerBlocks = new HashSet<>();
             visitedHandlerBlocks.add(handlerBlock);
             recoverHandlerBlocks(handlerBlock.getSuccessors(), visitedHandlerBlocks, handlerStmts, handlerBlock);
@@ -1805,24 +2200,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         List<Statement> filteredStmts = new ArrayList<>();
         boolean reachedTerminator = false;
-        for (Statement stmt : handlerStmts) {
-            if (reachedTerminator) {
+        for (Statement stmt : handlerStmts)
+        {
+            if (reachedTerminator)
+            {
                 continue;
             }
-            if (stmt instanceof VarDeclStmt) {
+            if (stmt instanceof VarDeclStmt)
+            {
                 VarDeclStmt varDecl = (VarDeclStmt) stmt;
-                if (varDecl.getName().equals(exceptionVarName)) {
+                if (varDecl.getName().equals(exceptionVarName))
+                {
                     continue;
                 }
             }
-            if (stmt instanceof ExprStmt) {
+            if (stmt instanceof ExprStmt)
+            {
                 ExprStmt exprStmt = (ExprStmt) stmt;
-                if (exprStmt.getExpression() instanceof BinaryExpr) {
+                if (exprStmt.getExpression() instanceof BinaryExpr)
+                {
                     BinaryExpr binExpr = (BinaryExpr) exprStmt.getExpression();
-                    if (binExpr.getOperator() == BinaryOperator.ASSIGN) {
-                        if (binExpr.getLeft() instanceof VarRefExpr) {
+                    if (binExpr.getOperator() == BinaryOperator.ASSIGN)
+                    {
+                        if (binExpr.getLeft() instanceof VarRefExpr)
+                        {
                             VarRefExpr varRef = (VarRefExpr) binExpr.getLeft();
-                            if (varRef.getName().equals(exceptionVarName)) {
+                            if (varRef.getName().equals(exceptionVarName))
+                            {
                                 continue;
                             }
                         }
@@ -1831,7 +2235,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
             filteredStmts.add(stmt);
 
-            if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+            if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt)
+            {
                 reachedTerminator = true;
             }
         }
@@ -1852,34 +2257,44 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * path. A return terminator is idempotent, so re-emit it at the clause end - exactly the treatment
      * the region structurer gives its own consumed boundaries.
      */
-    private void appendSharedReturnFallThrough(List<Statement> stmts, IRBlock handlerBlock) {
-        if (stmts.isEmpty() || isTerminatingBlock(new BlockStmt(stmts))) {
+    private void appendSharedReturnFallThrough(List<Statement> stmts, IRBlock handlerBlock)
+    {
+        if (stmts.isEmpty() || isTerminatingBlock(new BlockStmt(stmts)))
+        {
             return;
         }
         DominatorTree dt = context.getDominatorTree();
-        if (dt == null) {
+        if (dt == null)
+        {
             return;
         }
         Set<IRBlock> subtree = new HashSet<>();
         subtree.add(handlerBlock);
-        for (IRBlock b : context.getIrMethod().getBlocks()) {
-            if (dt.dominates(handlerBlock, b)) {
+        for (IRBlock b : context.getIrMethod().getBlocks())
+        {
+            if (dt.dominates(handlerBlock, b))
+            {
                 subtree.add(b);
             }
         }
         IRBlock join = null;
-        for (IRBlock b : subtree) {
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() != EdgeType.NORMAL || subtree.contains(e.getKey())) {
+        for (IRBlock b : subtree)
+        {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() != EdgeType.NORMAL || subtree.contains(e.getKey()))
+                {
                     continue;
                 }
-                if (join != null && join != e.getKey()) {
+                if (join != null && join != e.getKey())
+                {
                     return;
                 }
                 join = e.getKey();
             }
         }
-        if (join != null) {
+        if (join != null)
+        {
             stmts.addAll(processedReturnStatements(join));
         }
     }
@@ -1891,18 +2306,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * the nested try is the catch body. A successor that is merely the shared post-try merge or an enclosing
      * finally's inlined copy (no handler starts there) stays skipped, so the inlined copy is not duplicated.
      */
-    private boolean catchBodyHasNestedTry(IRBlock handlerBlock) {
+    private boolean catchBodyHasNestedTry(IRBlock handlerBlock)
+    {
         DominatorTree dt = context.getDominatorTree();
-        if (dt == null) {
+        if (dt == null)
+        {
             return false;
         }
-        for (IRBlock succ : handlerBlock.getSuccessors()) {
-            if (!dt.dominates(handlerBlock, succ)) {
+        for (IRBlock succ : handlerBlock.getSuccessors())
+        {
+            if (!dt.dominates(handlerBlock, succ))
+            {
                 continue;
             }
             ExceptionHandler h = findHandlerStartingAt(succ);
             if (h != null && !processedTryHandlers.contains(h)
-                    && !processedHandlerBlocks.contains(h.getHandlerBlock())) {
+                    && !processedHandlerBlocks.contains(h.getHandlerBlock()))
+            {
                 return true;
             }
         }
@@ -1918,15 +2338,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * having excised this family; a monitorexit in the handler (a synchronized release, whose copies
      * are dropped before recovery). Unknown provenance keeps the conversion.
      */
-    private boolean clauseHasFinallyEvidence(CatchClause clause) {
+    private boolean clauseHasFinallyEvidence(CatchClause clause)
+    {
         IRBlock hb = null;
-        for (Map.Entry<IRBlock, CatchClause> e : recoveredClauses.entrySet()) {
-            if (e.getValue() == clause) {
+        for (Map.Entry<IRBlock, CatchClause> e : recoveredClauses.entrySet())
+        {
+            if (e.getValue() == clause)
+            {
                 hb = e.getKey();
                 break;
             }
         }
-        if (hb == null) {
+        if (hb == null)
+        {
             return true;
         }
         return handlerHasFinallyEvidence(hb);
@@ -1941,65 +2365,86 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * catch-any entry (source cannot express one); the de-duplication having excised this family; a
      * monitorexit in the handler (a synchronized release, whose copies are dropped before recovery).
      */
-    private boolean handlerHasFinallyEvidence(IRBlock hb) {
+    private boolean handlerHasFinallyEvidence(IRBlock hb)
+    {
         List<ExceptionHandler> hbEntries = new ArrayList<>();
-        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
-            if (h.getHandlerBlock() == hb) {
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() == hb)
+            {
                 hbEntries.add(h);
             }
         }
         boolean savedEvidenceExtended = extendedFinallyDedup;
         extendedFinallyDedup = true;
-        try {
+        try
+        {
             List<IRInstruction> template = hbEntries.isEmpty()
                     ? null : straightLineFinallyTemplate(hbEntries.get(0));
-            if (template != null && !template.isEmpty()) {
+            if (template != null && !template.isEmpty())
+            {
                 Set<IRBlock> chainBlocks = new HashSet<>();
                 List<IRBlock> chain = finallyHandlerChain(hbEntries.get(0));
-                if (chain != null) {
+                if (chain != null)
+                {
                     chainBlocks.addAll(chain);
                 }
                 Set<IRBlock> rangeBlocks = new HashSet<>();
-                for (ExceptionHandler h : hbEntries) {
-                    if (h.getTryStart() == null || h.getTryEnd() == null) {
+                for (ExceptionHandler h : hbEntries)
+                {
+                    if (h.getTryStart() == null || h.getTryEnd() == null)
+                    {
                         continue;
                     }
                     int lo = h.getTryStart().getBytecodeOffset();
                     int hi = h.getTryEnd().getBytecodeOffset();
-                    for (IRBlock b : context.getIrMethod().getBlocks()) {
-                        if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi) {
+                    for (IRBlock b : context.getIrMethod().getBlocks())
+                    {
+                        if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi)
+                        {
                             rangeBlocks.add(b);
                         }
                     }
                 }
-                for (IRBlock b : context.getIrMethod().getBlocks()) {
-                    if (chainBlocks.contains(b) || probeTemplateStart(b, template) < 0) {
+                for (IRBlock b : context.getIrMethod().getBlocks())
+                {
+                    if (chainBlocks.contains(b) || probeTemplateStart(b, template) < 0)
+                    {
                         continue;
                     }
-                    if (!rangeBlocks.contains(b)) {
+                    if (!rangeBlocks.contains(b))
+                    {
                         return true;
                     }
-                    if (b.getTerminator() instanceof ReturnInstruction) {
+                    if (b.getTerminator() instanceof ReturnInstruction)
+                    {
                         return true;
                     }
-                    for (IRBlock succ : b.getSuccessors()) {
-                        if (!rangeBlocks.contains(succ) && !chainBlocks.contains(succ)
-                                && succ != hb) {
+                    for (IRBlock succ : b.getSuccessors())
+                    {
+                        if (!rangeBlocks.contains(succ) && !chainBlocks.contains(succ) && succ != hb)
+                        {
                             return true;
                         }
                     }
                 }
             }
-        } finally {
+        }
+        finally
+        {
             extendedFinallyDedup = savedEvidenceExtended;
         }
-        for (ExceptionHandler h : hbEntries) {
-            if (h.isCatchAll()) {
+        for (ExceptionHandler h : hbEntries)
+        {
+            if (h.isCatchAll())
+            {
                 return true;
             }
         }
-        for (ExceptionHandler d : finallyDeduped) {
-            if (d.getHandlerBlock() == hb) {
+        for (ExceptionHandler d : finallyDeduped)
+        {
+            if (d.getHandlerBlock() == hb)
+            {
                 return true;
             }
         }
@@ -2007,38 +2452,49 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> seen = new HashSet<>();
         work.add(hb);
         int budget = 40;
-        while (!work.isEmpty() && budget-- > 0) {
+        while (!work.isEmpty() && budget-- > 0)
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            for (IRInstruction ins : b.getInstructions()) {
-                if (ins instanceof SimpleInstruction
-                        && ((SimpleInstruction) ins).getOp() == SimpleOp.MONITOREXIT) {
+            for (IRInstruction ins : b.getInstructions())
+            {
+                if (ins instanceof SimpleInstruction && ((SimpleInstruction) ins).getOp() == SimpleOp.MONITOREXIT)
+                {
                     return true;
                 }
             }
             work.addAll(b.getSuccessors());
         }
-        if (TRACE) {
+        if (TRACE)
+        {
             trace("clause-evidence NONE handler=" + hb.getBytecodeOffset());
         }
         return false;
     }
 
-    /** Whether {@code s} is a rethrow, or a structure whose exit ends in one. */
-    private boolean endsInRethrow(Statement s) {
-        if (s instanceof ThrowStmt) {
+    /**
+     * Whether {@code s} is a rethrow, or a structure whose exit ends in one.
+     */
+    private boolean endsInRethrow(Statement s)
+    {
+        if (s instanceof ThrowStmt)
+        {
             return true;
         }
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             List<Statement> inner = ((BlockStmt) s).getStatements();
             return !inner.isEmpty() && endsInRethrow(inner.get(inner.size() - 1));
         }
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             return containsRethrow(((WhileStmt) s).getBody());
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifs = (IfStmt) s;
             return ifs.getThenBranch() != null && endsInRethrow(ifs.getThenBranch())
                     && ifs.getElseBranch() != null && endsInRethrow(ifs.getElseBranch());
@@ -2046,43 +2502,59 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    /** Whether the statement tree contains a throw on some path. */
-    private boolean containsRethrow(Statement s) {
-        if (s instanceof ThrowStmt) {
+    /**
+     * Whether the statement tree contains a throw on some path.
+     */
+    private boolean containsRethrow(Statement s)
+    {
+        if (s instanceof ThrowStmt)
+        {
             return true;
         }
-        if (s instanceof BlockStmt) {
-            for (Statement inner : ((BlockStmt) s).getStatements()) {
-                if (containsRethrow(inner)) {
+        if (s instanceof BlockStmt)
+        {
+            for (Statement inner : ((BlockStmt) s).getStatements())
+            {
+                if (containsRethrow(inner))
+                {
                     return true;
                 }
             }
             return false;
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifs = (IfStmt) s;
             return (ifs.getThenBranch() != null && containsRethrow(ifs.getThenBranch()))
                     || (ifs.getElseBranch() != null && containsRethrow(ifs.getElseBranch()));
         }
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             return containsRethrow(((WhileStmt) s).getBody());
         }
         return false;
     }
 
-    /** The rethrow ending {@code s} - the statement itself, or the one nested at the end of its structure. */
-    private ThrowStmt trailingRethrow(Statement s) {
-        if (s instanceof ThrowStmt) {
+    /**
+     * The rethrow ending {@code s} - the statement itself, or the one nested at the end of its structure.
+     */
+    private ThrowStmt trailingRethrow(Statement s)
+    {
+        if (s instanceof ThrowStmt)
+        {
             return (ThrowStmt) s;
         }
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             List<Statement> inner = ((BlockStmt) s).getStatements();
             return inner.isEmpty() ? null : trailingRethrow(inner.get(inner.size() - 1));
         }
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             return firstNestedThrow(((WhileStmt) s).getBody());
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifs = (IfStmt) s;
             ThrowStmt t = ifs.getThenBranch() == null ? null : trailingRethrow(ifs.getThenBranch());
             return t != null ? t
@@ -2091,40 +2563,51 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    /** The first throw in the statement tree, or null. */
-    private ThrowStmt firstNestedThrow(Statement s) {
-        if (s instanceof ThrowStmt) {
+    /**
+     * The first throw in the statement tree, or null.
+     */
+    private ThrowStmt firstNestedThrow(Statement s)
+    {
+        if (s instanceof ThrowStmt)
+        {
             return (ThrowStmt) s;
         }
-        if (s instanceof BlockStmt) {
-            for (Statement inner : ((BlockStmt) s).getStatements()) {
+        if (s instanceof BlockStmt)
+        {
+            for (Statement inner : ((BlockStmt) s).getStatements())
+            {
                 ThrowStmt t = firstNestedThrow(inner);
-                if (t != null) {
+                if (t != null)
+                {
                     return t;
                 }
             }
             return null;
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifs = (IfStmt) s;
             ThrowStmt t = ifs.getThenBranch() == null ? null : firstNestedThrow(ifs.getThenBranch());
             return t != null ? t
                     : (ifs.getElseBranch() == null ? null : firstNestedThrow(ifs.getElseBranch()));
         }
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             return firstNestedThrow(((WhileStmt) s).getBody());
         }
         return null;
     }
 
-    private boolean isFinallyRethrowPattern(CatchClause clause) {
+    private boolean isFinallyRethrowPattern(CatchClause clause)
+    {
         if (clause == null) return false;
 
         SourceType type = clause.getPrimaryType();
         if (!(type instanceof ReferenceSourceType)) return false;
 
         String typeName = ((ReferenceSourceType) type).getInternalName();
-        if (!typeName.equals("java/lang/Throwable") && !typeName.equals("Throwable")) {
+        if (!typeName.equals("java/lang/Throwable") && !typeName.equals("Throwable"))
+        {
             return false;
         }
 
@@ -2137,12 +2620,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // The rethrow ends the clause - as its trailing statement, or nested at the end of a structure
         // when the clause body carries control flow.
         ThrowStmt throwStmt = trailingRethrow(stmts.get(stmts.size() - 1));
-        if (throwStmt == null) {
+        if (throwStmt == null)
+        {
             return false;
         }
         Expression thrown = throwStmt.getException();
 
-        if (thrown instanceof VarRefExpr) {
+        if (thrown instanceof VarRefExpr)
+        {
             String thrownVar = ((VarRefExpr) thrown).getName();
             return thrownVar.equals(clause.variableName());
         }
@@ -2154,13 +2639,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Extracts the finally body from a finally-rethrow catch clause.
      * The finally body is everything except the final throw statement.
      */
-    private BlockStmt extractFinallyBody(CatchClause clause) {
-        if (clause == null || !(clause.body() instanceof BlockStmt)) {
+    private BlockStmt extractFinallyBody(CatchClause clause)
+    {
+        if (clause == null || !(clause.body() instanceof BlockStmt))
+        {
             return new BlockStmt(Collections.emptyList());
         }
 
         List<Statement> stmts = ((BlockStmt) clause.body()).getStatements();
-        if (stmts.isEmpty()) {
+        if (stmts.isEmpty())
+        {
             return new BlockStmt(Collections.emptyList());
         }
 
@@ -2170,13 +2658,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the whole structure. Strip the rethrow in place instead, leaving the body intact.
         Statement last = stmts.get(stmts.size() - 1);
         List<Statement> finallyStmts;
-        if (last instanceof ThrowStmt) {
+        if (last instanceof ThrowStmt)
+        {
             finallyStmts = new ArrayList<>(stmts.subList(0, stmts.size() - 1));
-        } else {
+        }
+        else
+        {
             finallyStmts = new ArrayList<>();
-            for (Statement st : stmts) {
+            for (Statement st : stmts)
+            {
                 Statement stripped = stripTrailingRethrow(st);
-                if (stripped != null) {
+                if (stripped != null)
+                {
                     finallyStmts.add(stripped);
                 }
             }
@@ -2190,7 +2683,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * loop-carrying finally clause recovers as {@code while (true) { body; if (exit) throw e; }}, whose
      * rethrow is the loop exit rather than a trailing statement.
      */
-    private Statement stripTrailingRethrow(Statement s) {
+    private Statement stripTrailingRethrow(Statement s)
+    {
         return stripTrailingRethrow(s, false);
     }
 
@@ -2198,33 +2692,42 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * As above; {@code inLoop} marks that the rethrow being removed is a LOOP EXIT - dropping it outright
      * would leave the loop endless, so it becomes a {@code break}.
      */
-    private Statement stripTrailingRethrow(Statement s, boolean inLoop) {
-        if (s instanceof ThrowStmt) {
+    private Statement stripTrailingRethrow(Statement s, boolean inLoop)
+    {
+        if (s instanceof ThrowStmt)
+        {
             return inLoop ? new BreakStmt() : null;
         }
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             List<Statement> kept = new ArrayList<>();
-            for (Statement inner : ((BlockStmt) s).getStatements()) {
+            for (Statement inner : ((BlockStmt) s).getStatements())
+            {
                 Statement stripped = stripTrailingRethrow(inner, inLoop);
-                if (stripped != null) {
+                if (stripped != null)
+                {
                     kept.add(stripped);
                 }
             }
             return kept.isEmpty() ? null : new BlockStmt(kept);
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifs = (IfStmt) s;
             Statement then = ifs.getThenBranch() == null ? null : stripTrailingRethrow(ifs.getThenBranch(), inLoop);
             Statement els = ifs.getElseBranch() == null ? null : stripTrailingRethrow(ifs.getElseBranch(), inLoop);
-            if (then == null && els == null) {
+            if (then == null && els == null)
+            {
                 return null;
             }
-            if (then == null) {
+            if (then == null)
+            {
                 return new IfStmt(invertCondition(ifs.getCondition()), els, null, ifs.getLocation());
             }
             return new IfStmt(ifs.getCondition(), then, els, ifs.getLocation());
         }
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             WhileStmt w = (WhileStmt) s;
             Statement body = stripTrailingRethrow(w.getBody(), true);
             return body == null ? null : new WhileStmt(w.getCondition(), body, w.getLabel());
@@ -2233,15 +2736,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
 
-    private List<Statement> filterOrphanFinallyThrows(List<Statement> statements, Set<String> finallyExceptionVars) {
+    private List<Statement> filterOrphanFinallyThrows(List<Statement> statements, Set<String> finallyExceptionVars)
+    {
         List<Statement> filtered = new ArrayList<>();
-        for (Statement stmt : statements) {
-            if (stmt instanceof ThrowStmt) {
+        for (Statement stmt : statements)
+        {
+            if (stmt instanceof ThrowStmt)
+            {
                 ThrowStmt throwStmt = (ThrowStmt) stmt;
                 Expression exception = throwStmt.getException();
-                if (exception instanceof VarRefExpr) {
+                if (exception instanceof VarRefExpr)
+                {
                     String varName = ((VarRefExpr) exception).getName();
-                    if (finallyExceptionVars.contains(varName)) {
+                    if (finallyExceptionVars.contains(varName))
+                    {
                         continue;
                     }
                 }
@@ -2256,10 +2764,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * return/throw inside a catch just as it does in the try body, so once the finally clause exists the
      * copies must fold out of every clause or the finally's effect doubles on the catch paths.
      */
-    private List<CatchClause> filterInlinedFinallyFromCatches(List<CatchClause> catches, List<Statement> finallyStmts) {
+    private List<CatchClause> filterInlinedFinallyFromCatches(List<CatchClause> catches, List<Statement> finallyStmts)
+    {
         List<CatchClause> out = new ArrayList<>(catches.size());
-        for (CatchClause clause : catches) {
-            if (!(clause.body() instanceof BlockStmt)) {
+        for (CatchClause clause : catches)
+        {
+            if (!(clause.body() instanceof BlockStmt))
+            {
                 out.add(clause);
                 continue;
             }
@@ -2270,7 +2781,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // trailing copy folds away.
             int n = folded.size();
             int k = finallyStmts.size();
-            if (n >= k && isStatementSequenceMatchingFinally(folded, n - k, finallyStmts)) {
+            if (n >= k && isStatementSequenceMatchingFinally(folded, n - k, finallyStmts))
+            {
                 folded = new ArrayList<>(folded.subList(0, n - k));
             }
             out.add(new CatchClause(clause.exceptionTypes(), clause.variableName(), new BlockStmt(folded)));
@@ -2283,28 +2795,35 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * of the copy removal the CFG-level de-duplication owns on its own (the fold-retirement burn-down). */
     private static final boolean FOLDS_DISABLED = System.getProperty("yabr.disable.finally.folds") != null;
 
-    private List<Statement> filterInlinedFinallyFromTryStatements(List<Statement> statements, List<Statement> finallyStmts) {
-        if (FOLDS_DISABLED || finallyStmts == null || finallyStmts.isEmpty()) {
+    private List<Statement> filterInlinedFinallyFromTryStatements(List<Statement> statements, List<Statement> finallyStmts)
+    {
+        if (FOLDS_DISABLED || finallyStmts == null || finallyStmts.isEmpty())
+        {
             return statements;
         }
         List<Statement> result = new ArrayList<>();
         int i = 0;
-        while (i < statements.size()) {
+        while (i < statements.size())
+        {
             Statement stmt = statements.get(i);
 
-            if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+            if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt)
+            {
                 result.add(stmt);
                 i++;
                 continue;
             }
 
-            if (stmt instanceof IfStmt) {
-                if (isStatementSequenceMatchingFinally(statements, i, finallyStmts)) {
+            if (stmt instanceof IfStmt)
+            {
+                if (isStatementSequenceMatchingFinally(statements, i, finallyStmts))
+                {
                     i += finallyStmts.size();
                     continue;
                 }
                 int invertedEnd = matchInvertedFinallyCopy(statements, i, finallyStmts);
-                if (invertedEnd >= 0) {
+                if (invertedEnd >= 0)
+                {
                     result.add(flattenToStatements(((IfStmt) stmt).getThenBranch()).get(0));
                     i = invertedEnd;
                     continue;
@@ -2321,7 +2840,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (stmt instanceof WhileStmt) {
+            if (stmt instanceof WhileStmt)
+            {
                 WhileStmt whileStmt = (WhileStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(whileStmt.getBody(), finallyStmts);
                 WhileStmt rebuiltWhile = new WhileStmt(whileStmt.getCondition(), newBody);
@@ -2331,15 +2851,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (stmt instanceof TryCatchStmt) {
+            if (stmt instanceof TryCatchStmt)
+            {
                 // A finally body that itself is a try/catch (a guarded call) makes each inlined copy a
                 // TryCatchStmt too - test the copy match BEFORE descending, or the descent consumes the
                 // statement and the copy is never folded.
-                if (isStatementSequenceMatchingFinally(statements, i, finallyStmts)) {
+                if (isStatementSequenceMatchingFinally(statements, i, finallyStmts))
+                {
                     int nextIdx = i + finallyStmts.size();
                     Statement next = nextIdx < statements.size() ? statements.get(nextIdx) : null;
                     if (next == null || next instanceof ReturnStmt || next instanceof ThrowStmt
-                            || next instanceof BreakStmt || next instanceof ContinueStmt) {
+                            || next instanceof BreakStmt || next instanceof ContinueStmt)
+                    {
                         i = nextIdx;
                         continue;
                     }
@@ -2352,7 +2875,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 TryCatchStmt tcs = (TryCatchStmt) stmt;
                 Statement newTry = filterInlinedFinallyFromBranch(tcs.getTryBlock(), finallyStmts);
                 List<CatchClause> newCatches = new ArrayList<>();
-                for (CatchClause cc : tcs.getCatches()) {
+                for (CatchClause cc : tcs.getCatches())
+                {
                     newCatches.add(new CatchClause(cc.exceptionTypes(), cc.variableName(),
                             filterInlinedFinallyFromBranch(cc.body(), finallyStmts)));
                 }
@@ -2365,14 +2889,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (stmt instanceof SwitchStmt) {
+            if (stmt instanceof SwitchStmt)
+            {
                 // javac splits the finally's protected range around the returns in switch arms, so
                 // an arm that leaves the try normally carries the inlined copy before its return.
                 // Left in place next to the extracted finally clause, the copy runs the cleanup a
                 // second time on that arm.
                 SwitchStmt sw = (SwitchStmt) stmt;
                 List<SwitchCase> newCases = new ArrayList<>();
-                for (SwitchCase c : sw.getCases()) {
+                for (SwitchCase c : sw.getCases())
+                {
                     newCases.add(new SwitchCase(c.labels(), c.expressionLabels(), c.isDefault(),
                             filterInlinedFinallyFromTryStatements(c.statements(), finallyStmts)));
                 }
@@ -2383,7 +2909,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (stmt instanceof DoWhileStmt) {
+            if (stmt instanceof DoWhileStmt)
+            {
                 DoWhileStmt doWhileStmt = (DoWhileStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(doWhileStmt.getBody(), finallyStmts);
                 DoWhileStmt rebuiltDoWhile = new DoWhileStmt(newBody, doWhileStmt.getCondition());
@@ -2393,7 +2920,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (stmt instanceof ForStmt) {
+            if (stmt instanceof ForStmt)
+            {
                 ForStmt forStmt = (ForStmt) stmt;
                 Statement newBody = filterInlinedFinallyFromBranch(forStmt.getBody(), finallyStmts);
                 ForStmt rebuiltFor = new ForStmt(forStmt.getInit(), forStmt.getCondition(), forStmt.getUpdate(), newBody);
@@ -2403,7 +2931,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (stmt instanceof BlockStmt) {
+            if (stmt instanceof BlockStmt)
+            {
                 BlockStmt blockStmt = (BlockStmt) stmt;
                 List<Statement> filteredBlock = filterInlinedFinallyFromTryStatements(blockStmt.getStatements(), finallyStmts);
                 result.add(new BlockStmt(filteredBlock));
@@ -2411,20 +2940,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (isStatementSequenceMatchingFinally(statements, i, finallyStmts)) {
+            if (isStatementSequenceMatchingFinally(statements, i, finallyStmts))
+            {
                 int nextIdx = i + finallyStmts.size();
-                if (nextIdx < statements.size()) {
+                if (nextIdx < statements.size())
+                {
                     Statement next = statements.get(nextIdx);
                     // javac inlines the finally before EVERY abrupt exit of the protected range, not only
                     // returns and throws: a break or continue out of the try runs the finally too. Fold the
                     // copy away before those as well - correct because the finally is re-emitted when the
                     // break/continue is lowered (the enclosing loop's cleanup drain).
                     if (next instanceof ReturnStmt || next instanceof ThrowStmt
-                            || next instanceof BreakStmt || next instanceof ContinueStmt) {
+                            || next instanceof BreakStmt || next instanceof ContinueStmt)
+                    {
                         i = nextIdx;
                         continue;
                     }
-                } else {
+                }
+                else
+                {
                     // A trailing copy with nothing after it is the fall-through exit's inlined finally: the
                     // body falls through into the finally clause, which runs the same statements again.
                     i = nextIdx;
@@ -2439,9 +2973,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the continuation's own return the try absorbed, or another exit's guard-dropped copy. Java
         // rejects unreachable code outright, so statements after a terminating try/catch at the same level
         // can only be recovery residue; lowering them produces dead blocks that fail verification.
-        for (int j = 0; j < result.size() - 1; j++) {
-            if (result.get(j) instanceof TryCatchStmt
-                    && isTerminatingTryCatch((TryCatchStmt) result.get(j))) {
+        for (int j = 0; j < result.size() - 1; j++)
+        {
+            if (result.get(j) instanceof TryCatchStmt && isTerminatingTryCatch((TryCatchStmt) result.get(j)))
+            {
                 result.subList(j + 1, result.size()).clear();
                 break;
             }
@@ -2449,10 +2984,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return result;
     }
 
-    private Statement filterInlinedFinallyFromBranch(Statement branch, List<Statement> finallyStmts) {
+    private Statement filterInlinedFinallyFromBranch(Statement branch, List<Statement> finallyStmts)
+    {
         if (branch == null) return null;
 
-        if (branch instanceof BlockStmt) {
+        if (branch instanceof BlockStmt)
+        {
             List<Statement> filtered = filterInlinedFinallyFromTryStatements(
                 ((BlockStmt) branch).getStatements(), finallyStmts);
             return new BlockStmt(filtered);
@@ -2461,37 +2998,49 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         List<Statement> singleStmt = new ArrayList<>();
         singleStmt.add(branch);
         List<Statement> filtered = filterInlinedFinallyFromTryStatements(singleStmt, finallyStmts);
-        if (filtered.isEmpty()) {
+        if (filtered.isEmpty())
+        {
             return new BlockStmt(Collections.emptyList());
         }
-        if (filtered.size() == 1) {
+        if (filtered.size() == 1)
+        {
             return filtered.get(0);
         }
         return new BlockStmt(filtered);
     }
 
-    /** True when any block of the handler's dominator subtree ends in a conditional branch. */
-    private boolean handlerSubtreeBranches(IRBlock handlerBlock) {
+    /**
+     * True when any block of the handler's dominator subtree ends in a conditional branch.
+     */
+    private boolean handlerSubtreeBranches(IRBlock handlerBlock)
+    {
         DominatorTree dt = context.getDominatorTree();
-        if (dt == null) {
+        if (dt == null)
+        {
             return false;
         }
         // A SWITCH branches too: a clause whose body is a switch needs the structured recovery just as
         // much as one holding an if - the flat successor walk appends the case bodies in set order and
         // collapses the construct to a single case.
-        if (isBranching(handlerBlock)) {
+        if (isBranching(handlerBlock))
+        {
             return true;
         }
-        for (IRBlock b : context.getIrMethod().getBlocks()) {
-            if (dt.dominates(handlerBlock, b) && isBranching(b)) {
+        for (IRBlock b : context.getIrMethod().getBlocks())
+        {
+            if (dt.dominates(handlerBlock, b) && isBranching(b))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    /** Whether {@code b} ends in a multi-way transfer - a conditional branch or a switch. */
-    private boolean isBranching(IRBlock b) {
+    /**
+     * Whether {@code b} ends in a multi-way transfer - a conditional branch or a switch.
+     */
+    private boolean isBranching(IRBlock b)
+    {
         IRInstruction term = b.getTerminator();
         return term instanceof BranchInstruction || term instanceof SwitchInstruction;
     }
@@ -2503,55 +3052,70 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Returns the index just past the matched copy (the guard plus the template body), or -1 when the
      * shape does not match; the caller replaces the whole copy with {@code J}.
      */
-    private int matchInvertedFinallyCopy(List<Statement> statements, int i, List<Statement> finallyStmts) {
-        if (finallyStmts.size() != 1 || !(finallyStmts.get(0) instanceof IfStmt)) {
+    private int matchInvertedFinallyCopy(List<Statement> statements, int i, List<Statement> finallyStmts)
+    {
+        if (finallyStmts.size() != 1 || !(finallyStmts.get(0) instanceof IfStmt))
+        {
             return -1;
         }
         IfStmt template = (IfStmt) finallyStmts.get(0);
-        if (template.getElseBranch() != null) {
+        if (template.getElseBranch() != null)
+        {
             return -1;
         }
         IfStmt guard = (IfStmt) statements.get(i);
-        if (guard.getElseBranch() != null
-                || !isComplementaryCondition(guard.getCondition(), template.getCondition())) {
+        if (guard.getElseBranch() != null || !isComplementaryCondition(guard.getCondition(), template.getCondition()))
+        {
             return -1;
         }
         List<Statement> jump = flattenToStatements(guard.getThenBranch());
-        if (jump.size() != 1) {
+        if (jump.size() != 1)
+        {
             return -1;
         }
         Statement j = jump.get(0);
         if (!(j instanceof ReturnStmt || j instanceof ThrowStmt
-                || j instanceof BreakStmt || j instanceof ContinueStmt)) {
+                || j instanceof BreakStmt || j instanceof ContinueStmt))
+        {
             return -1;
         }
         List<Statement> body = flattenToStatements(template.getThenBranch());
-        if (body.isEmpty() || i + 1 + body.size() > statements.size()) {
+        if (body.isEmpty() || i + 1 + body.size() > statements.size())
+        {
             return -1;
         }
-        for (int k = 0; k < body.size(); k++) {
-            if (!statementsMatch(body.get(k), statements.get(i + 1 + k))) {
+        for (int k = 0; k < body.size(); k++)
+        {
+            if (!statementsMatch(body.get(k), statements.get(i + 1 + k)))
+            {
                 return -1;
             }
         }
         return i + 1 + body.size();
     }
 
-    private List<Statement> flattenToStatements(Statement s) {
-        if (s instanceof BlockStmt) {
+    private List<Statement> flattenToStatements(Statement s)
+    {
+        if (s instanceof BlockStmt)
+        {
             return ((BlockStmt) s).getStatements();
         }
         return Collections.singletonList(s);
     }
 
-    /** True when the two conditions are logical complements over matching operands (e.g. == vs !=). */
-    private boolean isComplementaryCondition(Expression a, Expression b) {
-        if (!(a instanceof BinaryExpr) || !(b instanceof BinaryExpr)) {
+    /**
+     * True when the two conditions are logical complements over matching operands (e.g. == vs !=).
+     */
+    private boolean isComplementaryCondition(Expression a, Expression b)
+    {
+        if (!(a instanceof BinaryExpr) || !(b instanceof BinaryExpr))
+        {
             return false;
         }
         BinaryExpr ba = (BinaryExpr) a;
         BinaryExpr bb = (BinaryExpr) b;
-        if (!expressionsMatch(ba.getLeft(), bb.getLeft()) || !expressionsMatch(ba.getRight(), bb.getRight())) {
+        if (!expressionsMatch(ba.getLeft(), bb.getLeft()) || !expressionsMatch(ba.getRight(), bb.getRight()))
+        {
             return false;
         }
         BinaryOperator x = ba.getOperator();
@@ -2564,13 +3128,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 || (x == BinaryOperator.LE && y == BinaryOperator.GT);
     }
 
-    private boolean isStatementSequenceMatchingFinally(List<Statement> statements, int startIdx, List<Statement> finallyStmts) {
-        if (startIdx + finallyStmts.size() > statements.size()) {
+    private boolean isStatementSequenceMatchingFinally(List<Statement> statements, int startIdx, List<Statement> finallyStmts)
+    {
+        if (startIdx + finallyStmts.size() > statements.size())
+        {
             return false;
         }
         Map<String, String> tempBind = new HashMap<>();
-        for (int i = 0; i < finallyStmts.size(); i++) {
-            if (!statementMatchesFinally(statements.get(startIdx + i), finallyStmts.get(i), tempBind)) {
+        for (int i = 0; i < finallyStmts.size(); i++)
+        {
+            if (!statementMatchesFinally(statements.get(startIdx + i), finallyStmts.get(i), tempBind))
+            {
                 return false;
             }
         }
@@ -2584,48 +3152,60 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code int i5 = e; x = i5}), so a use of the finally's temp is matched against the candidate's via
      * {@code bind}, which is populated when their declarations line up.
      */
-    private boolean statementMatchesFinally(Statement cand, Statement fin, Map<String, String> bind) {
-        if (cand == null || fin == null) {
+    private boolean statementMatchesFinally(Statement cand, Statement fin, Map<String, String> bind)
+    {
+        if (cand == null || fin == null)
+        {
             return false;
         }
         // A guard-dropped copy: the finally is `if (x != null) { <cleanup> }` but the copy on a path where
         // the guard is decided lost its if-shell (the CFG-level de-dup excised the guard block), leaving the
         // bare cleanup. Match the copy against the guard's then-branch.
-        if (fin instanceof IfStmt && !(cand instanceof IfStmt) && ((IfStmt) fin).getElseBranch() == null) {
+        if (fin instanceof IfStmt && !(cand instanceof IfStmt) && ((IfStmt) fin).getElseBranch() == null)
+        {
             List<Statement> thenStmts = flattenToStatements(((IfStmt) fin).getThenBranch());
-            if (thenStmts.size() == 1 && statementMatchesFinally(cand, thenStmts.get(0), bind)) {
+            if (thenStmts.size() == 1 && statementMatchesFinally(cand, thenStmts.get(0), bind))
+            {
                 return true;
             }
         }
-        if (cand.getClass() != fin.getClass()) {
+        if (cand.getClass() != fin.getClass())
+        {
             return false;
         }
-        if (fin instanceof VarDeclStmt) {
+        if (fin instanceof VarDeclStmt)
+        {
             VarDeclStmt fd = (VarDeclStmt) fin;
             VarDeclStmt cd = (VarDeclStmt) cand;
             Expression fi = fd.getInitializer();
             Expression ci = cd.getInitializer();
-            if ((fi == null) != (ci == null)) {
+            if ((fi == null) != (ci == null))
+            {
                 return false;
             }
-            if (fi != null && !expressionMatchesFinally(ci, fi, bind)) {
+            if (fi != null && !expressionMatchesFinally(ci, fi, bind))
+            {
                 return false;
             }
             bind.put(fd.getName(), cd.getName());
             return true;
         }
-        if (fin instanceof ExprStmt) {
+        if (fin instanceof ExprStmt)
+        {
             return expressionMatchesFinally(((ExprStmt) cand).getExpression(), ((ExprStmt) fin).getExpression(), bind);
         }
-        if (fin instanceof ReturnStmt) {
+        if (fin instanceof ReturnStmt)
+        {
             Expression ce = ((ReturnStmt) cand).getValue();
             Expression fe = ((ReturnStmt) fin).getValue();
-            if (ce == null && fe == null) {
+            if (ce == null && fe == null)
+            {
                 return true;
             }
             return ce != null && fe != null && expressionMatchesFinally(ce, fe, bind);
         }
-        if (fin instanceof TryCatchStmt) {
+        if (fin instanceof TryCatchStmt)
+        {
             // A finally body that itself contains a try/catch (a guarded call inside the finally) is inlined
             // with FRESH catch-variable names in each copy, so the name-sensitive generic match never sees
             // the copies. Match structurally, binding each clause's exception variable like a declared temp.
@@ -2633,19 +3213,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             TryCatchStmt ct = (TryCatchStmt) cand;
             if (ft.getCatches().size() != ct.getCatches().size()
                     || (ft.getFinallyBlock() == null) != (ct.getFinallyBlock() == null)
-                    || !blockMatchesFinally(ct.getTryBlock(), ft.getTryBlock(), bind, false)) {
+                    || !blockMatchesFinally(ct.getTryBlock(), ft.getTryBlock(), bind, false))
+            {
                 return false;
             }
-            for (int ci = 0; ci < ft.getCatches().size(); ci++) {
+            for (int ci = 0; ci < ft.getCatches().size(); ci++)
+            {
                 CatchClause fc = ft.getCatches().get(ci);
                 CatchClause cc = ct.getCatches().get(ci);
-                if (fc.exceptionTypes().size() != cc.exceptionTypes().size()) {
+                if (fc.exceptionTypes().size() != cc.exceptionTypes().size())
+                {
                     return false;
                 }
                 bind.put(fc.variableName(), cc.variableName());
                 // The copy's catch may absorb the exit's own return/throw as its tail (the clause falls
                 // through to the exit the copy was inlined before); tolerate that one trailing statement.
-                if (!blockMatchesFinally(cc.body(), fc.body(), bind, true)) {
+                if (!blockMatchesFinally(cc.body(), fc.body(), bind, true))
+                {
                     return false;
                 }
             }
@@ -2655,47 +3239,59 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return statementsMatch(cand, fin);
     }
 
-    /** Element-wise {@link #statementMatchesFinally} over two statement bodies (blocks or single statements). */
-    private boolean blockMatchesFinally(Statement cand, Statement fin, Map<String, String> bind,
-                                        boolean tolerateTrailingExit) {
+    /**
+     * Element-wise {@link #statementMatchesFinally} over two statement bodies (blocks or single statements).
+     */
+    private boolean blockMatchesFinally(Statement cand, Statement fin, Map<String, String> bind, boolean tolerateTrailingExit)
+    {
         List<Statement> cs = flattenToStatements(cand);
         List<Statement> fs = flattenToStatements(fin);
-        if (cs.size() != fs.size()) {
+        if (cs.size() != fs.size())
+        {
             if (!tolerateTrailingExit || cs.size() != fs.size() + 1
                     || !(cs.get(cs.size() - 1) instanceof ReturnStmt
-                        || cs.get(cs.size() - 1) instanceof ThrowStmt)) {
+                        || cs.get(cs.size() - 1) instanceof ThrowStmt))
+            {
                 return false;
             }
         }
-        for (int i = 0; i < fs.size(); i++) {
-            if (!statementMatchesFinally(cs.get(i), fs.get(i), bind)) {
+        for (int i = 0; i < fs.size(); i++)
+        {
+            if (!statementMatchesFinally(cs.get(i), fs.get(i), bind))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private boolean expressionMatchesFinally(Expression cand, Expression fin, Map<String, String> bind) {
-        if (cand == null || fin == null) {
+    private boolean expressionMatchesFinally(Expression cand, Expression fin, Map<String, String> bind)
+    {
+        if (cand == null || fin == null)
+        {
             return cand == fin;
         }
-        if (cand.getClass() != fin.getClass()) {
+        if (cand.getClass() != fin.getClass())
+        {
             return false;
         }
-        if (fin instanceof VarRefExpr) {
+        if (fin instanceof VarRefExpr)
+        {
             String finName = ((VarRefExpr) fin).getName();
             String candName = ((VarRefExpr) cand).getName();
             String bound = bind.get(finName);
             return bound != null ? bound.equals(candName) : finName.equals(candName);
         }
-        if (fin instanceof BinaryExpr) {
+        if (fin instanceof BinaryExpr)
+        {
             BinaryExpr fb = (BinaryExpr) fin;
             BinaryExpr cb = (BinaryExpr) cand;
             return fb.getOperator() == cb.getOperator()
                 && expressionMatchesFinally(cb.getLeft(), fb.getLeft(), bind)
                 && expressionMatchesFinally(cb.getRight(), fb.getRight(), bind);
         }
-        if (fin instanceof LiteralExpr) {
+        if (fin instanceof LiteralExpr)
+        {
             return Objects.equals(((LiteralExpr) cand).getValue(), ((LiteralExpr) fin).getValue());
         }
         return cand.toString().equals(fin.toString());
@@ -2708,32 +3304,39 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * conditional {@code return}) the inlined copy is itself an {@code if}/{@code else} whose non-finally arm is
      * the genuine continuation; linear recovery would otherwise stop at the finally's own inlined return.
      */
-    private List<Statement> recoverFinallyGap(IRBlock tryEnd, IRBlock handlerBlock,
-                                              BlockStmt finallyBlock, Set<String> finallyExceptionVars) {
+    private List<Statement> recoverFinallyGap(IRBlock tryEnd, IRBlock handlerBlock, BlockStmt finallyBlock, Set<String> finallyExceptionVars)
+    {
         IRMethod irMethod = context.getIrMethod();
         int tryEndOffset = tryEnd.getBytecodeOffset();
         int handlerOffset = handlerBlock.getBytecodeOffset();
 
         IRBlock gapStart = null;
         Set<IRBlock> stopBlocks = new HashSet<>();
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             int offset = block.getBytecodeOffset();
-            if (offset >= handlerOffset) {
+            if (offset >= handlerOffset)
+            {
                 stopBlocks.add(block);
-            } else if (offset >= tryEndOffset
-                    && (gapStart == null || offset < gapStart.getBytecodeOffset())) {
+            }
+            else if (offset >= tryEndOffset && (gapStart == null || offset < gapStart.getBytecodeOffset()))
+            {
                 gapStart = block;
             }
         }
-        if (gapStart == null) {
+        if (gapStart == null)
+        {
             return Collections.emptyList();
         }
 
         List<Statement> gapStmts;
         context.pushStopBlocks(stopBlocks);
-        try {
+        try
+        {
             gapStmts = recoverBlockSequence(gapStart, stopBlocks);
-        } finally {
+        }
+        finally
+        {
             context.popStopBlocks();
         }
         gapStmts = filterOrphanFinallyThrows(gapStmts, finallyExceptionVars);
@@ -2746,17 +3349,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // match drops the name-insensitive declaration but keeps the store that reads it - orphaning the
         // temp (an undefined-variable recompile failure).
         List<Statement> finStmts = finallyBlock.getStatements();
-        if (finStmts.isEmpty()) {
+        if (finStmts.isEmpty())
+        {
             return gapStmts;
         }
         List<Statement> deduped = new ArrayList<>();
         int gi = 0;
-        while (gi < gapStmts.size()) {
-            if (isStatementSequenceMatchingFinally(gapStmts, gi, finStmts)) {
+        while (gi < gapStmts.size())
+        {
+            if (isStatementSequenceMatchingFinally(gapStmts, gi, finStmts))
+            {
                 gi += finStmts.size();
                 continue;
             }
-            if (isStatementInFinallyBlock(gapStmts.get(gi), finStmts)) {
+            if (isStatementInFinallyBlock(gapStmts.get(gi), finStmts))
+            {
                 gi++;
                 continue;
             }
@@ -2766,13 +3373,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return deduped;
     }
 
-    private boolean isStatementInFinallyBlock(Statement stmt, List<Statement> finallyStmts) {
-        if (finallyStmts.isEmpty()) {
+    private boolean isStatementInFinallyBlock(Statement stmt, List<Statement> finallyStmts)
+    {
+        if (finallyStmts.isEmpty())
+        {
             return false;
         }
 
-        for (Statement finallyStmt : finallyStmts) {
-            if (statementsMatch(stmt, finallyStmt)) {
+        for (Statement finallyStmt : finallyStmts)
+        {
+            if (statementsMatch(stmt, finallyStmt))
+            {
                 return true;
             }
         }
@@ -2786,53 +3397,68 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * tree classifies it as a shared merge - but post-excision the clause is its only real in-flow, and
      * skipping it would drop the clause's own return.
      */
-    private boolean isCatchExclusiveTail(IRBlock block, IRBlock catchEntry, DominatorTree dt) {
-        if (!(block.getTerminator() instanceof ReturnInstruction)) {
+    private boolean isCatchExclusiveTail(IRBlock block, IRBlock catchEntry, DominatorTree dt)
+    {
+        if (!(block.getTerminator() instanceof ReturnInstruction))
+        {
             return false;
         }
-        for (IRBlock p : block.getPredecessors()) {
-            if (dt.dominates(catchEntry, p)) {
+        for (IRBlock p : block.getPredecessors())
+        {
+            if (dt.dominates(catchEntry, p))
+            {
                 continue;
             }
-            if (!excisedFinallyCopyBlocks.contains(p)) {
+            if (!excisedFinallyCopyBlocks.contains(p))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts,
-                                      IRBlock catchEntry) {
+    private void recoverHandlerBlocks(Collection<IRBlock> successors, Set<IRBlock> visited, List<Statement> stmts, IRBlock catchEntry)
+    {
         DominatorTree dt = context.getDominatorTree();
-        for (IRBlock block : successors) {
+        for (IRBlock block : successors)
+        {
             if (visited.contains(block)) continue;
             if (catchEntry != null && dt != null && block != catchEntry && !dt.dominates(catchEntry, block)
-                    && !isCatchExclusiveTail(block, catchEntry, dt)) {
+                    && !isCatchExclusiveTail(block, catchEntry, dt))
+            {
                 continue; // outside the catch body - the shared post-try-catch merge
             }
 
             ExceptionHandler nested = findHandlerStartingAt(block);
             if (nested != null && !processedTryHandlers.contains(nested)
-                    && !processedHandlerBlocks.contains(nested.getHandlerBlock())) {
+                    && !processedHandlerBlocks.contains(nested.getHandlerBlock()))
+            {
                 Set<ExceptionHandler> savedTry = new HashSet<>(processedTryHandlers);
                 Set<IRBlock> savedBlocks = new HashSet<>(processedHandlerBlocks);
                 processedTryHandlers.add(nested);
-                if (nested.getHandlerBlock() != null) {
+                if (nested.getHandlerBlock() != null)
+                {
                     processedHandlerBlocks.add(nested.getHandlerBlock());
                 }
                 Set<IRBlock> nestedVisited = new HashSet<>(visited);
                 Statement recovered;
-                try {
+                try
+                {
                     recovered = recoverTryCatch(block, nested, new HashSet<>(), nestedVisited);
-                } catch (RuntimeException ex) {
+                }
+                catch (RuntimeException ex)
+                {
                     recovered = null;
                 }
-                if (recovered != null) {
+                if (recovered != null)
+                {
                     stmts.add(recovered);
                     visited.addAll(nestedVisited);
-                    if (!isTerminatingRecoveredTry(recovered)) {
+                    if (!isTerminatingRecoveredTry(recovered))
+                    {
                         IRBlock after = findBlockAfterTryCatch(nested, visited);
-                        if (after != null && !visited.contains(after)) {
+                        if (after != null && !visited.contains(after))
+                        {
                             recoverHandlerBlocks(Collections.singletonList(after), visited, stmts, catchEntry);
                         }
                     }
@@ -2846,10 +3472,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
             visited.add(block);
 
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 if (instr instanceof CopyInstruction) continue;
                 Statement stmt = recoverInstruction(instr);
-                if (stmt != null) {
+                if (stmt != null)
+                {
                     stmts.add(stmt);
                 }
             }
@@ -2859,16 +3487,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             boolean isReturn = terminator instanceof ReturnInstruction;
             boolean isGoto = false;
 
-            if (!isReturn && terminator instanceof SimpleInstruction) {
+            if (!isReturn && terminator instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) terminator;
-                if (simple.getOp() == SimpleOp.ATHROW) {
+                if (simple.getOp() == SimpleOp.ATHROW)
+                {
                     isThrow = true;
-                } else if (simple.getOp() == SimpleOp.GOTO) {
+                }
+                else if (simple.getOp() == SimpleOp.GOTO)
+                {
                     isGoto = true;
                 }
             }
 
-            if (isThrow) {
+            if (isThrow)
+            {
                 SimpleInstruction simple = (SimpleInstruction) terminator;
                 Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
                 Statement throwStmt = new ThrowStmt(exception);
@@ -2877,7 +3510,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (isReturn) {
+            if (isReturn)
+            {
                 ReturnInstruction ret = (ReturnInstruction) terminator;
                 Statement returnStmt = recoverReturn(ret);
                 stamp(returnStmt, ret);
@@ -2885,20 +3519,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 continue;
             }
 
-            if (isGoto) {
+            if (isGoto)
+            {
                 // A goto normally leaves the clause for the shared merge and stops the walk. But when it
                 // resolves - through the emptied inlined-finally copy chain - to the clause's OWN return
                 // (shared-looking only because the copy's now-emptied mirrored handler also flowed into
                 // it pre-excision), stopping would drop that return and the clause would wrongly fall
                 // through to the construct's continuation.
                 IRBlock tgt = singleNormalSuccessor(block);
-                if (tgt != null) {
+                if (tgt != null)
+                {
                     tgt = resolveThroughEmptyChain(tgt);
                 }
                 if (tgt != null && !visited.contains(tgt) && dt != null && catchEntry != null
                         && excisedFinallyCopyBlocks.contains(block)
                         && tgt.getTerminator() instanceof ReturnInstruction
-                        && (dt.dominates(catchEntry, tgt) || isCatchExclusiveTail(tgt, catchEntry, dt))) {
+                        && (dt.dominates(catchEntry, tgt) || isCatchExclusiveTail(tgt, catchEntry, dt)))
+                {
                     recoverHandlerBlocks(Collections.singletonList(tgt), visited, stmts, catchEntry);
                 }
                 continue;
@@ -2912,10 +3549,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Finds the exception variable name from the handler block.
      * The first instruction in a catch handler typically stores the exception to a local.
      */
-    private String findExceptionVariableName(IRBlock handlerBlock) {
+    private String findExceptionVariableName(IRBlock handlerBlock)
+    {
         SlotVariablePartition partition = context.getExpressionContext().getSlotPartition();
-        for (IRInstruction instr : handlerBlock.getInstructions()) {
-            if (instr instanceof StoreLocalInstruction) {
+        for (IRInstruction instr : handlerBlock.getInstructions())
+        {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
                 // The partition names the slot this store writes, so a caught exception is called what the
                 // source called it. Composing the name from the slot number here ignored that entirely, and
@@ -2923,12 +3563,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 String named = partition == null ? null : partition.nameForStore(store);
                 return named != null ? named : "local" + store.getLocalIndex();
             }
-            if (instr instanceof CopyInstruction) {
+            if (instr instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) instr;
                 SSAValue result = copy.getResult();
-                if (result != null) {
+                if (result != null)
+                {
                     String name = context.getExpressionContext().getVariableName(result);
-                    if (name != null) {
+                    if (name != null)
+                    {
                         return name;
                     }
                 }
@@ -2942,29 +3585,38 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Collects all SSA values that represent the caught exception in a handler block.
      * These values come from CopyInstruction at the start of the handler.
      */
-    private Set<SSAValue> collectExceptionValues(IRBlock handlerBlock) {
+    private Set<SSAValue> collectExceptionValues(IRBlock handlerBlock)
+    {
         Set<SSAValue> exceptionValues = new HashSet<>();
-        for (IRInstruction instr : handlerBlock.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : handlerBlock.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) instr;
-                if (copy.getResult() != null) {
+                if (copy.getResult() != null)
+                {
                     exceptionValues.add(copy.getResult());
                 }
-                if (copy.getSource() instanceof SSAValue) {
+                if (copy.getSource() instanceof SSAValue)
+                {
                     SSAValue ssaSrc = (SSAValue) copy.getSource();
                     exceptionValues.add(ssaSrc);
                 }
             }
             SSAValue result = instr.getResult();
-            if (result != null) {
+            if (result != null)
+            {
                 String name = result.getName();
-                if (name != null && name.startsWith("exc_")) {
+                if (name != null && name.startsWith("exc_"))
+                {
                     exceptionValues.add(result);
                 }
             }
-            if (instr instanceof StoreLocalInstruction) {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                if (store.getValue() instanceof SSAValue) {
+                if (store.getValue() instanceof SSAValue)
+                {
                     SSAValue ssaValue = (SSAValue) store.getValue();
                     exceptionValues.add(ssaValue);
                 }
@@ -2978,7 +3630,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Registers all SSA values that represent the exception in an exception handler.
      * This ensures they reference the catch parameter instead of undefined "v#" names.
      */
-    private void registerExceptionVariables(ExceptionHandler handler, String exceptionVarName) {
+    private void registerExceptionVariables(ExceptionHandler handler, String exceptionVarName)
+    {
         IRBlock handlerBlock = handler.getHandlerBlock();
         // Bound the walk to the blocks the catch clause's recovery actually consumes. The
         // handler block often falls through (physically) into the join after the try/catch;
@@ -2989,7 +3642,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<SSAValue> exceptionValuesSet = new HashSet<>();
         findExceptionSSAValues(handlerBlock, exceptionValuesSet, consumed);
 
-        for (SSAValue excVal : exceptionValuesSet) {
+        for (SSAValue excVal : exceptionValuesSet)
+        {
             context.getExpressionContext().setVariableName(excVal, exceptionVarName);
         }
     }
@@ -2998,12 +3652,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Finds all SSA values that represent the caught exception.
      * Starts from values with "exc_" prefix and tracks through copies and local stores/loads.
      */
-    private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result, Set<IRBlock> bound) {
+    private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result, Set<IRBlock> bound)
+    {
         Set<Integer> exceptionLocalSlots = new HashSet<>();
 
         findExceptionSSAValuesPass1(block, result, exceptionLocalSlots, new HashSet<>(), bound);
 
-        if (!exceptionLocalSlots.isEmpty()) {
+        if (!exceptionLocalSlots.isEmpty())
+        {
             findExceptionSSAValuesPass2(block, result, exceptionLocalSlots, new HashSet<>(), bound);
         }
     }
@@ -3011,60 +3667,76 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * First pass: Find exc_ prefix values and track which local slots they're stored to.
      */
-    private void findExceptionSSAValuesPass1(IRBlock block, Set<SSAValue> result,
-                                               Set<Integer> exceptionSlots, Set<IRBlock> visited,
-                                               Set<IRBlock> bound) {
+    private void findExceptionSSAValuesPass1(IRBlock block, Set<SSAValue> result, Set<Integer> exceptionSlots, Set<IRBlock> visited, Set<IRBlock> bound)
+    {
         if (visited.contains(block) || !bound.contains(block)) return;
         visited.add(block);
 
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) instr;
                 SSAValue copyResult = copy.getResult();
                 Value copySource = copy.getSource();
 
-                if (copySource instanceof SSAValue) {
+                if (copySource instanceof SSAValue)
+                {
                     SSAValue ssaSrc = (SSAValue) copySource;
                     String name = ssaSrc.getName();
-                    if (name != null && name.startsWith("exc_")) {
+                    if (name != null && name.startsWith("exc_"))
+                    {
                         result.add(ssaSrc);
-                        if (copyResult != null) {
+                        if (copyResult != null)
+                        {
                             result.add(copyResult);
                         }
-                    } else if (result.contains(ssaSrc)) {
-                        if (copyResult != null) {
+                    }
+                    else if (result.contains(ssaSrc))
+                    {
+                        if (copyResult != null)
+                        {
                             result.add(copyResult);
                         }
                     }
                 }
             }
 
-            if (instr instanceof StoreLocalInstruction) {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                if (store.getValue() instanceof SSAValue) {
+                if (store.getValue() instanceof SSAValue)
+                {
                     SSAValue ssaValue = (SSAValue) store.getValue();
                     String name = ssaValue.getName();
-                    if (name != null && name.startsWith("exc_")) {
+                    if (name != null && name.startsWith("exc_"))
+                    {
                         result.add(ssaValue);
                         exceptionSlots.add(store.getLocalIndex());
-                    } else if (result.contains(ssaValue)) {
+                    }
+                    else if (result.contains(ssaValue))
+                    {
                         exceptionSlots.add(store.getLocalIndex());
                     }
                 }
             }
 
-            for (Value operand : instr.getOperands()) {
-                if (operand instanceof SSAValue) {
+            for (Value operand : instr.getOperands())
+            {
+                if (operand instanceof SSAValue)
+                {
                     SSAValue ssaOp = (SSAValue) operand;
                     String name = ssaOp.getName();
-                    if (name != null && name.startsWith("exc_")) {
+                    if (name != null && name.startsWith("exc_"))
+                    {
                         result.add(ssaOp);
                     }
                 }
             }
         }
 
-        for (IRBlock succ : block.getSuccessors()) {
+        for (IRBlock succ : block.getSuccessors())
+        {
             findExceptionSSAValuesPass1(succ, result, exceptionSlots, visited, bound);
         }
     }
@@ -3072,37 +3744,45 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Second pass: Find LoadLocal from exception-containing slots.
      */
-    private void findExceptionSSAValuesPass2(IRBlock block, Set<SSAValue> result,
-                                               Set<Integer> exceptionSlots, Set<IRBlock> visited,
-                                               Set<IRBlock> bound) {
+    private void findExceptionSSAValuesPass2(IRBlock block, Set<SSAValue> result, Set<Integer> exceptionSlots, Set<IRBlock> visited, Set<IRBlock> bound)
+    {
         if (visited.contains(block) || !bound.contains(block)) return;
         visited.add(block);
 
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof LoadLocalInstruction) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof LoadLocalInstruction)
+            {
                 LoadLocalInstruction load = (LoadLocalInstruction) instr;
-                if (exceptionSlots.contains(load.getLocalIndex())) {
+                if (exceptionSlots.contains(load.getLocalIndex()))
+                {
                     SSAValue loadResult = load.getResult();
-                    if (loadResult != null) {
+                    if (loadResult != null)
+                    {
                         result.add(loadResult);
                     }
                 }
-            } else if (instr instanceof StoreLocalInstruction) {
+            }
+            else if (instr instanceof StoreLocalInstruction)
+            {
                 // A store of a non-exception value redefines the slot: javac reuses the catch
                 // variable's slot for unrelated locals afterwards, so later loads are NOT the
                 // exception and must keep their own variable.
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                if (exceptionSlots.contains(store.getLocalIndex())) {
+                if (exceptionSlots.contains(store.getLocalIndex()))
+                {
                     Value stored = store.getValue();
                     boolean isExceptionValue = stored instanceof SSAValue && result.contains(stored);
-                    if (!isExceptionValue) {
+                    if (!isExceptionValue)
+                    {
                         exceptionSlots.remove(store.getLocalIndex());
                     }
                 }
             }
         }
 
-        for (IRBlock succ : block.getSuccessors()) {
+        for (IRBlock succ : block.getSuccessors())
+        {
             findExceptionSSAValuesPass2(succ, result, exceptionSlots, visited, bound);
         }
     }
@@ -3110,17 +3790,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Represents a try region defined by start and end blocks.
      */
-    private static final class TryRegion {
+    private static final class TryRegion
+    {
         private final IRBlock start;
         private final IRBlock end;
 
-        public TryRegion(IRBlock start, IRBlock end) {
+        public TryRegion(IRBlock start, IRBlock end)
+        {
             this.start = start;
             this.end = end;
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(Object obj)
+        {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
             TryRegion that = (TryRegion) obj;
@@ -3129,12 +3812,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(start, end);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return "TryRegion{" +
                    "start=" + start +
                    ", end=" + end +
@@ -3148,21 +3833,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * lists inner entries first), so taking the first match would recover the inner region and
      * silently drop the outer catch. Ties keep table order.
      */
-    private ExceptionHandler findHandlerStartingAt(IRBlock block) {
+    private ExceptionHandler findHandlerStartingAt(IRBlock block)
+    {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
-        if (handlers == null || handlers.isEmpty()) {
+        if (handlers == null || handlers.isEmpty())
+        {
             return null;
         }
         ExceptionHandler best = null;
         int bestEnd = Integer.MIN_VALUE;
-        for (ExceptionHandler handler : handlers) {
+        for (ExceptionHandler handler : handlers)
+        {
             IRBlock tryStart = handler.getTryStart();
-            if (tryStart == block ||
-                (tryStart != null && tryStart.getBytecodeOffset() == block.getBytecodeOffset())) {
+            if (tryStart == block || (tryStart != null && tryStart.getBytecodeOffset() == block.getBytecodeOffset()))
+            {
                 int end = handler.getTryEnd() != null
                         ? handler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
-                if (best == null || end > bestEnd) {
+                if (best == null || end > bestEnd)
+                {
                     best = handler;
                     bestEnd = end;
                 }
@@ -3181,19 +3870,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * into a {@code try (r1; r2) { ... }} header and strips the synthetic close calls. Returns null when the
      * method is not a try-with-resources, so the caller falls back to the generic recovery.
      *
-     * <p>A user {@code catch} clause on the resource ({@code try (r) { } catch (E e) { }}) compiles to its own
+     *A user {@code catch} clause on the resource ({@code try (r) { } catch (E e) { }}) compiles to its own
      * handler alongside the resource cleanup handlers; those user handlers are folded into the recovered
      * {@code try (r)} as catch clauses rather than being dropped. A user {@code finally} (a rethrowing handler)
      * is left to the generic recovery.
      */
-    private List<Statement> recoverTryWithResources(IRBlock entry, List<ExceptionHandler> handlers) {
-        if (!isTryWithResourcesMethod(handlers)) {
+    private List<Statement> recoverTryWithResources(IRBlock entry, List<ExceptionHandler> handlers)
+    {
+        if (!isTryWithResourcesMethod(handlers))
+        {
             return null;
         }
         Set<ExceptionHandler> cleanup = twrCleanupHandlers(handlers);
         List<ExceptionHandler> userHandlers = new ArrayList<>();
-        for (ExceptionHandler h : handlers) {
-            if (!cleanup.contains(h)) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (!cleanup.contains(h))
+            {
                 userHandlers.add(h);
             }
         }
@@ -3202,18 +3895,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         BlockStmt finallyBlock = null;
         Set<String> finallyVars = new HashSet<>();
         List<CatchClause> catchClauses = new ArrayList<>();
-        for (CatchClause clause : userClauses) {
-            if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
+        for (CatchClause clause : userClauses)
+        {
+            if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause))
+            {
                 finallyBlock = extractFinallyBody(clause);
                 finallyVars.add(clause.variableName());
-            } else {
+            }
+            else
+            {
                 catchClauses.add(clause);
             }
         }
         // A rethrowing user handler that is not the finally pattern (e.g. a catch that rethrows) is not modeled
         // here; leave the whole region to the generic recovery rather than mis-fold it.
-        for (ExceptionHandler h : userHandlers) {
-            if (finallyBlock == null && handlerRethrows(h)) {
+        for (ExceptionHandler h : userHandlers)
+        {
+            if (finallyBlock == null && handlerRethrows(h))
+            {
                 return null;
             }
         }
@@ -3229,9 +3928,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> savedHandlerBlocks = new HashSet<>(processedHandlerBlocks);
         Set<IRBlock> savedProcessed = new HashSet<>(context.getProcessedBlocks());
         Map<IRBlock, List<Statement>> savedStatements = new HashMap<>(context.getBlockStatements());
-        for (ExceptionHandler h : allHandlers) {
+        for (ExceptionHandler h : allHandlers)
+        {
             processedTryHandlers.add(h);
-            if (h.getHandlerBlock() != null) {
+            if (h.getHandlerBlock() != null)
+            {
                 processedHandlerBlocks.add(h.getHandlerBlock());
             }
         }
@@ -3239,7 +3940,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         List<Statement> normalPath = recoverBlockSequence(entry, new HashSet<>());
         flattenTrailingGuardElse(normalPath);
         List<Statement> folded = reconstructTryWithResources(normalPath, catchClauses, finallyBlock, finallyVars);
-        if (folded == null) {
+        if (folded == null)
+        {
             processedTryHandlers.clear();
             processedTryHandlers.addAll(savedTryHandlers);
             processedHandlerBlocks.clear();
@@ -3259,71 +3961,96 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code Throwable.addSuppressed}) plus the primary handler it pairs with (the nearest enclosing handler,
      * whose block holds the close the suppress handler protects). Every other handler is a user catch/finally.
      */
-    private Set<ExceptionHandler> twrCleanupHandlers(List<ExceptionHandler> handlers) {
+    private Set<ExceptionHandler> twrCleanupHandlers(List<ExceptionHandler> handlers)
+    {
         Set<IRBlock> cleanupBlocks = new HashSet<>();
         List<ExceptionHandler> suppress = new ArrayList<>();
-        for (ExceptionHandler h : handlers) {
-            if (h.getHandlerBlock() != null && blockCallsAddSuppressed(h.getHandlerBlock())) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (h.getHandlerBlock() != null && blockCallsAddSuppressed(h.getHandlerBlock()))
+            {
                 suppress.add(h);
                 cleanupBlocks.add(h.getHandlerBlock());
             }
         }
-        for (ExceptionHandler s : suppress) {
-            if (s.getTryStart() == null) {
+        for (ExceptionHandler s : suppress)
+        {
+            if (s.getTryStart() == null)
+            {
                 continue;
             }
             int closeOffset = s.getTryStart().getBytecodeOffset();
             IRBlock primaryBlock = null;
             int best = -1;
-            for (ExceptionHandler h : handlers) {
-                if (h.getHandlerBlock() == null || cleanupBlocks.contains(h.getHandlerBlock())) {
+            for (ExceptionHandler h : handlers)
+            {
+                if (h.getHandlerBlock() == null || cleanupBlocks.contains(h.getHandlerBlock()))
+                {
                     continue;
                 }
                 int handlerOffset = h.getHandlerBlock().getBytecodeOffset();
-                if (handlerOffset <= closeOffset && handlerOffset > best) {
+                if (handlerOffset <= closeOffset && handlerOffset > best)
+                {
                     best = handlerOffset;
                     primaryBlock = h.getHandlerBlock();
                 }
             }
-            if (primaryBlock != null) {
+            if (primaryBlock != null)
+            {
                 cleanupBlocks.add(primaryBlock);
             }
         }
         Set<ExceptionHandler> cleanup = new HashSet<>();
-        for (ExceptionHandler h : handlers) {
-            if (h.getHandlerBlock() != null && cleanupBlocks.contains(h.getHandlerBlock())) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (h.getHandlerBlock() != null && cleanupBlocks.contains(h.getHandlerBlock()))
+            {
                 cleanup.add(h);
             }
         }
         return cleanup;
     }
 
-    /** True when the block itself invokes {@code Throwable.addSuppressed} — the suppress handler's signature. */
-    private boolean blockCallsAddSuppressed(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof InvokeInstruction && "addSuppressed".equals(((InvokeInstruction) instr).getName())) {
+    /**
+     * True when the block itself invokes {@code Throwable.addSuppressed} - the suppress handler's signature.
+     */
+    private boolean blockCallsAddSuppressed(IRBlock block)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof InvokeInstruction && "addSuppressed".equals(((InvokeInstruction) instr).getName()))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    /** True when an exception handler (transitively) calls {@code Throwable.addSuppressed} — the TWR signature. */
-    private boolean isTryWithResourcesMethod(List<ExceptionHandler> handlers) {
+    /**
+     * True when an exception handler (transitively) calls {@code Throwable.addSuppressed} - the TWR signature.
+     */
+    private boolean isTryWithResourcesMethod(List<ExceptionHandler> handlers)
+    {
         Set<IRBlock> seen = new HashSet<>();
         Deque<IRBlock> work = new ArrayDeque<>();
-        for (ExceptionHandler h : handlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 work.add(h.getHandlerBlock());
             }
         }
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof InvokeInstruction && "addSuppressed".equals(((InvokeInstruction) instr).getName())) {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof InvokeInstruction && "addSuppressed".equals(((InvokeInstruction) instr).getName()))
+                {
                     return true;
                 }
             }
@@ -3339,69 +4066,90 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * see it; with the arm terminal the two forms are the same program. Repeats while the tail keeps the
      * shape, so stacked guards all flatten.
      */
-    private void flattenTrailingGuardElse(List<Statement> normalPath) {
-        while (!normalPath.isEmpty()) {
+    private void flattenTrailingGuardElse(List<Statement> normalPath)
+    {
+        while (!normalPath.isEmpty())
+        {
             Statement last = normalPath.get(normalPath.size() - 1);
-            if (!(last instanceof IfStmt)) {
+            if (!(last instanceof IfStmt))
+            {
                 return;
             }
             IfStmt guard = (IfStmt) last;
-            if (!guard.hasElse() || !endsAbruptly(guard.getThenBranch())) {
+            if (!guard.hasElse() || !endsAbruptly(guard.getThenBranch()))
+            {
                 return;
             }
             Statement elseBranch = guard.getElseBranch();
             guard.setElseBranch(null);
-            if (elseBranch instanceof BlockStmt) {
+            if (elseBranch instanceof BlockStmt)
+            {
                 normalPath.addAll(((BlockStmt) elseBranch).getStatements());
-            } else {
+            }
+            else
+            {
                 normalPath.add(elseBranch);
             }
         }
     }
 
-    /** Whether every path through {@code s} throws or returns (its last reachable statement is terminal). */
-    private boolean endsAbruptly(Statement s) {
-        if (s instanceof ThrowStmt || s instanceof ReturnStmt) {
+    /**
+     * Whether every path through {@code s} throws or returns (its last reachable statement is terminal).
+     */
+    private boolean endsAbruptly(Statement s)
+    {
+        if (s instanceof ThrowStmt || s instanceof ReturnStmt)
+        {
             return true;
         }
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             List<Statement> stmts = ((BlockStmt) s).getStatements();
             return !stmts.isEmpty() && endsAbruptly(stmts.get(stmts.size() - 1));
         }
         return false;
     }
 
-    private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches,
-                                                        BlockStmt finallyBlock, Set<String> finallyVars) {
+    private List<Statement> reconstructTryWithResources(List<Statement> normalPath, List<CatchClause> catches, BlockStmt finallyBlock, Set<String> finallyVars)
+    {
         Set<String> closedVars = new LinkedHashSet<>();
-        for (Statement s : normalPath) {
+        for (Statement s : normalPath)
+        {
             String closed = findClosedResource(s);
-            if (closed != null) {
+            if (closed != null)
+            {
                 closedVars.add(closed);
             }
         }
-        if (closedVars.isEmpty()) {
+        if (closedVars.isEmpty())
+        {
             return null;
         }
 
         List<VarDeclStmt> resourceDecls = new ArrayList<>();
         Set<String> resourceNames = new LinkedHashSet<>();
-        for (Statement s : normalPath) {
-            if (s instanceof VarDeclStmt) {
+        for (Statement s : normalPath)
+        {
+            if (s instanceof VarDeclStmt)
+            {
                 VarDeclStmt d = (VarDeclStmt) s;
-                if (closedVars.contains(d.getName()) && resourceNames.add(d.getName())) {
+                if (closedVars.contains(d.getName()) && resourceNames.add(d.getName()))
+                {
                     resourceDecls.add(d);
                 }
             }
         }
-        if (resourceDecls.isEmpty()) {
+        if (resourceDecls.isEmpty())
+        {
             return null;
         }
 
         int firstIdx = normalPath.size();
-        for (int i = 0; i < normalPath.size(); i++) {
+        for (int i = 0; i < normalPath.size(); i++)
+        {
             Statement s = normalPath.get(i);
-            if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName())) {
+            if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName()))
+            {
                 firstIdx = i;
                 break;
             }
@@ -3409,24 +4157,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         List<Statement> pre = new ArrayList<>(normalPath.subList(0, firstIdx));
         List<Statement> body = new ArrayList<>();
-        for (int i = firstIdx; i < normalPath.size(); i++) {
+        for (int i = firstIdx; i < normalPath.size(); i++)
+        {
             Statement s = normalPath.get(i);
-            if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName())) {
+            if (s instanceof VarDeclStmt && resourceNames.contains(((VarDeclStmt) s).getName()))
+            {
                 continue; // resource declaration -> lifted into the try header
             }
             Statement stripped = stripSyntheticCloses(s, resourceNames);
-            if (stripped != null) {
+            if (stripped != null)
+            {
                 body.add(stripped);
             }
         }
 
-        if (finallyBlock != null) {
+        if (finallyBlock != null)
+        {
             body = filterOrphanFinallyThrows(body, finallyVars);
             body = filterInlinedFinallyFromTryStatements(body, finallyBlock.getStatements());
         }
 
         List<Expression> resources = new ArrayList<>();
-        for (VarDeclStmt d : resourceDecls) {
+        for (VarDeclStmt d : resourceDecls)
+        {
             resources.add(new VarRefExpr(d.getName(), d.getType()));
         }
         TryCatchStmt tryStmt = new TryCatchStmt(new BlockStmt(body), catches, finallyBlock, resources,
@@ -3446,28 +4199,35 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code if} leaves the rest of that arm intact, so a conditionally-throwing body recompiled with the close
      * inside a branch still recovers its body instead of collapsing to {@code try (r) {}}.
      */
-    private Statement stripSyntheticCloses(Statement s, Set<String> resourceNames) {
-        if (s instanceof ExprStmt) {
+    private Statement stripSyntheticCloses(Statement s, Set<String> resourceNames)
+    {
+        if (s instanceof ExprStmt)
+        {
             String r = closeReceiverName(s);
             return (r != null && resourceNames.contains(r)) ? null : s;
         }
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             List<Statement> kept = new ArrayList<>();
-            for (Statement inner : ((BlockStmt) s).getStatements()) {
+            for (Statement inner : ((BlockStmt) s).getStatements())
+            {
                 Statement stripped = stripSyntheticCloses(inner, resourceNames);
-                if (stripped != null) {
+                if (stripped != null)
+                {
                     kept.add(stripped);
                 }
             }
             return kept.isEmpty() ? null : new BlockStmt(kept);
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) s;
             Statement then = ifStmt.getThenBranch() == null
                     ? null : stripSyntheticCloses(ifStmt.getThenBranch(), resourceNames);
             Statement els = ifStmt.getElseBranch() == null
                     ? null : stripSyntheticCloses(ifStmt.getElseBranch(), resourceNames);
-            if (then == null && els == null) {
+            if (then == null && els == null)
+            {
                 return null;
             }
             ifStmt.setThenBranch(then != null ? then : new BlockStmt());
@@ -3483,19 +4243,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Recurses into if-branches and blocks so a close nested inside that wrapper is still recognized as
      * the resource's, which top-level inspection alone misses.
      */
-    private String findClosedResource(Statement s) {
-        if (s instanceof ExprStmt) {
+    private String findClosedResource(Statement s)
+    {
+        if (s instanceof ExprStmt)
+        {
             return closeReceiverName(s);
         }
-        if (s instanceof IfStmt) {
+        if (s instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) s;
             String r = findClosedResource(ifStmt.getThenBranch());
             return r != null ? r : findClosedResource(ifStmt.getElseBranch());
         }
-        if (s instanceof BlockStmt) {
-            for (Statement inner : ((BlockStmt) s).getStatements()) {
+        if (s instanceof BlockStmt)
+        {
+            for (Statement inner : ((BlockStmt) s).getStatements())
+            {
                 String r = findClosedResource(inner);
-                if (r != null) {
+                if (r != null)
+                {
                     return r;
                 }
             }
@@ -3503,17 +4269,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    /** The receiver variable name of a {@code receiver.close()} expression statement, else null. */
-    private String closeReceiverName(Statement s) {
-        if (!(s instanceof ExprStmt)) {
+    /**
+     * The receiver variable name of a {@code receiver.close()} expression statement, else null.
+     */
+    private String closeReceiverName(Statement s)
+    {
+        if (!(s instanceof ExprStmt))
+        {
             return null;
         }
         Expression e = ((ExprStmt) s).getExpression();
-        if (!(e instanceof MethodCallExpr)) {
+        if (!(e instanceof MethodCallExpr))
+        {
             return null;
         }
         MethodCallExpr mc = (MethodCallExpr) e;
-        if (!"close".equals(mc.getMethodName())) {
+        if (!"close".equals(mc.getMethodName()))
+        {
             return null;
         }
         return mc.getReceiver() instanceof VarRefExpr ? ((VarRefExpr) mc.getReceiver()).getName() : null;
@@ -3529,25 +4301,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * then runs twice; the enclosing region's own recovery owns it. When no outer recovery owns the block,
      * the piece is kept nested - that nested form is how the region's finally clause materializes at all.
      */
-    private boolean isEnclosingHandlerPiece(ExceptionHandler h, int mainStart, int mainEnd) {
-        if (h.getHandlerBlock() == null || !processedHandlerBlocks.contains(h.getHandlerBlock())) {
+    private boolean isEnclosingHandlerPiece(ExceptionHandler h, int mainStart, int mainEnd)
+    {
+        if (h.getHandlerBlock() == null || !processedHandlerBlocks.contains(h.getHandlerBlock()))
+        {
             return false;
         }
-        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers()) {
-            if (eh.getHandlerBlock() != h.getHandlerBlock()
-                    || eh.getTryStart() == null || eh.getTryEnd() == null) {
+        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers())
+        {
+            if (eh.getHandlerBlock() != h.getHandlerBlock() || eh.getTryStart() == null || eh.getTryEnd() == null)
+            {
                 continue;
             }
-            if (eh.getTryStart().getBytecodeOffset() < mainStart
-                    || eh.getTryEnd().getBytecodeOffset() > mainEnd) {
+            if (eh.getTryStart().getBytecodeOffset() < mainStart || eh.getTryEnd().getBytecodeOffset() > mainEnd)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private Statement recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler,
-                                          Set<IRBlock> originalStopBlocks, Set<IRBlock> visited) {
+    private Statement recoverTryCatch(IRBlock startBlock, ExceptionHandler mainHandler, Set<IRBlock> originalStopBlocks, Set<IRBlock> visited)
+    {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
 
@@ -3558,20 +4333,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // later entries (e.g. code after an `if (...) break;` in the try) are silently skipped.
         IRBlock mergedStart = mainHandler.getTryStart();
         IRBlock mergedEnd = mainHandler.getTryEnd();
-        for (ExceptionHandler h : handlers) {
-            if (h.getHandlerBlock() != mainHandler.getHandlerBlock()) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (h.getHandlerBlock() != mainHandler.getHandlerBlock())
+            {
                 continue;
             }
             if (h.getTryStart() != null && (mergedStart == null
-                    || h.getTryStart().getBytecodeOffset() < mergedStart.getBytecodeOffset())) {
+                    || h.getTryStart().getBytecodeOffset() < mergedStart.getBytecodeOffset()))
+            {
                 mergedStart = h.getTryStart();
             }
             if (h.getTryEnd() != null && (mergedEnd == null
-                    || h.getTryEnd().getBytecodeOffset() > mergedEnd.getBytecodeOffset())) {
+                    || h.getTryEnd().getBytecodeOffset() > mergedEnd.getBytecodeOffset()))
+            {
                 mergedEnd = h.getTryEnd();
             }
         }
-        if (mergedStart != mainHandler.getTryStart() || mergedEnd != mainHandler.getTryEnd()) {
+        if (mergedStart != mainHandler.getTryStart() || mergedEnd != mainHandler.getTryEnd())
+        {
             mainHandler = new ExceptionHandler(
                 mergedStart, mergedEnd, mainHandler.getHandlerBlock(), mainHandler.getCatchType());
         }
@@ -3581,9 +4361,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // finally handler protecting exactly this try).
         List<ExceptionHandler> sameRegionHandlers = new ArrayList<>();
         TryRegion mainRegion = createTryRegion(mainHandler);
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             if (h.getHandlerBlock() == mainHandler.getHandlerBlock()
-                    || (mainRegion != null && mainRegion.equals(createTryRegion(h)))) {
+                    || (mainRegion != null && mainRegion.equals(createTryRegion(h))))
+            {
                 sameRegionHandlers.add(h);
             }
         }
@@ -3594,28 +4376,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // whole HANDLER-BLOCK family: a split range of the same clause (javac splits around returns
         // and interleaved arms) is this construct's own scaffolding, and leaving it unclaimed makes
         // the continuation walk meet it as a fresh mid-family try start it can never decode.
-        for (ExceptionHandler h : sameRegionHandlers) {
+        for (ExceptionHandler h : sameRegionHandlers)
+        {
             processedTryHandlers.add(h);
-            if (h.getHandlerBlock() != null) {
+            if (h.getHandlerBlock() != null)
+            {
                 processedHandlerBlocks.add(h.getHandlerBlock());
             }
         }
-        for (ExceptionHandler h : irMethod.getExceptionHandlers()) {
-            if (h.getHandlerBlock() != null && processedHandlerBlocks.contains(h.getHandlerBlock())) {
+        for (ExceptionHandler h : irMethod.getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() != null && processedHandlerBlocks.contains(h.getHandlerBlock()))
+            {
                 processedTryHandlers.add(h);
             }
         }
         Set<IRBlock> tryStopBlocks = new HashSet<>(originalStopBlocks);
-        for (ExceptionHandler h : sameRegionHandlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : sameRegionHandlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 tryStopBlocks.add(h.getHandlerBlock());
             }
         }
 
-        if (mainHandler.getTryEnd() != null) {
+        if (mainHandler.getTryEnd() != null)
+        {
             int tryEndOffset = mainHandler.getTryEnd().getBytecodeOffset();
-            for (IRBlock block : irMethod.getBlocks()) {
-                if (block.getBytecodeOffset() >= tryEndOffset) {
+            for (IRBlock block : irMethod.getBlocks())
+            {
+                if (block.getBytecodeOffset() >= tryEndOffset)
+                {
                     tryStopBlocks.add(block);
                 }
             }
@@ -3627,10 +4418,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // no such block. Find it as the non-handler successor of an inner (catch) region that ends before the
         // catch-all, and stop there so it is recovered once, as the continuation after the try-catch-finally.
         boolean sharedFinallyStopAdded = false;
-        if (mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
+        if (mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null)
+        {
             Set<IRBlock> allHandlerBlocks = new HashSet<>();
-            for (ExceptionHandler h : handlers) {
-                if (h.getHandlerBlock() != null) {
+            for (ExceptionHandler h : handlers)
+            {
+                if (h.getHandlerBlock() != null)
+                {
                     allHandlerBlocks.add(h.getHandlerBlock());
                 }
             }
@@ -3643,15 +4437,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             int handlerOffset = mainHandler.getHandlerBlock().getBytecodeOffset();
             IRBlock shared = null;
             int bestOffset = Integer.MAX_VALUE;
-            for (IRBlock block : irMethod.getBlocks()) {
+            for (IRBlock block : irMethod.getBlocks())
+            {
                 int off = block.getBytecodeOffset();
                 if (off >= tryEndOffset && off < handlerOffset && off < bestOffset
-                        && !allHandlerBlocks.contains(block) && block.getPredecessors().size() > 1) {
+                        && !allHandlerBlocks.contains(block) && block.getPredecessors().size() > 1)
+                {
                     shared = block;
                     bestOffset = off;
                 }
             }
-            if (shared != null) {
+            if (shared != null)
+            {
                 tryStopBlocks.add(shared);
                 sharedFinallyStopAdded = true;
             }
@@ -3661,16 +4458,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // that the body recovery must build (mirroring recoverWithExceptionHandling's outer/inner
         // split); recovering the body flat would drop or misplace their clauses.
         List<ExceptionHandler> nestedHandlers = new ArrayList<>();
-        if (mainHandler.getTryStart() != null && mainHandler.getTryEnd() != null) {
+        if (mainHandler.getTryStart() != null && mainHandler.getTryEnd() != null)
+        {
             int mainStart = mainHandler.getTryStart().getBytecodeOffset();
             int mainEnd = mainHandler.getTryEnd().getBytecodeOffset();
-            for (ExceptionHandler h : handlers) {
-                if (sameRegionHandlers.contains(h) || h.getTryStart() == null || h.getTryEnd() == null) {
+            for (ExceptionHandler h : handlers)
+            {
+                if (sameRegionHandlers.contains(h) || h.getTryStart() == null || h.getTryEnd() == null)
+                {
                     continue;
                 }
                 int hStart = h.getTryStart().getBytecodeOffset();
                 int hEnd = h.getTryEnd().getBytecodeOffset();
-                if (hStart >= mainStart && hEnd <= mainEnd && !isEnclosingHandlerPiece(h, mainStart, mainEnd)) {
+                if (hStart >= mainStart && hEnd <= mainEnd && !isEnclosingHandlerPiece(h, mainStart, mainEnd))
+                {
                     nestedHandlers.add(h);
                 }
             }
@@ -3680,8 +4481,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the copy-skipping walk over copies that do not exist, refusing every structural offer. The
         // emitter writes real finally scaffolds as catch-any, so provenance survives the round trip.
         boolean hasFinally = isEvidencedFinally(mainHandler);
-        for (ExceptionHandler h : sameRegionHandlers) {
-            if (isEvidencedFinally(h)) {
+        for (ExceptionHandler h : sameRegionHandlers)
+        {
+            if (isEvidencedFinally(h))
+            {
                 hasFinally = true;
             }
         }
@@ -3693,16 +4496,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // WITHIN a protected range is a catch flowing back into its own loop, not a continuation - left alone.
         // For a javac layout the continuation sits past the merged end and is already a stop, so this is a
         // no-op there.
-        if (!hasFinally) {
-            for (ExceptionHandler h : sameRegionHandlers) {
-                if (h.getHandlerBlock() == null) {
+        if (!hasFinally)
+        {
+            for (ExceptionHandler h : sameRegionHandlers)
+            {
+                if (h.getHandlerBlock() == null)
+                {
                     continue;
                 }
                 Set<IRBlock> catchBlocks = new HashSet<>();
                 collectCatchConsumedBlocks(h, catchBlocks);
-                for (IRBlock cb : catchBlocks) {
-                    for (IRBlock succ : cb.getSuccessors()) {
-                        if (!catchBlocks.contains(succ) && !isWithinProtectedRange(succ, sameRegionHandlers)) {
+                for (IRBlock cb : catchBlocks)
+                {
+                    for (IRBlock succ : cb.getSuccessors())
+                    {
+                        if (!catchBlocks.contains(succ) && !isWithinProtectedRange(succ, sameRegionHandlers))
+                        {
                             tryStopBlocks.add(succ);
                         }
                     }
@@ -3712,34 +4521,43 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean savedExtendedSame = extendedFinallyDedup;
         extendedFinallyDedup = true;
         boolean finallyDeduped;
-        try {
+        try
+        {
             // Attempted with nested handlers present too: a finally whose body carries its own catch
             // inlines copies bearing MIRRORED nested handlers, which are exactly what the branchy
             // matcher's nested-template pairing excises (all-or-nothing, so a shape it cannot fully
             // account for leaves the IR untouched and the statement-level folds still apply).
             finallyDeduped = hasFinally && dedupStraightLineFinally(sameRegionHandlers);
-        } finally {
+        }
+        finally
+        {
             extendedFinallyDedup = savedExtendedSame;
         }
         List<Statement> tryStmts;
-        if (!nestedHandlers.isEmpty()) {
-            for (ExceptionHandler h : nestedHandlers) {
+        if (!nestedHandlers.isEmpty())
+        {
+            for (ExceptionHandler h : nestedHandlers)
+            {
                 // Pre-marking a nested handler as processed prevents the try body's own walk from rebuilding
                 // it. But a nested handler whose try-start sits INSIDE a loop body (not one that wraps a loop)
                 // is not recovered by recoverWithInnerTryCatch directly - the enclosing loop's body recovery
                 // reaches the nested try/catch through the processed set and so needs it left unprocessed.
                 // Pre-marking it there drops the catch (a recompiler can split the outer catch range so its
                 // second piece begins at the same in-loop block, colliding).
-                if (isInsideLoopBody(h.getTryStart())) {
+                if (isInsideLoopBody(h.getTryStart()))
+                {
                     continue;
                 }
                 processedTryHandlers.add(h);
-                if (h.getHandlerBlock() != null) {
+                if (h.getHandlerBlock() != null)
+                {
                     processedHandlerBlocks.add(h.getHandlerBlock());
                 }
             }
             tryStmts = recoverWithNestedHandlers(startBlock, nestedHandlers, tryStopBlocks);
-        } else {
+        }
+        else
+        {
             // A synchronized region's "inlined copies" are monitor instructions the statement recovery
             // drops outright - they never inflate a guard arm - so its body takes the engine offers
             // like any de-duplicated try. Only a REAL finally's surviving copies force the skip mode.
@@ -3751,29 +4569,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         BlockStmt tryBlock = new BlockStmt(tryStmts);
 
         Set<String> finallyExceptionVars = new HashSet<>();
-        for (ExceptionHandler h : sameRegionHandlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : sameRegionHandlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 collectCatchConsumedBlocks(h, visited);
             }
         }
         List<CatchClause> catchClauses = buildCatchClauses(sameRegionHandlers);
 
-        if (catchClauses.isEmpty()) {
+        if (catchClauses.isEmpty())
+        {
             return null;
         }
 
         BlockStmt finallyBlock = null;
         List<CatchClause> filteredCatches = new ArrayList<>();
-        for (CatchClause clause : catchClauses) {
-            if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause)) {
+        for (CatchClause clause : catchClauses)
+        {
+            if (isFinallyRethrowPattern(clause) && clauseHasFinallyEvidence(clause))
+            {
                 finallyBlock = extractFinallyBody(clause);
                 finallyExceptionVars.add(clause.variableName());
-            } else {
+            }
+            else
+            {
                 filteredCatches.add(clause);
             }
         }
 
-        if (!finallyExceptionVars.isEmpty()) {
+        if (!finallyExceptionVars.isEmpty())
+        {
             tryStmts = filterOrphanFinallyThrows(tryStmts, finallyExceptionVars);
 
             List<Statement> finallyStmts = finallyBlock.getStatements();
@@ -3783,11 +4609,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // Skip the gap re-add when we stopped at a shared finally block: that block IS the normal-exit
             // finally + continuation and is now recovered once by the outer block sequence; pulling it in here
             // too would duplicate it back into the try body.
-            if (!sharedFinallyStopAdded
-                    && mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null) {
+            if (!sharedFinallyStopAdded && mainHandler.getTryEnd() != null && mainHandler.getHandlerBlock() != null)
+            {
                 List<Statement> gapStmts = recoverFinallyGap(
                     mainHandler.getTryEnd(), mainHandler.getHandlerBlock(), finallyBlock, finallyExceptionVars);
-                if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts))) {
+                if (!gapStmts.isEmpty() && !isTerminatingBlock(new BlockStmt(tryStmts)))
+                {
                     tryStmts = new ArrayList<>(tryStmts);
                     tryStmts.addAll(gapStmts);
                 }
@@ -3803,15 +4630,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // finally before each catch exit, so without stripping it the finally runs twice on the caught
         // path (once as the nested finally on the exception unwind, once as the catch's inlined copy).
         // Strip the catch copies against the nested finally's already-recovered body.
-        if (finallyExceptionVars.isEmpty() && !filteredCatches.isEmpty()) {
+        if (finallyExceptionVars.isEmpty() && !filteredCatches.isEmpty())
+        {
             BlockStmt nestedFinally = firstNestedFinallyBlock(tryStmts);
-            if (nestedFinally != null && !nestedFinally.getStatements().isEmpty()) {
+            if (nestedFinally != null && !nestedFinally.getStatements().isEmpty())
+            {
                 filteredCatches = filterInlinedFinallyFromCatches(filteredCatches, nestedFinally.getStatements());
             }
         }
 
         Value syncLock = filteredCatches.isEmpty() ? detectSynchronizedLock(mainHandler) : null;
-        if (syncLock != null) {
+        if (syncLock != null)
+        {
             SynchronizedStmt sync = new SynchronizedStmt(recoverLockExpr(syncLock), tryBlock);
             stampFromBody(sync, tryBlock);
             return sync;
@@ -3822,13 +4652,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return tryCatch;
     }
 
-    /** The finally body of the first nested {@code try/finally} in a recovered statement list, if any. */
-    private BlockStmt firstNestedFinallyBlock(List<Statement> stmts) {
-        for (Statement s : stmts) {
-            if (s instanceof TryCatchStmt) {
+    /**
+     * The finally body of the first nested {@code try/finally} in a recovered statement list, if any.
+     */
+    private BlockStmt firstNestedFinallyBlock(List<Statement> stmts)
+    {
+        for (Statement s : stmts)
+        {
+            if (s instanceof TryCatchStmt)
+            {
                 TryCatchStmt t = (TryCatchStmt) s;
                 if (t.getFinallyBlock() instanceof BlockStmt
-                        && !((BlockStmt) t.getFinallyBlock()).getStatements().isEmpty()) {
+                        && !((BlockStmt) t.getFinallyBlock()).getStatements().isEmpty())
+                {
                     return (BlockStmt) t.getFinallyBlock();
                 }
             }
@@ -3842,23 +4678,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * recompiler emits it as a {@code Throwable} catch, so identifying the finally by its rethrow shape rather
      * than its declared type is stable across the round trip.
      */
-    private boolean handlerRethrows(ExceptionHandler h) {
-        if (h == null || h.getHandlerBlock() == null) {
+    private boolean handlerRethrows(ExceptionHandler h)
+    {
+        if (h == null || h.getHandlerBlock() == null)
+        {
             return false;
         }
         Deque<IRBlock> work = new ArrayDeque<>();
         Set<IRBlock> seen = new HashSet<>();
         work.add(h.getHandlerBlock());
         int budget = 40;
-        while (!work.isEmpty() && budget-- > 0) {
+        while (!work.isEmpty() && budget-- > 0)
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
             List<IRInstruction> instrs = b.getInstructions();
-            if (!instrs.isEmpty()) {
+            if (!instrs.isEmpty())
+            {
                 IRInstruction last = instrs.get(instrs.size() - 1);
-                if (last instanceof SimpleInstruction && ((SimpleInstruction) last).getOp() == SimpleOp.ATHROW) {
+                if (last instanceof SimpleInstruction && ((SimpleInstruction) last).getOp() == SimpleOp.ATHROW)
+                {
                     return true;
                 }
             }
@@ -3873,8 +4715,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * (astore/aload around the constructor) must not read as finally scaffolding. The other call sites
      * keep the narrower historical predicate their surrounding machinery is calibrated against.
      */
-    private boolean throwsFreshExceptionThroughSlots(ExceptionHandler h) {
-        if (h == null || h.getHandlerBlock() == null) {
+    private boolean throwsFreshExceptionThroughSlots(ExceptionHandler h)
+    {
+        if (h == null || h.getHandlerBlock() == null)
+        {
             return false;
         }
         Set<Value> freshValues = new HashSet<>();
@@ -3884,41 +4728,52 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> seen = new HashSet<>();
         work.add(h.getHandlerBlock());
         int budget = 60;
-        while (!work.isEmpty() && budget-- > 0) {
+        while (!work.isEmpty() && budget-- > 0)
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            for (IRInstruction ins : b.getInstructions()) {
-                if (ins instanceof NewInstruction && ins.getResult() != null) {
+            for (IRInstruction ins : b.getInstructions())
+            {
+                if (ins instanceof NewInstruction && ins.getResult() != null)
+                {
                     freshValues.add(ins.getResult());
                 }
                 // A layout may park the fresh exception in a slot before the throw (astore/aload
                 // around the constructor); the slot carries the freshness to the reload.
                 if (ins instanceof StoreLocalInstruction
-                        && freshValues.contains(((StoreLocalInstruction) ins).getValue())) {
+                        && freshValues.contains(((StoreLocalInstruction) ins).getValue()))
+                {
                     freshSlots.add(((StoreLocalInstruction) ins).getLocalIndex());
                 }
                 if (ins instanceof LoadLocalInstruction && ins.getResult() != null
-                        && freshSlots.contains(((LoadLocalInstruction) ins).getLocalIndex())) {
+                        && freshSlots.contains(((LoadLocalInstruction) ins).getLocalIndex()))
+                {
                     freshValues.add(ins.getResult());
                 }
                 if (ins instanceof CopyInstruction && ins.getResult() != null
-                        && freshValues.contains(((CopyInstruction) ins).getSource())) {
+                        && freshValues.contains(((CopyInstruction) ins).getSource()))
+                {
                     freshValues.add(ins.getResult());
                 }
             }
             IRInstruction term = b.getTerminator();
-            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+            {
                 // The FIRST athrow reached is the handler's own; descending further would wander over
                 // an exception edge into ANOTHER handler's throw and judge that one instead.
-                if (thrown == null) {
+                if (thrown == null)
+                {
                     thrown = ((SimpleInstruction) term).getOperand();
                 }
                 continue;
             }
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     work.add(e.getKey());
                 }
             }
@@ -3926,8 +4781,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return thrown != null && freshValues.contains(thrown);
     }
 
-    private boolean handlerThrowsFreshException(ExceptionHandler h) {
-        if (h == null || h.getHandlerBlock() == null) {
+    private boolean handlerThrowsFreshException(ExceptionHandler h)
+    {
+        if (h == null || h.getHandlerBlock() == null)
+        {
             return false;
         }
         Set<Value> freshValues = new HashSet<>();
@@ -3936,18 +4793,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> seen = new HashSet<>();
         work.add(h.getHandlerBlock());
         int budget = 60;
-        while (!work.isEmpty() && budget-- > 0) {
+        while (!work.isEmpty() && budget-- > 0)
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            for (IRInstruction ins : b.getInstructions()) {
-                if (ins instanceof NewInstruction && ins.getResult() != null) {
+            for (IRInstruction ins : b.getInstructions())
+            {
+                if (ins instanceof NewInstruction && ins.getResult() != null)
+                {
                     freshValues.add(ins.getResult());
                 }
             }
             IRInstruction term = b.getTerminator();
-            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+            {
                 thrown = ((SimpleInstruction) term).getOperand();
             }
             work.addAll(b.getSuccessors());
@@ -3961,23 +4823,30 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * straight-line handler into [store; goto] + [body; aload; athrow]; the intervening goto terminators
      * and the exception self-edge are stepped over.
      */
-    private List<IRBlock> finallyHandlerChain(ExceptionHandler h) {
-        if (h == null || h.getHandlerBlock() == null) {
+    private List<IRBlock> finallyHandlerChain(ExceptionHandler h)
+    {
+        if (h == null || h.getHandlerBlock() == null)
+        {
             return null;
         }
         List<IRBlock> chain = new ArrayList<>();
         Set<IRBlock> seen = new HashSet<>();
         IRBlock b = h.getHandlerBlock();
-        while (b != null && seen.add(b)) {
+        while (b != null && seen.add(b))
+        {
             chain.add(b);
             IRInstruction term = b.getTerminator();
-            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+            {
                 break;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
-                    if (next != null) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
+                    if (next != null)
+                    {
                         return null;
                     }
                     next = e.getKey();
@@ -3994,22 +4863,30 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * a template is already recovered correctly by the fused-twr/suppress paths and must not be routed
      * through the branchy consume-shells de-duplication; a plain sentinel-close template is safe.
      */
-    private boolean finallyTemplateHasNestedHandler(List<ExceptionHandler> outerHandlers) {
+    private boolean finallyTemplateHasNestedHandler(List<ExceptionHandler> outerHandlers)
+    {
         DominatorTree dt = context.getDominatorTree();
-        if (dt == null) {
+        if (dt == null)
+        {
             return false;
         }
-        for (ExceptionHandler h : outerHandlers) {
+        for (ExceptionHandler h : outerHandlers)
+        {
             IRBlock root = h.getHandlerBlock();
-            if (root == null || !handlerRethrows(h)) {
+            if (root == null || !handlerRethrows(h))
+            {
                 continue;
             }
-            for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers()) {
-                if (other == h || other.getHandlerBlock() == null || other.getTryBlocks() == null) {
+            for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers())
+            {
+                if (other == h || other.getHandlerBlock() == null || other.getTryBlocks() == null)
+                {
                     continue;
                 }
-                for (IRBlock tb : other.getTryBlocks()) {
-                    if (tb != root && dt.dominates(root, tb)) {
+                for (IRBlock tb : other.getTryBlocks())
+                {
+                    if (tb != root && dt.dominates(root, tb))
+                    {
                         return true;
                     }
                 }
@@ -4023,43 +4900,56 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * try-with-resources shape, whose outer finally's protected range javac splits around the inner
      * construct's exits.
      */
-    private boolean regionHasNestedFinally(List<ExceptionHandler> innerHandlers) {
-        for (ExceptionHandler h : innerHandlers) {
-            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)) {
+    private boolean regionHasNestedFinally(List<ExceptionHandler> innerHandlers)
+    {
+        for (ExceptionHandler h : innerHandlers)
+        {
+            if (handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean finallyTemplateHasLoop(List<ExceptionHandler> outerHandlers) {
+    private boolean finallyTemplateHasLoop(List<ExceptionHandler> outerHandlers)
+    {
         LoopAnalysis la = context.getLoopAnalysis();
         DominatorTree dt = context.getDominatorTree();
-        if (la == null || dt == null) {
+        if (la == null || dt == null)
+        {
             return false;
         }
-        for (ExceptionHandler h : outerHandlers) {
+        for (ExceptionHandler h : outerHandlers)
+        {
             IRBlock root = h.getHandlerBlock();
-            if (root == null || !handlerRethrows(h)) {
+            if (root == null || !handlerRethrows(h))
+            {
                 continue;
             }
             Deque<IRBlock> work = new ArrayDeque<>();
             Set<IRBlock> seen = new HashSet<>();
             work.add(root);
-            while (!work.isEmpty()) {
+            while (!work.isEmpty())
+            {
                 IRBlock b = work.poll();
-                if (!seen.add(b)) {
+                if (!seen.add(b))
+                {
                     continue;
                 }
-                if (la.isLoopHeader(b) && dt.dominates(root, b)) {
+                if (la.isLoopHeader(b) && dt.dominates(root, b))
+                {
                     return true;
                 }
                 IRInstruction term = b.getTerminator();
-                if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+                if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+                {
                     continue;
                 }
-                for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() == EdgeType.NORMAL && dt.dominates(root, e.getKey())) {
+                for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+                {
+                    if (e.getValue() == EdgeType.NORMAL && dt.dominates(root, e.getKey()))
+                    {
                         work.add(e.getKey());
                     }
                 }
@@ -4079,15 +4969,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * is rewired and the cached dominator tree stays valid. All-or-nothing: an uncovered exit, a template
      * or copy with its own nested try, or a second continuation declines the whole de-duplication.
      */
-    private boolean dedupBranchySubgraphFinally(List<ExceptionHandler> rethrowers, boolean consumeShells) {
+    private boolean dedupBranchySubgraphFinally(List<ExceptionHandler> rethrowers, boolean consumeShells)
+    {
         IRMethod method = context.getIrMethod();
         DominatorTree dt = context.getDominatorTree();
         IRBlock root = rethrowers.get(0).getHandlerBlock();
-        if (method == null || dt == null || root == null) {
+        if (method == null || dt == null || root == null)
+        {
             return false;
         }
-        for (ExceptionHandler r : rethrowers) {
-            if (r.getHandlerBlock() != root) {
+        for (ExceptionHandler r : rethrowers)
+        {
+            if (r.getHandlerBlock() != root)
+            {
                 trace("finally-dedup bail#1 root=" + root.getBytecodeOffset());
                 return false;
             }
@@ -4100,31 +4994,39 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         IRBlock rethrowBlk = null;
         Deque<IRBlock> twork = new ArrayDeque<>();
         twork.add(root);
-        while (!twork.isEmpty()) {
+        while (!twork.isEmpty())
+        {
             IRBlock b = twork.poll();
             IRInstruction term = b.getTerminator();
-            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
-                if (rethrowBlk != null && rethrowBlk != b) {
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+            {
+                if (rethrowBlk != null && rethrowBlk != b)
+                {
                     trace("finally-dedup bail#2 root=" + root.getBytecodeOffset());
                     return false;
                 }
                 rethrowBlk = b;
                 continue;
             }
-            if (!tblocks.add(b)) {
+            if (!tblocks.add(b))
+            {
                 continue;
             }
-            if (b != root && !dt.dominates(root, b)) {
+            if (b != root && !dt.dominates(root, b))
+            {
                 trace("finally-dedup bail#3 root=" + root.getBytecodeOffset());
                 return false;
             }
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     twork.add(e.getKey());
                 }
             }
         }
-        if (rethrowBlk == null) {
+        if (rethrowBlk == null)
+        {
             trace("finally-dedup bail#4 root=" + root.getBytecodeOffset());
             return false;
         }
@@ -4135,16 +5037,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // pairs and the excision retires.
         Map<IRBlock, ExceptionHandler> nestedTemplate = new LinkedHashMap<>();
         boolean absorbed = true;
-        while (absorbed) {
+        while (absorbed)
+        {
             absorbed = false;
-            for (ExceptionHandler h : method.getExceptionHandlers()) {
+            for (ExceptionHandler h : method.getExceptionHandlers())
+            {
                 IRBlock hb = h.getHandlerBlock();
                 if (hb == null || hb == root || tblocks.contains(hb) || nestedTemplate.containsKey(hb)
-                        || rethrowers.contains(h)) {
+                        || rethrowers.contains(h))
+                {
                     continue;
                 }
                 Set<IRBlock> hTry = h.getTryBlocks();
-                if (hTry == null || hTry.isEmpty() || !tblocks.containsAll(hTry)) {
+                if (hTry == null || hTry.isEmpty() || !tblocks.containsAll(hTry))
+                {
                     continue;
                 }
                 Deque<IRBlock> hwork = new ArrayDeque<>();
@@ -4152,31 +5058,39 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 List<IRBlock> hblocks = new ArrayList<>();
                 boolean ok = true;
                 Set<IRBlock> hseen = new HashSet<>();
-                while (!hwork.isEmpty()) {
+                while (!hwork.isEmpty())
+                {
                     IRBlock b = hwork.poll();
                     IRInstruction term = b.getTerminator();
-                    if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
-                        if (b != rethrowBlk) {
+                    if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+                    {
+                        if (b != rethrowBlk)
+                        {
                             ok = false;
                             break;
                         }
                         continue;
                     }
-                    if (tblocks.contains(b) || !hseen.add(b)) {
+                    if (tblocks.contains(b) || !hseen.add(b))
+                    {
                         continue;
                     }
-                    if (!dt.dominates(root, b)) {
+                    if (!dt.dominates(root, b))
+                    {
                         ok = false;
                         break;
                     }
                     hblocks.add(b);
-                    for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() == EdgeType.NORMAL) {
+                    for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+                    {
+                        if (e.getValue() == EdgeType.NORMAL)
+                        {
                             hwork.add(e.getKey());
                         }
                     }
                 }
-                if (!ok) {
+                if (!ok)
+                {
                     continue;
                 }
                 tblocks.addAll(hblocks);
@@ -4184,11 +5098,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 absorbed = true;
             }
         }
-        for (IRBlock b : tblocks) {
-            for (IRInstruction ins : b.getInstructions()) {
+        for (IRBlock b : tblocks)
+        {
+            for (IRInstruction ins : b.getInstructions())
+            {
                 if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
                         && !(ins instanceof StoreLocalInstruction && b == root)
-                        && !isMatchableFinallyInstr(ins)) {
+                        && !isMatchableFinallyInstr(ins))
+                {
                     trace("finally-dedup bail#5 root=" + root.getBytecodeOffset());
                     return false;
                 }
@@ -4200,13 +5117,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // its own clause. Demanding that every exit land on a (nonexistent) copy would decline the whole
         // region before the real clause's handler is ever tried; it is trivially de-duplicated instead.
         boolean emptyTemplate = true;
-        for (IRBlock b : tblocks) {
-            if (!matchableInstructions(b, b == root).isEmpty()) {
+        for (IRBlock b : tblocks)
+        {
+            if (!matchableInstructions(b, b == root).isEmpty())
+            {
                 emptyTemplate = false;
                 break;
             }
         }
-        if (emptyTemplate) {
+        if (emptyTemplate)
+        {
             finallyDeduped.addAll(rethrowers);
             return true;
         }
@@ -4223,46 +5143,61 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the nested try still exists, and a false widening lets condition-bearing code masquerade as a
         // copy and be gutted.
         boolean templateHasNestedTry = false;
-        for (ExceptionHandler other : method.getExceptionHandlers()) {
-            if (other.getHandlerBlock() == root || other.getTryBlocks() == null) {
+        for (ExceptionHandler other : method.getExceptionHandlers())
+        {
+            if (other.getHandlerBlock() == root || other.getTryBlocks() == null)
+            {
                 continue;
             }
-            for (IRBlock tb : other.getTryBlocks()) {
-                if (tb != root && dt.dominates(root, tb)) {
+            for (IRBlock tb : other.getTryBlocks())
+            {
+                if (tb != root && dt.dominates(root, tb))
+                {
                     templateHasNestedTry = true;
                     break;
                 }
             }
-            if (templateHasNestedTry) {
+            if (templateHasNestedTry)
+            {
                 break;
             }
         }
         List<ExceptionHandler> rangeSource;
-        if (consumeShells || !templateHasNestedTry) {
+        if (consumeShells || !templateHasNestedTry)
+        {
             rangeSource = new ArrayList<>();
-            for (ExceptionHandler r : method.getExceptionHandlers()) {
-                if (r.getHandlerBlock() == root) {
+            for (ExceptionHandler r : method.getExceptionHandlers())
+            {
+                if (r.getHandlerBlock() == root)
+                {
                     rangeSource.add(r);
                 }
             }
-        } else {
+        }
+        else
+        {
             rangeSource = rethrowers;
         }
-        for (ExceptionHandler r : rangeSource) {
+        for (ExceptionHandler r : rangeSource)
+        {
             int lo = r.getTryStart() == null ? -1 : r.getTryStart().getBytecodeOffset();
             int hi = r.getTryEnd() == null ? -1 : r.getTryEnd().getBytecodeOffset();
-            if (lo < 0 || hi <= lo) {
+            if (lo < 0 || hi <= lo)
+            {
                 trace("finally-dedup bail#6 root=" + root.getBytecodeOffset());
                 return false;
             }
-            for (IRBlock b : method.getBlocks()) {
+            for (IRBlock b : method.getBlocks())
+            {
                 int off = b.getBytecodeOffset();
-                if (off >= lo && off < hi) {
+                if (off >= lo && off < hi)
+                {
                     protectedBlocks.add(b);
                 }
             }
         }
-        if (protectedBlocks.isEmpty()) {
+        if (protectedBlocks.isEmpty())
+        {
             trace("finally-dedup bail#6 root=" + root.getBytecodeOffset());
             return false;
         }
@@ -4280,21 +5215,27 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // copy hunt runs over the merged view: a return in the GAP between ranges is the
         // continuation a relowered layout parked there, protected by nothing and owed no copy.
         Set<IRBlock> rawRangeBlocks = new HashSet<>();
-        for (ExceptionHandler r : method.getExceptionHandlers()) {
-            if (r.getHandlerBlock() != root || r.getTryStart() == null || r.getTryEnd() == null) {
+        for (ExceptionHandler r : method.getExceptionHandlers())
+        {
+            if (r.getHandlerBlock() != root || r.getTryStart() == null || r.getTryEnd() == null)
+            {
                 continue;
             }
             int lo = r.getTryStart().getBytecodeOffset();
             int hi = r.getTryEnd().getBytecodeOffset();
-            for (IRBlock b : method.getBlocks()) {
-                if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi) {
+            for (IRBlock b : method.getBlocks())
+            {
+                if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi)
+                {
                     rawRangeBlocks.add(b);
                 }
             }
         }
         Set<IRBlock> returnBlocks = new HashSet<>();
-        for (IRBlock p : protectedBlocks) {
-            if (p.getTerminator() instanceof ReturnInstruction && rawRangeBlocks.contains(p)) {
+        for (IRBlock p : protectedBlocks)
+        {
+            if (p.getTerminator() instanceof ReturnInstruction && rawRangeBlocks.contains(p))
+            {
                 returnBlocks.add(p);
             }
         }
@@ -4302,23 +5243,27 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> matchedCopyBlocks = new HashSet<>();
         Set<IRBlock> coveredReturns = new HashSet<>();
         Set<ExceptionHandler> copyNestedHandlers = new HashSet<>();
-        if (!returnBlocks.isEmpty()) {
+        if (!returnBlocks.isEmpty())
+        {
             // The signature comes from the template's first MEANINGFUL block: the root may hold only the
             // caught-exception store (split into its own block when the clause is itself protected), and
             // an empty signature would prefilter every candidate away.
             IRBlock sigBlock = root;
             while (matchableInstructions(sigBlock, sigBlock == root).isEmpty()
-                    && !(sigBlock.getTerminator() instanceof BranchInstruction)) {
+                    && !(sigBlock.getTerminator() instanceof BranchInstruction))
+            {
                 IRBlock nxt = singleNormalSuccessor(sigBlock);
-                if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk) {
+                if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk)
+                {
                     break;
                 }
                 sigBlock = nxt;
             }
             List<IRInstruction> rootSignature = matchableInstructions(sigBlock, sigBlock == root);
-            for (IRBlock candidate : protectedBlocks) {
-                if (returnBlocks.contains(candidate) || matchedCopyBlocks.contains(candidate)
-                        || candidate == root) {
+            for (IRBlock candidate : protectedBlocks)
+            {
+                if (returnBlocks.contains(candidate) || matchedCopyBlocks.contains(candidate) || candidate == root)
+                {
                     continue;
                 }
                 // Cheap prefilter before the full parallel walk: the copy's root must open with the same
@@ -4326,50 +5271,62 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 List<IRInstruction> candSignature = matchableInstructions(candidate, false);
                 if (rootSignature.isEmpty() != candSignature.isEmpty()
                         || (!rootSignature.isEmpty()
-                            && !sameFinallyInstr(rootSignature.get(0), candSignature.get(0)))) {
+                            && !sameFinallyInstr(rootSignature.get(0), candSignature.get(0))))
+                {
                     continue;
                 }
                 Map<IRBlock, IRBlock> map =
                         matchFinallySubgraph(root, candidate, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
-                if (map == null) {
+                if (map == null)
+                {
                     continue;
                 }
                 IRBlock exitOf = null;
-                for (IRBlock copy : map.values()) {
-                    for (Map.Entry<IRBlock, EdgeType> e : copy.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() == EdgeType.NORMAL
-                                && !map.containsValue(e.getKey())) {
+                for (IRBlock copy : map.values())
+                {
+                    for (Map.Entry<IRBlock, EdgeType> e : copy.getSuccessorEdgeTypes().entrySet())
+                    {
+                        if (e.getValue() == EdgeType.NORMAL && !map.containsValue(e.getKey()))
+                        {
                             exitOf = e.getKey();
                         }
                     }
                 }
-                if (exitOf != null) {
+                if (exitOf != null)
+                {
                     exitOf = resolveThroughEmptyChain(exitOf);
                 }
-                if (exitOf != null && returnBlocks.contains(exitOf)) {
+                if (exitOf != null && returnBlocks.contains(exitOf))
+                {
                     matches.add(map);
                     matchedCopyBlocks.addAll(map.values());
                     coveredReturns.add(exitOf);
                 }
             }
-            if (!coveredReturns.containsAll(returnBlocks)) {
-                if (TRACE) {
+            if (!coveredReturns.containsAll(returnBlocks))
+            {
+                if (TRACE)
+                {
                     Set<IRBlock> missing = new HashSet<>(returnBlocks);
                     missing.removeAll(coveredReturns);
                     StringBuilder sb = new StringBuilder();
-                    for (IRBlock mb : missing) {
+                    for (IRBlock mb : missing)
+                    {
                         sb.append(mb.getBytecodeOffset()).append(",");
                     }
-                    trace("finally-dedup bail#7 root=" + root.getBytecodeOffset()
-                            + " uncovered=" + sb);
-                } else {
+                    trace("finally-dedup bail#7 root=" + root.getBytecodeOffset() + " uncovered=" + sb);
+                }
+                else
+                {
                     trace("finally-dedup bail#7 root=" + root.getBytecodeOffset());
                 }
                 return false;
             }
         }
-        for (IRBlock p : protectedBlocks) {
-            if (matchedCopyBlocks.contains(p)) {
+        for (IRBlock p : protectedBlocks)
+        {
+            if (matchedCopyBlocks.contains(p))
+            {
                 continue;
             }
             // Exit coverage is OWED only by blocks in the RAW split ranges. A gap block inside the
@@ -4377,18 +5334,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // are still HUNTED - or relowered-parked continuation whose exits carry no copies - so a
             // failed match there is not the family's failure.
             boolean mustCover = rawRangeBlocks.contains(p);
-            for (Map.Entry<IRBlock, EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
+            for (Map.Entry<IRBlock, EdgeType> e : p.getSuccessorEdgeTypes().entrySet())
+            {
                 if (e.getValue() != EdgeType.NORMAL
                         || protectedBlocks.contains(e.getKey()) || e.getKey() == root
                         || tblocks.contains(e.getKey())
-                        || matchedCopyBlocks.contains(e.getKey())) {
+                        || matchedCopyBlocks.contains(e.getKey()))
+                {
                     continue;
                 }
                 IRBlock cand = resolveThroughEmptyChain(e.getKey());
                 Map<IRBlock, IRBlock> map =
                         matchFinallySubgraphPeeled(root, cand, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
-                if (map == null) {
-                    if (mustCover) {
+                if (map == null)
+                {
+                    if (mustCover)
+                    {
                         trace("finally-dedup bail#8 root=" + root.getBytecodeOffset()
                                 + " exitFrom=" + p.getBytecodeOffset() + " cand=" + cand.getBytecodeOffset());
                         return false;
@@ -4398,7 +5359,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 matches.add(map);
             }
         }
-        if (matches.isEmpty()) {
+        if (matches.isEmpty())
+        {
             trace("finally-dedup bail#9 root=" + root.getBytecodeOffset());
             return false;
         }
@@ -4406,11 +5368,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // recovery would find an empty try. The TEMPLATE may freely contain protected calls (javac guards
         // a finally handler's close) - template blocks are only compared, never touched.
         Set<IRBlock> allCopyBlocks = new HashSet<>();
-        for (Map<IRBlock, IRBlock> m : matches) {
+        for (Map<IRBlock, IRBlock> m : matches)
+        {
             allCopyBlocks.addAll(m.values());
         }
-        for (Map<IRBlock, IRBlock> map : matches) {
-            for (IRBlock copy : map.values()) {
+        for (Map<IRBlock, IRBlock> map : matches)
+        {
+            for (IRBlock copy : map.values())
+            {
                 ExceptionHandler live = findUnprocessedHandlerStartingAt(copy);
                 // A range boundary of a handler in the SAME dedup offering is not a live nested try:
                 // that family's own group excises its copies, and the whole construct is consumed
@@ -4419,9 +5384,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // blocks outside every excised copy - stays intact too: only gutting its whole range
                 // would leave its recovery an empty try.
                 boolean handlerKeepsContent = false;
-                if (!templateHasNestedTry && live != null && live.getTryBlocks() != null) {
-                    for (IRBlock tb : live.getTryBlocks()) {
-                        if (!allCopyBlocks.contains(tb) && !matchableInstructions(tb, false).isEmpty()) {
+                if (!templateHasNestedTry && live != null && live.getTryBlocks() != null)
+                {
+                    for (IRBlock tb : live.getTryBlocks())
+                    {
+                        if (!allCopyBlocks.contains(tb) && !matchableInstructions(tb, false).isEmpty())
+                        {
                             handlerKeepsContent = true;
                             break;
                         }
@@ -4432,53 +5400,66 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // consumed with the copy like a nested-template mirror. A handler whose range extends
                 // beyond the copies protects REAL code the match merely resembles - the bail stands.
                 if (live != null && !copyNestedHandlers.contains(live)
-                        && live.getTryBlocks() != null && !live.getTryBlocks().isEmpty()) {
+                        && live.getTryBlocks() != null && !live.getTryBlocks().isEmpty())
+                {
                     boolean copyInternal = true;
-                    for (IRBlock tb : live.getTryBlocks()) {
-                        if (!allCopyBlocks.contains(tb)) {
+                    for (IRBlock tb : live.getTryBlocks())
+                    {
+                        if (!allCopyBlocks.contains(tb))
+                        {
                             copyInternal = false;
                             break;
                         }
                     }
-                    if (copyInternal) {
+                    if (copyInternal)
+                    {
                         copyNestedHandlers.add(live);
                     }
                 }
                 if (live != null && !copyNestedHandlers.contains(live)
                         && !currentDedupOffering.contains(live)
-                        && !handlerKeepsContent) {
+                        && !handlerKeepsContent)
+                {
                     trace("finally-dedup bail#10 root=" + root.getBytecodeOffset());
                     return false;
                 }
             }
         }
-        for (Map<IRBlock, IRBlock> map : matches) {
+        for (Map<IRBlock, IRBlock> map : matches)
+        {
             IRBlock copyRoot = null;
             IRBlock copyExit = null;
-            for (Map.Entry<IRBlock, IRBlock> e : map.entrySet()) {
-                if (copyRoot == null) {
+            for (Map.Entry<IRBlock, IRBlock> e : map.entrySet())
+            {
+                if (copyRoot == null)
+                {
                     copyRoot = e.getValue();
                 }
-                for (Map.Entry<IRBlock, EdgeType> se
-                        : e.getValue().getSuccessorEdgeTypes().entrySet()) {
-                    if (se.getValue() == EdgeType.NORMAL
-                            && !map.containsValue(se.getKey())) {
+                for (Map.Entry<IRBlock, EdgeType> se : e.getValue().getSuccessorEdgeTypes().entrySet())
+                {
+                    if (se.getValue() == EdgeType.NORMAL && !map.containsValue(se.getKey()))
+                    {
                         copyExit = se.getKey();
                     }
                 }
             }
-            if (copyRoot != null && copyExit != null) {
+            if (copyRoot != null && copyExit != null)
+            {
                 excisedCopyExits.put(copyRoot, copyExit);
             }
-            for (IRBlock copy : map.values()) {
+            for (IRBlock copy : map.values())
+            {
                 boolean hadOwnWork = false;
-                for (IRInstruction ins : new ArrayList<>(copy.getInstructions())) {
-                    if (!ins.isTerminator() && !(ins instanceof CopyInstruction)) {
+                for (IRInstruction ins : new ArrayList<>(copy.getInstructions()))
+                {
+                    if (!ins.isTerminator() && !(ins instanceof CopyInstruction))
+                    {
                         copy.removeInstruction(ins);
                         hadOwnWork = true;
                     }
                 }
-                if (hadOwnWork) {
+                if (hadOwnWork)
+                {
                     excisedFinallyCopyBlocks.add(copy);
                 }
                 // On the finally-with-user-catch path the copies sit INSIDE the recovered window (the
@@ -4487,7 +5468,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // consumed - a block the parallel walk merely passed through still holds the protected
                 // body's own work. The gap-resident shells of the other paths stay walkable: their guard
                 // conditions are recovered from the shells by the existing folds.
-                if (consumeShells && hadOwnWork) {
+                if (consumeShells && hadOwnWork)
+                {
                     consumedFinallyShells.add(copy);
                     context.markProcessed(copy);
                 }
@@ -4498,33 +5480,42 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // scaffolding that enumerated handler groups before this ran) resurrects an empty try around the
         // excised blocks. The same applies to ANY handler whose whole protected range the excision
         // emptied (a chained inner copy's suppress catch reached through the exit resolution).
-        for (ExceptionHandler h : copyNestedHandlers) {
+        for (ExceptionHandler h : copyNestedHandlers)
+        {
             processedTryHandlers.add(h);
-            if (h.getHandlerBlock() != null) {
+            if (h.getHandlerBlock() != null)
+            {
                 processedHandlerBlocks.add(h.getHandlerBlock());
             }
-            if (h.getTryStart() != null) {
+            if (h.getTryStart() != null)
+            {
                 retiredTryBoundaries.add(h.getTryStart());
             }
             method.getExceptionHandlers().remove(h);
         }
-        for (ExceptionHandler h : new ArrayList<>(method.getExceptionHandlers())) {
+        for (ExceptionHandler h : new ArrayList<>(method.getExceptionHandlers()))
+        {
             Set<IRBlock> hTry = h.getTryBlocks();
             if (h.getHandlerBlock() == null || hTry == null || hTry.isEmpty()
-                    || processedTryHandlers.contains(h) || tblocks.contains(h.getHandlerBlock())) {
+                    || processedTryHandlers.contains(h) || tblocks.contains(h.getHandlerBlock()))
+            {
                 continue;
             }
             boolean allEmpty = true;
-            for (IRBlock tb : hTry) {
-                if (!matchableInstructions(tb, false).isEmpty()) {
+            for (IRBlock tb : hTry)
+            {
+                if (!matchableInstructions(tb, false).isEmpty())
+                {
                     allEmpty = false;
                     break;
                 }
             }
-            if (allEmpty) {
+            if (allEmpty)
+            {
                 processedTryHandlers.add(h);
                 processedHandlerBlocks.add(h.getHandlerBlock());
-                if (h.getTryStart() != null) {
+                if (h.getTryStart() != null)
+                {
                     retiredTryBoundaries.add(h.getTryStart());
                 }
                 method.getExceptionHandlers().remove(h);
@@ -4542,47 +5533,59 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * rethrow, which the pruned path cannot take), and only pure-load guard payloads qualify - a
      * peel must not lose an effect.
      */
-    private Map<IRBlock, IRBlock> matchFinallySubgraphPeeled(IRBlock troot, IRBlock croot,
-                                                             Set<IRBlock> tblocks, IRBlock rethrowBlk,
-                                                             Map<IRBlock, ExceptionHandler> nestedTemplate,
-                                                             Set<ExceptionHandler> copyNestedHandlers) {
+    private Map<IRBlock, IRBlock> matchFinallySubgraphPeeled(IRBlock troot, IRBlock croot, Set<IRBlock> tblocks, IRBlock rethrowBlk, Map<IRBlock, ExceptionHandler> nestedTemplate, Set<ExceptionHandler> copyNestedHandlers)
+    {
         Map<IRBlock, IRBlock> map =
                 matchFinallySubgraph(troot, croot, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
-        if (map != null) {
+        if (map != null)
+        {
             return map;
         }
         IRBlock entry = troot;
-        for (int peel = 0; peel < 3; peel++) {
+        for (int peel = 0; peel < 3; peel++)
+        {
             while (matchableInstructions(entry, entry == troot).isEmpty()
-                    && !(entry.getTerminator() instanceof BranchInstruction)) {
+                    && !(entry.getTerminator() instanceof BranchInstruction))
+            {
                 IRBlock nxt = singleNormalSuccessor(entry);
-                if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk) {
+                if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk)
+                {
                     return null;
                 }
                 entry = nxt;
             }
-            if (!(entry.getTerminator() instanceof BranchInstruction)) {
+            if (!(entry.getTerminator() instanceof BranchInstruction))
+            {
                 return null;
             }
-            for (IRInstruction ins : matchableInstructions(entry, entry == troot)) {
-                if (!(ins instanceof LoadLocalInstruction || ins instanceof ConstantInstruction)) {
+            for (IRInstruction ins : matchableInstructions(entry, entry == troot))
+            {
+                if (!(ins instanceof LoadLocalInstruction || ins instanceof ConstantInstruction))
+                {
                     return null;
                 }
             }
             BranchInstruction br = (BranchInstruction) entry.getTerminator();
             IRBlock keep;
-            if (peeledArmRethrows(br.getTrueTarget(), rethrowBlk, tblocks)) {
+            if (peeledArmRethrows(br.getTrueTarget(), rethrowBlk, tblocks))
+            {
                 keep = br.getFalseTarget();
-            } else if (peeledArmRethrows(br.getFalseTarget(), rethrowBlk, tblocks)) {
+            }
+            else if (peeledArmRethrows(br.getFalseTarget(), rethrowBlk, tblocks))
+            {
                 keep = br.getTrueTarget();
-            } else {
+            }
+            else
+            {
                 return null;
             }
-            if (keep == null || !tblocks.contains(keep)) {
+            if (keep == null || !tblocks.contains(keep))
+            {
                 return null;
             }
             map = matchFinallySubgraph(keep, croot, tblocks, rethrowBlk, nestedTemplate, copyNestedHandlers);
-            if (map != null) {
+            if (map != null)
+            {
                 return map;
             }
             entry = keep;
@@ -4590,13 +5593,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    /** Whether a peeled guard's discarded arm only rethrows (directly or through empty pads). */
-    private boolean peeledArmRethrows(IRBlock arm, IRBlock rethrowBlk, Set<IRBlock> tblocks) {
-        if (arm == null) {
+    /**
+     * Whether a peeled guard's discarded arm only rethrows (directly or through empty pads).
+     */
+    private boolean peeledArmRethrows(IRBlock arm, IRBlock rethrowBlk, Set<IRBlock> tblocks)
+    {
+        if (arm == null)
+        {
             return false;
         }
         IRBlock r = resolveThroughEmptyChain(arm);
-        if (r == rethrowBlk) {
+        if (r == rethrowBlk)
+        {
             return true;
         }
         return r != null && tblocks.contains(r) && isBareRethrowTail(r);
@@ -4608,10 +5616,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * rethrow must correspond to the copy reaching one single continuation. Returns the template-to-copy
      * block map, or null when the shapes differ.
      */
-    private Map<IRBlock, IRBlock> matchFinallySubgraph(IRBlock troot, IRBlock croot,
-                                                       Set<IRBlock> tblocks, IRBlock rethrowBlk,
-                                                       Map<IRBlock, ExceptionHandler> nestedTemplate,
-                                                       Set<ExceptionHandler> copyNestedHandlers) {
+    private Map<IRBlock, IRBlock> matchFinallySubgraph(IRBlock troot, IRBlock croot, Set<IRBlock> tblocks, IRBlock rethrowBlk, Map<IRBlock, ExceptionHandler> nestedTemplate, Set<ExceptionHandler> copyNestedHandlers)
+    {
         Map<IRBlock, IRBlock> map = new LinkedHashMap<>();
         Map<Integer, Integer> slotMap = new HashMap<>();
         Deque<IRBlock[]> work = new ArrayDeque<>();
@@ -4620,9 +5626,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // A copy has no store, so the parallel walk starts at the template's first MEANINGFUL block.
         IRBlock tstart = troot;
         while (matchableInstructions(tstart, tstart == troot).isEmpty()
-                && !(tstart.getTerminator() instanceof BranchInstruction)) {
+                && !(tstart.getTerminator() instanceof BranchInstruction))
+        {
             IRBlock nxt = singleNormalSuccessor(tstart);
-            if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk) {
+            if (nxt == null || !tblocks.contains(nxt) || nxt == rethrowBlk)
+            {
                 break;
             }
             tstart = nxt;
@@ -4630,13 +5638,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         work.add(new IRBlock[]{tstart, croot});
         IRBlock exit = null;
         List<ExceptionHandler> pendingCopyNested = new ArrayList<>();
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock[] pair = work.poll();
             IRBlock t = pair[0];
             IRBlock c = pair[1];
             IRBlock seen = map.get(t);
-            if (seen != null) {
-                if (seen != c) {
+            if (seen != null)
+            {
+                if (seen != c)
+                {
                     return null;
                 }
                 continue;
@@ -4646,51 +5657,63 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // mirrored on the copy side: a copy-side handler of the same catch type protecting this copy
             // block, foreign to the template. Their handler subgraphs join the parallel walk; the copy's
             // handler is retired with the excision.
-            for (Map.Entry<IRBlock, ExceptionHandler> nt : nestedTemplate.entrySet()) {
+            for (Map.Entry<IRBlock, ExceptionHandler> nt : nestedTemplate.entrySet())
+            {
                 ExceptionHandler th = nt.getValue();
-                if (th.getTryBlocks() == null || !th.getTryBlocks().contains(t)) {
+                if (th.getTryBlocks() == null || !th.getTryBlocks().contains(t))
+                {
                     continue;
                 }
                 ExceptionHandler ch = null;
-                for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+                for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+                {
                     if (h == th || h.getHandlerBlock() == null || tblocks.contains(h.getHandlerBlock())
                             || h.getTryBlocks() == null || !h.getTryBlocks().contains(c)
-                            || nestedTemplate.containsKey(h.getHandlerBlock())) {
+                            || nestedTemplate.containsKey(h.getHandlerBlock()))
+                    {
                         continue;
                     }
                     // The mirror must be structurally the template handler's twin - an enclosing clause
                     // handler also covers this copy block and shares the catch type, but protects a far
                     // larger range and is no nested close-guard.
-                    if (th.getTryBlocks() != null && h.getTryBlocks().size() != th.getTryBlocks().size()) {
+                    if (th.getTryBlocks() != null && h.getTryBlocks().size() != th.getTryBlocks().size())
+                    {
                         continue;
                     }
                     // A genuine nested close-guard SWALLOWS (logs or suppresses and falls through); a
                     // finally/suppress CLAUSE rethrows. An enclosing clause handler covers this copy
                     // block with the same catch type but rethrows - it is no mirror.
-                    if (handlerRethrows(h)) {
+                    if (handlerRethrows(h))
+                    {
                         continue;
                     }
-                    if (h.isCatchAll() != th.isCatchAll()) {
+                    if (h.isCatchAll() != th.isCatchAll())
+                    {
                         continue;
                     }
                     if (!h.isCatchAll() && !h.getCatchType().getInternalName()
-                            .equals(th.getCatchType().getInternalName())) {
+                            .equals(th.getCatchType().getInternalName()))
+                    {
                         continue;
                     }
                     boolean copySideOnly = true;
-                    for (IRBlock tb : h.getTryBlocks()) {
-                        if (tblocks.contains(tb)) {
+                    for (IRBlock tb : h.getTryBlocks())
+                    {
+                        if (tblocks.contains(tb))
+                        {
                             copySideOnly = false;
                             break;
                         }
                     }
-                    if (!copySideOnly) {
+                    if (!copySideOnly)
+                    {
                         continue;
                     }
                     ch = h;
                     break;
                 }
-                if (ch == null) {
+                if (ch == null)
+                {
                     // No mirrored handler on the copy side: javac's modern try-with-resources desugar
                     // protects the close ONLY inside the exception-path clause (addSuppressed), while the
                     // normal-path copy closes unprotected - an intentional asymmetry. The copy simply
@@ -4702,74 +5725,99 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
             List<IRInstruction> ti = matchableInstructions(t, t == troot);
             List<IRInstruction> ci = matchableInstructions(c, false);
-            if (ti.size() != ci.size()) {
+            if (ti.size() != ci.size())
+            {
                 return null;
             }
-            for (int i = 0; i < ti.size(); i++) {
-                if (!sameFinallyInstr(ti.get(i), ci.get(i), slotMap)) {
+            for (int i = 0; i < ti.size(); i++)
+            {
+                if (!sameFinallyInstr(ti.get(i), ci.get(i), slotMap))
+                {
                     return null;
                 }
             }
             IRInstruction tt = t.getTerminator();
-            if (tt instanceof BranchInstruction) {
-                if (!(c.getTerminator() instanceof BranchInstruction)) {
+            if (tt instanceof BranchInstruction)
+            {
+                if (!(c.getTerminator() instanceof BranchInstruction))
+                {
                     return null;
                 }
                 BranchInstruction tb = (BranchInstruction) tt;
                 BranchInstruction cb = (BranchInstruction) c.getTerminator();
                 // Verbatim copies branch on the SAME comparison; pairing arms across different
                 // condition kinds lets an unrelated conditional masquerade as the template's guard.
-                if (tb.getCondition() != cb.getCondition()) {
+                if (tb.getCondition() != cb.getCondition())
+                {
                     return null;
                 }
                 IRBlock[][] pairs = {
                         {tb.getTrueTarget(), cb.getTrueTarget()},
                         {tb.getFalseTarget(), cb.getFalseTarget()}};
-                for (IRBlock[] pr : pairs) {
+                for (IRBlock[] pr : pairs)
+                {
                     if (pr[0] == rethrowBlk || !tblocks.contains(pr[0])
                             || (leadsOnlyToRethrow(pr[0], tblocks, rethrowBlk)
-                                && !matchableShapeEquals(pr[0], pr[1], slotMap))) {
-                        if (exit != null && exit != pr[1]) {
+                                && !matchableShapeEquals(pr[0], pr[1], slotMap)))
+                    {
+                        if (exit != null && exit != pr[1])
+                        {
                             return null;
                         }
                         exit = pr[1];
-                    } else {
+                    }
+                    else
+                    {
                         work.add(pr);
                     }
                 }
-            } else {
+            }
+            else
+            {
                 IRBlock tn = singleNormalSuccessor(t);
                 IRBlock cn = singleNormalSuccessor(c);
-                if (tn == null || cn == null) {
+                if (tn == null || cn == null)
+                {
                     return null;
                 }
                 if (tn == rethrowBlk || !tblocks.contains(tn)
                         || (leadsOnlyToRethrow(tn, tblocks, rethrowBlk)
-                            && !matchableShapeEquals(tn, cn, slotMap))) {
-                    if (exit != null && exit != cn) {
+                            && !matchableShapeEquals(tn, cn, slotMap)))
+                {
+                    if (exit != null && exit != cn)
+                    {
                         return null;
                     }
                     exit = cn;
-                } else {
+                }
+                else
+                {
                     work.add(new IRBlock[]{tn, cn});
                 }
             }
         }
-        if (exit == null || map.containsValue(exit)) {
+        if (exit == null || map.containsValue(exit))
+        {
             return null;
         }
         copyNestedHandlers.addAll(pendingCopyNested);
         return map;
     }
 
-    /** The blocks of every raw exception-table range sharing {@code handler}'s handler block. */
-    private Set<IRBlock> tryRangeBlocks(ExceptionHandler handler) {
+    /**
+     * The blocks of every raw exception-table range sharing {@code handler}'s handler block.
+     */
+    private Set<IRBlock> tryRangeBlocks(ExceptionHandler handler)
+    {
         Set<IRBlock> out = new HashSet<>();
-        if (handler.getHandlerBlock() == null) {
+        if (handler.getHandlerBlock() == null)
+        {
             return out;
         }
-        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
-            if (h.getHandlerBlock() != handler.getHandlerBlock() || h.getTryBlocks() == null) {
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() != handler.getHandlerBlock() || h.getTryBlocks() == null)
+            {
                 continue;
             }
             out.addAll(h.getTryBlocks());
@@ -4777,31 +5825,44 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return out;
     }
 
-    /** Whether the statement tree contains a return - recursion via the structural children. */
-    private boolean containsReturn(List<Statement> stmts) {
-        for (Statement st : stmts) {
-            if (st instanceof ReturnStmt) {
+    /**
+     * Whether the statement tree contains a return - recursion via the structural children.
+     */
+    private boolean containsReturn(List<Statement> stmts)
+    {
+        for (Statement st : stmts)
+        {
+            if (st instanceof ReturnStmt)
+            {
                 return true;
             }
-            if (st instanceof BlockStmt && containsReturn(((BlockStmt) st).getStatements())) {
+            if (st instanceof BlockStmt && containsReturn(((BlockStmt) st).getStatements()))
+            {
                 return true;
             }
-            if (st instanceof IfStmt) {
+            if (st instanceof IfStmt)
+            {
                 IfStmt is = (IfStmt) st;
-                if (containsReturn(flattenToStatements(is.getThenBranch()))) {
+                if (containsReturn(flattenToStatements(is.getThenBranch())))
+                {
                     return true;
                 }
-                if (is.getElseBranch() != null && containsReturn(flattenToStatements(is.getElseBranch()))) {
+                if (is.getElseBranch() != null && containsReturn(flattenToStatements(is.getElseBranch())))
+                {
                     return true;
                 }
             }
-            if (st instanceof TryCatchStmt) {
+            if (st instanceof TryCatchStmt)
+            {
                 TryCatchStmt tc = (TryCatchStmt) st;
-                if (containsReturn(flattenToStatements(tc.getTryBlock()))) {
+                if (containsReturn(flattenToStatements(tc.getTryBlock())))
+                {
                     return true;
                 }
-                for (CatchClause cc : tc.getCatches()) {
-                    if (containsReturn(flattenToStatements(cc.body()))) {
+                for (CatchClause cc : tc.getCatches())
+                {
+                    if (containsReturn(flattenToStatements(cc.body())))
+                    {
                         return true;
                     }
                 }
@@ -4815,31 +5876,41 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code k} lives inside the protected range, i.e. javac's stashed boundary return whose value the try
      * body already owns.
      */
-    private boolean isStashReloadReturn(IRBlock exit, Set<IRBlock> protectedBlocks) {
+    private boolean isStashReloadReturn(IRBlock exit, Set<IRBlock> protectedBlocks)
+    {
         LoadLocalInstruction load = null;
-        for (IRInstruction ins : exit.getInstructions()) {
-            if (ins instanceof CopyInstruction) {
+        for (IRInstruction ins : exit.getInstructions())
+        {
+            if (ins instanceof CopyInstruction)
+            {
                 continue;
             }
-            if (ins instanceof LoadLocalInstruction && load == null) {
+            if (ins instanceof LoadLocalInstruction && load == null)
+            {
                 load = (LoadLocalInstruction) ins;
                 continue;
             }
-            if (ins instanceof ReturnInstruction && load != null) {
+            if (ins instanceof ReturnInstruction && load != null)
+            {
                 continue;
             }
-            if (ins.isTerminator()) {
+            if (ins.isTerminator())
+            {
                 continue;
             }
             return false;
         }
-        if (load == null || !(exit.getTerminator() instanceof ReturnInstruction)) {
+        if (load == null || !(exit.getTerminator() instanceof ReturnInstruction))
+        {
             return false;
         }
         int slot = load.getLocalIndex();
-        for (IRBlock pb : protectedBlocks) {
-            for (IRInstruction ins : pb.getInstructions()) {
-                if (ins instanceof StoreLocalInstruction && ((StoreLocalInstruction) ins).getLocalIndex() == slot) {
+        for (IRBlock pb : protectedBlocks)
+        {
+            for (IRInstruction ins : pb.getInstructions())
+            {
+                if (ins instanceof StoreLocalInstruction && ((StoreLocalInstruction) ins).getLocalIndex() == slot)
+                {
                     return true;
                 }
             }
@@ -4849,13 +5920,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
     /** The block comparable-instruction list: terminators and SSA plumbing skipped; the template root
      * additionally drops its leading caught-exception store. */
-    private List<IRInstruction> matchableInstructions(IRBlock b, boolean skipLeadingStore) {
+    private List<IRInstruction> matchableInstructions(IRBlock b, boolean skipLeadingStore)
+    {
         List<IRInstruction> out = new ArrayList<>();
-        for (IRInstruction ins : b.getInstructions()) {
-            if (ins.isTerminator() || ins instanceof CopyInstruction) {
+        for (IRInstruction ins : b.getInstructions())
+        {
+            if (ins.isTerminator() || ins instanceof CopyInstruction)
+            {
                 continue;
             }
-            if (skipLeadingStore && out.isEmpty() && ins instanceof StoreLocalInstruction) {
+            if (skipLeadingStore && out.isEmpty() && ins instanceof StoreLocalInstruction)
+            {
                 continue;
             }
             out.add(ins);
@@ -4863,11 +5938,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return out;
     }
 
-    private IRBlock singleNormalSuccessor(IRBlock b) {
+    private IRBlock singleNormalSuccessor(IRBlock b)
+    {
         IRBlock next = null;
-        for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-            if (e.getValue() == EdgeType.NORMAL) {
-                if (next != null) {
+        for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+        {
+            if (e.getValue() == EdgeType.NORMAL)
+            {
+                if (next != null)
+                {
                     return null;
                 }
                 next = e.getKey();
@@ -4876,9 +5955,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return next;
     }
 
-    private List<IRInstruction> straightLineFinallyTemplate(ExceptionHandler h) {
+    private List<IRInstruction> straightLineFinallyTemplate(ExceptionHandler h)
+    {
         List<IRBlock> chain = finallyHandlerChain(h);
-        if (chain == null) {
+        if (chain == null)
+        {
             return null;
         }
         // A finally body carrying its own catch - a handler whose WHOLE protected range lies within the
@@ -4888,44 +5969,55 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // catch wrapping the whole construct) does not disqualify the template.
         Set<IRBlock> chainSet = new HashSet<>(chain);
         Map<IRBlock, Set<IRBlock>> otherRanges = new LinkedHashMap<>();
-        for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers()) {
+        for (ExceptionHandler other : context.getIrMethod().getExceptionHandlers())
+        {
             if (other == h || other.getTryBlocks() == null || other.getTryBlocks().isEmpty()
                     || other.getHandlerBlock() == h.getHandlerBlock()
-                    || other.getHandlerBlock() == null) {
+                    || other.getHandlerBlock() == null)
+            {
                 continue;
             }
             otherRanges.computeIfAbsent(other.getHandlerBlock(), k -> new HashSet<>())
                     .addAll(other.getTryBlocks());
         }
-        for (Set<IRBlock> union : otherRanges.values()) {
+        for (Set<IRBlock> union : otherRanges.values())
+        {
             // Judged on the handler's WHOLE protected range across its entries: an enclosing catch also
             // protects blocks outside the chain (its other range pieces), while a genuinely
             // nested-in-template catch protects chain blocks only.
-            if (chainSet.containsAll(union)) {
+            if (chainSet.containsAll(union))
+            {
                 return null;
             }
         }
 
         IRBlock lastBlock = chain.isEmpty() ? null : chain.get(chain.size() - 1);
-        if (lastBlock == null) {
+        if (lastBlock == null)
+        {
             return null;
         }
         IRInstruction lastTerm = lastBlock.getTerminator();
-        if (!(lastTerm instanceof SimpleInstruction) || ((SimpleInstruction) lastTerm).getOp() != SimpleOp.ATHROW) {
+        if (!(lastTerm instanceof SimpleInstruction) || ((SimpleInstruction) lastTerm).getOp() != SimpleOp.ATHROW)
+        {
             return null;
         }
 
         List<IRInstruction> flat = new ArrayList<>();
-        for (int c = 0; c < chain.size(); c++) {
+        for (int c = 0; c < chain.size(); c++)
+        {
             List<IRInstruction> in = chain.get(c).getInstructions();
             int end = in.size();
-            if (c == chain.size() - 1) {
+            if (c == chain.size() - 1)
+            {
                 end--; // drop the trailing athrow
-            } else if (end > 0 && in.get(end - 1) instanceof SimpleInstruction
-                    && ((SimpleInstruction) in.get(end - 1)).getOp() == SimpleOp.GOTO) {
+            }
+            else if (end > 0 && in.get(end - 1) instanceof SimpleInstruction
+                    && ((SimpleInstruction) in.get(end - 1)).getOp() == SimpleOp.GOTO)
+            {
                 end--; // drop an inter-block goto
             }
-            for (int i = 0; i < end; i++) {
+            for (int i = 0; i < end; i++)
+            {
                 flat.add(in.get(i));
             }
         }
@@ -4933,16 +6025,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // feeds the rethrow, leaving only the finally body - the sequence javac inlined on every normal exit.
         int start = 0;
         while (start < flat.size()
-                && (flat.get(start) instanceof CopyInstruction || flat.get(start) instanceof StoreLocalInstruction)) {
+                && (flat.get(start) instanceof CopyInstruction || flat.get(start) instanceof StoreLocalInstruction))
+        {
             start++;
         }
         int stop = flat.size();
-        if (stop > start && flat.get(stop - 1) instanceof LoadLocalInstruction) {
+        if (stop > start && flat.get(stop - 1) instanceof LoadLocalInstruction)
+        {
             stop--;
         }
         List<IRInstruction> template = new ArrayList<>();
-        for (int i = start; i < stop; i++) {
-            if (!isMatchableFinallyInstr(flat.get(i))) {
+        for (int i = start; i < stop; i++)
+        {
+            if (!isMatchableFinallyInstr(flat.get(i)))
+            {
                 return null;
             }
             template.add(flat.get(i));
@@ -4950,9 +6046,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return template.isEmpty() ? null : template;
     }
 
-    /** Instruction kinds a straight-line finally copy is matched by: no control flow, structurally comparable. */
-    private boolean isMatchableFinallyInstr(IRInstruction ins) {
-        if (extendedFinallyDedup && (ins instanceof BinaryOpInstruction || ins instanceof UnaryOpInstruction)) {
+    /**
+     * Instruction kinds a straight-line finally copy is matched by: no control flow, structurally comparable.
+     */
+    private boolean isMatchableFinallyInstr(IRInstruction ins)
+    {
+        if (extendedFinallyDedup && (ins instanceof BinaryOpInstruction || ins instanceof UnaryOpInstruction))
+        {
             return true;
         }
         return ins instanceof FieldAccessInstruction || ins instanceof InvokeInstruction
@@ -4966,15 +6066,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * still has a copy counterpart (older desugars inline the whole clause tail into each copy) or the
      * copy already exited to its continuation (the modern fused desugar).
      */
-    private boolean matchableShapeEquals(IRBlock t, IRBlock c, Map<Integer, Integer> slotMap) {
+    private boolean matchableShapeEquals(IRBlock t, IRBlock c, Map<Integer, Integer> slotMap)
+    {
         List<IRInstruction> ti = matchableInstructions(t, false);
         List<IRInstruction> ci = matchableInstructions(c, false);
-        if (ti.size() != ci.size()) {
+        if (ti.size() != ci.size())
+        {
             return false;
         }
         Map<Integer, Integer> probe = new HashMap<>(slotMap);
-        for (int i = 0; i < ti.size(); i++) {
-            if (!sameFinallyInstr(ti.get(i), ci.get(i), probe)) {
+        for (int i = 0; i < ti.size(); i++)
+        {
+            if (!sameFinallyInstr(ti.get(i), ci.get(i), probe))
+            {
                 return false;
             }
         }
@@ -4987,39 +6091,50 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * counterpart (a copy exits to the normal continuation right after the finally body), so the walk
      * treats it as part of the rethrow boundary.
      */
-    private boolean leadsOnlyToRethrow(IRBlock b, Set<IRBlock> tblocks, IRBlock rethrowBlk) {
+    private boolean leadsOnlyToRethrow(IRBlock b, Set<IRBlock> tblocks, IRBlock rethrowBlk)
+    {
         Deque<IRBlock> work = new ArrayDeque<>();
         Set<IRBlock> seen = new HashSet<>();
         work.add(b);
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock x = work.poll();
-            if (x == rethrowBlk || !seen.add(x)) {
+            if (x == rethrowBlk || !seen.add(x))
+            {
                 continue;
             }
-            if (!tblocks.contains(x)) {
+            if (!tblocks.contains(x))
+            {
                 return false;
             }
-            for (IRInstruction ins : x.getInstructions()) {
+            for (IRInstruction ins : x.getInstructions())
+            {
                 if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
-                        && !(ins instanceof LoadLocalInstruction)) {
+                        && !(ins instanceof LoadLocalInstruction))
+                {
                     return false;
                 }
             }
             IRInstruction term = x.getTerminator();
-            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+            {
                 continue;
             }
-            if (term instanceof BranchInstruction) {
+            if (term instanceof BranchInstruction)
+            {
                 return false;
             }
             boolean any = false;
-            for (Map.Entry<IRBlock, EdgeType> e : x.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : x.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     work.add(e.getKey());
                     any = true;
                 }
             }
-            if (!any) {
+            if (!any)
+            {
                 return false;
             }
         }
@@ -5031,19 +6146,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * an already-excised copy of an inner finally, or a plain goto connector - to the block where a
      * template match can begin. Returns {@code b} itself when it holds instructions.
      */
-    private IRBlock resolveThroughEmptyChain(IRBlock b) {
+    private IRBlock resolveThroughEmptyChain(IRBlock b)
+    {
         Set<IRBlock> seen = new HashSet<>();
-        while (b != null && seen.add(b)) {
+        while (b != null && seen.add(b))
+        {
             IRBlock excised = excisedCopyExits.get(b);
-            if (excised != null) {
+            if (excised != null)
+            {
                 b = excised;
                 continue;
             }
-            if (!matchableInstructions(b, false).isEmpty()) {
+            if (!matchableInstructions(b, false).isEmpty())
+            {
                 return b;
             }
             IRBlock next = singleNormalSuccessor(b);
-            if (next == null) {
+            if (next == null)
+            {
                 return b;
             }
             b = next;
@@ -5057,36 +6177,47 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * caught throwable into the suppress flag and rethrows; such a handler is a catch CLAUSE, carries no
      * finally body, and has no inlined copies for the de-duplication to hunt.
      */
-    private boolean isLocalSpillRethrower(ExceptionHandler h) {
+    private boolean isLocalSpillRethrower(ExceptionHandler h)
+    {
         IRBlock hb = h.getHandlerBlock();
-        if (hb == null) {
+        if (hb == null)
+        {
             return false;
         }
         Deque<IRBlock> work = new ArrayDeque<>();
         Set<IRBlock> seen = new HashSet<>();
         work.add(hb);
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            for (IRInstruction ins : b.getInstructions()) {
-                if (ins.isTerminator() || ins instanceof CopyInstruction) {
+            for (IRInstruction ins : b.getInstructions())
+            {
+                if (ins.isTerminator() || ins instanceof CopyInstruction)
+                {
                     continue;
                 }
-                if (!(ins instanceof LoadLocalInstruction) && !(ins instanceof StoreLocalInstruction)) {
+                if (!(ins instanceof LoadLocalInstruction) && !(ins instanceof StoreLocalInstruction))
+                {
                     return false;
                 }
             }
             IRInstruction term = b.getTerminator();
-            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
+            if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW)
+            {
                 continue;
             }
-            if (term instanceof BranchInstruction) {
+            if (term instanceof BranchInstruction)
+            {
                 return false;
             }
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     work.add(e.getKey());
                 }
             }
@@ -5101,15 +6232,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * slot inside the finally clause than inside the inlined copies (the handler's own caught exception
      * occupies one), so raw slot equality wrongly rejects otherwise verbatim copies.
      */
-    private boolean sameFinallyInstr(IRInstruction a, IRInstruction b, Map<Integer, Integer> slotMap) {
+    private boolean sameFinallyInstr(IRInstruction a, IRInstruction b, Map<Integer, Integer> slotMap)
+    {
         if (slotMap != null && a.getClass() == b.getClass()
-                && (a instanceof LoadLocalInstruction || a instanceof StoreLocalInstruction)) {
+                && (a instanceof LoadLocalInstruction || a instanceof StoreLocalInstruction))
+        {
             int ta = a instanceof LoadLocalInstruction
                     ? ((LoadLocalInstruction) a).getLocalIndex() : ((StoreLocalInstruction) a).getLocalIndex();
             int tb = b instanceof LoadLocalInstruction
                     ? ((LoadLocalInstruction) b).getLocalIndex() : ((StoreLocalInstruction) b).getLocalIndex();
             Integer bound = slotMap.get(ta);
-            if (bound != null) {
+            if (bound != null)
+            {
                 return bound == tb;
             }
             // Only a slot the template DEFINES (first sight is a store - the handler's caught exception,
@@ -5117,7 +6251,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // one of the clause's free variables - the resource, the suppress flag - which javac's
             // genuine inlined copies share verbatim with the clause; remapping those lets an isomorphic
             // copy of a DIFFERENT resource cross-match and the wrong code be excised.
-            if (a instanceof LoadLocalInstruction && ta != tb) {
+            if (a instanceof LoadLocalInstruction && ta != tb)
+            {
                 return false;
             }
             slotMap.put(ta, tb);
@@ -5126,37 +6261,48 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return sameFinallyInstr(a, b);
     }
 
-    /** Structural equality of two finally instructions, ignoring SSA operand identity (verbatim javac copies). */
-    private boolean sameFinallyInstr(IRInstruction a, IRInstruction b) {
-        if (a.getClass() != b.getClass()) {
+    /**
+     * Structural equality of two finally instructions, ignoring SSA operand identity (verbatim javac copies).
+     */
+    private boolean sameFinallyInstr(IRInstruction a, IRInstruction b)
+    {
+        if (a.getClass() != b.getClass())
+        {
             return false;
         }
-        if (a instanceof FieldAccessInstruction) {
+        if (a instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction x = (FieldAccessInstruction) a, y = (FieldAccessInstruction) b;
             return x.isStatic() == y.isStatic() && x.getOwner().equals(y.getOwner())
                     && x.getName().equals(y.getName()) && x.getDescriptor().equals(y.getDescriptor());
         }
-        if (a instanceof InvokeInstruction) {
+        if (a instanceof InvokeInstruction)
+        {
             InvokeInstruction x = (InvokeInstruction) a, y = (InvokeInstruction) b;
             return x.getInvokeType() == y.getInvokeType() && x.getOwner().equals(y.getOwner())
                     && x.getName().equals(y.getName()) && x.getDescriptor().equals(y.getDescriptor());
         }
-        if (a instanceof ConstantInstruction) {
+        if (a instanceof ConstantInstruction)
+        {
             return String.valueOf(((ConstantInstruction) a).getConstant())
                     .equals(String.valueOf(((ConstantInstruction) b).getConstant()));
         }
-        if (a instanceof LoadLocalInstruction) {
+        if (a instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) a).getLocalIndex() == ((LoadLocalInstruction) b).getLocalIndex();
         }
-        if (a instanceof StoreLocalInstruction) {
+        if (a instanceof StoreLocalInstruction)
+        {
             return ((StoreLocalInstruction) a).getLocalIndex() == ((StoreLocalInstruction) b).getLocalIndex();
         }
-        if (a instanceof BinaryOpInstruction) {
+        if (a instanceof BinaryOpInstruction)
+        {
             // Operands are positional within the matched contiguous sequence (the loads and constants
             // around the op are compared themselves), so the operator is the instruction's identity.
             return ((BinaryOpInstruction) a).getOp() == ((BinaryOpInstruction) b).getOp();
         }
-        if (a instanceof UnaryOpInstruction) {
+        if (a instanceof UnaryOpInstruction)
+        {
             return ((UnaryOpInstruction) a).getOp() == ((UnaryOpInstruction) b).getOp();
         }
         return false;
@@ -5167,37 +6313,47 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * (a copy often occupies exactly one block), as long as the block is not a bare rethrow tail - only
      * an {@code athrow}-terminated whole-block match could mistake the handler itself for a copy.
      */
-    private int probeTemplateStart(IRBlock block, List<IRInstruction> template) {
+    private int probeTemplateStart(IRBlock block, List<IRInstruction> template)
+    {
         int strict = contiguousTemplateStart(block, template);
-        if (strict >= 0) {
+        if (strict >= 0)
+        {
             return strict;
         }
         List<IRInstruction> in = block.getInstructions();
         int n = template.size();
         int start = in.size() - n;
-        if (start < 0 || isBareRethrowTail(block)) {
+        if (start < 0 || isBareRethrowTail(block))
+        {
             return -1;
         }
-        for (int i = 0; i < n; i++) {
-            if (!sameFinallyInstr(template.get(i), in.get(start + i))) {
+        for (int i = 0; i < n; i++)
+        {
+            if (!sameFinallyInstr(template.get(i), in.get(start + i)))
+            {
                 return -1;
             }
         }
         return start;
     }
 
-    private int contiguousTemplateStart(IRBlock block, List<IRInstruction> template) {
+    private int contiguousTemplateStart(IRBlock block, List<IRInstruction> template)
+    {
         List<IRInstruction> in = block.getInstructions();
         int n = template.size();
-        for (int start = 0; start + n < in.size(); start++) {
+        for (int start = 0; start + n < in.size(); start++)
+        {
             boolean ok = true;
-            for (int i = 0; i < n; i++) {
-                if (!sameFinallyInstr(template.get(i), in.get(start + i))) {
+            for (int i = 0; i < n; i++)
+            {
+                if (!sameFinallyInstr(template.get(i), in.get(start + i)))
+                {
                     ok = false;
                     break;
                 }
             }
-            if (ok) {
+            if (ok)
+            {
                 return start;
             }
         }
@@ -5206,9 +6362,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
     private final Set<ExceptionHandler> finallyDeduped = new HashSet<>();
 
-    /** Try-range start blocks of handlers the de-duplication RETIRED from the method's handler table. */
+    /**
+     * Try-range start blocks of handlers the de-duplication RETIRED from the method's handler table.
+     */
     private final Set<IRBlock> retiredTryBoundaries = new HashSet<>();
-    /** The rethrower families offered to the current (possibly partitioned) de-duplication together. */
+    /**
+     * The rethrower families offered to the current (possibly partitioned) de-duplication together.
+     */
     private final Set<ExceptionHandler> currentDedupOffering = new HashSet<>();
     /** Each excised finally copy's root mapped to its continuation, so a later (outer) group's exit hunt
      * resolves through the emptied - possibly branchy - copy to where its own copy begins. */
@@ -5228,17 +6388,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * block that leaves the region before excising any; a shape it cannot fully account for leaves the IR untouched so
      * the caller keeps the legacy body walk and statement-level fold. Returns true when the body was de-duplicated.
      */
-    private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers) {
+    private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers)
+    {
         return dedupStraightLineFinally(regionHandlers, false);
     }
 
-    private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers, boolean consumeShells) {
+    private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers, boolean consumeShells)
+    {
         IRMethod method = context.getIrMethod();
-        if (method == null) {
+        if (method == null)
+        {
             return false;
         }
         List<ExceptionHandler> rethrowers = new ArrayList<>();
-        for (ExceptionHandler h : regionHandlers) {
+        for (ExceptionHandler h : regionHandlers)
+        {
             // A handler that wraps the caught exception in a FRESH one is a user catch, not a finally:
             // its body is no template, and admitting it here poisons the candidate set - one unmatchable
             // pseudo-rethrower declines the whole de-duplication, real finally included. Likewise a
@@ -5248,26 +6412,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             if (handlerRethrows(h) && !handlerThrowsFreshException(h) && !isLocalSpillRethrower(h)
                     && h.getTryStart() != null && h.getTryEnd() != null
                     && (h.isCatchAll() || h.getHandlerBlock() == null
-                        || handlerHasFinallyEvidence(h.getHandlerBlock()))) {
+                        || handlerHasFinallyEvidence(h.getHandlerBlock())))
+            {
                 // A typed rethrower without finally evidence is a user catch-rethrow, not a finally: it
                 // has no inlined copies to hunt, and offering it would decline the whole family - sinking
                 // the REAL finallies offered alongside it.
                 rethrowers.add(h);
             }
         }
-        if (rethrowers.isEmpty()) {
+        if (rethrowers.isEmpty())
+        {
             return false;
         }
-        if (finallyDeduped.containsAll(rethrowers)) {
+        if (finallyDeduped.containsAll(rethrowers))
+        {
             return true;
         }
-        for (ExceptionHandler h : rethrowers) {
-            if (straightLineFinallyTemplate(h) == null) {
+        for (ExceptionHandler h : rethrowers)
+        {
+            if (straightLineFinallyTemplate(h) == null)
+            {
                 // Independent finally handlers (two try-with-resources resources in one region) form
                 // separate groups keyed by handler block; each group's all-or-nothing invariant is its
                 // own, and the region is de-duplicated only when EVERY group is.
                 Map<IRBlock, List<ExceptionHandler>> byRoot = new LinkedHashMap<>();
-                for (ExceptionHandler r : rethrowers) {
+                for (ExceptionHandler r : rethrowers)
+                {
                     byRoot.computeIfAbsent(r.getHandlerBlock(), k -> new ArrayList<>()).add(r);
                 }
                 currentDedupOffering.clear();
@@ -5278,14 +6448,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 List<List<ExceptionHandler>> groups = new ArrayList<>(byRoot.values());
                 groups.sort(Comparator.comparingInt(g -> {
                     int span = 0;
-                    for (ExceptionHandler r : g) {
+                    for (ExceptionHandler r : g)
+                    {
                         int lo = r.getTryStart() == null ? 0 : r.getTryStart().getBytecodeOffset();
                         int hi = r.getTryEnd() == null ? 0 : r.getTryEnd().getBytecodeOffset();
                         span += Math.max(0, hi - lo);
                     }
                     return span;
                 }));
-                for (List<ExceptionHandler> group : groups) {
+                for (List<ExceptionHandler> group : groups)
+                {
                     // A mixed family (a branchy close guard alongside a straight-line accumulator) must
                     // not force every group branchy: a group whose own template IS straight-line gets the
                     // contiguous excision - the branchy matcher walks an empty template subtree for a
@@ -5293,7 +6465,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     boolean ok = dedupContiguousGroup(group) || dedupBranchySubgraphFinally(group, consumeShells);
                     trace("finally-dedup group root=" + group.get(0).getHandlerBlock().getBytecodeOffset()
                             + " ok=" + ok);
-                    if (!ok) {
+                    if (!ok)
+                    {
                         return false;
                     }
                 }
@@ -5309,116 +6482,153 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * edge's target), and all copies are excised together. Returns false - leaving the IR untouched - for
      * a branchy template or an uncovered exit.
      */
-    private boolean dedupContiguousGroup(List<ExceptionHandler> rethrowers) {
+    private boolean dedupContiguousGroup(List<ExceptionHandler> rethrowers)
+    {
         IRMethod method = context.getIrMethod();
         List<IRInstruction> template = null;
         Set<IRBlock> protectedBlocks = new HashSet<>();
         Set<IRBlock> handlerBlocks = new HashSet<>();
-        for (ExceptionHandler h : rethrowers) {
+        for (ExceptionHandler h : rethrowers)
+        {
             List<IRInstruction> t = straightLineFinallyTemplate(h);
-            if (t == null) {
+            if (t == null)
+            {
                 return false;
             }
-            if (template == null) {
+            if (template == null)
+            {
                 template = t;
             }
             int lo = h.getTryStart().getBytecodeOffset();
             int hi = h.getTryEnd().getBytecodeOffset();
-            for (IRBlock b : method.getBlocks()) {
+            for (IRBlock b : method.getBlocks())
+            {
                 int off = b.getBytecodeOffset();
-                if (off >= lo && off < hi) {
+                if (off >= lo && off < hi)
+                {
                     protectedBlocks.add(b);
                 }
             }
-            if (extendedFinallyDedup) {
+            if (extendedFinallyDedup)
+            {
                 List<IRBlock> chain = finallyHandlerChain(h);
-                if (chain != null) {
+                if (chain != null)
+                {
                     handlerBlocks.addAll(chain);
                 }
-            } else if (h.getHandlerBlock() != null) {
+            }
+            else if (h.getHandlerBlock() != null)
+            {
                 handlerBlocks.add(h.getHandlerBlock());
             }
         }
         // A self-protecting entry (the finally body covered by its own handler) would put the handler
         // chain in the protected set and excise the clause itself; the template blocks are never copies.
         protectedBlocks.removeAll(handlerBlocks);
-        if (protectedBlocks.isEmpty()) {
+        if (protectedBlocks.isEmpty())
+        {
             return false;
         }
         Set<IRBlock> scan = new LinkedHashSet<>(protectedBlocks);
-        for (IRBlock p : protectedBlocks) {
-            for (IRBlock s : p.getSuccessors()) {
-                if (!handlerBlocks.contains(s)) {
+        for (IRBlock p : protectedBlocks)
+        {
+            for (IRBlock s : p.getSuccessors())
+            {
+                if (!handlerBlocks.contains(s))
+                {
                     scan.add(s);
                 }
             }
         }
         List<List<IRInstruction>> excisions = new ArrayList<>();
-        if (extendedFinallyDedup) {
+        if (extendedFinallyDedup)
+        {
             // The all-or-nothing invariant, per EXIT: every normal edge out of the protected region, and
             // every return from inside it, must be covered by a copy in the edge's source or target block -
             // the finally must have run on that path. A block reached only THROUGH a copy (e.g. a return
             // shared by several already-covered exits) needs no copy of its own.
             Map<IRBlock, Integer> matchAt = new HashMap<>();
-            for (IRBlock b : scan) {
-                if (!handlerBlocks.contains(b)) {
+            for (IRBlock b : scan)
+            {
+                if (!handlerBlocks.contains(b))
+                {
                     matchAt.put(b, contiguousTemplateStart(b, template));
                 }
             }
-            for (IRBlock p : protectedBlocks) {
-                if (handlerBlocks.contains(p)) {
+            for (IRBlock p : protectedBlocks)
+            {
+                if (handlerBlocks.contains(p))
+                {
                     continue;
                 }
                 boolean pCovered = matchAt.getOrDefault(p, -1) >= 0;
-                if (!pCovered && p.getTerminator() instanceof ReturnInstruction) {
+                if (!pCovered && p.getTerminator() instanceof ReturnInstruction)
+                {
                     return false;
                 }
-                for (IRBlock s2 : p.getSuccessors()) {
-                    if (protectedBlocks.contains(s2) || handlerBlocks.contains(s2)) {
+                for (IRBlock s2 : p.getSuccessors())
+                {
+                    if (protectedBlocks.contains(s2) || handlerBlocks.contains(s2))
+                    {
                         continue;
                     }
-                    if (!pCovered && matchAt.getOrDefault(s2, -1) < 0 && !isBareRethrowTail(s2)) {
+                    if (!pCovered && matchAt.getOrDefault(s2, -1) < 0 && !isBareRethrowTail(s2))
+                    {
                         return false;
                     }
                 }
             }
-            for (Map.Entry<IRBlock, Integer> e : matchAt.entrySet()) {
-                if (e.getValue() >= 0) {
+            for (Map.Entry<IRBlock, Integer> e : matchAt.entrySet())
+            {
+                if (e.getValue() >= 0)
+                {
                     excisions.add(new ArrayList<>(
                             e.getKey().getInstructions().subList(e.getValue(), e.getValue() + template.size())));
                 }
             }
-        } else {
-            for (IRBlock b : scan) {
+        }
+        else
+        {
+            for (IRBlock b : scan)
+            {
                 int at = contiguousTemplateStart(b, template);
-                if (at >= 0) {
+                if (at >= 0)
+                {
                     excisions.add(new ArrayList<>(b.getInstructions().subList(at, at + template.size())));
-                } else if (leavesRegion(b, protectedBlocks) && !isBareRethrowTail(b)) {
+                }
+                else if (leavesRegion(b, protectedBlocks) && !isBareRethrowTail(b))
+                {
                     // The copy covering this exit may sit in the edge's TARGET instead of the leaving block
                     // itself: javac places the inlined finally in a dedicated block between the protected
                     // range and the continuation. A return leaving from inside the block has no such target
                     // and stays uncovered.
                     boolean coveredByTarget = !(b.getTerminator() instanceof ReturnInstruction);
-                    for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() != EdgeType.NORMAL) {
+                    for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+                    {
+                        if (e.getValue() != EdgeType.NORMAL)
+                        {
                             continue;
                         }
                         IRBlock t = e.getKey();
-                        if (protectedBlocks.contains(t) || handlerBlocks.contains(t) || isBareRethrowTail(t)) {
+                        if (protectedBlocks.contains(t) || handlerBlocks.contains(t) || isBareRethrowTail(t))
+                        {
                             continue;
                         }
-                        if (contiguousTemplateStart(t, template) < 0) {
+                        if (contiguousTemplateStart(t, template) < 0)
+                        {
                             coveredByTarget = false;
                             break;
                         }
                     }
-                    if (!coveredByTarget) {
+                    if (!coveredByTarget)
+                    {
                         return false;
                     }
                 }
             }
         }
-        if (excisions.isEmpty()) {
+        if (excisions.isEmpty())
+        {
             // Every exit passed the coverage checks yet no copy exists anywhere: the protected range
             // is fully terminal (every path throws into the scaffolding or ends in a bare rethrow
             // tail), so javac had no normal path to inline the finally on. Vacuously de-duplicated -
@@ -5429,8 +6639,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             finallyDeduped.addAll(rethrowers);
             return true;
         }
-        for (List<IRInstruction> run : excisions) {
-            for (IRInstruction ins : run) {
+        for (List<IRInstruction> run : excisions)
+        {
+            for (IRInstruction ins : run)
+            {
                 ins.getBlock().removeInstruction(ins);
             }
         }
@@ -5439,29 +6651,42 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return true;
     }
 
-    /** A block that leaves the protected region: it returns/throws, or has a successor outside the region. */
-    private boolean leavesRegion(IRBlock b, Set<IRBlock> region) {
+    /**
+     * A block that leaves the protected region: it returns/throws, or has a successor outside the region.
+     */
+    private boolean leavesRegion(IRBlock b, Set<IRBlock> region)
+    {
         IRInstruction term = b.getTerminator();
-        if (term instanceof ReturnInstruction) {
+        if (term instanceof ReturnInstruction)
+        {
             return true;
         }
-        for (IRBlock s : b.getSuccessors()) {
-            if (!region.contains(s)) {
+        for (IRBlock s : b.getSuccessors())
+        {
+            if (!region.contains(s))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    /** A block whose only real content is a rethrow of a caught exception (the finally handler tail itself). */
-    private boolean isBareRethrowTail(IRBlock b) {
+    /**
+     * A block whose only real content is a rethrow of a caught exception (the finally handler tail itself).
+     */
+    private boolean isBareRethrowTail(IRBlock b)
+    {
         IRInstruction term = b.getTerminator();
         return term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW;
     }
 
-    /** An empty block or one whose only instruction is its goto terminator - a jump pad. */
-    private boolean isBareShellBlock(IRBlock b) {
-        if (b.getInstructions().isEmpty()) {
+    /**
+     * An empty block or one whose only instruction is its goto terminator - a jump pad.
+     */
+    private boolean isBareShellBlock(IRBlock b)
+    {
+        if (b.getInstructions().isEmpty())
+        {
             return true;
         }
         return b.getInstructions().size() == 1
@@ -5473,7 +6698,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Recovers blocks for a try region, stopping at the specified stop blocks.
      */
-    private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited) {
+    private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited)
+    {
         return recoverBlocksForTry(startBlock, stopBlocks, visited, false);
     }
 
@@ -5484,50 +6710,59 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * keys off the try-end offset and those marks, not this local visited set, so the engine need not populate
      * it.
      *
-     * <p>When {@code skipReachingConditions} is set the body bypasses the engine entirely. A finally's inlined
+     *When {@code skipReachingConditions} is set the body bypasses the engine entirely. A finally's inlined
      * copies are still present when the engine would structure the body (they are folded out afterward), which
      * inflates a guard's exit arm and flips the guard's orientation across a round trip; the legacy walk orients
      * guards on the un-inflated body and is a round-trip fixed point there.
      */
-    private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited,
-                                                boolean skipReachingConditions) {
-        if (!skipReachingConditions) {
+    private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited, boolean skipReachingConditions)
+    {
+        if (!skipReachingConditions)
+        {
             List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks);
-            if (structured == null) {
+            if (structured == null)
+            {
                 // A nested try inside this body becomes an opaque node instead of failing the region.
                 structured = rcsStructurer.tryStructureRegion(startBlock, stopBlocks, true);
             }
-            if (structured != null) {
+            if (structured != null)
+            {
                 return structured;
             }
         }
         List<Statement> result = new ArrayList<>();
         IRBlock current = startBlock;
 
-        while (current != null && !visited.contains(current) && !stopBlocks.contains(current)) {
+        while (current != null && !visited.contains(current) && !stopBlocks.contains(current))
+        {
             visited.add(current);
 
-            if (context.isProcessed(current)) {
+            if (context.isProcessed(current))
+            {
                 // A block another recovery already emitted is re-emitted ONLY when it is a bare return -
                 // a terminator is idempotent, and the walk reaching it means this path's own return
                 // converged there. Re-adding any OTHER processed block would run its side effects twice:
                 // an inlined finally copy consumed by a clause fold, re-encountered by the continuation
                 // walk, would release a lock or close a stream a second time.
-                if (isReturnBlock(current)) {
+                if (isReturnBlock(current))
+                {
                     result.addAll(context.getStatements(current));
                 }
                 IRBlock revisitNext = getNextSequentialBlock(current);
-                if (revisitNext == null && stopBlocks.isEmpty()) {
+                if (revisitNext == null && stopBlocks.isEmpty())
+                {
                     // A re-visited region header (if/switch/loop) has two-plus successors, so
-                    // getNextSequentialBlock stops the chain — but the fall-through past it continues
+                    // getNextSequentialBlock stops the chain - but the fall-through past it continues
                     // along the region merges to a shared trailing return that other arms already
                     // emitted. Walk the merge chain and re-emit that return (a terminator is
                     // idempotent) without re-adding the intermediate, already-emitted blocks, which
                     // would duplicate them.
                     IRBlock chain = current;
                     Set<IRBlock> chainSeen = new HashSet<>();
-                    while (chain != null && chainSeen.add(chain)) {
-                        if (chain != current && isReturnBlock(chain) && context.isProcessed(chain)) {
+                    while (chain != null && chainSeen.add(chain))
+                    {
+                        if (chain != current && isReturnBlock(chain) && context.isProcessed(chain))
+                        {
                             result.addAll(context.getStatements(chain));
                             break;
                         }
@@ -5542,14 +6777,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
 
             RegionInfo info = analyzer.getRegionInfo(current);
-            if (info == null) {
-                if (current.getTerminator() instanceof SwitchInstruction) {
+            if (info == null)
+            {
+                if (current.getTerminator() instanceof SwitchInstruction)
+                {
                     // A dispatch the analyzer could not classify (its arms woven through an
                     // enclosing construct's scaffolding) must never fall through its terminator -
                     // the sequential walk would silently adopt one arm and drop the rest. Offer it
                     // to the engine as a terminal region; otherwise decline loudly.
                     OfferResult offered = offerTerminalRegion(current, new HashSet<>(stopBlocks));
-                    if (offered != null) {
+                    if (offered != null)
+                    {
                         result.addAll(offered.statements);
                         current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
                                 && (!context.isProcessed(offered.continuation)
@@ -5576,22 +6814,27 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 IRBlock bodyBound = null;
                 boolean bodyTerminalRegion = false;
                 boolean strictOffer = false;
-                switch (info.getType()) {
+                switch (info.getType())
+                {
                     case GUARD_CLAUSE:
                         // A guard clause bounds at its merge like an if; the skip mode keeps the
                         // walk (a finally's inlined copies inflate the guard's exit arm).
-                        if (!skipReachingConditions) {
+                        if (!skipReachingConditions)
+                        {
                             bodyBound = info.getMergeBlock();
                             bodyTerminalRegion = bodyBound == null;
                         }
                         break;
                     case IF_THEN:
                     case IF_THEN_ELSE:
-                        if (!skipReachingConditions) {
+                        if (!skipReachingConditions)
+                        {
                             bodyBound = info.getMergeBlock();
                             bodyTerminalRegion = bodyBound == null;
-                        } else if (info.getMergeBlock() != null
-                                && regionIsCopyFree(current, info.getMergeBlock(), stopBlocks)) {
+                        }
+                        else if (info.getMergeBlock() != null
+                                && regionIsCopyFree(current, info.getMergeBlock(), stopBlocks))
+                        {
                             // A surviving inlined copy always precedes an exit from the protected range,
                             // so a diamond whose blocks reach no terminal and whose single exit is its
                             // own non-terminal merge cannot contain one - safe to structure even while
@@ -5609,21 +6852,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     default:
                         break;
                 }
-                if (bodyTerminalRegion) {
+                if (bodyTerminalRegion)
+                {
                     OfferResult offered = offerTerminalRegion(current, new HashSet<>(stopBlocks));
-                    if (offered != null) {
+                    if (offered != null)
+                    {
                         result.addAll(offered.statements);
                         current = offered.continuation != null && !stopBlocks.contains(offered.continuation)
                                 && (!context.isProcessed(offered.continuation)
                                 || isTerminalTail(offered.continuation)) ? offered.continuation : null;
                         continue;
                     }
-                } else if (bodyBound != null && !visited.contains(bodyBound)) {
+                }
+                else if (bodyBound != null && !visited.contains(bodyBound))
+                {
                     Set<IRBlock> offeredStops = new HashSet<>(stopBlocks);
                     offeredStops.add(bodyBound);
                     List<Statement> structuredRegion =
                             offerRegionToEngine(current, offeredStops, bodyBound, !strictOffer);
-                    if (structuredRegion != null) {
+                    if (structuredRegion != null)
+                    {
                         result.addAll(structuredRegion);
                         current = stopBlocks.contains(bodyBound)
                                 || (context.isProcessed(bodyBound) && !isTerminalTail(bodyBound))
@@ -5633,13 +6881,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
             }
 
-            switch (info.getType()) {
+            switch (info.getType())
+            {
                 case IF_THEN:
                     throw retiredSchemaRecovery("if-then", current);
                 case IF_THEN_ELSE:
                     throw retiredSchemaRecovery("if-else", current);
-                case WHILE_LOOP: {
-                    if (loopCutByStops(info, stopBlocks)) {
+                case WHILE_LOOP:
+                {
+                    if (loopCutByStops(info, stopBlocks))
+                    {
                         List<Statement> headerStmts = recoverSimpleBlock(current);
                         result.addAll(headerStmts);
                         context.setStatements(current, headerStmts);
@@ -5649,8 +6900,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     }
                     throw retiredSchemaRecovery("while", current);
                 }
-                case DO_WHILE_LOOP: {
-                    if (loopCutByStops(info, stopBlocks)) {
+                case DO_WHILE_LOOP:
+                {
+                    if (loopCutByStops(info, stopBlocks))
+                    {
                         List<Statement> headerStmts = recoverSimpleBlock(current);
                         result.addAll(headerStmts);
                         context.setStatements(current, headerStmts);
@@ -5660,8 +6913,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     }
                     throw retiredSchemaRecovery("do-while", current);
                 }
-                case FOR_LOOP: {
-                    if (loopCutByStops(info, stopBlocks)) {
+                case FOR_LOOP:
+                {
+                    if (loopCutByStops(info, stopBlocks))
+                    {
                         List<Statement> headerStmts = recoverSimpleBlock(current);
                         result.addAll(headerStmts);
                         context.setStatements(current, headerStmts);
@@ -5673,7 +6928,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
                 case GUARD_CLAUSE:
                     throw retiredSchemaRecovery("guard", current);
-                default: {
+                default:
+                {
                     List<Statement> blockStmts = recoverSimpleBlock(current);
                     result.addAll(blockStmts);
                     context.setStatements(current, blockStmts);
@@ -5687,26 +6943,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // A path that exits this sequence into a loop's exit (break) or continue-target (continue) is an
         // explicit jump. The innermost loop yields an unlabeled break/continue; an enclosing loop yields a
         // labeled one. A redundant trailing `continue` to the innermost loop is stripped by the loop recovery.
-        if (current != null) {
+        if (current != null)
+        {
             ControlFlowContext.LoopJump jump = context.classifyLoopJump(current);
-            if (jump != null) {
+            if (jump != null)
+            {
                 String label = jump.loopHeader != null ? context.getOrCreateLabel(jump.loopHeader) : null;
-                if (jump.kind == ControlFlowContext.JumpKind.BREAK) {
+                if (jump.kind == ControlFlowContext.JumpKind.BREAK)
+                {
                     result.add(label != null ? new BreakStmt(label) : new BreakStmt());
-                } else {
+                }
+                else
+                {
                     result.add(label != null ? new ContinueStmt(label) : new ContinueStmt());
                 }
                 return result;
             }
         }
 
-        if (current != null && stopBlocks.contains(current) && !visited.contains(current)) {
+        if (current != null && stopBlocks.contains(current) && !visited.contains(current))
+        {
             // Only absorb a trailing terminator (e.g. a return) that is not the shared continuation of a
             // try/catch. A return block that a try body falls into AND a catch jumps to is the continuation
             // after the try/catch, not the try's own terminator; absorbing it emits a spurious `return;` inside
             // the try. (A switch/if merge-return reached only from normal case blocks is still absorbed.)
             if (isSimpleTerminatorBlock(current)
-                    && (visited.containsAll(current.getPredecessors()) || !isReachedFromCatchHandler(current))) {
+                    && (visited.containsAll(current.getPredecessors()) || !isReachedFromCatchHandler(current)))
+            {
                 List<Statement> termStmts = recoverSimpleBlock(current);
                 result.addAll(termStmts);
                 visited.add(current);
@@ -5716,16 +6979,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return result;
     }
 
-    private boolean isSimpleTerminatorBlock(IRBlock block) {
+    private boolean isSimpleTerminatorBlock(IRBlock block)
+    {
         List<IRInstruction> instrs = block.getInstructions();
         if (instrs.isEmpty()) return false;
         int terminatorCount = 0;
-        for (IRInstruction instr : instrs) {
-            if (instr instanceof ReturnInstruction) {
+        for (IRInstruction instr : instrs)
+        {
+            if (instr instanceof ReturnInstruction)
+            {
                 terminatorCount++;
-            } else if (instr instanceof SimpleInstruction) {
+            }
+            else if (instr instanceof SimpleInstruction)
+            {
                 SimpleOp op = ((SimpleInstruction) instr).getOp();
-                if (op == SimpleOp.ATHROW || op == SimpleOp.GOTO) {
+                if (op == SimpleOp.ATHROW || op == SimpleOp.GOTO)
+                {
                     terminatorCount++;
                 }
             }
@@ -5736,22 +7005,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Finds the block to continue from after a try-catch region.
      */
-    private IRBlock findBlockAfterTryCatch(ExceptionHandler handler, Set<IRBlock> visited) {
+    private IRBlock findBlockAfterTryCatch(ExceptionHandler handler, Set<IRBlock> visited)
+    {
         IRBlock after = findBlockAfterTryCatch0(handler, visited);
         // A continuation on an active outer stop boundary (a pushed loop exit, a finally gap's end) is
         // owned by the enclosing recovery; walking it from here would pull outer code - e.g. the method's
         // trailing return - into this nested region and mark it consumed, dropping it from its real place.
-        if (after != null && context.getAllStopBlocks().contains(after)) {
+        if (after != null && context.getAllStopBlocks().contains(after))
+        {
             return null;
         }
         return after;
     }
 
-    private IRBlock findBlockAfterTryCatch0(ExceptionHandler handler, Set<IRBlock> visited) {
+    private IRBlock findBlockAfterTryCatch0(ExceptionHandler handler, Set<IRBlock> visited)
+    {
         IRBlock handlerBlock = handler.getHandlerBlock();
-        if (handlerBlock != null) {
-            for (IRBlock succ : handlerBlock.getSuccessors()) {
-                if (!visited.contains(succ)) {
+        if (handlerBlock != null)
+        {
+            for (IRBlock succ : handlerBlock.getSuccessors())
+            {
+                if (!visited.contains(succ))
+                {
                     return succ;
                 }
             }
@@ -5762,10 +7037,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // through directly at the end offset, and a strictly-greater scan would skip it (dropping the code
         // between this try and the next). Pick the unvisited non-handler block nearest at-or-past the end.
         int endOffset = mergedTryEndOffset(handler);
-        if (endOffset >= 0) {
+        if (endOffset >= 0)
+        {
             IRMethod irMethod = context.getIrMethod();
             IRBlock best = null;
-            for (IRBlock block : irMethod.getBlocks()) {
+            for (IRBlock block : irMethod.getBlocks())
+            {
                 // An excised inlined-finally copy carries no statements and is marked processed; picking it
                 // as the continuation would land on a dead shell and drop the real continuation past it (the
                 // method's trailing return). Skip consumed shells so the nearest LIVE block past the end wins.
@@ -5773,7 +7050,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                         && block != handler.getHandlerBlock()
                         && !consumedFinallyShells.contains(block)
                         && !(!consumedFinallyShells.isEmpty() && context.isProcessed(block))
-                        && (best == null || block.getBytecodeOffset() < best.getBytecodeOffset())) {
+                        && (best == null || block.getBytecodeOffset() < best.getBytecodeOffset()))
+                {
                     best = block;
                 }
             }
@@ -5790,97 +7068,128 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * block); the continuation lies past the LAST entry's end, so using the passed entry's own {@code
      * tryEnd} would land on a block still inside the region. Mirrors the range-merge in recoverTryCatch.
      */
-    private int mergedTryEndOffset(ExceptionHandler handler) {
+    private int mergedTryEndOffset(ExceptionHandler handler)
+    {
         int end = handler.getTryEnd() != null ? handler.getTryEnd().getBytecodeOffset() : -1;
-        if (handler.getHandlerBlock() == null) {
+        if (handler.getHandlerBlock() == null)
+        {
             return end;
         }
-        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
-            if (h.getHandlerBlock() == handler.getHandlerBlock() && h.getTryEnd() != null) {
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() == handler.getHandlerBlock() && h.getTryEnd() != null)
+            {
                 end = Math.max(end, h.getTryEnd().getBytecodeOffset());
             }
         }
         return end;
     }
 
-    /** Whether {@code b}'s bytecode offset lies within some handler's protected {@code [tryStart, tryEnd)} range. */
-    private boolean isWithinProtectedRange(IRBlock b, List<ExceptionHandler> handlers) {
+    /**
+     * Whether {@code b}'s bytecode offset lies within some handler's protected {@code [tryStart, tryEnd)} range.
+     */
+    private boolean isWithinProtectedRange(IRBlock b, List<ExceptionHandler> handlers)
+    {
         int off = b.getBytecodeOffset();
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             if (h.getTryStart() != null && h.getTryEnd() != null
                     && off >= h.getTryStart().getBytecodeOffset()
-                    && off < h.getTryEnd().getBytecodeOffset()) {
+                    && off < h.getTryEnd().getBytecodeOffset())
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isTerminatingTryCatch(TryCatchStmt tryCatch) {
-        if (!isTerminatingBranch(tryCatch.getTryBlock())) {
+    private boolean isTerminatingTryCatch(TryCatchStmt tryCatch)
+    {
+        if (!isTerminatingBranch(tryCatch.getTryBlock()))
+        {
             return false;
         }
-        for (CatchClause clause : tryCatch.getCatches()) {
-            if (!isTerminatingBranch(clause.body())) {
+        for (CatchClause clause : tryCatch.getCatches())
+        {
+            if (!isTerminatingBranch(clause.body()))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    /** Whether a try/catch or synchronized statement recovered for a region leaves no normal fall-through. */
-    private boolean isTerminatingRecoveredTry(Statement recovered) {
-        if (recovered instanceof TryCatchStmt) {
+    /**
+     * Whether a try/catch or synchronized statement recovered for a region leaves no normal fall-through.
+     */
+    private boolean isTerminatingRecoveredTry(Statement recovered)
+    {
+        if (recovered instanceof TryCatchStmt)
+        {
             return isTerminatingTryCatch((TryCatchStmt) recovered);
         }
-        if (recovered instanceof SynchronizedStmt) {
+        if (recovered instanceof SynchronizedStmt)
+        {
             return isTerminatingBranch(((SynchronizedStmt) recovered).getBody());
         }
         return false;
     }
 
-    private boolean isTerminatingBlock(BlockStmt block) {
-        if (block == null || block.getStatements().isEmpty()) {
+    private boolean isTerminatingBlock(BlockStmt block)
+    {
+        if (block == null || block.getStatements().isEmpty())
+        {
             return false;
         }
         Statement lastStmt = block.getStatements().get(block.getStatements().size() - 1);
         return isTerminatingStatement(lastStmt);
     }
 
-    private boolean isTerminatingStatement(Statement stmt) {
+    private boolean isTerminatingStatement(Statement stmt)
+    {
         if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
-                || stmt instanceof BreakStmt || stmt instanceof ContinueStmt) {
+                || stmt instanceof BreakStmt || stmt instanceof ContinueStmt)
+        {
             return true;
         }
-        if (stmt instanceof IfStmt) {
+        if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
-            if (ifStmt.getElseBranch() == null) {
+            if (ifStmt.getElseBranch() == null)
+            {
                 return false;
             }
             return isTerminatingBranch(ifStmt.getThenBranch())
                 && isTerminatingBranch(ifStmt.getElseBranch());
         }
-        if (stmt instanceof TryCatchStmt) {
+        if (stmt instanceof TryCatchStmt)
+        {
             return isTerminatingTryCatch((TryCatchStmt) stmt);
         }
-        if (stmt instanceof BlockStmt) {
+        if (stmt instanceof BlockStmt)
+        {
             return isTerminatingBlock((BlockStmt) stmt);
         }
-        if (stmt instanceof SwitchStmt) {
+        if (stmt instanceof SwitchStmt)
+        {
             // A switch terminates when every arm does (returns/throws; a break falls out and does
             // NOT terminate) and a default arm makes the dispatch total.
             SwitchStmt sw = (SwitchStmt) stmt;
             boolean hasDefault = false;
-            for (SwitchCase c : sw.getCases()) {
-                if (c.isDefault()) {
+            for (SwitchCase c : sw.getCases())
+            {
+                if (c.isDefault())
+                {
                     hasDefault = true;
                 }
                 List<Statement> body = c.statements();
-                if (body.isEmpty()) {
+                if (body.isEmpty())
+                {
                     return false;
                 }
                 Statement last = body.get(body.size() - 1);
-                if (last instanceof BreakStmt || !isTerminatingStatement(last)) {
+                if (last instanceof BreakStmt || !isTerminatingStatement(last))
+                {
                     return false;
                 }
             }
@@ -5889,18 +7198,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private boolean isTerminatingBranch(Statement branch) {
-        if (branch instanceof BlockStmt) {
+    private boolean isTerminatingBranch(Statement branch)
+    {
+        if (branch instanceof BlockStmt)
+        {
             return isTerminatingBlock((BlockStmt) branch);
         }
         return isTerminatingStatement(branch);
     }
 
 
-    /** Map from local slot name to unified type (computed from all assignments) */
+    /**
+     * Map from local slot name to unified type (computed from all assignments)
+     */
     private final Map<String, SourceType> localSlotUnifiedTypes = new HashMap<>();
 
-    /** Maps slot index to (typeCategory -> variableName) for consistent naming of reused slots */
+    /**
+     * Maps slot index to (typeCategory -&gt; variableName) for consistent naming of reused slots
+     */
     private final Map<Integer, Map<String, String>> slotTypeCategoryToName = new HashMap<>();
 
     /**
@@ -5910,7 +7225,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      */
     private final Set<Integer> phiSlots = new HashSet<>();
 
-    private void emitPhiDeclarations(IRMethod method, List<Statement> statements) {
+    private void emitPhiDeclarations(IRMethod method, List<Statement> statements)
+    {
         Set<SSAValue> phiValues = new LinkedHashSet<>();
         Set<String> declaredNames = new HashSet<>();
 
@@ -5927,22 +7243,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         // PRE-PASS: Identify slots that have phis (values merging from multiple branches)
         // For these slots, we use coarse type categories so all branches share the same variable name
-        for (IRBlock block : method.getBlocks()) {
-            if (handlerBlocks.contains(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (handlerBlocks.contains(block))
+            {
                 continue;
             }
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 int localIndex = getLocalIndexFromPhi(phi);
-                if (localIndex >= 0) {
+                if (localIndex >= 0)
+                {
                     phiSlots.add(localIndex);
                 }
             }
         }
 
         // PASS 1: Process ALL StoreLocalInstruction to establish slot names
-        for (IRBlock block : method.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction) {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof StoreLocalInstruction)
+                {
                     StoreLocalInstruction storeLocal = (StoreLocalInstruction) instr;
                     int localIndex = storeLocal.getLocalIndex();
 
@@ -5950,26 +7273,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     SourceType storedType = typeRecoverer.recoverType(storedValue);
 
                     String localName = partitionName(storeLocal);
-                    if (localName == null) {
+                    if (localName == null)
+                    {
                         localName = getNameForLocalSlotWithType(localIndex, storedType);
                     }
                     context.getExpressionContext().setLocalSlotName(localIndex, localName);
 
-                    if (storedType != null && !storedType.isVoid() && !isNullValue(storedValue)) {
+                    if (storedType != null && !storedType.isVoid() && !isNullValue(storedValue))
+                    {
                         localSlotTypes.computeIfAbsent(localName, k -> new ArrayList<>()).add(storedType);
                         String narrow = narrowLvtDescriptor(localIndex, storeLocal.getBytecodeOffset());
-                        if (narrow != null) {
+                        if (narrow != null)
+                        {
                             String prev = localSlotLvtNarrow.putIfAbsent(localName, narrow);
-                            if (prev != null && !prev.equals(narrow)) {
+                            if (prev != null && !prev.equals(narrow))
+                            {
                                 localSlotLvtNarrow.put(localName, "CONFLICT");
                             }
                         }
                     }
 
-                    if (storedValue instanceof SSAValue) {
+                    if (storedValue instanceof SSAValue)
+                    {
                         SSAValue sourceValue = (SSAValue) storedValue;
-                        if (isUsedByArrayStore(sourceValue)) {
-                            if (context.getExpressionContext().isPendingNew(sourceValue)) {
+                        if (isUsedByArrayStore(sourceValue))
+                        {
+                            if (context.getExpressionContext().isPendingNew(sourceValue))
+                            {
                                 String className = context.getExpressionContext().consumePendingNew(sourceValue);
                                 context.getExpressionContext().registerPendingNewLocalSlot(localIndex, className);
                             }
@@ -5991,13 +7321,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                                 && (existingName == null
                                 || isSyntheticValueName(existingName)
                                 || existingName.matches("[a-z]\\d+"));
-                        if (shouldOverwrite) {
+                        if (shouldOverwrite)
+                        {
                             context.getExpressionContext().setVariableName(sourceValue, localName);
                             context.getExpressionContext().markMaterialized(sourceValue);
                             context.getExpressionContext().setSSAValueSlot(sourceValue, localIndex);
                         }
 
-                        if (context.getExpressionContext().isPendingNew(sourceValue)) {
+                        if (context.getExpressionContext().isPendingNew(sourceValue))
+                        {
                             String className = context.getExpressionContext().consumePendingNew(sourceValue);
                             context.getExpressionContext().registerPendingNewLocalSlot(localIndex, className);
                         }
@@ -6009,10 +7341,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // Compute unified types for each variable name AFTER PASS 1 but BEFORE PASS 2.
         // PASS 2 needs this data to correctly determine type compatibility for loads.
         localSlotUnifiedTypes.clear();
-        for (Map.Entry<String, List<SourceType>> entry : localSlotTypes.entrySet()) {
+        for (Map.Entry<String, List<SourceType>> entry : localSlotTypes.entrySet())
+        {
             String slotName = entry.getKey();
             List<SourceType> types = entry.getValue();
-            if (!types.isEmpty()) {
+            if (!types.isEmpty())
+            {
                 // A name whose stores mix primitive and reference types cannot be one Java variable: it groups
                 // distinct variables that legally share a name across disjoint scopes (e.g. a boxed-value transient
                 // and an int loop counter both named `i`). Unifying the whole set would widen to Object and mistype
@@ -6020,10 +7354,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // type. The reference-typed stores are a separate scope resolved by their own value expressions.
                 List<SourceType> primitiveTypes = new ArrayList<>();
                 boolean hasReference = false;
-                for (SourceType t : types) {
-                    if (t.isPrimitive()) {
+                for (SourceType t : types)
+                {
+                    if (t.isPrimitive())
+                    {
                         primitiveTypes.add(t);
-                    } else {
+                    }
+                    else
+                    {
                         hasReference = true;
                     }
                 }
@@ -6033,7 +7371,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // char/byte/short/boolean local stored through int-shaped bytecode (e.g. a synthetic `= 0`
                 // init) otherwise widens to `int`, losing the declared type and drifting from javac.
                 String narrow = localSlotLvtNarrow.get(slotName);
-                if (narrow != null && !"CONFLICT".equals(narrow) && unifiedType == PrimitiveSourceType.INT) {
+                if (narrow != null && !"CONFLICT".equals(narrow) && unifiedType == PrimitiveSourceType.INT)
+                {
                     unifiedType = typeRecoverer.recoverType(narrow);
                 }
                 localSlotUnifiedTypes.put(slotName, unifiedType);
@@ -6042,22 +7381,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         // PASS 2: Process ALL LoadLocalInstruction now that slot names are established
         // Always use the category-based name lookup to ensure loads match the correct store
-        for (IRBlock block : method.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof LoadLocalInstruction) {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof LoadLocalInstruction)
+                {
                     LoadLocalInstruction loadLocal = (LoadLocalInstruction) instr;
-                    if (loadLocal.getResult() != null) {
+                    if (loadLocal.getResult() != null)
+                    {
                         int localIndex = loadLocal.getLocalIndex();
                         SourceType valueType = typeRecoverer.recoverType(loadLocal.getResult());
                         String localName = partitionName(loadLocal);
-                        if (localName == null) {
+                        if (localName == null)
+                        {
                             localName = getNameForLocalSlotWithType(localIndex, valueType);
                         }
                         context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
                         context.getExpressionContext().markMaterialized(loadLocal.getResult());
 
                         String pendingNewClass = context.getExpressionContext().consumePendingNewLocalSlot(localIndex);
-                        if (pendingNewClass != null) {
+                        if (pendingNewClass != null)
+                        {
                             context.getExpressionContext().registerPendingNew(loadLocal.getResult(), pendingNewClass);
                         }
                     }
@@ -6066,13 +7411,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
 
         List<PhiInstruction> phiInstructions = new ArrayList<>();
-        for (IRBlock block : method.getBlocks()) {
-            if (handlerBlocks.contains(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (handlerBlocks.contains(block))
+            {
                 continue;
             }
 
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                if (phi.getResult() != null) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                if (phi.getResult() != null)
+                {
                     phiValues.add(phi.getResult());
                     phiInstructions.add(phi);
                 }
@@ -6082,11 +7431,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         List<SSAValue> sortedValues = sortByDependencies(phiValues);
 
         Map<SSAValue, PhiInstruction> valueToPhiMap = new HashMap<>();
-        for (PhiInstruction phi : phiInstructions) {
+        for (PhiInstruction phi : phiInstructions)
+        {
             valueToPhiMap.put(phi.getResult(), phi);
         }
 
-        for (SSAValue value : sortedValues) {
+        for (SSAValue value : sortedValues)
+        {
             PhiInstruction phi = valueToPhiMap.get(value);
             emitPhiDeclaration(phi, statements, declaredNames, handlerBlocks);
         }
@@ -6094,16 +7445,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // Additional pass: Declare handler block phis that are used through store chains
         // These phis are skipped in the main pass but may still need declarations
         // when their values are assigned via NEW instructions
-        for (IRBlock block : method.getBlocks()) {
-            if (!handlerBlocks.contains(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (!handlerBlocks.contains(block))
+            {
                 continue;
             }
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                if (phi.getResult() != null && !phiValues.contains(phi.getResult())) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                if (phi.getResult() != null && !phiValues.contains(phi.getResult()))
+                {
                     String phiVarName = context.getExpressionContext().getVariableName(phi.getResult());
-                    if (phiVarName != null && !phiVarName.equals("this")
-                            && !isParameterOrThisRef(phi.getResult())) {
-                        if (!declaredNames.contains(phiVarName) && !context.getExpressionContext().isDeclared(phiVarName)) {
+                    if (phiVarName != null && !phiVarName.equals("this") && !isParameterOrThisRef(phi.getResult()))
+                    {
+                        if (!declaredNames.contains(phiVarName) && !context.getExpressionContext().isDeclared(phiVarName))
+                        {
                             SourceType type = computePhiUnifiedType(phi);
                             declaredNames.add(phiVarName);
                             context.getExpressionContext().markDeclared(phiVarName);
@@ -6117,8 +7473,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    /** A synthetic SSA value name ("v" followed by a digit, e.g. {@code v3} or {@code v3_0}) - not a real local name. */
-    private static boolean isSyntheticValueName(String name) {
+    /**
+     * A synthetic SSA value name ("v" followed by a digit, e.g. {@code v3} or {@code v3_0}) - not a real local name.
+     */
+    private static boolean isSyntheticValueName(String name)
+    {
         return name.length() > 1 && name.charAt(0) == 'v' && Character.isDigit(name.charAt(1));
     }
 
@@ -6128,19 +7487,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * following pc, so the entry's scope typically begins just after the store; a small forward window catches
      * it. Returns null when there is no such entry (no debug info, or the slot holds a wider type there).
      */
-    private String narrowLvtDescriptor(int slot, int offset) {
+    private String narrowLvtDescriptor(int slot, int offset)
+    {
         RecoveryContext ctx = context.getExpressionContext();
         String desc = ctx.debugDescriptorAtStore(slot, offset);
-        if (desc == null) {
+        if (desc == null)
+        {
             desc = ctx.debugDescriptorAt(slot, offset);
         }
         return desc != null && desc.length() == 1 && "ZBCS".indexOf(desc.charAt(0)) >= 0 ? desc : null;
     }
 
     /**
-     * Gets the unified type for a local slot, or null if not computed.
+     * Looks up the type unified across every value stored into a local slot.
+     *
+     * @param slotName the recovered variable name of the slot
+     * @return the unified type, or null if none was computed for the slot
      */
-    public SourceType getLocalSlotUnifiedType(String slotName) {
+    public SourceType getLocalSlotUnifiedType(String slotName)
+    {
         return localSlotUnifiedTypes.get(slotName);
     }
 
@@ -6148,8 +7513,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Emits a phi variable declaration with default value.
      * Uses unified type from all incoming phi values.
      */
-    private void emitPhiDeclaration(PhiInstruction phi, List<Statement> statements, Set<String> declaredNames,
-                                    Set<IRBlock> handlerBlocks) {
+    private void emitPhiDeclaration(PhiInstruction phi, List<Statement> statements, Set<String> declaredNames, Set<IRBlock> handlerBlocks)
+    {
         if (phi == null) return;
         SSAValue result = phi.getResult();
         if (result == null) return;
@@ -6159,7 +7524,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // join. The catch variable is declared by its own catch clause, so declaring this phi too emits a
         // spurious top-level `Exception e = null`. (Restricted to dead + handler-sourced so the load-bearing
         // pattern-switch dead phis, which have no handler operand, still declare.)
-        if (isDeadCatchVarPhi(phi, handlerBlocks)) {
+        if (isDeadCatchVarPhi(phi, handlerBlocks))
+        {
             return;
         }
 
@@ -6169,15 +7535,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the slot is really an int). Skip it so the slot is declared by its actual stores.
         // Coherent dead phis (all-reference or all-primitive) still declare normally, since
         // they carry the slot's correct unified type.
-        if (isTypePunDeadPhi(phi)) {
+        if (isTypePunDeadPhi(phi))
+        {
             return;
         }
 
-        if (selfStorePhis.contains(phi)) {
+        if (selfStorePhis.contains(phi))
+        {
             return;
         }
 
-        if (isForLoopInductionPhi(phi)) {
+        if (isForLoopInductionPhi(phi))
+        {
             return;
         }
 
@@ -6185,7 +7554,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         String name = partitionName(phi);
         String nameFromMethodRecoverer = context.getExpressionContext().getVariableName(result);
-        if (name == null) {
+        if (name == null)
+        {
             int localIndex = getLocalIndexFromPhi(phi);
             // A slot with no recovered name already carries a generated one, and that name IS the name for
             // this phi - take it as it stands. A slot that does have a recovered name goes through the typed
@@ -6194,22 +7564,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // info silently took a different path than the same class compiled without it.
             boolean slotIsNamed = localIndex >= 0
                     && context.getExpressionContext().debugNameForSlot(localIndex) != null;
-            if (nameFromMethodRecoverer != null && !slotIsNamed) {
+            if (nameFromMethodRecoverer != null && !slotIsNamed)
+            {
                 name = nameFromMethodRecoverer;
-            } else {
-                if (localIndex >= 0) {
+            }
+            else
+            {
+                if (localIndex >= 0)
+                {
                     name = getNameForLocalSlotWithType(localIndex, phiType);
                 }
-                if (name == null) {
+                if (name == null)
+                {
                     name = nameFromMethodRecoverer;
                 }
             }
         }
-        if (name == null) {
+        if (name == null)
+        {
             name = "v" + result.getId();
         }
 
-        if ("this".equals(name) || isParameterOrThisRef(result)) {
+        if ("this".equals(name) || isParameterOrThisRef(result))
+        {
             return;
         }
 
@@ -6219,12 +7596,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         SourceType type = localSlotUnifiedTypes.getOrDefault(name, phiType);
 
         boolean upgradedToBoolean = false;
-        if (type == PrimitiveSourceType.INT && phiReceivesBooleanConstantsOnly(phi)) {
+        if (type == PrimitiveSourceType.INT && phiReceivesBooleanConstantsOnly(phi))
+        {
             type = PrimitiveSourceType.BOOLEAN;
             upgradedToBoolean = true;
         }
 
-        if (declaredNames.contains(name) || context.getExpressionContext().isDeclared(name)) {
+        if (declaredNames.contains(name) || context.getExpressionContext().isDeclared(name))
+        {
             return;
         }
 
@@ -6233,7 +7612,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
 
-        if (upgradedToBoolean) {
+        if (upgradedToBoolean)
+        {
             localSlotUnifiedTypes.put(name, PrimitiveSourceType.BOOLEAN);
         }
 
@@ -6244,16 +7624,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // (e.g. an accumulator seeded from a parameter starts at 0). Only simple entry values (constant,
         // parameter, or a local load) are inlined, to avoid duplicating a side-effecting expression.
         Value entryInput = findLoopEntryInput(phi);
-        if (isSafeEntryInit(entryInput) && entryDominatesPhi(entryInput, phi)) {
+        if (isSafeEntryInit(entryInput) && entryDominatesPhi(entryInput, phi))
+        {
             Expression entryExpr = exprRecoverer.recoverOperand(entryInput, type);
-            if (isSelfReference(entryExpr, name)) {
+            if (isSelfReference(entryExpr, name))
+            {
                 // The entry value is materialized under this phi's own slot name, so recoverOperand
                 // returns a reference to the variable being declared. Recover its underlying constant
                 // directly so the entry value is not lost to a `T v = v` self-initializer (which a later
                 // pass then resolves to the loop-body store, e.g. `boolean captured = true`).
                 entryExpr = recoverEntryConstant(entryInput, type);
             }
-            if (entryExpr != null) {
+            if (entryExpr != null)
+            {
                 initValue = entryExpr;
                 entryApplied = true;
             }
@@ -6268,11 +7651,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // phi (a ternary's value join) carries a synthetic name: stealing its dominating operand into
         // that name severs the operand's real store/load web - the operand's own variable is left
         // assigned-but-unread while every use reads the synthetic, which only ever holds this default.
-        if (!entryApplied && (partitionName(phi) != null || getLocalIndexFromPhi(phi) >= 0)) {
+        if (!entryApplied && (partitionName(phi) != null || getLocalIndexFromPhi(phi) >= 0))
+        {
             Value dominating = findDominatingOperand(phi);
             if (dominating instanceof SSAValue && !isSafeEntryInit(dominating)
                     && entryDominatesPhi(dominating, phi)
-                    && !context.getExpressionContext().isMaterialized((SSAValue) dominating)) {
+                    && !context.getExpressionContext().isMaterialized((SSAValue) dominating))
+            {
                 SSAValue dominatingValue = (SSAValue) dominating;
                 context.getExpressionContext().setVariableName(dominatingValue, name);
                 context.getExpressionContext().markMaterialized(dominatingValue);
@@ -6280,7 +7665,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
         VarDeclStmt phiDecl = new VarDeclStmt(type, name, initValue);
-        if (partitionName(phi) == null && getLocalIndexFromPhi(phi) < 0) {
+        if (partitionName(phi) == null && getLocalIndexFromPhi(phi) < 0)
+        {
             // A slot-less stack phi has no source variable behind it: this declaration is the
             // recovery's own carrier (e.g. a value-yielding switch's merge), not source shape.
             phiDecl.markSynthetic();
@@ -6293,19 +7679,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * holds on entry to the merge, before any branch reassigns it. Null when no operand, or more than one
      * distinct value, dominates. The same value arriving from several predecessors still counts as one.
      */
-    private Value findDominatingOperand(PhiInstruction phi) {
+    private Value findDominatingOperand(PhiInstruction phi)
+    {
         IRBlock phiBlock = phi.getBlock();
-        if (phiBlock == null) {
+        if (phiBlock == null)
+        {
             return null;
         }
         Set<Value> dominating = new HashSet<>();
-        for (Value in : phi.getIncomingValues().values()) {
-            if (!(in instanceof SSAValue)) {
+        for (Value in : phi.getIncomingValues().values())
+        {
+            if (!(in instanceof SSAValue))
+            {
                 continue;
             }
             IRInstruction def = ((SSAValue) in).getDefinition();
             IRBlock defBlock = def != null ? def.getBlock() : null;
-            if (defBlock != null && analyzer.getDominatorTree().dominates(defBlock, phiBlock)) {
+            if (defBlock != null && analyzer.getDominatorTree().dominates(defBlock, phiBlock))
+            {
                 dominating.add(in);
             }
         }
@@ -6317,17 +7708,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * phi's block. A merge phi inside the loop body (e.g. one whose non-recursive incoming is a
      * mid-loop assignment) has a non-dominating "entry" that must not seed the slot's declaration.
      */
-    private boolean entryDominatesPhi(Value entryInput, PhiInstruction phi) {
+    private boolean entryDominatesPhi(Value entryInput, PhiInstruction phi)
+    {
         IRBlock phiBlock = phi.getBlock();
-        if (phiBlock == null) {
+        if (phiBlock == null)
+        {
             return false;
         }
-        if (entryInput instanceof Constant) {
+        if (entryInput instanceof Constant)
+        {
             return true;
         }
-        if (entryInput instanceof SSAValue) {
+        if (entryInput instanceof SSAValue)
+        {
             IRInstruction def = ((SSAValue) entryInput).getDefinition();
-            if (def == null) {
+            if (def == null)
+            {
                 // Definition-less means a parameter - always in scope - or an UNDEFINED slot read: the
                 // pre-loop path never wrote the slot, and rendering that input borrows whatever name a
                 // DISJOINT component left there (`Spatial child = t;` with t from an exclusive branch).
@@ -6340,8 +7736,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    /** Whether {@code expr} is a reference to the variable {@code name} - a self-initializer to reject. */
-    private boolean isSelfReference(Expression expr, String name) {
+    /**
+     * Whether {@code expr} is a reference to the variable {@code name} - a self-initializer to reject.
+     */
+    private boolean isSelfReference(Expression expr, String name)
+    {
         return expr instanceof VarRefExpr && name != null
                 && name.equals(((VarRefExpr) expr).getName());
     }
@@ -6350,32 +7749,45 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Recovers a constant-backed entry value as a literal, bypassing slot materialization. Returns null
      * when the entry input is not constant-backed, leaving the declaration's default initializer.
      */
-    private Expression recoverEntryConstant(Value entryInput, SourceType type) {
+    private Expression recoverEntryConstant(Value entryInput, SourceType type)
+    {
         Constant c = null;
-        if (entryInput instanceof Constant) {
+        if (entryInput instanceof Constant)
+        {
             c = (Constant) entryInput;
-        } else if (entryInput instanceof SSAValue) {
+        }
+        else if (entryInput instanceof SSAValue)
+        {
             IRInstruction def = ((SSAValue) entryInput).getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 c = ((ConstantInstruction) def).getConstant();
             }
         }
         return c != null ? exprRecoverer.recoverConstant(c, type) : null;
     }
 
-    /** For a loop-carried phi (exactly one input recurses through the phi result), returns the entry input; else null. */
-    private Value findLoopEntryInput(PhiInstruction phi) {
+    /**
+     * For a loop-carried phi (exactly one input recurses through the phi result), returns the entry input; else null.
+     */
+    private Value findLoopEntryInput(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
-        if (result == null) {
+        if (result == null)
+        {
             return null;
         }
         Value entry = null;
         int entryCount = 0;
         int recursiveCount = 0;
-        for (Value in : phi.getIncomingValues().values()) {
-            if (valueReaches(in, result, new HashSet<>())) {
+        for (Value in : phi.getIncomingValues().values())
+        {
+            if (valueReaches(in, result, new HashSet<>()))
+            {
                 recursiveCount++;
-            } else {
+            }
+            else
+            {
                 entry = in;
                 entryCount++;
             }
@@ -6383,30 +7795,39 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return (entryCount == 1 && recursiveCount >= 1) ? entry : null;
     }
 
-    private boolean valueReaches(Value v, SSAValue target, Set<Value> seen) {
-        if (v == target) {
+    private boolean valueReaches(Value v, SSAValue target, Set<Value> seen)
+    {
+        if (v == target)
+        {
             return true;
         }
-        if (!(v instanceof SSAValue) || !seen.add(v)) {
+        if (!(v instanceof SSAValue) || !seen.add(v))
+        {
             return false;
         }
         IRInstruction def = ((SSAValue) v).getDefinition();
-        if (def == null) {
+        if (def == null)
+        {
             return false;
         }
-        for (Value op : def.getOperands()) {
-            if (valueReaches(op, target, seen)) {
+        for (Value op : def.getOperands())
+        {
+            if (valueReaches(op, target, seen))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isSafeEntryInit(Value v) {
-        if (v instanceof Constant) {
+    private boolean isSafeEntryInit(Value v)
+    {
+        if (v instanceof Constant)
+        {
             return true;
         }
-        if (v instanceof SSAValue) {
+        if (v instanceof SSAValue)
+        {
             IRInstruction def = ((SSAValue) v).getDefinition();
             return def == null
                     || def instanceof ConstantInstruction
@@ -6419,27 +7840,30 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Checks if a PHI instruction corresponds to a for-loop induction variable.
      * Such PHIs should not have their declaration emitted early since the variable
      * will be declared inline in the for-loop initialization.
-     * <p>
      * Uses two checks:
      * 1. Direct PHI result marking (always applies)
      * 2. Local index check, but ONLY if the PHI is in a for-loop header block
      *    (this prevents slot reuse bugs where a later PHI for the same slot
      *    would be incorrectly skipped)
      */
-    private boolean isForLoopInductionPhi(PhiInstruction phi) {
+    private boolean isForLoopInductionPhi(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
-        if (result != null && context.isForLoopInductionPhi(result)) {
+        if (result != null && context.isForLoopInductionPhi(result))
+        {
             return true;
         }
         IRBlock phiBlock = phi.getBlock();
-        if (phiBlock != null && context.isForLoopHeader(phiBlock)) {
+        if (phiBlock != null && context.isForLoopHeader(phiBlock))
+        {
             int localIndex = getLocalIndexFromPhi(phi);
             return localIndex >= 0 && context.isForLoopInductionLocal(localIndex);
         }
         return false;
     }
 
-    private int getLocalIndexFromPhi(PhiInstruction phi) {
+    private int getLocalIndexFromPhi(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
         if (result == null) return -1;
 
@@ -6447,26 +7871,34 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // generated `localN` name, which fired only for a class WITHOUT debug info - so the two took different
         // routes to the same answer, and only one of them was exercised by anything.
 
-        for (Value incoming : phi.getOperands()) {
-            if (incoming instanceof SSAValue) {
+        for (Value incoming : phi.getOperands())
+        {
+            if (incoming instanceof SSAValue)
+            {
                 SSAValue ssaVal = (SSAValue) incoming;
                 IRInstruction def = ssaVal.getDefinition();
-                if (def instanceof LoadLocalInstruction) {
+                if (def instanceof LoadLocalInstruction)
+                {
                     return ((LoadLocalInstruction) def).getLocalIndex();
                 }
-                if (def instanceof StoreLocalInstruction) {
+                if (def instanceof StoreLocalInstruction)
+                {
                     return ((StoreLocalInstruction) def).getLocalIndex();
                 }
             }
         }
 
-        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+        {
             IRBlock predBlock = entry.getKey();
             Value incomingValue = entry.getValue();
-            for (IRInstruction instr : predBlock.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction) {
+            for (IRInstruction instr : predBlock.getInstructions())
+            {
+                if (instr instanceof StoreLocalInstruction)
+                {
                     StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                    if (store.getValue() == incomingValue) {
+                    if (store.getValue() == incomingValue)
+                    {
                         return store.getLocalIndex();
                     }
                 }
@@ -6482,14 +7914,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * would duplicate that store (e.g. javac's `s = new X(); result = s` where both s and result get one
      * `new X` value: the result store assigns the phi, the extra phi copy must not be emitted).
      */
-    private boolean isStoredToPhiSlot(SSAValue value, PhiInstruction phi) {
+    private boolean isStoredToPhiSlot(SSAValue value, PhiInstruction phi)
+    {
         int slot = getLocalIndexFromPhi(phi);
-        if (slot < 0 || value == null) {
+        if (slot < 0 || value == null)
+        {
             return false;
         }
-        for (IRInstruction use : value.getUses()) {
-            if (use instanceof StoreLocalInstruction
-                    && ((StoreLocalInstruction) use).getLocalIndex() == slot) {
+        for (IRInstruction use : value.getUses())
+        {
+            if (use instanceof StoreLocalInstruction && ((StoreLocalInstruction) use).getLocalIndex() == slot)
+            {
                 return true;
             }
         }
@@ -6503,14 +7938,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * phi's name would emit a wrong-typed assignment (e.g. {@code child = new Vector3f()}). The value's
      * own store partition is authoritative, so require it to match. Unknown partitions do not veto.
      */
-    private boolean valueBelongsToPhiVariable(SSAValue value, String phiVarName) {
-        if (value == null || phiVarName == null) {
+    private boolean valueBelongsToPhiVariable(SSAValue value, String phiVarName)
+    {
+        if (value == null || phiVarName == null)
+        {
             return true;
         }
-        for (IRInstruction use : value.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : value.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 String storeName = partitionName(use);
-                if (storeName != null) {
+                if (storeName != null)
+                {
                     return storeName.equals(phiVarName);
                 }
             }
@@ -6524,12 +7964,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * phi-copy materialization of the same expression under that name would run its side effects a
      * second time - the store is the single materialization and the copy must be suppressed.
      */
-    private boolean isStoredToVariableNamed(SSAValue value, String varName) {
-        if (value == null || varName == null) {
+    private boolean isStoredToVariableNamed(SSAValue value, String varName)
+    {
+        if (value == null || varName == null)
+        {
             return false;
         }
-        for (IRInstruction use : value.getUses()) {
-            if (use instanceof StoreLocalInstruction && varName.equals(partitionName(use))) {
+        for (IRInstruction use : value.getUses())
+        {
+            if (use instanceof StoreLocalInstruction && varName.equals(partitionName(use)))
+            {
                 return true;
             }
         }
@@ -6541,34 +7985,44 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * defining local load/store/phi - or -1 when it is not a local-slot value. Lets a variable's role be
      * decided from its slot layout rather than from its (now real) recovered name.
      */
-    private int slotOfValue(SSAValue value) {
-        if (value == null) {
+    private int slotOfValue(SSAValue value)
+    {
+        if (value == null)
+        {
             return -1;
         }
         RecoveryContext ctx = context.getExpressionContext();
         int paramSlot = ctx.parameterSlot(value);
-        if (paramSlot >= 0) {
+        if (paramSlot >= 0)
+        {
             return paramSlot;
         }
         int stored = ctx.getSSAValueSlot(value);
-        if (stored >= 0) {
+        if (stored >= 0)
+        {
             return stored;
         }
         IRInstruction def = value.getDefinition();
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) def).getLocalIndex();
         }
-        if (def instanceof StoreLocalInstruction) {
+        if (def instanceof StoreLocalInstruction)
+        {
             return ((StoreLocalInstruction) def).getLocalIndex();
         }
-        if (def instanceof PhiInstruction) {
+        if (def instanceof PhiInstruction)
+        {
             return getLocalIndexFromPhi((PhiInstruction) def);
         }
         return -1;
     }
 
-    /** True when {@code value} refers to the receiver or a parameter (decided by its local slot). */
-    private boolean isParameterOrThisRef(SSAValue value) {
+    /**
+     * True when {@code value} refers to the receiver or a parameter (decided by its local slot).
+     */
+    private boolean isParameterOrThisRef(SSAValue value)
+    {
         return context.getExpressionContext().isParameterOrThisSlot(slotOfValue(value));
     }
 
@@ -6577,40 +8031,51 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * exception handler's region. Used to tell a shared try/catch continuation (the catch jumps to it) from
      * an ordinary sequence terminator, so the former is recovered after the try/catch rather than inside it.
      */
-    private boolean isReachedFromCatchHandler(IRBlock block) {
+    private boolean isReachedFromCatchHandler(IRBlock block)
+    {
         Set<IRBlock> handlerRegion = new HashSet<>();
-        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
-            if (h.getHandlerBlock() != null && handlerRegion.add(h.getHandlerBlock())) {
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() != null && handlerRegion.add(h.getHandlerBlock()))
+            {
                 collectReachableBlocks(h.getHandlerBlock(), handlerRegion);
             }
         }
-        for (IRBlock pred : block.getPredecessors()) {
-            if (handlerRegion.contains(pred)) {
+        for (IRBlock pred : block.getPredecessors())
+        {
+            if (handlerRegion.contains(pred))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isDeadCatchVarPhi(PhiInstruction phi, Set<IRBlock> handlerBlocks) {
+    private boolean isDeadCatchVarPhi(PhiInstruction phi, Set<IRBlock> handlerBlocks)
+    {
         SSAValue result = phi.getResult();
-        if (result == null || !result.getUses().isEmpty()) {
+        if (result == null || !result.getUses().isEmpty())
+        {
             return false;
         }
         SourceType type = typeRecoverer.recoverType(result);
-        if (type == null || type.isPrimitive() || type.isVoid()) {
+        if (type == null || type.isPrimitive() || type.isVoid())
+        {
             return false;
         }
         // A reference-typed dead phi that either has no real incoming value (the catch variable's reused slot
         // is undefined on the try path and its catch def was elided) or merges a value defined in a catch
         // handler is the catch variable bridging a shared finally join - already declared by its catch clause.
         boolean hasOperand = false;
-        for (Value op : phi.getOperands()) {
-            if (op instanceof SSAValue) {
+        for (Value op : phi.getOperands())
+        {
+            if (op instanceof SSAValue)
+            {
                 hasOperand = true;
                 IRInstruction def = ((SSAValue) op).getDefinition();
                 if (def != null && def.getBlock() != null && handlerBlocks != null
-                        && handlerBlocks.contains(def.getBlock())) {
+                        && handlerBlocks.contains(def.getBlock()))
+                {
                     return true;
                 }
             }
@@ -6618,47 +8083,60 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return !hasOperand;
     }
 
-    private boolean isTypePunDeadPhi(PhiInstruction phi) {
+    private boolean isTypePunDeadPhi(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
-        if (result == null || !result.getUses().isEmpty()) {
+        if (result == null || !result.getUses().isEmpty())
+        {
             return false;
         }
         boolean hasPrimitive = false;
         boolean hasReference = false;
-        for (Value value : phi.getOperands()) {
+        for (Value value : phi.getOperands())
+        {
             SourceType type = typeRecoverer.recoverType(value);
-            if (type == null || type.isVoid()) {
+            if (type == null || type.isVoid())
+            {
                 continue;
             }
-            if (type.isPrimitive()) {
+            if (type.isPrimitive())
+            {
                 hasPrimitive = true;
-            } else {
+            }
+            else
+            {
                 hasReference = true;
             }
         }
         return hasPrimitive && hasReference;
     }
 
-    private SourceType computePhiUnifiedType(PhiInstruction phi) {
+    private SourceType computePhiUnifiedType(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
 
         List<SourceType> incomingTypes = new ArrayList<>();
-        for (Value value : phi.getOperands()) {
-            if (isNullValue(value)) {
+        for (Value value : phi.getOperands())
+        {
+            if (isNullValue(value))
+            {
                 continue;
             }
             SourceType valueType = typeRecoverer.recoverType(value);
-            if (valueType != null && !valueType.isVoid()) {
+            if (valueType != null && !valueType.isVoid())
+            {
                 incomingTypes.add(valueType);
             }
         }
 
-        if (!incomingTypes.isEmpty()) {
+        if (!incomingTypes.isEmpty())
+        {
             return typeRecoverer.computeCommonType(incomingTypes);
         }
 
         String localName = context.getExpressionContext().getVariableName(result);
-        if (localName != null && localSlotUnifiedTypes.containsKey(localName)) {
+        if (localName != null && localSlotUnifiedTypes.containsKey(localName))
+        {
             return localSlotUnifiedTypes.get(localName);
         }
 
@@ -6672,16 +8150,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Normal control flow merge blocks that are reachable from handlers
      * should NOT be skipped - they contain regular value phis that need declaration.
      */
-    private Set<IRBlock> collectExceptionHandlerBlocks(IRMethod method) {
+    private Set<IRBlock> collectExceptionHandlerBlocks(IRMethod method)
+    {
         Set<IRBlock> handlerBlocks = new HashSet<>();
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
-        if (handlers == null || handlers.isEmpty()) {
+        if (handlers == null || handlers.isEmpty())
+        {
             return handlerBlocks;
         }
 
-        for (ExceptionHandler handler : handlers) {
+        for (ExceptionHandler handler : handlers)
+        {
             IRBlock handlerBlock = handler.getHandlerBlock();
-            if (handlerBlock != null) {
+            if (handlerBlock != null)
+            {
                 handlerBlocks.add(handlerBlock);
             }
         }
@@ -6692,32 +8174,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Sorts SSA values so that values are declared after their dependencies.
      * Uses topological sort based on def-use chains.
      */
-    private List<SSAValue> sortByDependencies(Set<SSAValue> values) {
+    private List<SSAValue> sortByDependencies(Set<SSAValue> values)
+    {
         List<SSAValue> result = new ArrayList<>();
         Set<SSAValue> visited = new HashSet<>();
         Set<SSAValue> inProgress = new HashSet<>();
 
-        for (SSAValue value : values) {
+        for (SSAValue value : values)
+        {
             visitForSort(value, values, visited, inProgress, result);
         }
 
         return result;
     }
 
-    private void visitForSort(SSAValue value, Set<SSAValue> allValues,
-                              Set<SSAValue> visited, Set<SSAValue> inProgress,
-                              List<SSAValue> result) {
+    private void visitForSort(SSAValue value, Set<SSAValue> allValues, Set<SSAValue> visited, Set<SSAValue> inProgress, List<SSAValue> result)
+    {
         if (visited.contains(value)) return;
         if (inProgress.contains(value)) return;
 
         inProgress.add(value);
 
         IRInstruction def = value.getDefinition();
-        if (def != null) {
-            for (Value operand : def.getOperands()) {
-                if (operand instanceof SSAValue) {
+        if (def != null)
+        {
+            for (Value operand : def.getOperands())
+            {
+                if (operand instanceof SSAValue)
+                {
                     SSAValue ssaDep = (SSAValue) operand;
-                    if (allValues.contains(ssaDep)) {
+                    if (allValues.contains(ssaDep))
+                    {
                         visitForSort(ssaDep, allValues, visited, inProgress, result);
                     }
                 }
@@ -6733,11 +8220,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Checks if an SSA value is an intermediate value that should be inlined.
      * Intermediate values are those used only by other instructions (not stored to fields/arrays/locals).
      */
-    private boolean isIntermediateValue(SSAValue value) {
+    private boolean isIntermediateValue(SSAValue value)
+    {
         if (value == null) return false;
 
         IRInstruction def = value.getDefinition();
-        if (def instanceof InvokeInstruction && shouldStoreMethodResult((InvokeInstruction) def, value)) {
+        if (def instanceof InvokeInstruction && shouldStoreMethodResult((InvokeInstruction) def, value))
+        {
             return false;
         }
 
@@ -6748,16 +8237,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // variable: a branch/phi (recovered as a named condition/merge), a store to a local, or a
         // store to a field/array. Every other use kind (invoke arg, return, arithmetic, type check,
         // field/array LOAD) consumes the value inline and does not force materialization.
-        for (IRInstruction use : uses) {
+        for (IRInstruction use : uses)
+        {
             if (use instanceof BranchInstruction
                     || use instanceof StoreLocalInstruction
-                    || use instanceof PhiInstruction) {
+                    || use instanceof PhiInstruction)
+            {
                 return false;
             }
-            if (use instanceof FieldAccessInstruction && ((FieldAccessInstruction) use).isStore()) {
+            if (use instanceof FieldAccessInstruction && ((FieldAccessInstruction) use).isStore())
+            {
                 return false;
             }
-            if (use instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) use).isStore()) {
+            if (use instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) use).isStore())
+            {
                 return false;
             }
         }
@@ -6769,12 +8262,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * statement. The {@code <init>} invoke itself (and the {@code dup} the allocation is paired through) are
      * not uses that keep the value alive for anything later.
      */
-    private boolean isDiscardedAllocation(SSAValue newValue, InvokeInstruction init) {
-        if (newValue == null) {
+    private boolean isDiscardedAllocation(SSAValue newValue, InvokeInstruction init)
+    {
+        if (newValue == null)
+        {
             return false;
         }
-        for (IRInstruction use : newValue.getUses()) {
-            if (use != init) {
+        for (IRInstruction use : newValue.getUses())
+        {
+            if (use != init)
+            {
                 return false;
             }
         }
@@ -6787,18 +8284,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * recoverer, so materializing it here is futile and leaves an orphaned, re-inlined statement once
      * dead-variable elimination strips the unread declaration.
      */
-    private boolean shouldStoreMethodResult(InvokeInstruction invoke, SSAValue result) {
+    private boolean shouldStoreMethodResult(InvokeInstruction invoke, SSAValue result)
+    {
         if (result == null || result.getType() == null) return false;
         if (result.getUses().size() <= 1) return false;
 
         String methodName = invoke.getName();
-        if (isImportantMethodName(methodName)) {
+        if (isImportantMethodName(methodName))
+        {
             return isUsedAsMethodReceiver(result);
         }
         return false;
     }
 
-    private boolean isImportantMethodName(String methodName) {
+    private boolean isImportantMethodName(String methodName)
+    {
         if (methodName == null) return false;
         if (methodName.startsWith("get") && methodName.length() > 3) return true;
         if (methodName.startsWith("find") && methodName.length() > 4) return true;
@@ -6810,15 +8310,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return methodName.startsWith("retrieve") && methodName.length() > 8;
     }
 
-    private boolean isUsedAsMethodReceiver(SSAValue result) {
-        for (IRInstruction use : result.getUses()) {
-            if (use instanceof InvokeInstruction) {
+    private boolean isUsedAsMethodReceiver(SSAValue result)
+    {
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof InvokeInstruction)
+            {
                 InvokeInstruction invoke = (InvokeInstruction) use;
-                if (invoke.getInvokeType() != InvokeType.STATIC) {
+                if (invoke.getInvokeType() != InvokeType.STATIC)
+                {
                     java.util.List<Value> args = invoke.getArguments();
-                    if (!args.isEmpty() && args.get(0) == result) {
+                    if (!args.isEmpty() && args.get(0) == result)
+                    {
                         SSAValue invokeResult = invoke.getResult();
-                        if (isMethodChainIntermediate(invokeResult)) {
+                        if (isMethodChainIntermediate(invokeResult))
+                        {
                             continue;
                         }
                         return true;
@@ -6829,17 +8335,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private boolean isMethodChainIntermediate(SSAValue value) {
+    private boolean isMethodChainIntermediate(SSAValue value)
+    {
         if (value == null) return false;
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.isEmpty()) return true;
-        for (IRInstruction use : uses) {
-            if (use instanceof InvokeInstruction) {
+        for (IRInstruction use : uses)
+        {
+            if (use instanceof InvokeInstruction)
+            {
                 InvokeInstruction invoke = (InvokeInstruction) use;
                 java.util.List<Value> args = invoke.getArguments();
-                if (!args.isEmpty() && args.get(0) == value) {
+                if (!args.isEmpty() && args.get(0) == value)
+                {
                     SSAValue invokeResult = invoke.getResult();
-                    if (isMethodChainIntermediate(invokeResult)) {
+                    if (isMethodChainIntermediate(invokeResult))
+                    {
                         continue;
                     }
                 }
@@ -6856,19 +8367,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Checks if an SSA value is used exactly once and that use is a FieldAccessInstruction store.
      * Such values can be safely inlined into the field assignment.
      */
-    private boolean isSingleUsePutField(SSAValue value) {
+    private boolean isSingleUsePutField(SSAValue value)
+    {
         if (value == null) return false;
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.size() != 1) return false;
         IRInstruction use = uses.get(0);
-        if (use instanceof FieldAccessInstruction) {
+        if (use instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fa = (FieldAccessInstruction) use;
             return fa.isStore();
         }
         return false;
     }
 
-    private boolean isSingleUsePhiOperand(SSAValue value) {
+    private boolean isSingleUsePhiOperand(SSAValue value)
+    {
         if (value == null) return false;
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.size() != 1) return false;
@@ -6882,25 +8396,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * and let StoreLocalInstruction handle the emission. The StoreLocal
      * will create the local variable, and other uses will reference that local.
      */
-    private boolean isUsedByStoreLocal(SSAValue value) {
+    private boolean isUsedByStoreLocal(SSAValue value)
+    {
         if (value == null) return false;
         return isUsedByStoreLocalWithVisited(value, new HashSet<>());
     }
 
-    private boolean isUsedByStoreLocalWithVisited(SSAValue value, Set<SSAValue> visited) {
+    private boolean isUsedByStoreLocalWithVisited(SSAValue value, Set<SSAValue> visited)
+    {
         if (value == null || !visited.add(value)) return false;
 
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.isEmpty()) return false;
 
-        for (IRInstruction use : uses) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : uses)
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 return true;
             }
-            if (use instanceof CopyInstruction) {
+            if (use instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) use;
-                if (copy.getResult() != null) {
-                    if (isUsedByStoreLocalWithVisited(copy.getResult(), visited)) {
+                if (copy.getResult() != null)
+                {
+                    if (isUsedByStoreLocalWithVisited(copy.getResult(), visited))
+                    {
                         return true;
                     }
                 }
@@ -6913,43 +8434,57 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Gets the PHI instruction that uses this value, if any.
      * Returns the first PHI instruction found that uses this value.
      */
-    private PhiInstruction getPhiUsingValue(SSAValue value) {
+    private PhiInstruction getPhiUsingValue(SSAValue value)
+    {
         if (value == null) return null;
         return getPhiUsingValueWithVisited(value, new HashSet<>());
     }
 
-    /** Whether the value is stored into a local, materializing it as a real assignment statement. */
-    private boolean hasStoreLocalUse(SSAValue value) {
-        if (value == null) {
+    /**
+     * Whether the value is stored into a local, materializing it as a real assignment statement.
+     */
+    private boolean hasStoreLocalUse(SSAValue value)
+    {
+        if (value == null)
+        {
             return false;
         }
-        for (IRInstruction use : value.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : value.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private PhiInstruction getPhiUsingValueWithVisited(SSAValue value, Set<SSAValue> visited) {
+    private PhiInstruction getPhiUsingValueWithVisited(SSAValue value, Set<SSAValue> visited)
+    {
         if (value == null || !visited.add(value)) return null;
 
         java.util.List<IRInstruction> uses = value.getUses();
-        for (IRInstruction use : uses) {
-            if (use instanceof PhiInstruction) {
+        for (IRInstruction use : uses)
+        {
+            if (use instanceof PhiInstruction)
+            {
                 // A degenerate phi (all incoming values identical) carries no merge information and
                 // must not drive an assignment statement: doing so duplicates the store that already
                 // materializes the value (e.g. spurious phi(B:v, C:v) on a local written in one branch).
-                if (isDegeneratePhi((PhiInstruction) use)) {
+                if (isDegeneratePhi((PhiInstruction) use))
+                {
                     continue;
                 }
                 return (PhiInstruction) use;
             }
-            if (use instanceof CopyInstruction) {
+            if (use instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) use;
-                if (copy.getResult() != null) {
+                if (copy.getResult() != null)
+                {
                     PhiInstruction phi = getPhiUsingValueWithVisited(copy.getResult(), visited);
-                    if (phi != null) {
+                    if (phi != null)
+                    {
                         return phi;
                     }
                 }
@@ -6960,38 +8495,51 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
     /**
      * A phi is degenerate when all its incoming values are the same {@link Value} (or it has a
-     * single incoming). Such a phi is redundant — it is not a genuine control-flow merge of
-     * distinct definitions — and must not be treated as a variable that needs its own assignment.
+     * single incoming). Such a phi is redundant - it is not a genuine control-flow merge of
+     * distinct definitions - and must not be treated as a variable that needs its own assignment.
      */
-    private static boolean isDegeneratePhi(PhiInstruction phi) {
+    private static boolean isDegeneratePhi(PhiInstruction phi)
+    {
         Value common = null;
         boolean first = true;
-        for (Value incoming : phi.getIncomingValues().values()) {
-            if (first) {
+        for (Value incoming : phi.getIncomingValues().values())
+        {
+            if (first)
+            {
                 common = incoming;
                 first = false;
-            } else if (incoming != common) {
+            }
+            else if (incoming != common)
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private PhiInstruction getPhiThroughStoreChain(SSAValue value) {
+    private PhiInstruction getPhiThroughStoreChain(SSAValue value)
+    {
         if (value == null) return null;
 
-        for (IRInstruction use : value.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : value.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) use;
                 int slot = store.getLocalIndex();
 
-                for (IRBlock block : context.getIrMethod().getBlocks()) {
-                    for (IRInstruction instr : block.getInstructions()) {
-                        if (instr instanceof LoadLocalInstruction) {
+                for (IRBlock block : context.getIrMethod().getBlocks())
+                {
+                    for (IRInstruction instr : block.getInstructions())
+                    {
+                        if (instr instanceof LoadLocalInstruction)
+                        {
                             LoadLocalInstruction load = (LoadLocalInstruction) instr;
-                            if (load.getLocalIndex() == slot && load.getResult() != null) {
+                            if (load.getLocalIndex() == slot && load.getResult() != null)
+                            {
                                 PhiInstruction phi = getPhiUsingValue(load.getResult());
-                                if (phi != null) {
+                                if (phi != null)
+                                {
                                     return phi;
                                 }
                             }
@@ -7003,18 +8551,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private SSAValue findNewInstructionValue(SSAValue value) {
+    private SSAValue findNewInstructionValue(SSAValue value)
+    {
         if (value == null) return null;
         Set<SSAValue> visited = new HashSet<>();
         SSAValue current = value;
-        while (visited.add(current)) {
+        while (visited.add(current))
+        {
             IRInstruction def = current.getDefinition();
-            if (def instanceof NewInstruction) {
+            if (def instanceof NewInstruction)
+            {
                 return current;
             }
-            if (def instanceof CopyInstruction) {
+            if (def instanceof CopyInstruction)
+            {
                 Value source = ((CopyInstruction) def).getSource();
-                if (source instanceof SSAValue) {
+                if (source instanceof SSAValue)
+                {
                     current = (SSAValue) source;
                     continue;
                 }
@@ -7024,21 +8577,27 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    /** Whether {@code v} is a compile-time constant operand (a bare constant or a constant SSA def). */
-    private static boolean isConstantOperand(Value v) {
+    /**
+     * Whether {@code v} is a compile-time constant operand (a bare constant or a constant SSA def).
+     */
+    private static boolean isConstantOperand(Value v)
+    {
         return v instanceof Constant
-                || (v instanceof SSAValue
-                    && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
+                || (v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
     }
 
-    private boolean isUsedByArrayStore(SSAValue value) {
+    private boolean isUsedByArrayStore(SSAValue value)
+    {
         if (value == null) return false;
 
         java.util.List<IRInstruction> uses = value.getUses();
-        for (IRInstruction use : uses) {
-            if (use instanceof ArrayAccessInstruction) {
+        for (IRInstruction use : uses)
+        {
+            if (use instanceof ArrayAccessInstruction)
+            {
                 ArrayAccessInstruction aa = (ArrayAccessInstruction) use;
-                if (aa.isStore() && aa.getArray() == value) {
+                if (aa.isStore() && aa.getArray() == value)
+                {
                     return true;
                 }
             }
@@ -7051,10 +8610,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * store ({@code arr[i] = value}). Such a value should be inlined into that store
      * rather than also emitted as a standalone (result-discarding) statement.
      */
-    private boolean isSingleUseArrayStoreValue(SSAValue value) {
+    private boolean isSingleUseArrayStoreValue(SSAValue value)
+    {
         if (value == null || value.getUses().size() != 1) return false;
         IRInstruction use = value.getUses().get(0);
-        if (use instanceof ArrayAccessInstruction) {
+        if (use instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction aa = (ArrayAccessInstruction) use;
             return aa.isStore() && aa.getValue() == value;
         }
@@ -7065,22 +8626,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Gets the local variable name from the StoreLocalInstruction that stores this value.
      * Used to emit array declarations at the right position with the correct name.
      */
-    private String getLocalNameFromStoreLocal(SSAValue value) {
+    private String getLocalNameFromStoreLocal(SSAValue value)
+    {
         if (value == null) return null;
 
         java.util.List<IRInstruction> uses = value.getUses();
-        for (IRInstruction use : uses) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : uses)
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) use;
                 int localIndex = store.getLocalIndex();
                 SourceType valueType = typeRecoverer.recoverType(value);
                 String name = partitionName(store);
-                if (name == null) {
+                if (name == null)
+                {
                     name = getNameForLocalSlotWithType(localIndex, valueType);
                 }
-                if (name != null && context.getExpressionContext().isDeclared(name)) {
+                if (name != null && context.getExpressionContext().isDeclared(name))
+                {
                     SourceType declaredType = context.getExpressionContext().getDeclaredType(name);
-                    if (declaredType != null && !typesAreCompatibleForDeclaration(declaredType, valueType)) {
+                    if (declaredType != null && !typesAreCompatibleForDeclaration(declaredType, valueType))
+                    {
                         name = generateUniqueLocalName(localIndex);
                     }
                 }
@@ -7090,11 +8657,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private boolean typesAreCompatibleForDeclaration(SourceType type1, SourceType type2) {
-        if (type1 == null || type2 == null) {
+    private boolean typesAreCompatibleForDeclaration(SourceType type1, SourceType type2)
+    {
+        if (type1 == null || type2 == null)
+        {
             return true;
         }
-        if (type1.equals(type2)) {
+        if (type1.equals(type2))
+        {
             return true;
         }
         boolean type1Array = type1 instanceof ArraySourceType;
@@ -7104,11 +8674,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
     private final Set<PhiInstruction> selfStorePhis = new HashSet<>();
 
-    private void detectSelfStorePhis(IRMethod method) {
+    private void detectSelfStorePhis(IRMethod method)
+    {
         selfStorePhis.clear();
-        for (IRBlock block : method.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                if (isSelfStorePhiPattern(phi)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                if (isSelfStorePhiPattern(phi))
+                {
                     selfStorePhis.add(phi);
                     markSelfStorePhiChain(phi);
                 }
@@ -7116,7 +8690,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    private void markSelfStorePhiChain(PhiInstruction phi) {
+    private void markSelfStorePhiChain(PhiInstruction phi)
+    {
         FieldAccessInstruction fieldLoad = findFieldLoadInPhiChain(phi, new HashSet<>());
         if (fieldLoad == null) return;
 
@@ -7129,19 +8704,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         cacheFieldExprForPhiChain(phi, fieldExpr, visited);
     }
 
-    private void cacheFieldExprForPhiChain(PhiInstruction phi, Expression fieldExpr, Set<PhiInstruction> visited) {
+    private void cacheFieldExprForPhiChain(PhiInstruction phi, Expression fieldExpr, Set<PhiInstruction> visited)
+    {
         if (phi == null || visited.contains(phi)) return;
         visited.add(phi);
 
-        if (phi.getResult() != null) {
+        if (phi.getResult() != null)
+        {
             context.getExpressionContext().cacheExpression(phi.getResult(), fieldExpr);
         }
 
-        for (Value operand : phi.getOperands()) {
-            if (operand instanceof SSAValue) {
+        for (Value operand : phi.getOperands())
+        {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssaOp = (SSAValue) operand;
                 IRInstruction def = ssaOp.getDefinition();
-                if (def instanceof PhiInstruction) {
+                if (def instanceof PhiInstruction)
+                {
                     PhiInstruction nestedPhi = (PhiInstruction) def;
                     selfStorePhis.add(nestedPhi);
                     cacheFieldExprForPhiChain(nestedPhi, fieldExpr, visited);
@@ -7150,11 +8730,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    private boolean isSelfStorePhiPattern(PhiInstruction phi) {
+    private boolean isSelfStorePhiPattern(PhiInstruction phi)
+    {
         if (phi == null || phi.getResult() == null) return false;
 
         FieldAccessInstruction fieldLoad = findFieldLoadInPhiChain(phi, new HashSet<>());
-        if (fieldLoad == null) {
+        if (fieldLoad == null)
+        {
             return false;
         }
 
@@ -7162,7 +8744,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // reproduces the original access for a static field or a `this`-receiver field. An instance
         // field whose receiver is the cursor itself (e.g. `e.next` where `e` is this phi) would lose
         // its receiver and collapse to `this.next`; such a phi is an ordinary local, not a cursor.
-        if (!selfStoreFieldReceiverIsImplicit(fieldLoad)) {
+        if (!selfStoreFieldReceiverIsImplicit(fieldLoad))
+        {
             return false;
         }
 
@@ -7176,12 +8759,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * True when {@code fieldLoad}'s receiver matches the implicit (null) receiver the self-store
      * recovery emits: a static field, or an instance field accessed on {@code this}.
      */
-    private boolean selfStoreFieldReceiverIsImplicit(FieldAccessInstruction fieldLoad) {
-        if (fieldLoad.isStatic()) {
+    private boolean selfStoreFieldReceiverIsImplicit(FieldAccessInstruction fieldLoad)
+    {
+        if (fieldLoad.isStatic())
+        {
             return true;
         }
         Value receiver = fieldLoad.getObjectRef();
-        if (!(receiver instanceof SSAValue)) {
+        if (!(receiver instanceof SSAValue))
+        {
             return false;
         }
         return !context.getIrMethod().isStatic() && slotOfValue((SSAValue) receiver) == 0;
@@ -7190,21 +8776,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * True when {@code result} (a field load feeding {@code targetPhi}) is written by a store_local to
      * a source variable other than the phi's own. The store is then the value's real assignment, and a
-     * phi copy naming the phi's variable would be a spurious cross-variable one — either a redundant
+     * phi copy naming the phi's variable would be a spurious cross-variable one - either a redundant
      * advance (`e = e.next` beside the store `e = next` in the coalesced `next = e.next; e = next`
      * idiom) or a type-punned slot reuse (`i = model` where the reused JVM slot later holds the
      * {@code sceneModel} Spatial). Suppress the copy; the store owns the value. Names come from the
      * reaching-definition partition, which splits a reused slot into its distinct source variables.
      */
-    private boolean fieldLoadValueBelongsToOtherVariable(SSAValue result, PhiInstruction targetPhi) {
+    private boolean fieldLoadValueBelongsToOtherVariable(SSAValue result, PhiInstruction targetPhi)
+    {
         String phiName = context.getExpressionContext().getVariableName(targetPhi.getResult());
-        if (phiName == null) {
+        if (phiName == null)
+        {
             return false;
         }
-        for (IRInstruction use : result.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 String storeName = partitionName(use);
-                if (storeName != null && !storeName.equals(phiName)) {
+                if (storeName != null && !storeName.equals(phiName))
+                {
                     return true;
                 }
             }
@@ -7212,7 +8803,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private boolean hasFieldStoreInPhiUseChain(PhiInstruction phi, String fieldOwner, String fieldName, Set<PhiInstruction> visited) {
+    private boolean hasFieldStoreInPhiUseChain(PhiInstruction phi, String fieldOwner, String fieldName, Set<PhiInstruction> visited)
+    {
         if (phi == null || visited.contains(phi)) return false;
         visited.add(phi);
 
@@ -7220,14 +8812,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         if (phiResult == null) return false;
 
         java.util.List<IRInstruction> uses = phiResult.getUses();
-        for (IRInstruction use : uses) {
-            if (use instanceof FieldAccessInstruction) {
+        for (IRInstruction use : uses)
+        {
+            if (use instanceof FieldAccessInstruction)
+            {
                 FieldAccessInstruction fai = (FieldAccessInstruction) use;
-                if (fai.isStore() && fieldOwner.equals(fai.getOwner()) && fieldName.equals(fai.getName())) {
+                if (fai.isStore() && fieldOwner.equals(fai.getOwner()) && fieldName.equals(fai.getName()))
+                {
                     return true;
                 }
-            } else if (use instanceof PhiInstruction) {
-                if (hasFieldStoreInPhiUseChain((PhiInstruction) use, fieldOwner, fieldName, visited)) {
+            }
+            else if (use instanceof PhiInstruction)
+            {
+                if (hasFieldStoreInPhiUseChain((PhiInstruction) use, fieldOwner, fieldName, visited))
+                {
                     return true;
                 }
             }
@@ -7235,22 +8833,30 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private FieldAccessInstruction findFieldLoadInPhiChain(PhiInstruction phi, Set<PhiInstruction> visited) {
+    private FieldAccessInstruction findFieldLoadInPhiChain(PhiInstruction phi, Set<PhiInstruction> visited)
+    {
         if (phi == null || visited.contains(phi)) return null;
         visited.add(phi);
 
-        for (Value operand : phi.getOperands()) {
-            if (operand instanceof SSAValue) {
+        for (Value operand : phi.getOperands())
+        {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssaOp = (SSAValue) operand;
                 IRInstruction def = ssaOp.getDefinition();
-                if (def instanceof FieldAccessInstruction) {
+                if (def instanceof FieldAccessInstruction)
+                {
                     FieldAccessInstruction fai = (FieldAccessInstruction) def;
-                    if (fai.isLoad()) {
+                    if (fai.isLoad())
+                    {
                         return fai;
                     }
-                } else if (def instanceof PhiInstruction) {
+                }
+                else if (def instanceof PhiInstruction)
+                {
                     FieldAccessInstruction nested = findFieldLoadInPhiChain((PhiInstruction) def, visited);
-                    if (nested != null) {
+                    if (nested != null)
+                    {
                         return nested;
                     }
                 }
@@ -7259,25 +8865,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private FieldAccessInstruction getSelfStoreFieldInfo(PhiInstruction phi) {
+    private FieldAccessInstruction getSelfStoreFieldInfo(PhiInstruction phi)
+    {
         return findFieldLoadInPhiChain(phi, new HashSet<>());
     }
 
     /**
      * Gets a default value for the given type.
      */
-    private Expression getDefaultValue(SourceType type) {
-        if (type instanceof PrimitiveSourceType) {
+    private Expression getDefaultValue(SourceType type)
+    {
+        if (type instanceof PrimitiveSourceType)
+        {
             PrimitiveSourceType pst = (PrimitiveSourceType) type;
-            if (pst == PrimitiveSourceType.BOOLEAN) {
+            if (pst == PrimitiveSourceType.BOOLEAN)
+            {
                 return LiteralExpr.ofBoolean(false);
-            } else if (pst == PrimitiveSourceType.LONG) {
+            }
+            else if (pst == PrimitiveSourceType.LONG)
+            {
                 return LiteralExpr.ofLong(0L);
-            } else if (pst == PrimitiveSourceType.FLOAT) {
+            }
+            else if (pst == PrimitiveSourceType.FLOAT)
+            {
                 return LiteralExpr.ofFloat(0.0f);
-            } else if (pst == PrimitiveSourceType.DOUBLE) {
+            }
+            else if (pst == PrimitiveSourceType.DOUBLE)
+            {
                 return LiteralExpr.ofDouble(0.0);
-            } else {
+            }
+            else
+            {
                 return LiteralExpr.ofInt(0);
             }
         }
@@ -7288,37 +8906,61 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Checks if an expression is a default value (0, false, null, 0L, 0.0, etc.).
      * Used to skip redundant assignments that re-initialize variables to their default values.
      */
-    private boolean isDefaultValue(Expression expr) {
-        if (!(expr instanceof LiteralExpr)) {
+    private boolean isDefaultValue(Expression expr)
+    {
+        if (!(expr instanceof LiteralExpr))
+        {
             return false;
         }
         LiteralExpr literal = (LiteralExpr) expr;
         Object value = literal.getValue();
-        if (value == null) {
+        if (value == null)
+        {
             return true;
         }
-        if (value instanceof Number) {
+        if (value instanceof Number)
+        {
             return ((Number) value).doubleValue() == 0.0;
         }
-        if (value instanceof Boolean) {
+        if (value instanceof Boolean)
+        {
             return !((Boolean) value);
         }
         return false;
     }
 
-    /** Tracks try handlers that have already been processed to avoid infinite loops */
+    /**
+     * Tracks try handlers that have already been processed to avoid infinite loops
+     */
     private final Set<ExceptionHandler> processedTryHandlers = new HashSet<>();
-    /** For-loop induction inits already re-emitted (as a for-init or in front of a while), never twice. */
+    /**
+     * For-loop induction inits already re-emitted (as a for-init or in front of a while), never twice.
+     */
     private final Set<IRInstruction> consumedForLoopInits = new HashSet<>();
 
-    /** Stores recovered ahead of their own position, at the call whose carried result they consume. */
+    /**
+     * Stores recovered ahead of their own position, at the call whose carried result they consume.
+     */
     private final Set<IRInstruction> earlyRecoveredStores = new HashSet<>();
-    /** Excised inlined-finally copy blocks consumed outright; the walk and continuation route around them. */
+    /**
+     * Excised inlined-finally copy blocks consumed outright; the walk and continuation route around them.
+     */
     private final Set<IRBlock> consumedFinallyShells = new HashSet<>();
-    /** Tracks handler blocks to prevent nested try-finally for same finally block */
+    /**
+     * Tracks handler blocks to prevent nested try-finally for same finally block
+     */
     private final Set<IRBlock> processedHandlerBlocks = new HashSet<>();
 
-    public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+    /**
+     * Recovers the statements of one region as a hand-off, preserving the surrounding recovery's
+     * processed marks.
+     *
+     * @param startBlock the block the region starts at
+     * @param stopBlocks blocks that bound the region and are not recovered into it
+     * @return the recovered statements
+     */
+    public List<Statement> recoverBlockSequence(IRBlock startBlock, Set<IRBlock> stopBlocks)
+    {
         // Every sub-region (an if arm, a loop body, a clause body) is a region hand-off: a sub-region
         // pass preserves the surrounding recovery's processed marks (only the top-level whole-method
         // pass owns the mark namespace), and a re-entrant pass launched from inside an engine emit is
@@ -7332,17 +8974,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * a piece is handed off in full rather than being a sub-region of an in-progress schema structuring,
      * so the RC engine may structure it without interleaving with the legacy walk.
      */
-    private List<Statement> recoverRegionHandoff(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+    private List<Statement> recoverRegionHandoff(IRBlock startBlock, Set<IRBlock> stopBlocks)
+    {
         // A stop that is a bare goto pad jumping BACK to a block that dominates it is a loop's own
         // latch pad past a try range's end - the construct's internal edge, not a boundary. The engine
         // attempts run without it so the loop can close; the staging and the legacy walk keep the
         // original stops, whose continuation semantics they are built around.
         Set<IRBlock> engineStops = stopBlocks;
         DominatorTree handoffDt = context.getDominatorTree();
-        if (handoffDt != null) {
-            for (IRBlock stop : stopBlocks) {
-                if (isLatchPad(stop, handoffDt)) {
-                    if (engineStops == stopBlocks) {
+        if (handoffDt != null)
+        {
+            for (IRBlock stop : stopBlocks)
+            {
+                if (isLatchPad(stop, handoffDt))
+                {
+                    if (engineStops == stopBlocks)
+                    {
                         engineStops = new HashSet<>(stopBlocks);
                     }
                     engineStops.remove(stop);
@@ -7350,25 +8997,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
         List<Statement> structured = rcsStructurer.tryStructureRegion(startBlock, engineStops);
-        if (structured != null) {
+        if (structured != null)
+        {
             return structured;
         }
         List<Statement> staged = recoverSequentialTryStages(startBlock, stopBlocks);
-        if (staged != null) {
+        if (staged != null)
+        {
             return staged;
         }
         // No linear staging (a try inside a loop body or on one arm of a branch): let the engine place
         // each try as an opaque composite node at its structural position.
         structured = rcsStructurer.tryStructureRegion(startBlock, engineStops, true);
-        if (structured != null) {
+        if (structured != null)
+        {
             return structured;
         }
         throw retiredSchemaRecovery("region-handoff", startBlock);
     }
 
-    /** Whether {@code b} is a bare goto pad whose single successor dominates it - a loop latch pad. */
-    private boolean isLatchPad(IRBlock b, DominatorTree dt) {
-        if (b.getSuccessors().size() != 1) {
+    /**
+     * Whether {@code b} is a bare goto pad whose single successor dominates it - a loop latch pad.
+     */
+    private boolean isLatchPad(IRBlock b, DominatorTree dt)
+    {
+        if (b.getSuccessors().size() != 1)
+        {
             return false;
         }
         List<IRInstruction> instrs = b.getInstructions();
@@ -7376,7 +9030,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 || (instrs.size() == 1 && instrs.get(0) == b.getTerminator()
                     && b.getTerminator() instanceof SimpleInstruction
                     && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.GOTO);
-        if (!bare) {
+        if (!bare)
+        {
             return false;
         }
         IRBlock target = b.getSuccessors().iterator().next();
@@ -7389,12 +9044,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * would absorb blocks an outer recovery owns; the header is emitted as a plain block instead and
      * the outer recovery closes the loop.
      */
-    private boolean loopCutByStops(RegionInfo info, Set<IRBlock> stops) {
-        if (info.getLoop() == null) {
+    private boolean loopCutByStops(RegionInfo info, Set<IRBlock> stops)
+    {
+        if (info.getLoop() == null)
+        {
             return false;
         }
-        for (IRBlock lb : info.getLoop().getBlocks()) {
-            if (stops.contains(lb)) {
+        for (IRBlock lb : info.getLoop().getBlocks())
+        {
+            if (stops.contains(lb))
+            {
                 return true;
             }
         }
@@ -7405,18 +9064,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Whether {@code b} lies inside a switch case body - some block in the method switches, and {@code b}
      * is one of its case targets or dominated by one.
      */
-    private boolean enclosingSwitchCase(IRBlock b) {
+    private boolean enclosingSwitchCase(IRBlock b)
+    {
         DominatorTree dt = context.getDominatorTree();
         IRMethod m = context.getIrMethod();
-        if (dt == null || m == null) {
+        if (dt == null || m == null)
+        {
             return false;
         }
-        for (IRBlock sb : m.getBlocks()) {
-            if (!(sb.getTerminator() instanceof SwitchInstruction) || sb == b) {
+        for (IRBlock sb : m.getBlocks())
+        {
+            if (!(sb.getTerminator() instanceof SwitchInstruction) || sb == b)
+            {
                 continue;
             }
-            for (IRBlock target : sb.getSuccessors()) {
-                if (target == b || dt.dominates(target, b)) {
+            for (IRBlock target : sb.getSuccessors())
+            {
+                if (target == b || dt.dominates(target, b))
+                {
                     return true;
                 }
             }
@@ -7424,34 +9089,45 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    /** Whether every block of {@code loop} lies within {@code handler}'s merged protected range. */
-    private boolean loopWithinTryRange(LoopAnalysis.Loop loop, ExceptionHandler handler) {
-        if (handler == null || handler.getTryStart() == null) {
+    /**
+     * Whether every block of {@code loop} lies within {@code handler}'s merged protected range.
+     */
+    private boolean loopWithinTryRange(LoopAnalysis.Loop loop, ExceptionHandler handler)
+    {
+        if (handler == null || handler.getTryStart() == null)
+        {
             return false;
         }
         int lo = handler.getTryStart().getBytecodeOffset();
         int hi = mergedTryEndOffset(handler);
-        if (hi < 0) {
+        if (hi < 0)
+        {
             return false;
         }
-        for (IRBlock lb : loop.getBlocks()) {
+        for (IRBlock lb : loop.getBlocks())
+        {
             int off = lb.getBytecodeOffset();
-            if (off < lo || off >= hi) {
+            if (off < lo || off >= hi)
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private List<Statement> recoverSequentialTryStages(IRBlock startBlock, Set<IRBlock> stopBlocks) {
+    private List<Statement> recoverSequentialTryStages(IRBlock startBlock, Set<IRBlock> stopBlocks)
+    {
         Set<IRBlock> prefix = new HashSet<>();
         Deque<IRBlock> work = new ArrayDeque<>();
         work.add(startBlock);
         IRBlock tryStart = null;
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock b = work.poll();
-            if (findUnprocessedHandlerStartingAt(b) != null) {
-                if (tryStart != null && tryStart != b) {
+            if (findUnprocessedHandlerStartingAt(b) != null)
+            {
+                if (tryStart != null && tryStart != b)
+                {
                     return null;
                 }
                 // A try nested INSIDE a loop has no linear staging: control re-enters the blocks before it on
@@ -7461,18 +9137,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // a different block) contains the try start.
                 // A try INSIDE a switch case has no linear staging: the case bodies are branches of the
                 // switch, so prefix-try-continuation sequencing hoists the try out of the construct.
-                if (enclosingSwitchCase(b)) {
+                if (enclosingSwitchCase(b))
+                {
                     return null;
                 }
-                if (context.getLoopAnalysis() != null) {
+                if (context.getLoopAnalysis() != null)
+                {
                     ExceptionHandler stageHandler = findUnprocessedHandlerStartingAt(b);
                     LoopAnalysis.Loop enclosing = context.getLoopAnalysis().getLoop(b);
-                    while (enclosing != null) {
+                    while (enclosing != null)
+                    {
                         // "Try wraps loop" is judged by CONTAINMENT, not header identity: a do-while whose
                         // body STARTS with the try makes the try-start block the loop header too, but the
                         // latch lies outside the protected range - staging that shape hoists the try out
                         // of the loop. Only a loop wholly within the range stages linearly.
-                        if (!loopWithinTryRange(enclosing, stageHandler)) {
+                        if (!loopWithinTryRange(enclosing, stageHandler))
+                        {
                             return null;
                         }
                         enclosing = enclosing.getParent();
@@ -7481,26 +9161,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 tryStart = b;
                 continue;
             }
-            if (!prefix.add(b)) {
+            if (!prefix.add(b))
+            {
                 continue;
             }
-            for (IRBlock s : b.getSuccessors()) {
-                if (stopBlocks.contains(s)) {
+            for (IRBlock s : b.getSuccessors())
+            {
+                if (stopBlocks.contains(s))
+                {
                     return null;
                 }
-                if (!prefix.contains(s)) {
+                if (!prefix.contains(s))
+                {
                     work.add(s);
                 }
             }
         }
-        if (tryStart == null) {
+        if (tryStart == null)
+        {
             return null;
         }
         ExceptionHandler handler = findUnprocessedHandlerStartingAt(tryStart);
-        if (handler == null || prefix.contains(handler.getHandlerBlock())) {
+        if (handler == null || prefix.contains(handler.getHandlerBlock()))
+        {
             return null;
         }
-        if (tryHasFinallyHandler(tryStart)) {
+        if (tryHasFinallyHandler(tryStart))
+        {
             // A finally (a rethrowing catch-all) needs its inlined copies de-duplicated and its clause
             // built; that is the outer-handler scaffolding's job. Delegate the stage to it: the
             // handler-free prefix first, then the scaffolding from the try, which recovers the region's
@@ -7509,7 +9196,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
 
         List<Statement> out = new ArrayList<>();
-        if (tryStart != startBlock) {
+        if (tryStart != startBlock)
+        {
             Set<IRBlock> prefixStops = new HashSet<>(stopBlocks);
             prefixStops.add(tryStart);
             out.addAll(recoverRegionHandoff(startBlock, prefixStops));
@@ -7517,42 +9205,50 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // it (an if-arm containing the try) recovers the try/catch through its own handler branch. When
             // the prefix consumed the handler, it owned the whole region including the continuation;
             // recovering the try again here would emit an empty duplicate after it.
-            if (processedTryHandlers.contains(handler)
-                    || processedHandlerBlocks.contains(handler.getHandlerBlock())) {
+            if (processedTryHandlers.contains(handler) || processedHandlerBlocks.contains(handler.getHandlerBlock()))
+            {
                 return out;
             }
             // A prefix that ends by terminating unconditionally consumed the try's shared continuation (a
             // path bypassing a one-arm try to the merge): the try appended here would be unreachable dead
             // code and the arm it was cut from has already been emitted without it. A guard-shaped prefix
             // (its return inside an if) leaves the fall-through open and stages normally.
-            if (isTerminatingBlock(new BlockStmt(out))) {
+            if (isTerminatingBlock(new BlockStmt(out)))
+            {
                 return null;
             }
         }
         processedTryHandlers.add(handler);
-        if (handler.getHandlerBlock() != null) {
+        if (handler.getHandlerBlock() != null)
+        {
             processedHandlerBlocks.add(handler.getHandlerBlock());
         }
         Set<IRBlock> tryVisited = new HashSet<>(prefix);
         Statement recovered = recoverTryCatch(tryStart, handler, stopBlocks, tryVisited);
-        if (recovered == null) {
+        if (recovered == null)
+        {
             throw retiredSchemaRecovery("try-stage", tryStart);
         }
         out.add(recovered);
-        if (!isTerminatingRecoveredTry(recovered)) {
+        if (!isTerminatingRecoveredTry(recovered))
+        {
             IRBlock after = findBlockAfterTryCatch(handler, tryVisited);
             // The try's normal exit is often an empty goto shell in front of the real continuation (the
             // shared join past the catch). Resolve through it so the processed-return check below sees the
             // join itself, not the shell.
             after = resolveThroughGotoShells(after);
-            if (after != null && !stopBlocks.contains(after)) {
-                if (context.isProcessed(after) && isReturnBlock(after)) {
+            if (after != null && !stopBlocks.contains(after))
+            {
+                if (context.isProcessed(after) && isReturnBlock(after))
+                {
                     // The continuation is a shared trailing return a prefix arm already absorbed (a guard's
                     // early exit and the try's fall-through converge on one return block). The hand-off
                     // emits nothing for a processed region, which would drop the fall-through's return
                     // entirely; a return terminator is idempotent, so re-emit its recovered statements.
                     out.addAll(context.getStatements(after));
-                } else {
+                }
+                else
+                {
                     out.addAll(recoverRegionHandoff(after, stopBlocks));
                 }
             }
@@ -7566,18 +9262,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * normal flow it rejoins - this set can never contain a block normal control reaches, so it is safe as
      * a stop set for boundary-strict recoveries.
      */
-    private Set<IRBlock> catchExclusiveBlocks(List<ExceptionHandler> handlers) {
+    private Set<IRBlock> catchExclusiveBlocks(List<ExceptionHandler> handlers)
+    {
         Set<IRBlock> out = new HashSet<>();
         DominatorTree dt = context.getDominatorTree();
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             IRBlock hb = h.getHandlerBlock();
-            if (hb == null) {
+            if (hb == null)
+            {
                 continue;
             }
             out.add(hb);
-            if (dt != null) {
-                for (IRBlock b : context.getIrMethod().getBlocks()) {
-                    if (dt.dominates(hb, b)) {
+            if (dt != null)
+            {
+                for (IRBlock b : context.getIrMethod().getBlocks())
+                {
+                    if (dt.dominates(hb, b))
+                    {
                         out.add(b);
                     }
                 }
@@ -7588,43 +9290,53 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
 
     @Override
-    public boolean startsUnprocessedHandler(IRBlock block) {
+    public boolean startsUnprocessedHandler(IRBlock block)
+    {
         return findUnprocessedHandlerStartingAt(block) != null;
     }
 
     @Override
-    public boolean isRetiredHandlerBlock(IRBlock block) {
+    public boolean isRetiredHandlerBlock(IRBlock block)
+    {
         return processedHandlerBlocks.contains(block);
     }
 
     @Override
-    public TryNodeDescriptor decodeTryNode(IRBlock block, Set<IRBlock> regionStops) {
+    public TryNodeDescriptor decodeTryNode(IRBlock block, Set<IRBlock> regionStops)
+    {
         this.decodeRegionStops = regionStops == null ? Collections.emptySet() : regionStops;
         ExceptionHandler h = findUnprocessedHandlerStartingAt(block);
-        if (h == null || h.getHandlerBlock() == null) {
+        if (h == null || h.getHandlerBlock() == null)
+        {
             return null;
         }
         IRMethod irMethod = context.getIrMethod();
         int startOff = h.getTryStart() != null ? h.getTryStart().getBytecodeOffset() : -1;
         int endOff = -1;
-        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-            if (eh.getHandlerBlock() != h.getHandlerBlock()) {
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+        {
+            if (eh.getHandlerBlock() != h.getHandlerBlock())
+            {
                 continue;
             }
-            if (eh.getTryStart() != null && (startOff < 0 || eh.getTryStart().getBytecodeOffset() < startOff)) {
+            if (eh.getTryStart() != null && (startOff < 0 || eh.getTryStart().getBytecodeOffset() < startOff))
+            {
                 startOff = eh.getTryStart().getBytecodeOffset();
             }
-            if (eh.getTryEnd() != null && eh.getTryEnd().getBytecodeOffset() > endOff) {
+            if (eh.getTryEnd() != null && eh.getTryEnd().getBytecodeOffset() > endOff)
+            {
                 endOff = eh.getTryEnd().getBytecodeOffset();
             }
         }
-        if (startOff < 0 || endOff <= startOff || block.getBytecodeOffset() != startOff) {
+        if (startOff < 0 || endOff <= startOff || block.getBytecodeOffset() != startOff)
+        {
             trace("node-decline range block=" + block.getBytecodeOffset()
                     + " startOff=" + startOff + " endOff=" + endOff);
             return null;
         }
         boolean finallyNode = false;
-        if (tryHasFinallyHandler(block)) {
+        if (tryHasFinallyHandler(block))
+        {
             // A finally-protected try can be a node: the merged window is widened over EVERY same-start
             // handler's family, so it covers the try body, the user catch bodies, the inlined finally
             // copies between them, and the rethrower's own split ranges. The delegate is still handed the
@@ -7633,14 +9345,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // copies are de-duplicated from the exits up front; a shape whose copies cannot be excised
             // statically declines (leaving them would double the finally's effect on the normal path).
             finallyNode = true;
-            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+            {
                 if (sib.getHandlerBlock() == null || sib.getTryStart() == null
-                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset())
+                {
                     continue;
                 }
-                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+                {
                     if (eh.getHandlerBlock() == sib.getHandlerBlock() && eh.getTryEnd() != null
-                            && eh.getTryEnd().getBytecodeOffset() > endOff) {
+                            && eh.getTryEnd().getBytecodeOffset() > endOff)
+                    {
                         endOff = eh.getTryEnd().getBytecodeOffset();
                     }
                 }
@@ -7648,40 +9364,53 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
         Set<IRBlock> consumed = new HashSet<>();
         boolean monitorFamily = false;
-        for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+        for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+        {
             if (sib.getTryStart() != null && sib.getTryStart().getBytecodeOffset() == startOff
-                    && detectSynchronizedLock(sib) != null) {
+                    && detectSynchronizedLock(sib) != null)
+            {
                 monitorFamily = true;
                 break;
             }
         }
-        if (finallyNode && !monitorFamily && context.getLoopAnalysis() != null && context.getLoopAnalysis().getLoop(block) != null) {
+        if (finallyNode && !monitorFamily && context.getLoopAnalysis() != null && context.getLoopAnalysis().getLoop(block) != null)
+        {
             // Inside a loop the finally family's span window swallows the loop's own continuation
             // (the code between the protected range and the latch, where a relowered layout parks
             // it) and the predecessor closure is off-limits. Membership is the family's actual
             // RANGES: the de-duplication excises the close copies from the epilogue, and the
             // epilogue's real code stays outside the node as region code at the join.
-            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
-                if (sib.getHandlerBlock() == null || sib.getTryStart() == null || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+            {
+                if (sib.getHandlerBlock() == null || sib.getTryStart() == null || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset())
+                {
                     continue;
                 }
-                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-                    if (eh.getHandlerBlock() != sib.getHandlerBlock() || eh.getTryStart() == null || eh.getTryEnd() == null) {
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+                {
+                    if (eh.getHandlerBlock() != sib.getHandlerBlock() || eh.getTryStart() == null || eh.getTryEnd() == null)
+                    {
                         continue;
                     }
                     int lo = eh.getTryStart().getBytecodeOffset();
                     int hi = eh.getTryEnd().getBytecodeOffset();
-                    for (IRBlock b : irMethod.getBlocks()) {
-                        if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi) {
+                    for (IRBlock b : irMethod.getBlocks())
+                    {
+                        if (b.getBytecodeOffset() >= lo && b.getBytecodeOffset() < hi)
+                        {
                             consumed.add(b);
                         }
                     }
                 }
             }
-        } else {
-            for (IRBlock b : irMethod.getBlocks()) {
+        }
+        else
+        {
+            for (IRBlock b : irMethod.getBlocks())
+            {
                 int off = b.getBytecodeOffset();
-                if (off >= startOff && off < endOff) {
+                if (off >= startOff && off < endOff)
+                {
                     consumed.add(b);
                 }
             }
@@ -7691,21 +9420,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // between its ranges, where a relowered layout parks unrelated code (a return arm, a loop
         // continuation). Carve the window down to the family's actual ranges plus the blocks only
         // the construct reaches - same closure, keyed on this handler's own family.
-        if (!finallyNode) {
+        if (!finallyNode)
+        {
             List<int[]> ownRanges = new ArrayList<>();
-            for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-                if (eh.getHandlerBlock() == h.getHandlerBlock() && eh.getTryStart() != null && eh.getTryEnd() != null) {
+            for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+            {
+                if (eh.getHandlerBlock() == h.getHandlerBlock() && eh.getTryStart() != null && eh.getTryEnd() != null)
+                {
                     ownRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
                             eh.getTryEnd().getBytecodeOffset()});
                 }
             }
             boolean acyclicPlain = context.getLoopAnalysis() == null || context.getLoopAnalysis().getLoop(block) == null;
-            if (ownRanges.size() > 1 && acyclicPlain) {
+            if (ownRanges.size() > 1 && acyclicPlain)
+            {
                 Set<IRBlock> plainClosure = new HashSet<>();
-                for (IRBlock b : irMethod.getBlocks()) {
+                for (IRBlock b : irMethod.getBlocks())
+                {
                     int boff = b.getBytecodeOffset();
-                    for (int[] r : ownRanges) {
-                        if (boff >= r[0] && boff < r[1]) {
+                    for (int[] r : ownRanges)
+                    {
+                        if (boff >= r[0] && boff < r[1])
+                        {
                             plainClosure.add(b);
                             break;
                         }
@@ -7713,53 +9449,68 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
                 plainClosure.add(h.getHandlerBlock());
                 boolean plainGrew = true;
-                while (plainGrew) {
+                while (plainGrew)
+                {
                     plainGrew = false;
-                    for (IRBlock b : irMethod.getBlocks()) {
+                    for (IRBlock b : irMethod.getBlocks())
+                    {
                         if (plainClosure.contains(b) || b == irMethod.getEntryBlock()
                                 || b.getPredecessors().isEmpty()
-                                || b.getTerminator() instanceof ReturnInstruction) {
+                                || b.getTerminator() instanceof ReturnInstruction)
+                        {
                             continue;
                         }
-                        if (plainClosure.containsAll(b.getPredecessors())) {
+                        if (plainClosure.containsAll(b.getPredecessors()))
+                        {
                             plainClosure.add(b);
                             plainGrew = true;
                         }
                     }
                 }
                 consumed = plainClosure;
-            } else if (ownRanges.size() > 1) {
+            }
+            else if (ownRanges.size() > 1)
+            {
                 // Inside a loop the predecessor closure is off-limits (it swallows latches), but the
                 // merged window still over-consumes: a relowered layout parks unrelated code in the
                 // gap between the family's split ranges. A gap block no consumed block flows into is
                 // foreign - carve it out so the join scan never meets its exits. Strictly narrowing:
                 // range-covered blocks and interior-reached gap blocks (the latch path) are untouched.
                 boolean carved = true;
-                while (carved) {
+                while (carved)
+                {
                     carved = false;
-                    for (IRBlock b : new ArrayList<>(consumed)) {
-                        if (b == block || b == h.getHandlerBlock()) {
+                    for (IRBlock b : new ArrayList<>(consumed))
+                    {
+                        if (b == block || b == h.getHandlerBlock())
+                        {
                             continue;
                         }
                         int boff = b.getBytecodeOffset();
                         boolean inRange = false;
-                        for (int[] r : ownRanges) {
-                            if (boff >= r[0] && boff < r[1]) {
+                        for (int[] r : ownRanges)
+                        {
+                            if (boff >= r[0] && boff < r[1])
+                            {
                                 inRange = true;
                                 break;
                             }
                         }
-                        if (inRange) {
+                        if (inRange)
+                        {
                             continue;
                         }
                         boolean reached = false;
-                        for (IRBlock p : b.getPredecessors()) {
-                            if (consumed.contains(p)) {
+                        for (IRBlock p : b.getPredecessors())
+                        {
+                            if (consumed.contains(p))
+                            {
                                 reached = true;
                                 break;
                             }
                         }
-                        if (!reached) {
+                        if (!reached)
+                        {
                             consumed.remove(b);
                             carved = true;
                         }
@@ -7767,7 +9518,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
             }
         }
-        if (finallyNode) {
+        if (finallyNode)
+        {
             // The widened window spans min..max over the sibling families' SPLIT ranges, and javac can lay
             // the construct's continuation - the return the normal-exit copy converges on - in the gap
             // between a family's ranges (before a catch body the family also protects). A terminal block in
@@ -7775,15 +9527,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // construct; leave it unconsumed so the join scan finds it.
             List<int[]> protectedRanges = new ArrayList<>();
             Set<IRBlock> familyHandlers = new HashSet<>();
-            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+            {
                 if (sib.getHandlerBlock() == null || sib.getTryStart() == null
-                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                        || sib.getTryStart().getBytecodeOffset() != block.getBytecodeOffset())
+                {
                     continue;
                 }
-                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-                    if (eh.getHandlerBlock() == sib.getHandlerBlock()) {
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+                {
+                    if (eh.getHandlerBlock() == sib.getHandlerBlock())
+                    {
                         familyHandlers.add(eh.getHandlerBlock());
-                        if (eh.getTryStart() != null && eh.getTryEnd() != null) {
+                        if (eh.getTryStart() != null && eh.getTryEnd() != null)
+                        {
                             protectedRanges.add(new int[]{eh.getTryStart().getBytecodeOffset(),
                                     eh.getTryEnd().getBytecodeOffset()});
                         }
@@ -7810,19 +9567,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // synchronized body shares its try start with the sync rethrower, so every same-start
             // handler is checked before the closure engages.
             boolean syncFamily = false;
-            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+            {
                 if (sib.getTryStart() != null && sib.getTryStart().getBytecodeOffset() == startOff
-                        && detectSynchronizedLock(sib) != null) {
+                        && detectSynchronizedLock(sib) != null)
+                {
                     syncFamily = true;
                     break;
                 }
             }
-            if (acyclicNode && !syncFamily) {
+            if (acyclicNode && !syncFamily)
+            {
             Set<IRBlock> closure = new HashSet<>();
-            for (IRBlock b : irMethod.getBlocks()) {
+            for (IRBlock b : irMethod.getBlocks())
+            {
                 int boff = b.getBytecodeOffset();
-                for (int[] r : protectedRanges) {
-                    if (boff >= r[0] && boff < r[1]) {
+                for (int[] r : protectedRanges)
+                {
+                    if (boff >= r[0] && boff < r[1])
+                    {
                         closure.add(b);
                         break;
                     }
@@ -7830,71 +9593,92 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
             closure.addAll(familyHandlers);
             boolean grew = true;
-            while (grew) {
+            while (grew)
+            {
                 grew = false;
-                for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+                for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+                {
                     if (eh.getHandlerBlock() == null || closure.contains(eh.getHandlerBlock())
-                            || eh.getTryStart() == null || eh.getTryEnd() == null) {
+                            || eh.getTryStart() == null || eh.getTryEnd() == null)
+                    {
                         continue;
                     }
                     boolean rangeInside = true;
                     int lo = eh.getTryStart().getBytecodeOffset();
                     int hi = eh.getTryEnd().getBytecodeOffset();
-                    for (IRBlock b : irMethod.getBlocks()) {
+                    for (IRBlock b : irMethod.getBlocks())
+                    {
                         int boff = b.getBytecodeOffset();
-                        if (boff >= lo && boff < hi && !closure.contains(b)) {
+                        if (boff >= lo && boff < hi && !closure.contains(b))
+                        {
                             rangeInside = false;
                             break;
                         }
                     }
-                    if (rangeInside) {
+                    if (rangeInside)
+                    {
                         closure.add(eh.getHandlerBlock());
                         grew = true;
                     }
                 }
-                for (IRBlock b : irMethod.getBlocks()) {
+                for (IRBlock b : irMethod.getBlocks())
+                {
                     if (closure.contains(b) || b == irMethod.getEntryBlock()
                             || b.getPredecessors().isEmpty()
-                            || b.getTerminator() instanceof ReturnInstruction) {
+                            || b.getTerminator() instanceof ReturnInstruction)
+                    {
                         continue;
                     }
-                    if (closure.containsAll(b.getPredecessors())) {
+                    if (closure.containsAll(b.getPredecessors()))
+                    {
                         closure.add(b);
                         grew = true;
                     }
                 }
             }
-            for (IRBlock b : new ArrayList<>(closure)) {
-                if (!(b.getTerminator() instanceof ReturnInstruction)) {
+            for (IRBlock b : new ArrayList<>(closure))
+            {
+                if (!(b.getTerminator() instanceof ReturnInstruction))
+                {
                     continue;
                 }
                 int boff = b.getBytecodeOffset();
                 boolean covered = false;
-                for (int[] r : protectedRanges) {
-                    if (boff >= r[0] && boff < r[1]) {
+                for (int[] r : protectedRanges)
+                {
+                    if (boff >= r[0] && boff < r[1])
+                    {
                         covered = true;
                         break;
                     }
                 }
-                if (!covered) {
+                if (!covered)
+                {
                     closure.remove(b);
                 }
             }
             consumed = closure;
-            } else {
-                for (IRBlock b : new ArrayList<>(consumed)) {
-                    if (!(b.getTerminator() instanceof ReturnInstruction)) {
+            }
+            else
+            {
+                for (IRBlock b : new ArrayList<>(consumed))
+                {
+                    if (!(b.getTerminator() instanceof ReturnInstruction))
+                    {
                         continue;
                     }
                     int boff = b.getBytecodeOffset();
                     boolean covered = false;
-                    for (int[] r : protectedRanges) {
-                        if (boff >= r[0] && boff < r[1]) {
+                    for (int[] r : protectedRanges)
+                    {
+                        if (boff >= r[0] && boff < r[1])
+                        {
                             covered = true;
                             break;
                         }
                     }
-                    if (!covered) {
+                    if (!covered)
+                    {
                         consumed.remove(b);
                     }
                 }
@@ -7906,38 +9690,47 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // the merged protected window, or the recovery would consume blocks the model cannot predict.
         DominatorTree nestDt = context.getDominatorTree();
         Set<IRBlock> siblingHandlerBlocks = new HashSet<>();
-        if (!finallyNode) {
+        if (!finallyNode)
+        {
             // A same-start handler with its own handler block is this try's sibling CATCH CLAUSE
             // (a multi-catch), not a nested try: the delegate recovers every clause of the statement,
             // so the node consumes the sibling's catch code and scans its exits for the join.
-            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+            {
                 if (sib.getHandlerBlock() != null && sib.getHandlerBlock() != h.getHandlerBlock()
                         && sib.getTryStart() != null
                         && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset()
                         && !processedTryHandlers.contains(sib)
-                        && !processedHandlerBlocks.contains(sib.getHandlerBlock())) {
+                        && !processedHandlerBlocks.contains(sib.getHandlerBlock()))
+                {
                     siblingHandlerBlocks.add(sib.getHandlerBlock());
                 }
             }
         }
-        if (finallyNode) {
+        if (finallyNode)
+        {
             // The finally's sibling scaffolding - every same-start handler family, including the
             // rethrower's own split ranges - is blanket-consumed: the delegate recovery owns the whole
             // construct (flat clauses via the caller's handler pick, copies folded out of the try and
             // catch bodies alike).
-            for (ExceptionHandler sib : irMethod.getExceptionHandlers()) {
+            for (ExceptionHandler sib : irMethod.getExceptionHandlers())
+            {
                 if (sib.getHandlerBlock() != null && sib.getTryStart() != null
-                        && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset()) {
+                        && sib.getTryStart().getBytecodeOffset() == block.getBytecodeOffset())
+                {
                     siblingHandlerBlocks.add(sib.getHandlerBlock());
                 }
             }
         }
-        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+        {
             if (eh.getHandlerBlock() == null || eh.getHandlerBlock() == h.getHandlerBlock()
-                    || eh.getTryStart() == null) {
+                    || eh.getTryStart() == null)
+            {
                 continue;
             }
-            if (siblingHandlerBlocks.contains(eh.getHandlerBlock())) {
+            if (siblingHandlerBlocks.contains(eh.getHandlerBlock()))
+            {
                 // Any entry targeting a same-start sibling's handler block - the sibling's other split
                 // ranges included - is the finally/catch scaffolding itself, not a nested try; the finally
                 // decode consumes those handlers' whole subtrees.
@@ -7946,7 +9739,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             int s = eh.getTryStart().getBytecodeOffset();
             if (s >= startOff && s < endOff
                     && !processedTryHandlers.contains(eh)
-                    && !processedHandlerBlocks.contains(eh.getHandlerBlock())) {
+                    && !processedHandlerBlocks.contains(eh.getHandlerBlock()))
+            {
                 // A handler whose protected blocks lie entirely outside the consumed set is not
                 // nested at all: it is a sibling construct a relowered layout parked in the gap
                 // between this family's split ranges. Its offset alone puts it in the window;
@@ -7954,14 +9748,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 boolean protectsConsumed = false;
                 int lo = eh.getTryStart().getBytecodeOffset();
                 int hi = eh.getTryEnd() != null ? eh.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
-                for (IRBlock nb : consumed) {
+                for (IRBlock nb : consumed)
+                {
                     int off = nb.getBytecodeOffset();
-                    if (off >= lo && off < hi) {
+                    if (off >= lo && off < hi)
+                    {
                         protectsConsumed = true;
                         break;
                     }
                 }
-                if (!protectsConsumed) {
+                if (!protectsConsumed)
+                {
                     continue;
                 }
                 // Containment is judged against the CONSUMED SET, not the offset window: a
@@ -7969,16 +9766,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // the closure has legitimately absorbed it. A block in neither is genuinely outside
                 // the model's reach.
                 boolean contained = true;
-                for (IRBlock nb : irMethod.getBlocks()) {
-                    if (nb == eh.getHandlerBlock() || nestDt.dominates(eh.getHandlerBlock(), nb)) {
+                for (IRBlock nb : irMethod.getBlocks())
+                {
+                    if (nb == eh.getHandlerBlock() || nestDt.dominates(eh.getHandlerBlock(), nb))
+                    {
                         int off = nb.getBytecodeOffset();
-                        if ((off < startOff || off >= endOff) && !consumed.contains(nb)) {
+                        if ((off < startOff || off >= endOff) && !consumed.contains(nb))
+                        {
                             contained = false;
                             break;
                         }
                     }
                 }
-                if (!contained) {
+                if (!contained)
+                {
                     trace("node-decline nested-uncontained block=" + block.getBytecodeOffset()
                             + " nested=" + eh.getHandlerBlock().getBytecodeOffset());
                     return null;
@@ -7988,7 +9789,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         consumed.add(h.getHandlerBlock());
 
         DominatorTree dt = context.getDominatorTree();
-        if (finallyNode) {
+        if (finallyNode)
+        {
             return decodeFinallyTryNode(block, h, consumed, dt);
         }
         // A multi-block catch body (a catch with its own branches) is dominated by the handler entry;
@@ -7998,9 +9800,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> handlerBody = new HashSet<>();
         handlerBody.add(h.getHandlerBlock());
         handlerBody.addAll(siblingHandlerBlocks);
-        for (IRBlock b : irMethod.getBlocks()) {
-            for (IRBlock entryBlock : handlerBody.toArray(new IRBlock[0])) {
-                if (dt.dominates(entryBlock, b)) {
+        for (IRBlock b : irMethod.getBlocks())
+        {
+            for (IRBlock entryBlock : handlerBody.toArray(new IRBlock[0]))
+            {
+                if (dt.dominates(entryBlock, b))
+                {
                     handlerBody.add(b);
                     break;
                 }
@@ -8008,18 +9813,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
         consumed.addAll(handlerBody);
         IRBlock after = null;
-        for (IRBlock cb : handlerBody) {
-            for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+        for (IRBlock cb : handlerBody)
+        {
+            for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet())
+            {
                 IRBlock succ = e.getKey();
-                if (e.getValue() == EdgeType.EXCEPTION
-                        || consumed.contains(succ) || dt.dominates(succ, cb)) {
+                if (e.getValue() == EdgeType.EXCEPTION || consumed.contains(succ) || dt.dominates(succ, cb))
+                {
                     continue;
                 }
                 succ = resolveThroughGotoShells(succ);
-                if (consumed.contains(succ)) {
+                if (consumed.contains(succ))
+                {
                     continue;
                 }
-                if (after != null && after != succ) {
+                if (after != null && after != succ)
+                {
                     trace("node-decline handler-two-join block=" + block.getBytecodeOffset()
                             + " a=" + after.getBytecodeOffset() + " b=" + succ.getBytecodeOffset());
                     return null;
@@ -8027,42 +9836,52 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 after = succ;
             }
         }
-        if (after == null) {
+        if (after == null)
+        {
             // The range-end fallback presumes the try's normal continuation physically follows the
             // protected range (javac's contiguous layout). When the try side is fully TERMINAL too
             // (`try { return f(); } catch { throw wrap; }`), there is no join at all - fabricating
             // one from the next offset wires the node into unrelated code (a relowered layout may
             // place any block there) and the phantom edge reads as an irreducible cycle.
             Set<IRBlock> trySideTargets = new HashSet<>();
-            for (IRBlock cb : consumed) {
-                for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() == EdgeType.NORMAL
-                            && !consumed.contains(e.getKey())) {
+            for (IRBlock cb : consumed)
+            {
+                for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet())
+                {
+                    if (e.getValue() == EdgeType.NORMAL && !consumed.contains(e.getKey()))
+                    {
                         trySideTargets.add(e.getKey());
                     }
                 }
             }
-            if (trySideTargets.size() == 1) {
+            if (trySideTargets.size() == 1)
+            {
                 // The try side's one real continuation IS the join; the offset fallback below can
                 // point at whatever block a relowered layout happens to place past the range end
                 // (an empty pad, unrelated code).
                 after = trySideTargets.iterator().next();
-            } else if (!trySideTargets.isEmpty()) {
+            }
+            else if (!trySideTargets.isEmpty())
+            {
                 int best = Integer.MAX_VALUE;
-                for (IRBlock b : irMethod.getBlocks()) {
+                for (IRBlock b : irMethod.getBlocks())
+                {
                     int off = b.getBytecodeOffset();
-                    if (off >= endOff && off < best && !consumed.contains(b)) {
+                    if (off >= endOff && off < best && !consumed.contains(b))
+                    {
                         after = b;
                         best = off;
                     }
                 }
             }
-            if (after != null && dt.dominates(h.getHandlerBlock(), after)) {
+            if (after != null && dt.dominates(h.getHandlerBlock(), after))
+            {
                 trace("node-decline handler-dominates-after block=" + block.getBytecodeOffset());
                 return null;
             }
         }
-        if (after == block) {
+        if (after == block)
+        {
             trace("finally-node decline block=" + block.getBytecodeOffset() + " self-join");
             return null;
         }
@@ -8073,29 +9892,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // - left out they dangle outside both the node and the region and break the latch model.
         LoopAnalysis loopsForPads = context.getLoopAnalysis();
         LoopAnalysis.Loop enclosingLoop = loopsForPads == null ? null : loopsForPads.getLoop(block);
-        if (loopsForPads != null) {
+        if (loopsForPads != null)
+        {
             boolean afterOutOfLoop = enclosingLoop != null && after != null
                     && !enclosingLoop.getBlocks().contains(after);
             Set<IRBlock> exitPads = new HashSet<>();
-            for (IRBlock cb : consumed) {
-                if (handlerBody.contains(cb)) {
+            for (IRBlock cb : consumed)
+            {
+                if (handlerBody.contains(cb))
+                {
                     continue;
                 }
-                for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() != EdgeType.NORMAL
-                            || consumed.contains(e.getKey())) {
+                for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet())
+                {
+                    if (e.getValue() != EdgeType.NORMAL || consumed.contains(e.getKey()))
+                    {
                         continue;
                     }
                     Set<IRBlock> chain = new HashSet<>();
                     IRBlock landing = resolveThroughGotoShells(e.getKey(), chain);
-                    if (landing == null) {
+                    if (landing == null)
+                    {
                         continue;
                     }
                     LoopAnalysis.Loop landingLoop = loopsForPads.getLoop(landing);
                     if (landingLoop != null && landingLoop.getHeader() == landing
-                            && landingLoop.getBlocks().contains(block)) {
+                            && landingLoop.getBlocks().contains(block))
+                    {
                         exitPads.addAll(chain);
-                    } else if (afterOutOfLoop && enclosingLoop.getBlocks().contains(landing)) {
+                    }
+                    else if (afterOutOfLoop && enclosingLoop.getBlocks().contains(landing))
+                    {
                         after = landing;
                         afterOutOfLoop = false;
                         exitPads.addAll(chain);
@@ -8111,23 +9938,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     @Override
-    public List<Statement> recoverBoundaryTail(IRBlock tail) {
-        if (!isTerminalTail(tail)) {
+    public List<Statement> recoverBoundaryTail(IRBlock tail)
+    {
+        if (!isTerminalTail(tail))
+        {
             return null;
         }
         List<Statement> out = new ArrayList<>();
         IRBlock b = tail;
         int hops = 0;
-        while (b != null && hops++ < 8) {
+        while (b != null && hops++ < 8)
+        {
             out.addAll(recoverSimpleBlock(b));
             if (b.getTerminator() instanceof ReturnInstruction
                     || (b.getTerminator() instanceof SimpleInstruction
-                        && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW)) {
+                        && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW))
+            {
                 return out;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     next = e.getKey();
                 }
             }
@@ -8137,11 +9970,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     @Override
-    public Statement recoverTryNode(IRBlock block, TryNodeDescriptor node, Set<IRBlock> stopBlocks,
-                                    Set<IRBlock> alreadyEmitted) {
+    public Statement recoverTryNode(IRBlock block, TryNodeDescriptor node, Set<IRBlock> stopBlocks, Set<IRBlock> alreadyEmitted)
+    {
         ExceptionHandler h = node.handler();
         processedTryHandlers.add(h);
-        if (h.getHandlerBlock() != null) {
+        if (h.getHandlerBlock() != null)
+        {
             processedHandlerBlocks.add(h.getHandlerBlock());
         }
         // A node whose continuation is a genuine CODE join (not a return tail) hands that boundary to
@@ -8152,15 +9986,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // legitimately emit a converging return per path (idempotent), and stopping them drops it.
         IRBlock after = node.after();
         if (after == null || after.getTerminator() instanceof ReturnInstruction
-                || (context.getLoopAnalysis() != null && context.getLoopAnalysis().getLoop(block) != null)) {
+                || (context.getLoopAnalysis() != null && context.getLoopAnalysis().getLoop(block) != null))
+        {
             return recoverTryCatch(block, h, stopBlocks, new HashSet<>(alreadyEmitted));
         }
         Set<IRBlock> stops = new HashSet<>(stopBlocks);
         stops.add(after);
         context.pushStopBlocks(stops);
-        try {
+        try
+        {
             return recoverTryCatch(block, h, stops, new HashSet<>(alreadyEmitted));
-        } finally {
+        }
+        finally
+        {
             context.popStopBlocks();
         }
     }
@@ -8170,19 +10008,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * a finally-compatible catch type, and either a true catch-any entry (source cannot express one)
      * or a verbatim inlined copy of the handler body somewhere outside its protected ranges.
      */
-    private boolean isEvidencedFinally(ExceptionHandler h) {
+    private boolean isEvidencedFinally(ExceptionHandler h)
+    {
         return handlerRethrows(h) && !handlerThrowsFreshException(h) && isFinallyCatchType(h)
-                && (h.isCatchAll() || h.getHandlerBlock() == null
-                    || handlerHasFinallyEvidence(h.getHandlerBlock()));
+                && (h.isCatchAll() || h.getHandlerBlock() == null || handlerHasFinallyEvidence(h.getHandlerBlock()));
     }
 
     @Override
-    public boolean recoveredTryTerminates(Statement recovered) {
+    public boolean recoveredTryTerminates(Statement recovered)
+    {
         return isTerminatingRecoveredTry(recovered);
     }
 
     @Override
-    public void unrecoveredTryNode(IRBlock block) {
+    public void unrecoveredTryNode(IRBlock block)
+    {
         throw retiredSchemaRecovery("try-node", block);
     }
 
@@ -8197,14 +10037,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * null - keeping the caller's decline - when the scaffolding's outermost handler for the try does not
      * begin exactly at the staged boundary, was already consumed, or protects a try with its own catch.
      */
-    private List<Statement> recoverFinallyStage(IRBlock startBlock, IRBlock tryStart, Set<IRBlock> stopBlocks) {
+    private List<Statement> recoverFinallyStage(IRBlock startBlock, IRBlock tryStart, Set<IRBlock> stopBlocks)
+    {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
         List<ExceptionHandler> mergedHandlers = mergeHandlersWithSameTarget(handlers);
         ExceptionHandler outer = findOutermostHandler(tryStart, mergedHandlers);
         if (outer == null || outer.getTryStart() == null
                 || outer.getTryStart().getBytecodeOffset() != tryStart.getBytecodeOffset()
                 || processedTryHandlers.contains(outer)
-                || processedHandlerBlocks.contains(outer.getHandlerBlock())) {
+                || processedHandlerBlocks.contains(outer.getHandlerBlock()))
+        {
             return null;
         }
         // A USER finally with a nested catch of its own (a different unprocessed handler inside the range) is
@@ -8215,40 +10057,50 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // inside a loop within the synchronized (a wait-loop's `catch (InterruptedException) {}`), producing
         // uncompilable output - so a synchronized region with a nested catch is delegated to the scaffolding,
         // which recovers the nested try/catch via recoverWithNestedHandlers.
-        if (detectSynchronizedLock(outer) == null) {
+        if (detectSynchronizedLock(outer) == null)
+        {
             int outerStart = outer.getTryStart().getBytecodeOffset();
             int outerEnd = outer.getTryEnd() != null ? outer.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
-            for (ExceptionHandler h : mergedHandlers) {
+            for (ExceptionHandler h : mergedHandlers)
+            {
                 if (h == outer || h.getHandlerBlock() == outer.getHandlerBlock() || sameTryRange(h, outer)
                         || h.getTryStart() == null
                         || processedTryHandlers.contains(h)
-                        || processedHandlerBlocks.contains(h.getHandlerBlock())) {
+                        || processedHandlerBlocks.contains(h.getHandlerBlock()))
+                {
                     continue;
                 }
                 int hs = h.getTryStart().getBytecodeOffset();
-                if (hs >= outerStart && hs < outerEnd) {
+                if (hs >= outerStart && hs < outerEnd)
+                {
                     return null;
                 }
             }
         }
         List<Statement> out = new ArrayList<>();
-        if (tryStart != startBlock) {
+        if (tryStart != startBlock)
+        {
             Set<IRBlock> prefixStops = new HashSet<>(stopBlocks);
             prefixStops.add(tryStart);
             out.addAll(recoverRegionHandoff(startBlock, prefixStops));
         }
         Set<IRBlock> handlerBlocks = new HashSet<>();
-        for (ExceptionHandler h : handlers) {
-            if (h.getHandlerBlock() != null) {
+        for (ExceptionHandler h : handlers)
+        {
+            if (h.getHandlerBlock() != null)
+            {
                 handlerBlocks.add(h.getHandlerBlock());
                 collectReachableBlocks(h.getHandlerBlock(), handlerBlocks);
             }
         }
         boolean savedExtended = extendedFinallyDedup;
         extendedFinallyDedup = true;
-        try {
+        try
+        {
             out.addAll(recoverOuterHandlerRegion(tryStart, outer, handlers, mergedHandlers, handlerBlocks));
-        } finally {
+        }
+        finally
+        {
             extendedFinallyDedup = savedExtended;
         }
         return out;
@@ -8256,17 +10108,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
     /** Whether a store is a handler's caught-exception spill: its value chains through copies to the
      * raw exception (a definition-less SSA value), not to anything the finally body computed. */
-    private boolean isExceptionSpill(StoreLocalInstruction store) {
+    private boolean isExceptionSpill(StoreLocalInstruction store)
+    {
         Value v = store.getValue();
         Set<IRInstruction> seen = new HashSet<>();
         int hops = 0;
-        while (v instanceof SSAValue && hops++ < 4) {
+        while (v instanceof SSAValue && hops++ < 4)
+        {
             IRInstruction def = ((SSAValue) v).getDefinition();
-            if (def == null || !seen.add(def)) {
+            if (def == null || !seen.add(def))
+            {
                 // No definition, or a self-referential copy cycle: the raw incoming exception.
                 return true;
             }
-            if (!(def instanceof CopyInstruction)) {
+            if (!(def instanceof CopyInstruction))
+            {
                 return false;
             }
             v = ((CopyInstruction) def).getSource();
@@ -8274,15 +10130,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return !(v instanceof SSAValue);
     }
 
-    private boolean finallyWritesLocal(List<ExceptionHandler> handlers) {
-        for (ExceptionHandler h : handlers) {
-            if (!handlerRethrows(h) || handlerThrowsFreshException(h)) {
+    private boolean finallyWritesLocal(List<ExceptionHandler> handlers)
+    {
+        for (ExceptionHandler h : handlers)
+        {
+            if (!handlerRethrows(h) || handlerThrowsFreshException(h))
+            {
                 continue;
             }
             List<IRInstruction> template = straightLineFinallyTemplate(h);
-            if (template != null) {
-                for (IRInstruction ins : template) {
-                    if (ins instanceof StoreLocalInstruction) {
+            if (template != null)
+            {
+                for (IRInstruction ins : template)
+                {
+                    if (ins instanceof StoreLocalInstruction)
+                    {
                         return true;
                     }
                 }
@@ -8294,32 +10156,41 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // finally body write.
             IRBlock hb = h.getHandlerBlock();
             int hops = 0;
-            while (hb != null && hops++ < 8) {
-                for (IRInstruction ins : hb.getInstructions()) {
-                    if (ins instanceof StoreLocalInstruction && !isExceptionSpill((StoreLocalInstruction) ins)) {
+            while (hb != null && hops++ < 8)
+            {
+                for (IRInstruction ins : hb.getInstructions())
+                {
+                    if (ins instanceof StoreLocalInstruction && !isExceptionSpill((StoreLocalInstruction) ins))
+                    {
                         return true;
                     }
                 }
                 if (hb.getTerminator() instanceof SimpleInstruction
-                        && ((SimpleInstruction) hb.getTerminator()).getOp() == SimpleOp.ATHROW) {
+                        && ((SimpleInstruction) hb.getTerminator()).getOp() == SimpleOp.ATHROW)
+                {
                     break;
                 }
                 IRBlock next = null;
-                for (Map.Entry<IRBlock, EdgeType> e : hb.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() == EdgeType.NORMAL) {
-                        if (next != null) {
+                for (Map.Entry<IRBlock, EdgeType> e : hb.getSuccessorEdgeTypes().entrySet())
+                {
+                    if (e.getValue() == EdgeType.NORMAL)
+                    {
+                        if (next != null)
+                        {
                             return true;
                         }
                         next = e.getKey();
                     }
                 }
                 if (next == null && !(hb.getTerminator() instanceof SimpleInstruction
-                        && ((SimpleInstruction) hb.getTerminator()).getOp() == SimpleOp.ATHROW)) {
+                        && ((SimpleInstruction) hb.getTerminator()).getOp() == SimpleOp.ATHROW))
+                {
                     return true;
                 }
                 hb = next;
             }
-            if (hops >= 8) {
+            if (hops >= 8)
+            {
                 return true;
             }
         }
@@ -8333,28 +10204,34 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * the single normal continuation the deduplicated exits converge on. The descriptor keeps the caller's
      * handler pick, so the delegate recovery matches the legacy walk's flat clause folding.
      */
-    private TryNodeDescriptor decodeFinallyTryNode(IRBlock block, ExceptionHandler h,
-                                                   Set<IRBlock> consumed, DominatorTree dt) {
+    private TryNodeDescriptor decodeFinallyTryNode(IRBlock block, ExceptionHandler h, Set<IRBlock> consumed, DominatorTree dt)
+    {
         IRMethod irMethod = context.getIrMethod();
         ExceptionHandler rethrower = null;
         List<ExceptionHandler> siblings = new ArrayList<>();
-        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+        {
             if (eh.getHandlerBlock() == null || eh.getTryStart() == null
-                    || eh.getTryStart().getBytecodeOffset() != block.getBytecodeOffset()) {
+                    || eh.getTryStart().getBytecodeOffset() != block.getBytecodeOffset())
+            {
                 continue;
             }
             siblings.add(eh);
-            if (rethrower == null && handlerRethrows(eh) && !handlerThrowsFreshException(eh)) {
+            if (rethrower == null && handlerRethrows(eh) && !handlerThrowsFreshException(eh))
+            {
                 rethrower = eh;
             }
         }
-        if (rethrower == null) {
+        if (rethrower == null)
+        {
             trace("finally-node decline block=" + block.getBytecodeOffset() + " no-rethrower");
             return null;
         }
         List<ExceptionHandler> family = new ArrayList<>();
-        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-            if (eh.getHandlerBlock() == rethrower.getHandlerBlock()) {
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+        {
+            if (eh.getHandlerBlock() == rethrower.getHandlerBlock())
+            {
                 family.add(eh);
             }
         }
@@ -8368,46 +10245,58 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // loop (the try-around-infinite-retry family) has its own recovery: consuming its inner
         // scaffolding here excises the loop's exit logic and the recompiled loop never terminates.
         boolean windowHasLoop = false;
-        if (context.getLoopAnalysis() != null) {
-            for (IRBlock cb : consumed) {
-                if (context.getLoopAnalysis().isLoopHeader(cb)) {
+        if (context.getLoopAnalysis() != null)
+        {
+            for (IRBlock cb : consumed)
+            {
+                if (context.getLoopAnalysis().isLoopHeader(cb))
+                {
                     windowHasLoop = true;
                     break;
                 }
             }
         }
         for (ExceptionHandler eh : windowHasLoop ? java.util.Collections.<ExceptionHandler>emptyList()
-                : irMethod.getExceptionHandlers()) {
+                : irMethod.getExceptionHandlers())
+        {
             if (eh.getHandlerBlock() == null || eh.getHandlerBlock() == rethrower.getHandlerBlock()
                     || eh.getTryStart() == null || !consumed.contains(eh.getTryStart())
                     || !handlerRethrows(eh) || handlerThrowsFreshException(eh)
-                    || isLocalSpillRethrower(eh)) {
+                    || isLocalSpillRethrower(eh))
+            {
                 continue;
             }
             // A clause's own nested close-guard also reaches the rethrow, but it is the clause's
             // scaffolding, not a resource family of its own: its handler sits inside another family
             // handler's dominated subtree.
             boolean insideClause = dt.dominates(rethrower.getHandlerBlock(), eh.getHandlerBlock());
-            if (!insideClause) {
-                for (ExceptionHandler fam : irMethod.getExceptionHandlers()) {
+            if (!insideClause)
+            {
+                for (ExceptionHandler fam : irMethod.getExceptionHandlers())
+                {
                     if (fam.getHandlerBlock() != null && fam.getHandlerBlock() != eh.getHandlerBlock()
                             && fam != eh && handlerRethrows(fam) && !isLocalSpillRethrower(fam)
-                            && dt.dominates(fam.getHandlerBlock(), eh.getHandlerBlock())) {
+                            && dt.dominates(fam.getHandlerBlock(), eh.getHandlerBlock()))
+                    {
                         insideClause = true;
                         break;
                     }
                 }
             }
-            if (insideClause) {
+            if (insideClause)
+            {
                 continue;
             }
             family.add(eh);
             nestedRethrowerBlocks.add(eh.getHandlerBlock());
         }
-        for (IRBlock nrb : nestedRethrowerBlocks) {
+        for (IRBlock nrb : nestedRethrowerBlocks)
+        {
             consumed.add(nrb);
-            for (IRBlock b : irMethod.getBlocks()) {
-                if (dt.dominates(nrb, b)) {
+            for (IRBlock b : irMethod.getBlocks())
+            {
+                if (dt.dominates(nrb, b))
+                {
                     consumed.add(b);
                 }
             }
@@ -8421,9 +10310,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean savedDecodeExtended = extendedFinallyDedup;
         extendedFinallyDedup = true;
         boolean decodeDeduped;
-        try {
+        try
+        {
             decodeDeduped = dedupStraightLineFinally(family);
-        } finally {
+        }
+        finally
+        {
             extendedFinallyDedup = savedDecodeExtended;
         }
         Set<IRBlock> carveFreed = Collections.emptySet();
@@ -8434,38 +10326,48 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // leaving it consumed silently drops it (an array build between the close and the next use
         // vanished whole). Only after a successful excision: un-excised copies must stay consumed
         // for the delegate's statement-level folds.
-        if (decodeDeduped) {
+        if (decodeDeduped)
+        {
             Set<IRBlock> familySubtrees = new HashSet<>();
-            for (ExceptionHandler sib : siblings) {
+            for (ExceptionHandler sib : siblings)
+            {
                 familySubtrees.add(sib.getHandlerBlock());
             }
             familySubtrees.addAll(nestedRethrowerBlocks);
             familySubtrees.add(rethrower.getHandlerBlock());
             Set<IRBlock> candidates = new LinkedHashSet<>();
-            for (IRBlock cb : consumed) {
+            for (IRBlock cb : consumed)
+            {
                 int off = cb.getBytecodeOffset();
                 boolean keep = excisedFinallyCopyBlocks.contains(cb)
                         || consumedFinallyShells.contains(cb)
                         || isBareRethrowTail(cb) || isBareShellBlock(cb);
-                if (!keep) {
-                    for (ExceptionHandler fh : family) {
+                if (!keep)
+                {
+                    for (ExceptionHandler fh : family)
+                    {
                         if (fh.getTryStart() != null && fh.getTryEnd() != null
                                 && off >= fh.getTryStart().getBytecodeOffset()
-                                && off < fh.getTryEnd().getBytecodeOffset()) {
+                                && off < fh.getTryEnd().getBytecodeOffset())
+                        {
                             keep = true;
                             break;
                         }
                     }
                 }
-                if (!keep) {
-                    for (IRBlock hb : familySubtrees) {
-                        if (hb != null && (cb == hb || dt.dominates(hb, cb))) {
+                if (!keep)
+                {
+                    for (IRBlock hb : familySubtrees)
+                    {
+                        if (hb != null && (cb == hb || dt.dominates(hb, cb)))
+                        {
                             keep = true;
                             break;
                         }
                     }
                 }
-                if (!keep) {
+                if (!keep)
+                {
                     candidates.add(cb);
                 }
             }
@@ -8475,29 +10377,36 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // together; blocked chains stay whole.
             boolean freedAny = true;
             Set<IRBlock> freed = new HashSet<>();
-            while (freedAny) {
+            while (freedAny)
+            {
                 freedAny = false;
-                for (IRBlock cb : candidates) {
-                    if (freed.contains(cb)) {
+                for (IRBlock cb : candidates)
+                {
+                    if (freed.contains(cb))
+                    {
                         continue;
                     }
                     boolean flowsOut = true;
-                    for (Map.Entry<IRBlock, EdgeType> e
-                            : cb.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() != EdgeType.NORMAL) {
+                    for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet())
+                    {
+                        if (e.getValue() != EdgeType.NORMAL)
+                        {
                             continue;
                         }
                         IRBlock t = resolveThroughGotoShells(e.getKey());
-                        if (consumed.contains(t) && !freed.contains(t) && !candidates.contains(t)) {
+                        if (consumed.contains(t) && !freed.contains(t) && !candidates.contains(t))
+                        {
                             flowsOut = false;
                             break;
                         }
-                        if (candidates.contains(t) && !freed.contains(t)) {
+                        if (candidates.contains(t) && !freed.contains(t))
+                        {
                             flowsOut = false;
                             break;
                         }
                     }
-                    if (flowsOut) {
+                    if (flowsOut)
+                    {
                         freed.add(cb);
                         freedAny = true;
                     }
@@ -8507,24 +10416,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             carveFreed = freed;
         }
         Set<IRBlock> siblingBlocks = new HashSet<>();
-        for (ExceptionHandler sib : siblings) {
+        for (ExceptionHandler sib : siblings)
+        {
             siblingBlocks.add(sib.getHandlerBlock());
         }
-        for (ExceptionHandler sib : siblings) {
+        for (ExceptionHandler sib : siblings)
+        {
             consumed.add(sib.getHandlerBlock());
-            for (IRBlock b : irMethod.getBlocks()) {
-                if (dt.dominates(sib.getHandlerBlock(), b)) {
+            for (IRBlock b : irMethod.getBlocks())
+            {
+                if (dt.dominates(sib.getHandlerBlock(), b))
+                {
                     consumed.add(b);
                 }
             }
         }
-        for (ExceptionHandler eh : irMethod.getExceptionHandlers()) {
-            if (eh.getHandlerBlock() == null || siblingBlocks.contains(eh.getHandlerBlock())) {
+        for (ExceptionHandler eh : irMethod.getExceptionHandlers())
+        {
+            if (eh.getHandlerBlock() == null || siblingBlocks.contains(eh.getHandlerBlock()))
+            {
                 continue;
             }
-            if (consumed.contains(eh.getHandlerBlock())) {
-                for (IRBlock b : irMethod.getBlocks()) {
-                    if (dt.dominates(eh.getHandlerBlock(), b)) {
+            if (consumed.contains(eh.getHandlerBlock()))
+            {
+                for (IRBlock b : irMethod.getBlocks())
+                {
+                    if (dt.dominates(eh.getHandlerBlock(), b))
+                    {
                         consumed.add(b);
                     }
                 }
@@ -8535,16 +10453,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> exitShells = new HashSet<>();
         boolean rescan = true;
         scan:
-        while (rescan) {
+        while (rescan)
+        {
         rescan = false;
-        for (IRBlock cb : new ArrayList<>(consumed)) {
-            if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb)) {
+        for (IRBlock cb : new ArrayList<>(consumed))
+        {
+            if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb))
+            {
                 continue;
             }
-            for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+            for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet())
+            {
                 IRBlock succ = e.getKey();
-                if (e.getValue() != EdgeType.NORMAL
-                        || consumed.contains(succ) || dt.dominates(succ, cb)) {
+                if (e.getValue() != EdgeType.NORMAL || consumed.contains(succ) || dt.dominates(succ, cb))
+                {
                     continue;
                 }
                 // The try's fall-through often exits into a bare goto shell in front of the join the
@@ -8552,17 +10474,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // are collected into the node - left out, a shell on the exit path dangles outside both
                 // the node and the region (e.g. as a loop's back-edge source) and breaks the model.
                 succ = resolveThroughGotoShells(succ, exitShells);
-                if (consumed.contains(succ)) {
+                if (consumed.contains(succ))
+                {
                     continue;
                 }
-                if (after != null && after != succ) {
+                if (after != null && after != succ)
+                {
                     // Two distinct continuations: when EVERY candidate is a terminal return tail (javac's
                     // per-exit inlined finally copy carrying that exit's own return), the construct has no
                     // external join at all - the delegate recovery owns those tails, re-attaching each
                     // return behind the de-duplicated finally. Any non-terminal rival is a genuine second
                     // join the node model cannot express.
                     if (delegateOwnsExitTail(after, consumed, rethrower)
-                            && delegateOwnsExitTail(succ, consumed, rethrower)) {
+                            && delegateOwnsExitTail(succ, consumed, rethrower))
+                    {
                         after = null;
                         allExitsTerminal = true;
                         break;
@@ -8574,11 +10499,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     boolean acyclicContext = context.getLoopAnalysis() == null
                             || context.getLoopAnalysis().getLoop(block) == null;
                     if (acyclicContext && delegateOwnsExitTail(succ, consumed, rethrower)
-                            && !(after.getTerminator() instanceof ReturnInstruction)) {
+                            && !(after.getTerminator() instanceof ReturnInstruction))
+                    {
                         continue;
                     }
                     if (acyclicContext && delegateOwnsExitTail(after, consumed, rethrower)
-                            && !(succ.getTerminator() instanceof ReturnInstruction)) {
+                            && !(succ.getTerminator() instanceof ReturnInstruction))
+                    {
                         after = succ;
                         continue;
                     }
@@ -8587,22 +10514,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     // region re-emits a converging terminal once per reaching path, and the delegate's
                     // own absorption of the tail covers only its in-construct paths.
                     if (acyclicContext && delegateOwnsExitTail(after, consumed, rethrower)
-                            && !delegateOwnsExitTail(succ, consumed, rethrower)) {
+                            && !delegateOwnsExitTail(succ, consumed, rethrower))
+                    {
                         after = succ;
                         continue;
                     }
                     if (acyclicContext && delegateOwnsExitTail(succ, consumed, rethrower)
-                            && !delegateOwnsExitTail(after, consumed, rethrower)) {
+                            && !delegateOwnsExitTail(after, consumed, rethrower))
+                    {
                         continue;
                     }
                     // A rival that is one of the offering REGION'S OWN STOPS is the region's boundary,
                     // not a second join of the construct: the delegate's walks stop there (the engine
                     // pushes the boundary onto the context stack), and the region model reaches the
                     // boundary through the kept join's continuation. Keep the in-region join.
-                    if (decodeRegionStops.contains(succ) && !decodeRegionStops.contains(after)) {
+                    if (decodeRegionStops.contains(succ) && !decodeRegionStops.contains(after))
+                    {
                         continue;
                     }
-                    if (decodeRegionStops.contains(after) && !decodeRegionStops.contains(succ)) {
+                    if (decodeRegionStops.contains(after) && !decodeRegionStops.contains(succ))
+                    {
                         after = succ;
                         continue;
                     }
@@ -8611,19 +10542,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     // loop model owns the break edge (it stays visible on the consumed blocks' CFG edges,
                     // where the loop's break-target scan finds it and settles it through guarded-close
                     // intermediates, and the delegate emits the jump).
-                    if (!acyclicContext) {
+                    if (!acyclicContext)
+                    {
                         LoopAnalysis.Loop encl = context.getLoopAnalysis().getLoop(block);
                         boolean afterIn = encl.getBlocks().contains(after);
                         boolean succIn = encl.getBlocks().contains(succ);
-                        if (afterIn && !succIn) {
+                        if (afterIn && !succIn)
+                        {
                             continue;
                         }
-                        if (succIn && !afterIn) {
+                        if (succIn && !afterIn)
+                        {
                             after = succ;
                             continue;
                         }
                     }
-                    if (!carveFreed.isEmpty()) {
+                    if (!carveFreed.isEmpty())
+                    {
                         // The carve exposed a second join this model cannot take; the pre-carve
                         // consumed set had the construct whole. Restore it and rescan once.
                         trace("finally-node carve-retry block=" + block.getBytecodeOffset());
@@ -8639,12 +10574,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
                 after = succ;
             }
-            if (allExitsTerminal) {
+            if (allExitsTerminal)
+            {
                 break;
             }
         }
         }
-        if (after == block) {
+        if (after == block)
+        {
             return null;
         }
         consumed.addAll(exitShells);
@@ -8662,11 +10599,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * node's consumed set, or it would dangle outside both the node and the region and break the model's
      * predecessor mapping for the join.
      */
-    private IRBlock resolveThroughGotoShells(IRBlock b) {
+    private IRBlock resolveThroughGotoShells(IRBlock b)
+    {
         return resolveThroughGotoShells(b, null);
     }
 
-    private IRBlock resolveThroughGotoShells(IRBlock b, Set<IRBlock> traversed) {
+    private IRBlock resolveThroughGotoShells(IRBlock b, Set<IRBlock> traversed)
+    {
         int hops = 0;
         while (b != null && b.getTerminator() instanceof SimpleInstruction
                 && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.GOTO
@@ -8674,8 +10613,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 && (b.getInstructions().isEmpty()
                     || (b.getInstructions().size() == 1
                         && b.getInstructions().get(0) == b.getTerminator()))
-                && hops++ < 8) {
-            if (traversed != null) {
+                && hops++ < 8)
+        {
+            if (traversed != null)
+            {
                 traversed.add(b);
             }
             b = b.getSuccessors().iterator().next();
@@ -8690,10 +10631,12 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * return - duplicating a bare return on another path is idempotent). A shared chain carrying real
      * code is a genuine join: treating it as a tail duplicates or drops the shared continuation.
      */
-    private boolean delegateOwnsExitTail(IRBlock exit, Set<IRBlock> consumed, ExceptionHandler rethrower) {
+    private boolean delegateOwnsExitTail(IRBlock exit, Set<IRBlock> consumed, ExceptionHandler rethrower)
+    {
         // A tail crossing an active outer stop boundary belongs to the ENCLOSING recovery: the node's
         // delegate stops there and cannot emit the rest, whatever the tail's shape.
-        if (exitChainCrossesContextStop(exit)) {
+        if (exitChainCrossesContextStop(exit))
+        {
             return false;
         }
         // The exclusive-reachability claim holds only for a DE-DUPLICATED finally, whose delegate
@@ -8701,7 +10644,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // never excised (a synchronized region's release scaffold) has no such re-attachment pass:
         // claiming its tail hides the real continuation from the region model and drops the code.
         // A bare or copy-carrying RETURN tail stays claimable - re-emitting a return is idempotent.
-        if (finallyDeduped.contains(rethrower) && nodeOwnsExitTail(exit, consumed)) {
+        if (finallyDeduped.contains(rethrower) && nodeOwnsExitTail(exit, consumed))
+        {
             return true;
         }
         return isBareReturnTail(exit) || isFinallyCopyReturnTail(exit, rethrower);
@@ -8714,19 +10658,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * path - exactly what the desugar itself does - so the delegate owns it even when the trailing
      * return is shared with paths outside the construct.
      */
-    private boolean isFinallyCopyReturnTail(IRBlock exit, ExceptionHandler rethrower) {
+    private boolean isFinallyCopyReturnTail(IRBlock exit, ExceptionHandler rethrower)
+    {
         IRBlock hb = rethrower.getHandlerBlock();
         DominatorTree dt = context.getDominatorTree();
-        if (hb == null || dt == null) {
+        if (hb == null || dt == null)
+        {
             return false;
         }
         Set<String> templateCalls = new HashSet<>();
-        for (IRBlock b : context.getIrMethod().getBlocks()) {
-            if (b != hb && !dt.dominates(hb, b)) {
+        for (IRBlock b : context.getIrMethod().getBlocks())
+        {
+            if (b != hb && !dt.dominates(hb, b))
+            {
                 continue;
             }
-            for (IRInstruction ins : b.getInstructions()) {
-                if (ins instanceof InvokeInstruction) {
+            for (IRInstruction ins : b.getInstructions())
+            {
+                if (ins instanceof InvokeInstruction)
+                {
                     InvokeInstruction iv = (InvokeInstruction) ins;
                     templateCalls.add(iv.getOwner() + "." + iv.getName());
                 }
@@ -8736,37 +10686,47 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> seen = new HashSet<>();
         work.add(exit);
         int budget = 24;
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            if (budget-- <= 0) {
+            if (budget-- <= 0)
+            {
                 return false;
             }
-            for (IRInstruction ins : b.getInstructions()) {
+            for (IRInstruction ins : b.getInstructions())
+            {
                 if (ins.isTerminator() || ins instanceof CopyInstruction
                         || ins instanceof LoadLocalInstruction || ins instanceof StoreLocalInstruction
-                        || ins instanceof ConstantInstruction) {
+                        || ins instanceof ConstantInstruction)
+                {
                     continue;
                 }
                 if (ins instanceof InvokeInstruction && templateCalls.contains(
-                        ((InvokeInstruction) ins).getOwner() + "." + ((InvokeInstruction) ins).getName())) {
+                        ((InvokeInstruction) ins).getOwner() + "." + ((InvokeInstruction) ins).getName()))
+                        {
                     continue;
                 }
                 return false;
             }
-            if (b.getTerminator() instanceof ReturnInstruction) {
+            if (b.getTerminator() instanceof ReturnInstruction)
+            {
                 continue;
             }
             boolean any = false;
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     work.add(e.getKey());
                     any = true;
                 }
             }
-            if (!any) {
+            if (!any)
+            {
                 return false;
             }
         }
@@ -8779,29 +10739,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * terminal once per reaching path, so a region offer may absorb it as its own arm's terminal;
      * the duplicate emissions cover exclusive paths and each executes at most once.
      */
-    private boolean isTerminalTail(IRBlock b) {
+    private boolean isTerminalTail(IRBlock b)
+    {
         int hops = 0;
-        while (b != null && hops++ < 8) {
-            if (b.getTerminator() instanceof ReturnInstruction) {
+        while (b != null && hops++ < 8)
+        {
+            if (b.getTerminator() instanceof ReturnInstruction)
+            {
                 return true;
             }
             if (b.getTerminator() instanceof SimpleInstruction
-                    && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW) {
+                    && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW)
+            {
                 return true;
             }
             IRBlock excised = excisedCopyExits.get(b);
-            if (excised != null) {
+            if (excised != null)
+            {
                 b = excised;
                 continue;
             }
-            if (b.getTerminator() instanceof BranchInstruction
-                    || b.getTerminator() instanceof SwitchInstruction) {
+            if (b.getTerminator() instanceof BranchInstruction || b.getTerminator() instanceof SwitchInstruction)
+            {
                 return false;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
-                    if (next != null) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
+                    if (next != null)
+                    {
                         return false;
                     }
                     next = e.getKey();
@@ -8812,34 +10780,45 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private boolean isBareReturnTail(IRBlock b) {
+    private boolean isBareReturnTail(IRBlock b)
+    {
         int hops = 0;
-        while (b != null && hops++ < 8) {
+        while (b != null && hops++ < 8)
+        {
             IRBlock excised = excisedCopyExits.get(b);
-            if (excised == null) {
-                for (IRInstruction ins : b.getInstructions()) {
+            if (excised == null)
+            {
+                for (IRInstruction ins : b.getInstructions())
+                {
                     if (!ins.isTerminator() && !(ins instanceof CopyInstruction)
                             && !(ins instanceof LoadLocalInstruction)
                             && !(ins instanceof StoreLocalInstruction)
-                            && !(ins instanceof ConstantInstruction)) {
+                            && !(ins instanceof ConstantInstruction))
+                    {
                         return false;
                     }
                 }
             }
-            if (b.getTerminator() instanceof ReturnInstruction) {
+            if (b.getTerminator() instanceof ReturnInstruction)
+            {
                 return true;
             }
-            if (excised != null) {
+            if (excised != null)
+            {
                 b = excised;
                 continue;
             }
-            if (b.getTerminator() instanceof BranchInstruction) {
+            if (b.getTerminator() instanceof BranchInstruction)
+            {
                 return false;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
-                    if (next != null) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
+                    if (next != null)
+                    {
                         return false;
                     }
                     next = e.getKey();
@@ -8850,33 +10829,42 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    /** The offering region's stop set, captured at decode entry for the tail-ownership checks. */
+    /**
+     * The offering region's stop set, captured at decode entry for the tail-ownership checks.
+     */
     private Set<IRBlock> decodeRegionStops = Collections.emptySet();
 
     /**
      * Whether the successor closure from {@code exit} (bounded) touches a boundary the node's delegate
      * must stop at - an active context stop or the offering region's own stop set.
      */
-    private boolean exitChainCrossesContextStop(IRBlock exit) {
+    private boolean exitChainCrossesContextStop(IRBlock exit)
+    {
         Set<IRBlock> contextStops = new HashSet<>(context.getAllStopBlocks());
         contextStops.addAll(decodeRegionStops);
-        if (contextStops.isEmpty()) {
+        if (contextStops.isEmpty())
+        {
             return false;
         }
         Deque<IRBlock> work = new ArrayDeque<>();
         Set<IRBlock> seen = new HashSet<>();
         work.add(exit);
         int budget = 64;
-        while (!work.isEmpty() && budget-- > 0) {
+        while (!work.isEmpty() && budget-- > 0)
+        {
             IRBlock b = work.poll();
-            if (!seen.add(b)) {
+            if (!seen.add(b))
+            {
                 continue;
             }
-            if (contextStops.contains(b)) {
+            if (contextStops.contains(b))
+            {
                 return true;
             }
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     work.add(e.getKey());
                 }
             }
@@ -8884,26 +10872,34 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    private boolean nodeOwnsExitTail(IRBlock exit, Set<IRBlock> consumed) {
+    private boolean nodeOwnsExitTail(IRBlock exit, Set<IRBlock> consumed)
+    {
         Deque<IRBlock> work = new ArrayDeque<>();
         Set<IRBlock> chain = new HashSet<>();
         work.add(exit);
         int budget = 64;
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock b = work.poll();
-            if (!chain.add(b)) {
+            if (!chain.add(b))
+            {
                 continue;
             }
-            if (budget-- <= 0) {
+            if (budget-- <= 0)
+            {
                 return false;
             }
-            for (IRBlock p : b.getPredecessors()) {
-                if (!consumed.contains(p) && !chain.contains(p)) {
+            for (IRBlock p : b.getPredecessors())
+            {
+                if (!consumed.contains(p) && !chain.contains(p))
+                {
                     return false;
                 }
             }
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                if (e.getValue() == EdgeType.NORMAL)
+                {
                     work.add(e.getKey());
                 }
             }
@@ -8911,15 +10907,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return true;
     }
 
-    private boolean tryHasFinallyHandler(IRBlock tryStart) {
+    private boolean tryHasFinallyHandler(IRBlock tryStart)
+    {
         int startOff = tryStart.getBytecodeOffset();
-        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+        for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+        {
             // A typed wrap-rethrow user clause (`catch (FNF e) { throw wrap(e); }`) must not read as
             // finally scaffolding: the slot-tracing freshness check sees the wrap even when a layout
             // parks the fresh exception in a slot before its throw. (Gating on the declared catch
             // type instead broke real finally scaffolding whose merged handler carries a user type.)
             if (h.getTryStart() != null && h.getTryStart().getBytecodeOffset() == startOff
-                    && handlerRethrows(h) && !throwsFreshExceptionThroughSlots(h)) {
+                    && handlerRethrows(h) && !throwsFreshExceptionThroughSlots(h))
+            {
                 return true;
             }
         }
@@ -8932,7 +10931,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * rethrows ({@code catch (IllegalArgumentException ex) { throw ex; }}) is a genuine user clause,
      * not finally scaffolding.
      */
-    private boolean isFinallyCatchType(ExceptionHandler h) {
+    private boolean isFinallyCatchType(ExceptionHandler h)
+    {
         return h.isCatchAll() || h.getCatchType() == null
                 || "java/lang/Throwable".equals(h.getCatchType().getInternalName());
     }
@@ -8941,13 +10941,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Whether the block sits inside an enclosing loop's body - i.e. some loop containing it has a DIFFERENT
      * header block. A block that is itself a loop header (a try that wraps the loop) is not "inside" the body.
      */
-    private boolean isInsideLoopBody(IRBlock block) {
-        if (block == null || context.getLoopAnalysis() == null) {
+    private boolean isInsideLoopBody(IRBlock block)
+    {
+        if (block == null || context.getLoopAnalysis() == null)
+        {
             return false;
         }
         LoopAnalysis.Loop enclosing = context.getLoopAnalysis().getLoop(block);
-        while (enclosing != null) {
-            if (enclosing.getHeader() != block) {
+        while (enclosing != null)
+        {
+            if (enclosing.getHeader() != block)
+            {
                 return true;
             }
             enclosing = enclosing.getParent();
@@ -8955,11 +10959,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    /** An accepted engine offer: the structured statements and where the walk resumes (null = nowhere). */
-    private static final class OfferResult {
+    /**
+     * An accepted engine offer: the structured statements and where the walk resumes (null = nowhere).
+     */
+    private static final class OfferResult
+    {
         final List<Statement> statements;
         final IRBlock continuation;
-        OfferResult(List<Statement> statements, IRBlock continuation) {
+        OfferResult(List<Statement> statements, IRBlock continuation)
+        {
             this.statements = statements;
             this.continuation = continuation;
         }
@@ -8970,35 +10978,45 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * continuation), or the region may flow into exactly ONE stop - then it is really a bounded
      * construct whose join the analyzer did not name, and the walk resumes at that exit.
      */
-    private OfferResult offerTerminalRegion(IRBlock entry, Set<IRBlock> offeredStops) {
+    private OfferResult offerTerminalRegion(IRBlock entry, Set<IRBlock> offeredStops)
+    {
         releaseInternalStops(entry, offeredStops, null);
         Set<IRBlock> exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
         Set<IRBlock> flaggedTails = new HashSet<>();
-        if (exits != null && exits.size() > 1) {
+        if (exits != null && exits.size() > 1)
+        {
             exits = retryOfferReleases(entry, offeredStops, null, exits, flaggedTails);
         }
-        if (exits == null || exits.size() > 1) {
-            if (System.getProperty("yabr.trace.offer") != null) {
+        if (exits == null || exits.size() > 1)
+        {
+            if (System.getProperty("yabr.trace.offer") != null)
+            {
                 System.err.println("[OFFER-T] entry=" + entry.getBytecodeOffset()
                         + " refused exits=" + (exits == null ? "probe-decline"
                             : exits.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
                                 .sorted().collect(java.util.stream.Collectors.joining(","))));
             }
-            if (!flaggedTails.isEmpty()) {
+            if (!flaggedTails.isEmpty())
+            {
                 rcsStructurer.setBoundaryDuplicableTails(null);
             }
             return null;
         }
         IRBlock continuation = exits.isEmpty() ? null : exits.iterator().next();
         List<Statement> out;
-        try {
+        try
+        {
             out = rcsStructurer.tryStructureRegion(entry, offeredStops, true);
-        } finally {
-            if (!flaggedTails.isEmpty()) {
+        }
+        finally
+        {
+            if (!flaggedTails.isEmpty())
+            {
                 rcsStructurer.setBoundaryDuplicableTails(null);
             }
         }
-        if (System.getProperty("yabr.trace.offer") != null) {
+        if (System.getProperty("yabr.trace.offer") != null)
+        {
             System.err.println("[OFFER-T] entry=" + entry.getBytecodeOffset()
                     + " cont=" + (continuation == null ? "null" : continuation.getBytecodeOffset())
                     + " stops=" + offeredStops.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
@@ -9016,9 +11034,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * models it as a node) and a bare return tail (duplication-idempotent), both strictly dominated
      * by the entry and distinct from the bound.
      */
-    private void releaseInternalStops(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
+    private void releaseInternalStops(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound)
+    {
         DominatorTree dt = context.getDominatorTree();
-        if (dt == null) {
+        if (dt == null)
+        {
             return;
         }
         offeredStops.removeIf(stop -> stop != entry && stop != bound
@@ -9035,18 +11055,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * but its clause not yet emitted). Such a range boundary is the in-progress construct's internal
      * scaffolding - javac splits ranges around early exits - not a nested try the offer must stop at.
      */
-    private boolean startsClaimedHandlerRange(IRBlock b) {
+    private boolean startsClaimedHandlerRange(IRBlock b)
+    {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
-        if (handlers == null) {
+        if (handlers == null)
+        {
             return false;
         }
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             IRBlock ts = h.getTryStart();
             boolean startsHere = ts == b
                     || (ts != null && ts.getBytecodeOffset() == b.getBytecodeOffset());
             if (startsHere && h.getHandlerBlock() != null
                     && processedHandlerBlocks.contains(h.getHandlerBlock())
-                    && !context.isProcessed(h.getHandlerBlock())) {
+                    && !context.isProcessed(h.getHandlerBlock()))
+            {
                 return true;
             }
         }
@@ -9059,23 +11083,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * blocks (up to the merge and the walk's stops) carry no return/throw terminator - the merge
      * itself included - is copy-free and safe to structure while copies survive elsewhere.
      */
-    private boolean regionIsCopyFree(IRBlock entry, IRBlock merge, Set<IRBlock> stopBlocks) {
-        if (isTerminalBlockShape(merge)) {
+    private boolean regionIsCopyFree(IRBlock entry, IRBlock merge, Set<IRBlock> stopBlocks)
+    {
+        if (isTerminalBlockShape(merge))
+        {
             return false;
         }
         Deque<IRBlock> work = new ArrayDeque<>();
         Set<IRBlock> seen = new HashSet<>();
         work.add(entry);
         seen.add(entry);
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             IRBlock b = work.poll();
-            if (isTerminalBlockShape(b)) {
+            if (isTerminalBlockShape(b))
+            {
                 return false;
             }
-            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
                 IRBlock succ = e.getKey();
-                if (e.getValue() != EdgeType.NORMAL || succ == merge
-                        || stopBlocks.contains(succ) || !seen.add(succ)) {
+                if (e.getValue() != EdgeType.NORMAL || succ == merge || stopBlocks.contains(succ) || !seen.add(succ))
+                {
                     continue;
                 }
                 work.add(succ);
@@ -9084,18 +11113,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return true;
     }
 
-    private boolean isTerminalBlockShape(IRBlock b) {
+    private boolean isTerminalBlockShape(IRBlock b)
+    {
         return b.getTerminator() instanceof ReturnInstruction
                 || (b.getTerminator() instanceof SimpleInstruction
                     && ((SimpleInstruction) b.getTerminator()).getOp() == SimpleOp.ATHROW);
     }
 
-    private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound) {
+    private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound)
+    {
         return offerRegionToEngine(entry, offeredStops, bound, true);
     }
 
-    private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound,
-                                                boolean allowTailRelease) {
+    private List<Statement> offerRegionToEngine(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound, boolean allowTailRelease)
+    {
         // A stop that is an unprocessed try's start STRICTLY inside the offered construct is the walk's
         // own hand-off boundary, not the construct's: the engine models that try as an opaque node, so
         // the offer spans it. Without this, a loop whose body opens a try is cut at its first block.
@@ -9104,13 +11135,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // absorb it as its own exit arm's terminal rather than refusing on a second boundary.
         // A bound that is itself a bare goto pad fronts the construct's real continuation: resolve it,
         // so the pad is absorbed in-region and the offer is judged against the landing.
-        if (bound != null) {
+        if (bound != null)
+        {
             IRBlock landing = resolveThroughGotoShells(bound);
             // Resolve only a pad the region owns exclusively (the entry dominates it). A shell with
             // predecessors outside the offered construct is a SHARED convergence - the walk's real
             // continuation - and swapping it for its landing leaves the region no reachable exit.
             DominatorTree padDt = context.getDominatorTree();
-            if (landing != bound && padDt != null && padDt.dominates(entry, bound)) {
+            if (landing != bound && padDt != null && padDt.dominates(entry, bound))
+            {
                 offeredStops.remove(bound);
                 offeredStops.add(landing);
                 bound = landing;
@@ -9126,7 +11159,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // a back edge, which the probe never counts as an exit. The offer is sound - the region ends
         // in the loop's continue and the caller resumes at the already-processed header.
         if (!exitsOk && bound != null && exits != null && exits.isEmpty()
-                && rcsStructurer.lastRegionContinuesInto(bound)) {
+                && rcsStructurer.lastRegionContinuesInto(bound))
+        {
             exitsOk = true;
         }
         // A bounded construct may ALSO fall out through the end boundary of a handler range still
@@ -9134,19 +11168,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // return: both are the construct's own terminal tail, not rival continuations. Release such
         // extra exits and re-probe; the retry never touches an offer that already met its contract.
         Set<IRBlock> flaggedTails = new HashSet<>();
-        if (allowTailRelease && !exitsOk && bound != null && exits != null && exits.contains(bound)) {
+        if (allowTailRelease && !exitsOk && bound != null && exits != null && exits.contains(bound))
+        {
             exits = retryOfferReleases(entry, offeredStops, bound, exits, flaggedTails);
             exitsOk = boundSatisfied(exits, bound);
         }
         List<Statement> out;
-        try {
+        try
+        {
             out = exitsOk ? rcsStructurer.tryStructureRegion(entry, offeredStops, true) : null;
-        } finally {
-            if (!flaggedTails.isEmpty()) {
+        }
+        finally
+        {
+            if (!flaggedTails.isEmpty())
+            {
                 rcsStructurer.setBoundaryDuplicableTails(null);
             }
         }
-        if (System.getProperty("yabr.trace.offer") != null) {
+        if (System.getProperty("yabr.trace.offer") != null)
+        {
             System.err.println("[OFFER] entry=" + entry.getBytecodeOffset()
                     + " bound=" + (bound == null ? "null" : bound.getBytecodeOffset())
                     + " stops=" + offeredStops.stream().map(x -> String.valueOf(x.getBytecodeOffset()))
@@ -9165,14 +11205,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * (a loop latch pad the enclosing recovery owns; the region falls out into it and the walk resumes
      * at the bound just as after the schema dispatch).
      */
-    private boolean boundSatisfied(Set<IRBlock> exits, IRBlock bound) {
-        if (exits == null) {
+    private boolean boundSatisfied(Set<IRBlock> exits, IRBlock bound)
+    {
+        if (exits == null)
+        {
             return false;
         }
-        if (bound == null) {
+        if (bound == null)
+        {
             return exits.isEmpty();
         }
-        if (exits.size() != 1) {
+        if (exits.size() != 1)
+        {
             return false;
         }
         IRBlock only = exits.iterator().next();
@@ -9188,22 +11232,27 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * a probe declined). {@code offeredStops} and {@code flaggedTails} are mutated in place; the caller
      * owns clearing the engine's flagged-tail set after the offer.
      */
-    private Set<IRBlock> retryOfferReleases(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound,
-                                            Set<IRBlock> exits, Set<IRBlock> flaggedTails) {
+    private Set<IRBlock> retryOfferReleases(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound, Set<IRBlock> exits, Set<IRBlock> flaggedTails)
+    {
         DominatorTree dt = context.getDominatorTree();
         Set<IRBlock> released = new HashSet<>();
-        for (int round = 0; dt != null && round < 8; round++) {
+        for (int round = 0; dt != null && round < 8; round++)
+        {
             Set<IRBlock> extras = new HashSet<>(exits);
-            if (bound != null) {
+            if (bound != null)
+            {
                 extras.remove(bound);
             }
             extras.removeAll(flaggedTails);
             boolean releasable = !extras.isEmpty() || !flaggedTails.isEmpty();
             Set<IRBlock> toFlag = new HashSet<>();
-            for (IRBlock extra : extras) {
+            for (IRBlock extra : extras)
+            {
                 boolean insideReleasedTail = false;
-                for (IRBlock r : released) {
-                    if (dt.dominates(r, extra)) {
+                for (IRBlock r : released)
+                {
+                    if (dt.dominates(r, extra))
+                    {
                         insideReleasedTail = true;
                         break;
                     }
@@ -9211,20 +11260,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 if (insideReleasedTail
                         || (endsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
                         || (followsClaimedHandlerRange(extra) && dt.dominates(entry, extra))
-                        || (isTerminalTail(extra) && dt.dominates(entry, extra))) {
+                        || (isTerminalTail(extra) && dt.dominates(entry, extra)))
+                {
                     continue;
                 }
                 // A shared terminal tail the entry does NOT dominate cannot be absorbed into the
                 // region (multi-entry); the engine inlines it once at the region's convergence
                 // instead, while it stays a stop for everyone else.
-                if (isTerminalTail(extra)) {
+                if (isTerminalTail(extra))
+                {
                     toFlag.add(extra);
                     continue;
                 }
                 releasable = false;
                 break;
             }
-            if (!releasable || extras.isEmpty()) {
+            if (!releasable || extras.isEmpty())
+            {
                 break;
             }
             extras.removeAll(toFlag);
@@ -9235,7 +11287,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     && released.stream().anyMatch(r -> dt.dominates(r, stop)));
             rcsStructurer.setBoundaryDuplicableTails(flaggedTails);
             exits = rcsStructurer.probeRegionExits(entry, offeredStops, true);
-            if (exits == null || (bound != null && !exits.contains(bound)) || exits.size() <= 1) {
+            if (exits == null || (bound != null && !exits.contains(bound)) || exits.size() <= 1)
+            {
                 return exits;
             }
         }
@@ -9247,18 +11300,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * (claimed but its clause not yet emitted) - the in-progress construct's own boundary, which a
      * terminal arm inside the body may legitimately cross on its way out.
      */
-    private boolean endsClaimedHandlerRange(IRBlock b) {
+    private boolean endsClaimedHandlerRange(IRBlock b)
+    {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
-        if (handlers == null) {
+        if (handlers == null)
+        {
             return false;
         }
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             IRBlock te = h.getTryEnd();
             boolean endsHere = te == b
                     || (te != null && te.getBytecodeOffset() == b.getBytecodeOffset());
             if (endsHere && h.getHandlerBlock() != null
                     && processedHandlerBlocks.contains(h.getHandlerBlock())
-                    && !context.isProcessed(h.getHandlerBlock())) {
+                    && !context.isProcessed(h.getHandlerBlock()))
+            {
                 return true;
             }
         }
@@ -9270,27 +11327,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * exclusive try-end block, claimed but not yet emitted) - a stop the scaffolding added for that
      * in-progress construct's own boundary, which an offer spanning the construct may cross.
      */
-    private boolean followsClaimedHandlerRange(IRBlock b) {
+    private boolean followsClaimedHandlerRange(IRBlock b)
+    {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
-        if (handlers == null) {
+        if (handlers == null)
+        {
             return false;
         }
-        for (ExceptionHandler h : handlers) {
+        for (ExceptionHandler h : handlers)
+        {
             IRBlock te = h.getTryEnd();
             if (te != null && h.getHandlerBlock() != null
                     && processedHandlerBlocks.contains(h.getHandlerBlock())
                     && !context.isProcessed(h.getHandlerBlock())
-                    && te.getSuccessors().contains(b)) {
+                    && te.getSuccessors().contains(b))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private ExceptionHandler findUnprocessedHandlerStartingAt(IRBlock block) {
+    private ExceptionHandler findUnprocessedHandlerStartingAt(IRBlock block)
+    {
         IRMethod irMethod = context.getIrMethod();
         List<ExceptionHandler> handlers = irMethod.getExceptionHandlers();
-        if (handlers == null || handlers.isEmpty()) {
+        if (handlers == null || handlers.isEmpty())
+        {
             return null;
         }
         // The widest UNPROCESSED handler at this block, not the widest handler filtered afterward. When a
@@ -9299,17 +11362,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // drops it; the widest still-open handler is the one to recover here.
         ExceptionHandler best = null;
         int bestEnd = Integer.MIN_VALUE;
-        for (ExceptionHandler handler : handlers) {
+        for (ExceptionHandler handler : handlers)
+        {
             IRBlock tryStart = handler.getTryStart();
             boolean startsHere = tryStart == block
                     || (tryStart != null && tryStart.getBytecodeOffset() == block.getBytecodeOffset());
             if (!startsHere || processedTryHandlers.contains(handler)
-                    || processedHandlerBlocks.contains(handler.getHandlerBlock())) {
+                    || processedHandlerBlocks.contains(handler.getHandlerBlock()))
+            {
                 continue;
             }
             int end = handler.getTryEnd() != null
                     ? handler.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
-            if (best == null || end > bestEnd) {
+            if (best == null || end > bestEnd)
+            {
                 best = handler;
                 bestEnd = end;
             }
@@ -9317,12 +11383,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return best;
     }
 
-    /** Whether {@code -Dyabr.trace} route/decode diagnostics are enabled (dormant otherwise). */
+    /**
+     * Whether {@code -Dyabr.trace} route/decode diagnostics are enabled (dormant otherwise).
+     */
     private static final boolean TRACE = System.getProperty("yabr.trace") != null;
 
-    /** Emits a route/decode diagnostic when {@code -Dyabr.trace} is set. */
-    private static void trace(String msg) {
-        if (TRACE) {
+    /**
+     * Emits a route/decode diagnostic when {@code -Dyabr.trace} is set.
+     */
+    private static void trace(String msg)
+    {
+        if (TRACE)
+        {
             System.err.println("[yabr] " + msg);
         }
     }
@@ -9331,15 +11403,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
 
     @Override
-    public List<Statement> recoverSimpleBlock(IRBlock block) {
+    public List<Statement> recoverSimpleBlock(IRBlock block)
+    {
         List<Statement> statements = new ArrayList<>();
 
-        for (IRInstruction instr : block.getInstructions()) {
-            if (context.shouldSkipInstruction(instr)) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (context.shouldSkipInstruction(instr))
+            {
                 continue;
             }
             Statement stmt = recoverInstruction(instr);
-            if (stmt != null) {
+            if (stmt != null)
+            {
                     statements.add(stmt);
             }
         }
@@ -9351,28 +11427,38 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Recovers a statement for an instruction and stamps it with the instruction's bytecode-offset
      * provenance, so decompiled output can be mapped back to bytecode positions.
      */
-    private Statement recoverInstruction(IRInstruction instr) {
+    private Statement recoverInstruction(IRInstruction instr)
+    {
         Statement stmt = recoverInstruction0(instr);
-        if (stmt != null && instr.getBytecodeOffset() >= 0 && !stmt.getLocation().hasOffset()) {
+        if (stmt != null && instr.getBytecodeOffset() >= 0 && !stmt.getLocation().hasOffset())
+        {
             stmt.setLocation(SourceLocation.fromOffset(instr.getBytecodeOffset()));
         }
         return stmt;
     }
 
-    private void stamp(Statement stmt, IRInstruction instr) {
-        if (stmt != null && instr != null && instr.getBytecodeOffset() >= 0 && !stmt.getLocation().hasOffset()) {
+    private void stamp(Statement stmt, IRInstruction instr)
+    {
+        if (stmt != null && instr != null && instr.getBytecodeOffset() >= 0 && !stmt.getLocation().hasOffset())
+        {
             stmt.setLocation(SourceLocation.fromOffset(instr.getBytecodeOffset()));
         }
     }
 
 
-    /** Stamps a wrapper statement (e.g. try/catch) from the first stamped statement in its body. */
-    private void stampFromBody(Statement stmt, BlockStmt body) {
-        if (stmt == null || body == null || stmt.getLocation().hasOffset()) {
+    /**
+     * Stamps a wrapper statement (e.g. try/catch) from the first stamped statement in its body.
+     */
+    private void stampFromBody(Statement stmt, BlockStmt body)
+    {
+        if (stmt == null || body == null || stmt.getLocation().hasOffset())
+        {
             return;
         }
-        for (Statement child : body.getStatements()) {
-            if (child.getLocation() != null && child.getLocation().hasOffset()) {
+        for (Statement child : body.getStatements())
+        {
+            if (child.getLocation() != null && child.getLocation().hasOffset())
+            {
                 stmt.setLocation(child.getLocation());
                 return;
             }
@@ -9387,37 +11473,47 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * putfield that increments the field is emitted first. Restricted to a single block, where
      * instruction order is program order, so the check needs no dominance reasoning.
      */
-    private boolean fieldLoadClobberedBeforeUse(FieldAccessInstruction load, SSAValue result) {
-        if (result == null) {
+    private boolean fieldLoadClobberedBeforeUse(FieldAccessInstruction load, SSAValue result)
+    {
+        if (result == null)
+        {
             return false;
         }
         IRBlock block = load.getBlock();
-        if (block == null || !blockHasFieldStore(block)) {
+        if (block == null || !blockHasFieldStore(block))
+        {
             return false;
         }
         Set<IRInstruction> uses = null;
         boolean seenLoad = false;
         boolean clobbered = false;
-        for (IRInstruction between : block.getInstructions()) {
-            if (!seenLoad) {
+        for (IRInstruction between : block.getInstructions())
+        {
+            if (!seenLoad)
+            {
                 seenLoad = between == load;
                 continue;
             }
-            if (between instanceof FieldAccessInstruction) {
+            if (between instanceof FieldAccessInstruction)
+            {
                 FieldAccessInstruction store = (FieldAccessInstruction) between;
                 if (store.isStore()
                         && store.isStatic() == load.isStatic()
                         && load.getName().equals(store.getName())
                         && load.getOwner().equals(store.getOwner())
-                        && load.getObjectRef() == store.getObjectRef()) {
+                        && load.getObjectRef() == store.getObjectRef())
+                {
                     clobbered = true;
                 }
             }
-            if (clobbered) {
-                if (uses == null) {
+            if (clobbered)
+            {
+                if (uses == null)
+                {
                     uses = new HashSet<>(result.getUses());
                 }
-                if (uses.contains(between)) {
+                if (uses.contains(between))
+                {
                     return true;
                 }
             }
@@ -9425,15 +11521,21 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return false;
     }
 
-    /** Whether a block writes any field, cached so store-free blocks skip the clobber scan in O(1). */
-    private boolean blockHasFieldStore(IRBlock block) {
+    /**
+     * Whether a block writes any field, cached so store-free blocks skip the clobber scan in O(1).
+     */
+    private boolean blockHasFieldStore(IRBlock block)
+    {
         Boolean cached = blockHasFieldStoreCache.get(block);
-        if (cached != null) {
+        if (cached != null)
+        {
             return cached;
         }
         boolean has = false;
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isStore()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isStore())
+            {
                 has = true;
                 break;
             }
@@ -9450,12 +11552,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * that whole generated form rather than tested for a leading {@code v}, which also claimed any recovered
      * variable that merely happens to be called {@code value} or {@code visited}.
      */
-    private boolean isPerValueTemporaryName(String name) {
-        if (name.length() < 2 || name.charAt(0) != 'v') {
+    private boolean isPerValueTemporaryName(String name)
+    {
+        if (name.length() < 2 || name.charAt(0) != 'v')
+        {
             return false;
         }
-        for (int i = 1; i < name.length(); i++) {
-            if (!Character.isDigit(name.charAt(i))) {
+        for (int i = 1; i < name.length(); i++)
+        {
+            if (!Character.isDigit(name.charAt(i)))
+            {
                 return false;
             }
         }
@@ -9470,65 +11576,82 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * In-place only when the move is invisible: the single use is a store in the same block, and nothing
      * in between touches the store's slot or names its variable. Returns null otherwise.
      */
-    private Statement storeCarriedCallInPlace(InvokeInstruction invoke, SSAValue result) {
+    private Statement storeCarriedCallInPlace(InvokeInstruction invoke, SSAValue result)
+    {
         StoreLocalInstruction store = null;
-        for (IRInstruction use : result.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
-                if (store != null) {
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
+                if (store != null)
+                {
                     return null;
                 }
                 store = (StoreLocalInstruction) use;
-            } else if (!(use instanceof PhiInstruction)) {
+            }
+            else if (!(use instanceof PhiInstruction))
+            {
                 // A phi beside the store is the join of the stored slot - the text renders once, at
                 // the store. Any other extra use reads the value elsewhere and pins the default path.
                 return null;
             }
         }
-        if (store == null) {
+        if (store == null)
+        {
             return null;
         }
         IRBlock block = invoke.getBlock();
-        if (block == null || store.getBlock() != block
-                || !exprRecoverer.renderingAtUseCrossesEffects(invoke, store)) {
+        if (block == null || store.getBlock() != block || !exprRecoverer.renderingAtUseCrossesEffects(invoke, store))
+        {
             return null;
         }
         String targetName = partitionName(store);
-        if (targetName == null || !context.getExpressionContext().isDeclared(targetName)) {
+        if (targetName == null || !context.getExpressionContext().isDeclared(targetName))
+        {
             return null;
         }
         // Every merge of the value must render under the same name, or an arm-end edge copy would
         // still read it and re-print the call there.
-        for (IRInstruction use : result.getUses()) {
+        for (IRInstruction use : result.getUses())
+        {
             if (use instanceof PhiInstruction && use.getResult() != null
-                    && !targetName.equals(context.getExpressionContext().getVariableName(use.getResult()))) {
+                    && !targetName.equals(context.getExpressionContext().getVariableName(use.getResult())))
+            {
                 return null;
             }
         }
         List<IRInstruction> instrs = block.getInstructions();
         int from = instrs.indexOf(invoke);
         int to = instrs.indexOf(store);
-        if (from < 0 || to <= from) {
+        if (from < 0 || to <= from)
+        {
             return null;
         }
-        for (int i = from + 1; i < to; i++) {
+        for (int i = from + 1; i < to; i++)
+        {
             IRInstruction between = instrs.get(i);
             if (between instanceof LoadLocalInstruction
-                    && ((LoadLocalInstruction) between).getLocalIndex() == store.getLocalIndex()) {
+                    && ((LoadLocalInstruction) between).getLocalIndex() == store.getLocalIndex())
+            {
                 return null;
             }
             if (between instanceof StoreLocalInstruction
-                    && ((StoreLocalInstruction) between).getLocalIndex() == store.getLocalIndex()) {
+                    && ((StoreLocalInstruction) between).getLocalIndex() == store.getLocalIndex())
+            {
                 return null;
             }
-            for (Value op : between.getOperands()) {
+            for (Value op : between.getOperands())
+            {
                 if (op instanceof SSAValue
-                        && targetName.equals(context.getExpressionContext().getVariableName((SSAValue) op))) {
+                        && targetName.equals(context.getExpressionContext().getVariableName((SSAValue) op)))
+                {
                     return null;
                 }
             }
         }
         SourceType type = getLocalSlotUnifiedType(targetName);
-        if (type == null) {
+        if (type == null)
+        {
             type = typeRecoverer.recoverType(result);
         }
         Expression rhs = exprRecoverer.recover(invoke);
@@ -9537,31 +11660,38 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, targetName);
         earlyRecoveredStores.add(store);
-        return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
-                new VarRefExpr(targetName, type, result), rhs, type));
+        return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, new VarRefExpr(targetName, type, result), rhs, type));
     }
 
-    private Statement materializeClobberedLoad(SSAValue result, Expression value) {
+    private Statement materializeClobberedLoad(SSAValue result, Expression value)
+    {
         // Prefer names that are stable across bytecode layouts: the captured FIELD's own simple
         // name is derived from the expression itself, identical whichever layout the method was
         // compiled from; the partition's store name and the id-derived fallback both shift with the
         // layout (the partition bumps around reserved names, ids renumber), renaming the temp on
         // every round trip.
-        if (value instanceof FieldAccessExpr) {
+        if (value instanceof FieldAccessExpr)
+        {
             String fieldName = ((FieldAccessExpr) value).getFieldName();
-            if (fieldName != null && !fieldName.isEmpty()) {
+            if (fieldName != null && !fieldName.isEmpty())
+            {
                 Statement s = materializeIntoTemporary(result, value, fieldName);
-                if (s != null) {
+                if (s != null)
+                {
                     return s;
                 }
             }
         }
-        for (IRInstruction use : result.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 String stored = partitionName(use);
-                if (stored != null && !context.getExpressionContext().isDeclared(stored)) {
+                if (stored != null && !context.getExpressionContext().isDeclared(stored))
+                {
                     Statement s = materializeIntoTemporary(result, value, stored);
-                    if (s != null) {
+                    if (s != null)
+                    {
                         return s;
                     }
                 }
@@ -9575,15 +11705,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * expression to this position in the statement sequence. Returns null when the value has no recoverable
      * type or the name is already taken, leaving the caller's default path.
      */
-    private Statement materializeIntoTemporary(SSAValue result, Expression value, String name) {
+    private Statement materializeIntoTemporary(SSAValue result, Expression value, String name)
+    {
         SourceType type = value.getType();
-        if (type == null) {
+        if (type == null)
+        {
             type = typeRecoverer.recoverType(result);
         }
-        if (type == null) {
+        if (type == null)
+        {
             return null;
         }
-        if (context.getExpressionContext().isDeclared(name)) {
+        if (context.getExpressionContext().isDeclared(name))
+        {
             return null;
         }
         context.getExpressionContext().markDeclaredWithType(name, type);
@@ -9598,25 +11732,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * same whichever bytecode layout the method was compiled from, which an id-based name is not. Returns
      * null when no stable name is available, leaving the caller on its existing path.
      */
-    private String temporaryNameForCall(InvokeInstruction invoke) {
+    private String temporaryNameForCall(InvokeInstruction invoke)
+    {
         String method = invoke.getName();
-        if (method == null || method.isEmpty() || "<init>".equals(method) || "<clinit>".equals(method)) {
+        if (method == null || method.isEmpty() || "<init>".equals(method) || "<clinit>".equals(method))
+        {
             return null;
         }
         String base = method;
-        for (String prefix : new String[]{"get", "is", "read", "fetch"}) {
+        for (String prefix : new String[]{"get", "is", "read", "fetch"})
+        {
             if (method.length() > prefix.length() && method.startsWith(prefix)
-                    && Character.isUpperCase(method.charAt(prefix.length()))) {
+                    && Character.isUpperCase(method.charAt(prefix.length())))
+            {
                 base = method.substring(prefix.length());
                 break;
             }
         }
         base = Character.toLowerCase(base.charAt(0)) + base.substring(1);
-        if (!Character.isJavaIdentifierStart(base.charAt(0))) {
+        if (!Character.isJavaIdentifierStart(base.charAt(0)))
+        {
             return null;
         }
-        for (int i = 1; i < base.length(); i++) {
-            if (!Character.isJavaIdentifierPart(base.charAt(i))) {
+        for (int i = 1; i < base.length(); i++)
+        {
+            if (!Character.isJavaIdentifierPart(base.charAt(i)))
+            {
                 return null;
             }
         }
@@ -9637,34 +11778,43 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * yielding {@code int t = i; i = i + 1; f(t);}. The copy carries a temp name; its declaration is
      * emitted when the inserted {@link CopyInstruction} is recovered.
      */
-    private void splitClobberedIncrementReads(IRMethod method) {
-        for (IRBlock block : method.getBlocks()) {
+    private void splitClobberedIncrementReads(IRMethod method)
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             List<IRInstruction> snapshot = new ArrayList<>(block.getInstructions());
-            for (int i = 0; i < snapshot.size(); i++) {
-                if (!(snapshot.get(i) instanceof StoreLocalInstruction)) {
+            for (int i = 0; i < snapshot.size(); i++)
+            {
+                if (!(snapshot.get(i) instanceof StoreLocalInstruction))
+                {
                     continue;
                 }
                 StoreLocalInstruction store = (StoreLocalInstruction) snapshot.get(i);
                 SSAValue pre = incrementPreValue(store);
-                if (pre == null) {
+                if (pre == null)
+                {
                     continue;
                 }
                 String storeName = partitionName(store);
-                if (storeName == null
-                        || !storeName.equals(context.getExpressionContext().getVariableName(pre))) {
+                if (storeName == null || !storeName.equals(context.getExpressionContext().getVariableName(pre)))
+                {
                     continue;
                 }
                 List<IRInstruction> laterUses = new ArrayList<>();
-                for (IRInstruction use : pre.getUses()) {
-                    if (snapshot.indexOf(use) > i) {
+                for (IRInstruction use : pre.getUses())
+                {
+                    if (snapshot.indexOf(use) > i)
+                    {
                         laterUses.add(use);
                     }
                 }
-                if (laterUses.isEmpty()) {
+                if (laterUses.isEmpty())
+                {
                     continue;
                 }
                 SourceType type = typeRecoverer.recoverType(pre);
-                if (type == null) {
+                if (type == null)
+                {
                     continue;
                 }
                 SSAValue copy = new SSAValue(pre.getType());
@@ -9674,67 +11824,88 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 context.getExpressionContext().setVariableName(copy, name);
                 splitIncrementTemps.add(copy);
                 block.insertInstruction(block.getInstructions().indexOf(store), new CopyInstruction(copy, pre));
-                for (IRInstruction use : laterUses) {
+                for (IRInstruction use : laterUses)
+                {
                     use.replaceOperand(pre, copy);
                 }
             }
         }
     }
 
-    /** The incremented pre-value {@code x} of a {@code slot = x +/- constant} store, else null. */
-    private SSAValue incrementPreValue(StoreLocalInstruction store) {
+    /**
+     * The incremented pre-value {@code x} of a {@code slot = x +/- constant} store, else null.
+     */
+    private SSAValue incrementPreValue(StoreLocalInstruction store)
+    {
         Value stored = store.getValue();
-        if (!(stored instanceof SSAValue)) {
+        if (!(stored instanceof SSAValue))
+        {
             return null;
         }
         IRInstruction def = ((SSAValue) stored).getDefinition();
-        if (!(def instanceof BinaryOpInstruction)) {
+        if (!(def instanceof BinaryOpInstruction))
+        {
             return null;
         }
         BinaryOpInstruction bin = (BinaryOpInstruction) def;
-        if (bin.getOp() != BinaryOp.ADD && bin.getOp() != BinaryOp.SUB) {
+        if (bin.getOp() != BinaryOp.ADD && bin.getOp() != BinaryOp.SUB)
+        {
             return null;
         }
         Value left = bin.getLeft();
         Value right = bin.getRight();
-        if (left instanceof SSAValue && isConstantValue(right)) {
+        if (left instanceof SSAValue && isConstantValue(right))
+        {
             return (SSAValue) left;
         }
-        if (right instanceof SSAValue && isConstantValue(left) && bin.getOp() == BinaryOp.ADD) {
+        if (right instanceof SSAValue && isConstantValue(left) && bin.getOp() == BinaryOp.ADD)
+        {
             return (SSAValue) right;
         }
         return null;
     }
 
-    /** A raw constant, or an SSA value produced by a constant load. */
-    private boolean isConstantValue(Value v) {
-        if (v instanceof Constant) {
+    /**
+     * A raw constant, or an SSA value produced by a constant load.
+     */
+    private boolean isConstantValue(Value v)
+    {
+        if (v instanceof Constant)
+        {
             return true;
         }
         return v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction;
     }
 
-    private Statement recoverInstruction0(IRInstruction instr) {
-        if (instr.isTerminator()) {
+    private Statement recoverInstruction0(IRInstruction instr)
+    {
+        if (instr.isTerminator())
+        {
             return recoverTerminator(instr);
         }
 
-        if (instr instanceof StoreLocalInstruction) {
+        if (instr instanceof StoreLocalInstruction)
+        {
             StoreLocalInstruction store = (StoreLocalInstruction) instr;
-            if (earlyRecoveredStores.remove(store)) {
+            if (earlyRecoveredStores.remove(store))
+            {
                 return null;
             }
             return recoverStoreLocal(store);
         }
 
-        if (instr instanceof FieldAccessInstruction) {
+        if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isStore()) {
+            if (fieldAccess.isStore())
+            {
                 Value storedValue = fieldAccess.getValue();
-                if (storedValue instanceof SSAValue) {
+                if (storedValue instanceof SSAValue)
+                {
                     SSAValue ssaStored = (SSAValue) storedValue;
                     IRInstruction def = ssaStored.getDefinition();
-                    if (def instanceof PhiInstruction && selfStorePhis.contains((PhiInstruction) def)) {
+                    if (def instanceof PhiInstruction && selfStorePhis.contains((PhiInstruction) def))
+                    {
                         return null;
                     }
                 }
@@ -9745,43 +11916,51 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 Expression target = new FieldAccessExpr(
                     receiver, fieldAccess.getName(), fieldAccess.getOwner(), fieldAccess.isStatic(), fieldType)
                     .withDescriptor(fieldAccess.getDescriptor());
-                return new ExprStmt(new BinaryExpr(
-                    BinaryOperator.ASSIGN, target, value, fieldType));
+                return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, fieldType));
             }
-            if (fieldAccess.isLoad() && fieldAccess.getResult() != null) {
+            if (fieldAccess.isLoad() && fieldAccess.getResult() != null)
+            {
                 SSAValue result = fieldAccess.getResult();
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(result, value);
                 if (fieldLoadClobberedBeforeUse(fieldAccess, result)
-                        || exprRecoverer.inliningWouldReorderEffects(result)) {
+                        || exprRecoverer.inliningWouldReorderEffects(result))
+                {
                     // The same protection when the field is mutated INDIRECTLY: a call between the load
                     // and its use may write the field (`double a = g.time; g.setTime(x); use(a)`), so a
                     // load carried across any effect is captured where it was performed, not re-read at
                     // the use. Operands of the use itself are exempt inside the reorder check.
                     Statement decl = materializeClobberedLoad(result, value);
-                    if (decl != null) {
+                    if (decl != null)
+                    {
                         return decl;
                     }
                 }
                 PhiInstruction targetPhi = getPhiUsingValue(result);
-                if (targetPhi != null && targetPhi.getResult() != null) {
-                    if (selfStorePhis.contains(targetPhi)) {
+                if (targetPhi != null && targetPhi.getResult() != null)
+                {
+                    if (selfStorePhis.contains(targetPhi))
+                    {
                         return null;
                     }
-                    if (context.isForLoopInductionPhi(targetPhi.getResult())) {
+                    if (context.isForLoopInductionPhi(targetPhi.getResult()))
+                    {
                         return null;
                     }
                     // When this field-load value is written by a store_local to a source variable other
                     // than the phi's own, that store is its real assignment; a copy here naming the phi's
                     // variable would be a spurious cross-variable one (a redundant advance, or a
                     // type-punned reuse like `i = model`). Cache the expression and let the store emit it.
-                    if (fieldLoadValueBelongsToOtherVariable(result, targetPhi)) {
+                    if (fieldLoadValueBelongsToOtherVariable(result, targetPhi))
+                    {
                         return null;
                     }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
-                    if (phiVarName != null) {
+                    if (phiVarName != null)
+                    {
                         SourceType type = value.getType();
-                        if (type == null) {
+                        if (type == null)
+                        {
                             type = typeRecoverer.recoverType(result);
                         }
                         VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
@@ -9792,13 +11971,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             return null;
         }
 
-        if (instr instanceof ArrayAccessInstruction) {
+        if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
-            if (arrayAccess.isStore()) {
+            if (arrayAccess.isStore())
+            {
                 Expression array = exprRecoverer.recoverOperand(arrayAccess.getArray());
                 Expression index = exprRecoverer.recoverOperand(arrayAccess.getIndex());
                 Expression value = exprRecoverer.recoverOperand(arrayAccess.getValue());
-                if (!(index instanceof LiteralExpr) && isConstantOperand(arrayAccess.getIndex())) {
+                if (!(index instanceof LiteralExpr) && isConstantOperand(arrayAccess.getIndex()))
+                {
                     Logger.error("decompiler: constant array-store index recovered as non-literal '"
                             + index + "' on '" + array + "' — likely a mis-materialized constant");
                 }
@@ -9808,11 +11990,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     : value.getType();
                 value = coerceForStore(value, elemType);
                 Expression target = new ArrayAccessExpr(array, index, elemType);
-                return new ExprStmt(new BinaryExpr(
-                    BinaryOperator.ASSIGN, target, value, elemType));
-            } else {
+                return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, elemType));
+            }
+            else
+            {
                 SSAValue result = arrayAccess.getResult();
-                if (result != null) {
+                if (result != null)
+                {
                     Expression expr = exprRecoverer.recover(arrayAccess);
                     context.getExpressionContext().cacheExpression(result, expr);
                 }
@@ -9820,66 +12004,82 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
 
-        if (instr instanceof InvokeInstruction) {
+        if (instr instanceof InvokeInstruction)
+        {
             InvokeInstruction invoke = (InvokeInstruction) instr;
-            if ("<init>".equals(invoke.getName())) {
+            if ("<init>".equals(invoke.getName()))
+            {
                 Value receiver = invoke.getArguments().isEmpty() ? null : invoke.getArguments().get(0);
                 SSAValue ssaReceiver = (receiver instanceof SSAValue) ? (SSAValue) receiver : null;
                 Expression expr = exprRecoverer.recover(invoke);
-                if (expr instanceof MethodCallExpr) {
+                if (expr instanceof MethodCallExpr)
+                {
                     MethodCallExpr mce = (MethodCallExpr) expr;
                     String methodName = mce.getMethodName();
-                    if ("super".equals(methodName) || "this".equals(methodName)) {
+                    if ("super".equals(methodName) || "this".equals(methodName))
+                    {
                         return new ExprStmt(expr);
                     }
                 }
-                if (expr instanceof NewExpr) {
-                    if (ssaReceiver != null) {
+                if (expr instanceof NewExpr)
+                {
+                    if (ssaReceiver != null)
+                    {
                         IRInstruction receiverDef = ssaReceiver.getDefinition();
-                        if (receiverDef instanceof NewInstruction) {
+                        if (receiverDef instanceof NewInstruction)
+                        {
                             NewInstruction newInstr = (NewInstruction) receiverDef;
                             SSAValue newResult = newInstr.getResult();
                             boolean usedByStore = isUsedByStoreLocal(newResult);
                             PhiInstruction targetPhi = getPhiUsingValue(newResult);
-                            if (targetPhi == null && usedByStore) {
+                            if (targetPhi == null && usedByStore)
+                            {
                                 targetPhi = getPhiThroughStoreChain(newResult);
                             }
                             if (newResult != null && targetPhi != null && targetPhi.getResult() != null
-                                    && !isStoredToPhiSlot(newResult, targetPhi)) {
+                                    && !isStoredToPhiSlot(newResult, targetPhi))
+                            {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                                 if (phiVarName != null && !phiVarName.equals("this")
                                         && !isParameterOrThisRef(targetPhi.getResult())
                                         && valueBelongsToPhiVariable(newResult, phiVarName)
-                                        && !isStoredToVariableNamed(newResult, phiVarName)) {
+                                        && !isStoredToVariableNamed(newResult, phiVarName))
+                                {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
                                 }
                             }
-                            if (newResult != null) {
+                            if (newResult != null)
+                            {
                                 context.getExpressionContext().cacheExpression(newResult, expr);
                             }
-                            if (usedByStore && targetPhi == null) {
+                            if (usedByStore && targetPhi == null)
+                            {
                                 return null;
                             }
                             // Nothing keeps the object - no store, no merge, no name - but constructing it is
                             // still what the statement DOES: the constructor runs, and whatever it throws or
                             // writes happens. Caching the expression for a use that does not exist dropped the
                             // allocation from the output entirely, leaving an empty method behind.
-                            if (isDiscardedAllocation(newResult, invoke)) {
+                            if (isDiscardedAllocation(newResult, invoke))
+                            {
                                 return new ExprStmt(expr);
                             }
                             return null;
                         }
                         SSAValue actualNewValue = findNewInstructionValue(ssaReceiver);
                         boolean usedByStoreLocal = isUsedByStoreLocal(actualNewValue);
-                        if (actualNewValue != null && !usedByStoreLocal) {
+                        if (actualNewValue != null && !usedByStoreLocal)
+                        {
                             PhiInstruction targetPhi = getPhiUsingValue(actualNewValue);
-                            if (targetPhi != null && targetPhi.getResult() != null) {
+                            if (targetPhi != null && targetPhi.getResult() != null)
+                            {
                                 String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
                                 if (phiVarName != null && !phiVarName.equals("this")
                                         && !isParameterOrThisRef(targetPhi.getResult())
-                                        && valueBelongsToPhiVariable(actualNewValue, phiVarName)) {
+                                        && valueBelongsToPhiVariable(actualNewValue, phiVarName))
+                                {
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
@@ -9887,22 +12087,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                             }
                         }
                         String varName = context.getExpressionContext().getVariableName(ssaReceiver);
-                        if (varName != null && !varName.equals("this")
-                                && !isParameterOrThisRef(ssaReceiver)) {
+                        if (varName != null && !varName.equals("this") && !isParameterOrThisRef(ssaReceiver))
+                        {
                             SourceType type = expr.getType();
-                            if (!context.getExpressionContext().isDeclared(varName)) {
+                            if (!context.getExpressionContext().isDeclared(varName))
+                            {
                                 context.getExpressionContext().markDeclared(varName);
                                 return new VarDeclStmt(type, varName, expr);
                             }
                         }
-                        if (actualNewValue != null) {
+                        if (actualNewValue != null)
+                        {
                             context.getExpressionContext().cacheExpression(actualNewValue, expr);
                         }
                         // Nothing keeps the object - no store, no merge, no name - but constructing it is
                         // still what the statement DOES: the constructor runs, and whatever it throws or
                         // writes happens. Caching the expression for a use that does not exist dropped the
                         // allocation from the output entirely, leaving an empty method behind.
-                        if (isDiscardedAllocation(actualNewValue, invoke)) {
+                        if (isDiscardedAllocation(actualNewValue, invoke))
+                        {
                             return new ExprStmt(expr);
                         }
                     }
@@ -9910,26 +12113,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 }
                 return new ExprStmt(expr);
             }
-            if (invoke.getResult() == null || invoke.getResult().getType() == null) {
+            if (invoke.getResult() == null || invoke.getResult().getType() == null)
+            {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
             }
             SSAValue result = invoke.getResult();
-            if (context.getExpressionContext().isRecovered(result)) {
+            if (context.getExpressionContext().isRecovered(result))
+            {
                 return null;
             }
             boolean usedByStoreLocal = isUsedByStoreLocal(result);
-            if (usedByStoreLocal) {
+            if (usedByStoreLocal)
+            {
                 Statement inPlace = storeCarriedCallInPlace(invoke, result);
-                if (inPlace != null) {
+                if (inPlace != null)
+                {
                     return inPlace;
                 }
-                if (exprRecoverer.inliningWouldReorderEffects(result)) {
+                if (exprRecoverer.inliningWouldReorderEffects(result))
+                {
                     String name = temporaryNameForCall(invoke);
-                    if (name != null) {
+                    if (name != null)
+                    {
                         Expression captured = exprRecoverer.recover(invoke);
                         Statement decl = materializeIntoTemporary(result, captured, name);
-                        if (decl != null) {
+                        if (decl != null)
+                        {
                             return decl;
                         }
                     }
@@ -9938,45 +12148,54 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
-            if (isSingleUseArrayStoreValue(result)) {
+            if (isSingleUseArrayStoreValue(result))
+            {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
-            if (result.getUses().isEmpty()) {
+            if (result.getUses().isEmpty())
+            {
                 Expression expr = exprRecoverer.recover(invoke);
                 return new ExprStmt(expr);
             }
-            if (exprRecoverer.inliningWouldReorderEffects(result)) {
+            if (exprRecoverer.inliningWouldReorderEffects(result))
+            {
                 // The value stays on the stack across a statement that has its own effect. Rendering the
                 // call at its use site would print the two effects in the wrong order, so capture it into
                 // a temporary here and let the use read that name.
                 String name = temporaryNameForCall(invoke);
-                if (name != null) {
+                if (name != null)
+                {
                     Expression expr = exprRecoverer.recover(invoke);
                     Statement captured = materializeIntoTemporary(result, expr, name);
-                    if (captured != null) {
+                    if (captured != null)
+                    {
                         return captured;
                     }
                 }
             }
-            if (isIntermediateValue(result)) {
+            if (isIntermediateValue(result))
+            {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
-            if (isSingleUsePutField(result)) {
+            if (isSingleUsePutField(result))
+            {
                 Expression expr = exprRecoverer.recover(invoke);
                 context.getExpressionContext().cacheExpression(result, expr);
                 return null;
             }
-            if (isSingleUsePhiOperand(result)) {
+            if (isSingleUsePhiOperand(result))
+            {
                 Expression expr = exprRecoverer.recover(invoke);
                 // If the value feeds an already-declared phi (e.g. a structured switch-expression
                 // merge), emit the copy `phiVar = expr` here: the structured recovery path has no
                 // lowerPhisOnEdge step, so otherwise a non-constant arm value would be dropped.
                 Statement phiCopy = phiCopyForDeclaredMerge(result, expr);
-                if (phiCopy != null) {
+                if (phiCopy != null)
+                {
                     return phiCopy;
                 }
                 context.getExpressionContext().cacheExpression(result, expr);
@@ -9984,18 +12203,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
 
-        if (instr instanceof NewInstruction) {
+        if (instr instanceof NewInstruction)
+        {
             SSAValue result = instr.getResult();
-            if (result != null) {
+            if (result != null)
+            {
                 Expression expr = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(result, expr);
             }
             return null;
         }
 
-        if (instr instanceof NewArrayInstruction) {
+        if (instr instanceof NewArrayInstruction)
+        {
             SSAValue result = instr.getResult();
-            if (result != null) {
+            if (result != null)
+            {
                 boolean usedByStore = isUsedByStoreLocal(result);
                 boolean usedByArrayStore = isUsedByArrayStore(result);
                 boolean usesEmpty = result.getUses().isEmpty();
@@ -10003,9 +12226,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // If used by both array store and local store, emit declaration here
                 // so array stores can use the variable name correctly.
                 // Without this, array stores would appear before the declaration.
-                if (usedByArrayStore && usedByStore) {
+                if (usedByArrayStore && usedByStore)
+                {
                     String varName = getLocalNameFromStoreLocal(result);
-                    if (varName != null) {
+                    if (varName != null)
+                    {
                         SourceType type = typeRecoverer.recoverType(result);
                         Expression value = exprRecoverer.recover(instr);
                         context.getExpressionContext().cacheExpression(result, value);
@@ -10015,7 +12240,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                         // emitted at method scope or by an earlier store). Re-declaring here shadows it,
                         // so the array is built into a fresh inner variable and the outer one keeps its
                         // old value - the store is lost. Assign to the existing variable instead.
-                        if (context.getExpressionContext().isDeclared(varName)) {
+                        if (context.getExpressionContext().isDeclared(varName))
+                        {
                             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
                                     new VarRefExpr(varName, type, result), value, type));
                         }
@@ -10024,12 +12250,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     }
                 }
 
-                if (usedByStore) {
+                if (usedByStore)
+                {
                     Expression expr = exprRecoverer.recover(instr);
                     context.getExpressionContext().cacheExpression(result, expr);
                     return null;
                 }
-                if (usesEmpty) {
+                if (usesEmpty)
+                {
                     Expression expr = exprRecoverer.recover(instr);
                     return new ExprStmt(expr);
                 }
@@ -10038,9 +12266,11 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             return null;
         }
 
-        if (instr instanceof CopyInstruction) {
+        if (instr instanceof CopyInstruction)
+        {
             CopyInstruction copy = (CopyInstruction) instr;
-            if (copy.getResult() != null && splitIncrementTemps.contains(copy.getResult())) {
+            if (copy.getResult() != null && splitIncrementTemps.contains(copy.getResult()))
+            {
                 SourceType type = typeRecoverer.recoverType(copy.getResult());
                 String name = context.getExpressionContext().getVariableName(copy.getResult());
                 Expression src = exprRecoverer.recoverOperand(copy.getSource());
@@ -10048,19 +12278,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
             Value source = copy.getSource();
             Set<SSAValue> visited = new HashSet<>();
-            while (source instanceof SSAValue) {
+            while (source instanceof SSAValue)
+            {
                 SSAValue ssaSource = (SSAValue) source;
-                if (!visited.add(ssaSource)) {
+                if (!visited.add(ssaSource))
+                {
                     break;
                 }
-                if (context.getExpressionContext().isPendingNew(ssaSource)) {
+                if (context.getExpressionContext().isPendingNew(ssaSource))
+                {
                     return null;
                 }
                 IRInstruction def = ssaSource.getDefinition();
-                if (def instanceof NewInstruction) {
+                if (def instanceof NewInstruction)
+                {
                     return null;
                 }
-                if (def instanceof CopyInstruction) {
+                if (def instanceof CopyInstruction)
+                {
                     source = ((CopyInstruction) def).getSource();
                     continue;
                 }
@@ -10068,23 +12303,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
 
-        if (instr instanceof SimpleInstruction) {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            if (simple.getOp() == SimpleOp.MONITORENTER ||
-                simple.getOp() == SimpleOp.MONITOREXIT) {
+            if (simple.getOp() == SimpleOp.MONITORENTER || simple.getOp() == SimpleOp.MONITOREXIT)
+            {
                 return null;
             }
-            if (simple.getOp() == SimpleOp.ATHROW) {
+            if (simple.getOp() == SimpleOp.ATHROW)
+            {
                 Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
                 return new ThrowStmt(exception);
             }
         }
 
-        if (instr instanceof LoadLocalInstruction) {
+        if (instr instanceof LoadLocalInstruction)
+        {
             LoadLocalInstruction loadLocal = (LoadLocalInstruction) instr;
-            if (loadLocal.getResult() != null) {
+            if (loadLocal.getResult() != null)
+            {
                 String existingName = context.getExpressionContext().getVariableName(loadLocal.getResult());
-                if (existingName == null) {
+                if (existingName == null)
+                {
                     int localIndex = loadLocal.getLocalIndex();
                     String localName = getNameForLocalSlot(localIndex);
                     context.getExpressionContext().setVariableName(loadLocal.getResult(), localName);
@@ -10098,16 +12338,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             return null;
         }
 
-        if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof TypeCheckInstruction) {
-            if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
+        if (instr instanceof BinaryOpInstruction || instr instanceof UnaryOpInstruction || instr instanceof TypeCheckInstruction)
+        {
+            if (instr.getResult() != null && isIntermediateValue(instr.getResult()))
+            {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
                 return null;
             }
-            if (instr.getResult() != null && isSingleUsePhiOperand(instr.getResult())) {
+            if (instr.getResult() != null && isSingleUsePhiOperand(instr.getResult()))
+            {
                 Expression value = exprRecoverer.recover(instr);
                 Statement phiCopy = phiCopyForDeclaredMerge(instr.getResult(), value);
-                if (phiCopy != null) {
+                if (phiCopy != null)
+                {
                     return phiCopy;
                 }
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
@@ -10115,18 +12359,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
 
-        if (instr instanceof TypeCheckInstruction) {
-            if (instr.getResult() != null && isIntermediateValue(instr.getResult())) {
+        if (instr instanceof TypeCheckInstruction)
+        {
+            if (instr.getResult() != null && isIntermediateValue(instr.getResult()))
+            {
                 Expression value = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), value);
                 return null;
             }
         }
 
-        if (instr instanceof ConstantInstruction) {
+        if (instr instanceof ConstantInstruction)
+        {
             ConstantInstruction constInstr = (ConstantInstruction) instr;
             SSAValue result = constInstr.getResult();
-            if (result != null) {
+            if (result != null)
+            {
                 PhiInstruction targetPhi = getPhiUsingValue(result);
                 // A dead phi (or the primitive/reference pun a reused slot leaves behind) carries an
                 // arbitrary component's name; materializing the constant into it writes another
@@ -10134,23 +12382,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 // guard every other phi-copy emitter applies. The store consuming this constant
                 // still emits the real initialization.
                 if (targetPhi != null && targetPhi.getResult() != null
-                        && (targetPhi.getResult().getUses().isEmpty() || isTypePunDeadPhi(targetPhi))) {
+                        && (targetPhi.getResult().getUses().isEmpty() || isTypePunDeadPhi(targetPhi)))
+                {
                     targetPhi = null;
                 }
                 // The phi of a REUSED slot can carry the other occupant's name and type; writing this
                 // constant into it is the same reused-slot fiction lowerPhisOnEdge refuses (`minor =
                 // null` for a try-with-resources sentinel, with minor an int). The store consuming
                 // the constant still emits the real initialization under the right name.
-                if (targetPhi != null && targetPhi.getResult() != null) {
+                if (targetPhi != null && targetPhi.getResult() != null)
+                {
                     String punName = context.getExpressionContext().getVariableName(targetPhi.getResult());
-                    if (punName != null && !copyTypeCompatible(getLocalSlotUnifiedType(punName), result)) {
+                    if (punName != null && !copyTypeCompatible(getLocalSlotUnifiedType(punName), result))
+                    {
                         targetPhi = null;
                     }
                 }
-                if (targetPhi != null && targetPhi.getResult() != null) {
-                    if (selfStorePhis.contains(targetPhi)) {
+                if (targetPhi != null && targetPhi.getResult() != null)
+                {
+                    if (selfStorePhis.contains(targetPhi))
+                    {
                         FieldAccessInstruction fieldInfo = getSelfStoreFieldInfo(targetPhi);
-                        if (fieldInfo != null) {
+                        if (fieldInfo != null)
+                        {
                             Expression value = exprRecoverer.recover(constInstr);
                             SourceType fieldType = typeRecoverer.recoverType(fieldInfo.getDescriptor());
                             Expression fieldTarget = new FieldAccessExpr(
@@ -10159,13 +12413,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, fieldTarget, value, fieldType));
                         }
                     }
-                    if (context.isForLoopInductionPhi(targetPhi.getResult())) {
+                    if (context.isForLoopInductionPhi(targetPhi.getResult()))
+                    {
                         Expression value = exprRecoverer.recover(constInstr);
                         context.getExpressionContext().cacheExpression(result, value);
                         return null;
                     }
                     String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
-                    if (phiVarName != null) {
+                    if (phiVarName != null)
+                    {
                         Expression value = exprRecoverer.recover(constInstr);
                         // A phi-feeding constant is normally folded into the phi variable's declaration
                         // default - but NOT when an exception handler reads the variable's slot: the
@@ -10173,24 +12429,30 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                         // statement before the protected range (and the declaration with it), or the
                         // handler's read references a variable declared inside the try it covers.
                         boolean handlerRead = slotReadByReachableHandler(constInstr, result);
-                        if (!handlerRead && !context.getExpressionContext().isDeclared(phiVarName)) {
+                        if (!handlerRead && !context.getExpressionContext().isDeclared(phiVarName))
+                        {
                             context.getExpressionContext().cacheExpression(result, value);
                             return null;
                         }
-                        if (!handlerRead && isDefaultValue(value)) {
+                        if (!handlerRead && isDefaultValue(value))
+                        {
                             context.getExpressionContext().cacheExpression(result, value);
                             return null;
                         }
                         SourceType type = getLocalSlotUnifiedType(phiVarName);
-                        if (type == null) {
+                        if (type == null)
+                        {
                             type = value.getType();
                         }
-                        if (type == null) {
+                        if (type == null)
+                        {
                             type = typeRecoverer.recoverType(result);
                         }
-                        if (type == PrimitiveSourceType.BOOLEAN) {
+                        if (type == PrimitiveSourceType.BOOLEAN)
+                        {
                             Expression boolValue = tryConvertToBooleanLiteral(value, result);
-                            if (boolValue != null) {
+                            if (boolValue != null)
+                            {
                                 value = boolValue;
                             }
                         }
@@ -10204,13 +12466,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             return null;
         }
 
-        if (instr.getResult() != null) {
-            if (isUsedByStoreLocal(instr.getResult())) {
+        if (instr.getResult() != null)
+        {
+            if (isUsedByStoreLocal(instr.getResult()))
+            {
                 Expression expr = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), expr);
                 return null;
             }
-            if (isUsedOnlyByTerminator(instr.getResult())) {
+            if (isUsedOnlyByTerminator(instr.getResult()))
+            {
                 Expression expr = exprRecoverer.recover(instr);
                 context.getExpressionContext().cacheExpression(instr.getResult(), expr);
                 return null;
@@ -10221,11 +12486,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private boolean isUsedOnlyByTerminator(SSAValue value) {
+    private boolean isUsedOnlyByTerminator(SSAValue value)
+    {
         if (value == null) return false;
         java.util.List<IRInstruction> uses = value.getUses();
         if (uses.isEmpty()) return false;
-        for (IRInstruction use : uses) {
+        for (IRInstruction use : uses)
+        {
             if (use instanceof BranchInstruction) continue;
             if (use instanceof ReturnInstruction) continue;
             if (use instanceof SwitchInstruction) continue;
@@ -10234,14 +12501,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return true;
     }
 
-    private Statement recoverTerminator(IRInstruction instr) {
-        if (instr instanceof ReturnInstruction) {
+    private Statement recoverTerminator(IRInstruction instr)
+    {
+        if (instr instanceof ReturnInstruction)
+        {
             ReturnInstruction ret = (ReturnInstruction) instr;
             return recoverReturn(ret);
         }
-        if (instr instanceof SimpleInstruction) {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            if (simple.getOp() == SimpleOp.ATHROW) {
+            if (simple.getOp() == SimpleOp.ATHROW)
+            {
                 Expression exception = exprRecoverer.recoverOperand(simple.getOperand());
                 return new ThrowStmt(exception);
             }
@@ -10249,27 +12520,34 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private Statement recoverStoreLocal(StoreLocalInstruction store) {
+    private Statement recoverStoreLocal(StoreLocalInstruction store)
+    {
         Value storeValue = store.getValue();
 
         // Early exit: if this is a NewArrayInstruction result that was already
         // declared at the NewArray position (because it's used by array stores),
         // skip to avoid duplicate declarations. This is a specific case handled
         // in recoverInstruction for NewArrayInstruction.
-        if (storeValue instanceof SSAValue) {
+        if (storeValue instanceof SSAValue)
+        {
             SSAValue ssaValue = (SSAValue) storeValue;
             IRInstruction def = ssaValue.getDefinition();
-            if (def instanceof NewArrayInstruction && isUsedByArrayStore(ssaValue)) {
-                if (context.getExpressionContext().isMaterialized(ssaValue)) {
+            if (def instanceof NewArrayInstruction && isUsedByArrayStore(ssaValue))
+            {
+                if (context.getExpressionContext().isMaterialized(ssaValue))
+                {
                     String existingName = context.getExpressionContext().getVariableName(ssaValue);
-                    if (existingName != null && context.getExpressionContext().isDeclared(existingName)) {
+                    if (existingName != null && context.getExpressionContext().isDeclared(existingName))
+                    {
                         int localIndex = store.getLocalIndex();
                         SourceType valueType = typeRecoverer.recoverType(ssaValue);
                         String expectedName = partitionName(store);
-                        if (expectedName == null) {
+                        if (expectedName == null)
+                        {
                             expectedName = getNameForLocalSlotWithType(localIndex, valueType);
                         }
-                        if (existingName.equals(expectedName)) {
+                        if (existingName.equals(expectedName))
+                        {
                             return null;
                         }
                     }
@@ -10287,7 +12565,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // variable reference (e.g., "result = i" should reference "i", not "new Integer(999)").
         boolean wasMaterialized;
         boolean shouldUnmaterialize = false;
-        if (storeValue instanceof SSAValue) {
+        if (storeValue instanceof SSAValue)
+        {
             SSAValue ssaValue = (SSAValue) storeValue;
             wasMaterialized = context.getExpressionContext().isMaterialized(ssaValue);
             int previousSlot = context.getExpressionContext().getSSAValueSlot(ssaValue);
@@ -10303,7 +12582,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // Only unmaterialize if this is the first store OR if we're storing to the same slot
             shouldUnmaterialize = wasMaterialized && !declaredArrayInit
                     && (previousSlot == -1 || previousSlot == localIndex);
-            if (shouldUnmaterialize) {
+            if (shouldUnmaterialize)
+            {
                 context.getExpressionContext().unmarkMaterialized(ssaValue);
             }
         }
@@ -10311,20 +12591,23 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Expression value = exprRecoverer.recoverOperand(storeValue);
 
         // Re-materialize after recovery if we unmaterialized
-        if (shouldUnmaterialize) {
+        if (shouldUnmaterialize)
+        {
             context.getExpressionContext().markMaterialized((SSAValue) storeValue);
         }
 
         value = stripDoubleNot(value);
 
-        if (value == null) {
+        if (value == null)
+        {
             // The stored expression could not be recovered as an operand (e.g. a copy that aliases an
             // unnamed entry value). Fall back to referencing the stored value by its own name, or the
             // slot's, so the store still emits a well-formed statement rather than a null right-hand side.
             SourceType fallbackType = typeRecoverer.recoverType(storeValue);
             String fallbackName = storeValue instanceof SSAValue
                     ? context.getExpressionContext().getVariableName((SSAValue) storeValue) : null;
-            if (fallbackName == null) {
+            if (fallbackName == null)
+            {
                 fallbackName = getNameForLocalSlotWithType(localIndex, fallbackType);
             }
             value = new VarRefExpr(fallbackName, fallbackType,
@@ -10332,7 +12615,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
 
         SourceType valueType = value.getType();
-        if (valueType == null) {
+        if (valueType == null)
+        {
             valueType = typeRecoverer.recoverType(store.getValue());
         }
 
@@ -10340,7 +12624,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // matches the loads that read it; fall back to category naming if unplaced.
         String name = partitionName(store);
         if (System.getProperty("yabr.debug.store") != null
-                && store.getBytecodeOffset() == Integer.parseInt(System.getProperty("yabr.debug.store"))) {
+                && store.getBytecodeOffset() == Integer.parseInt(System.getProperty("yabr.debug.store")))
+        {
             System.err.println("[store] off=" + store.getBytecodeOffset() + " slot=" + localIndex
                     + " partition=" + name
                     + " valName=" + (storeValue instanceof SSAValue
@@ -10348,28 +12633,34 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     + " materialized=" + (storeValue instanceof SSAValue
                         && context.getExpressionContext().isMaterialized((SSAValue) storeValue)));
         }
-        if (name == null) {
+        if (name == null)
+        {
             name = getNameForLocalSlotWithType(localIndex, valueType);
         }
 
         SourceType type = getLocalSlotUnifiedType(name);
-        if (type == null) {
+        if (type == null)
+        {
             type = value.getType();
         }
-        if (type == null) {
+        if (type == null)
+        {
             type = VoidSourceType.INSTANCE;
         }
 
         // Prefer boolean expression type over int unified type (JVM uses int for boolean)
         SourceType exprType = value.getType();
-        if (exprType == PrimitiveSourceType.BOOLEAN && type == PrimitiveSourceType.INT) {
+        if (exprType == PrimitiveSourceType.BOOLEAN && type == PrimitiveSourceType.INT)
+        {
             type = PrimitiveSourceType.BOOLEAN;
         }
 
         // Convert int literal to boolean when storing to a boolean variable
-        if (type == PrimitiveSourceType.BOOLEAN) {
+        if (type == PrimitiveSourceType.BOOLEAN)
+        {
             Expression boolValue = tryConvertToBooleanLiteral(value, store.getValue());
-            if (boolValue != null) {
+            if (boolValue != null)
+            {
                 value = boolValue;
             }
         }
@@ -10380,24 +12671,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // and subsequent references to the SSA value.
         // For LOADED values (from LoadLocalInstruction), DON'T copy the source's name to the target slot.
         // The target slot should keep its own name, and the assignment should reference the source.
-        if (store.getValue() instanceof SSAValue) {
+        if (store.getValue() instanceof SSAValue)
+        {
             SSAValue sourceValue = (SSAValue) store.getValue();
             IRInstruction sourceDef = sourceValue.getDefinition();
             // A value from a load, a phi, or a parameter is a read of an existing variable (the
             // slot's current value, a loop-carried merge, or a method argument), not a value freshly
             // defined by this store. Copying the store's slot name onto it would conflate distinct
-            // variables — e.g. `a = b` (b is a loop phi or a parameter) would rename b to "a" and
+            // variables - e.g. `a = b` (b is a loop phi or a parameter) would rename b to "a" and
             // collapse the assignment into an elided self-store.
             boolean isLoadedValue = sourceDef instanceof LoadLocalInstruction
                 || sourceDef instanceof PhiInstruction
                 || isParameterOrThisRef(sourceValue);
             boolean isAlreadyMaterialized = context.getExpressionContext().isMaterialized(sourceValue);
 
-            if (!isLoadedValue && !isAlreadyMaterialized) {
+            if (!isLoadedValue && !isAlreadyMaterialized)
+            {
                 String existingName = context.getExpressionContext().getVariableName(sourceValue);
-                if (existingName != null && !isPerValueTemporaryName(existingName)) {
+                if (existingName != null && !isPerValueTemporaryName(existingName))
+                {
                     name = existingName;
-                } else {
+                }
+                else
+                {
                     context.getExpressionContext().setVariableName(sourceValue, name);
                 }
                 context.getExpressionContext().setSSAValueSlot(sourceValue, localIndex);
@@ -10409,7 +12705,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         boolean isDeclared = context.getExpressionContext().isDeclared(name);
 
-        if (isDeclared) {
+        if (isDeclared)
+        {
             // A default-value store is covered by the declaration's default initializer only while the variable
             // provably still holds that default: outside a loop (a loop re-runs the store each iteration where
             // the hoisted declaration ran once) AND with no non-default store to the slot dominating this one. An
@@ -10423,12 +12720,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             if (isDefaultValue(value) && context.getLoopStack().isEmpty() && !inLoopBlock
                     && !context.inInnermostSwitchCase(store.getBlock())
                     && !hasDominatingNonDefaultStore(store)
-                    && !slotReadByReachableHandler(store, null)) {
+                    && !slotReadByReachableHandler(store, null))
+            {
                 return null;
             }
-            if (value instanceof VarRefExpr) {
+            if (value instanceof VarRefExpr)
+            {
                 VarRefExpr varRef = (VarRefExpr) value;
-                if (name.equals(varRef.getName())) {
+                if (name.equals(varRef.getName()))
+                {
                     return null;
                 }
             }
@@ -10436,7 +12736,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
         }
 
-        if (value instanceof VarRefExpr && name.equals(((VarRefExpr) value).getName())) {
+        if (value instanceof VarRefExpr && name.equals(((VarRefExpr) value).getName()))
+        {
             // An identity store - the value already lives under this name (e.g. a caught exception whose
             // catch clause introduced it) - declares nothing.
             return null;
@@ -10452,81 +12753,105 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * the exception path even when normal-flow dominance says it is redundant - eliding it either changes
      * the handler's read or strands the variable's declaration inside the try the handler covers.
      */
-    private boolean slotReadByReachableHandler(IRInstruction instr, SSAValue storedValue) {
+    private boolean slotReadByReachableHandler(IRInstruction instr, SSAValue storedValue)
+    {
         IRBlock origin = instr.getBlock();
-        if (origin == null) {
+        if (origin == null)
+        {
             return false;
         }
         int slot = -1;
-        if (instr instanceof StoreLocalInstruction) {
+        if (instr instanceof StoreLocalInstruction)
+        {
             slot = ((StoreLocalInstruction) instr).getLocalIndex();
-        } else if (storedValue != null) {
-            for (IRInstruction ins : origin.getInstructions()) {
-                if (ins instanceof StoreLocalInstruction
-                        && ((StoreLocalInstruction) ins).getValue() == storedValue) {
+        }
+        else if (storedValue != null)
+        {
+            for (IRInstruction ins : origin.getInstructions())
+            {
+                if (ins instanceof StoreLocalInstruction && ((StoreLocalInstruction) ins).getValue() == storedValue)
+                {
                     slot = ((StoreLocalInstruction) ins).getLocalIndex();
                     break;
                 }
             }
         }
-        if (slot < 0) {
+        if (slot < 0)
+        {
             return false;
         }
-        if (handlerReadSlots == null) {
+        if (handlerReadSlots == null)
+        {
             handlerReadSlots = new LinkedHashMap<>();
             DominatorTree dt = context.getDominatorTree();
-            for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+            for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+            {
                 IRBlock hb = h.getHandlerBlock();
                 Set<IRBlock> tryBlocks = h.getTryBlocks();
-                if (hb == null || tryBlocks == null || tryBlocks.isEmpty()) {
+                if (hb == null || tryBlocks == null || tryBlocks.isEmpty())
+                {
                     continue;
                 }
                 Set<Integer> reads = new HashSet<>();
-                for (IRBlock b : context.getIrMethod().getBlocks()) {
-                    if (b != hb && (dt == null || !dt.dominates(hb, b))) {
+                for (IRBlock b : context.getIrMethod().getBlocks())
+                {
+                    if (b != hb && (dt == null || !dt.dominates(hb, b)))
+                    {
                         continue;
                     }
-                    for (IRInstruction ins : b.getInstructions()) {
-                        if (ins instanceof LoadLocalInstruction) {
+                    for (IRInstruction ins : b.getInstructions())
+                    {
+                        if (ins instanceof LoadLocalInstruction)
+                        {
                             reads.add(((LoadLocalInstruction) ins).getLocalIndex());
                         }
                     }
                 }
-                if (!reads.isEmpty()) {
+                if (!reads.isEmpty())
+                {
                     handlerReadSlots.put(h, reads);
                 }
             }
         }
-        for (Map.Entry<ExceptionHandler, Set<Integer>> e : handlerReadSlots.entrySet()) {
-            if (!e.getValue().contains(slot)) {
+        for (Map.Entry<ExceptionHandler, Set<Integer>> e : handlerReadSlots.entrySet())
+        {
+            if (!e.getValue().contains(slot))
+            {
                 continue;
             }
             Set<IRBlock> tryBlocks = e.getKey().getTryBlocks();
             boolean covers = tryBlocks.contains(origin);
-            if (!covers) {
+            if (!covers)
+            {
                 Deque<IRBlock> work = new ArrayDeque<>();
                 Set<IRBlock> seen = new HashSet<>();
                 work.add(origin);
-                while (!work.isEmpty()) {
+                while (!work.isEmpty())
+                {
                     IRBlock b = work.poll();
-                    if (!seen.add(b)) {
+                    if (!seen.add(b))
+                    {
                         continue;
                     }
-                    if (tryBlocks.contains(b)) {
+                    if (tryBlocks.contains(b))
+                    {
                         covers = true;
                         break;
                     }
                     work.addAll(b.getSuccessors());
                 }
             }
-            if (covers) {
+            if (covers)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    /** Slots each handler's dominated subtree loads, built once per method for the elision guard. */
+    /**
+     * Slots each handler's dominated subtree loads, built once per method for the elision guard.
+     */
     private Map<ExceptionHandler, Set<Integer>> handlerReadSlots;
 
     /**
@@ -10535,28 +12860,35 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code store}). When so, a default-valued store to the slot is a real re-initialization, not a redundant
      * repeat of the declaration's default, and must be kept.
      */
-    private boolean hasDominatingNonDefaultStore(StoreLocalInstruction store) {
+    private boolean hasDominatingNonDefaultStore(StoreLocalInstruction store)
+    {
         int slot = store.getLocalIndex();
         IRBlock block = store.getBlock();
-        if (block == null) {
+        if (block == null)
+        {
             return false;
         }
         Value inBlock = lastSlotStoreValueBefore(block, store, slot);
-        if (inBlock != null) {
+        if (inBlock != null)
+        {
             return !isDefaultIrValue(inBlock);
         }
         DominatorTree dom = context.getDominatorTree();
-        if (dom == null) {
+        if (dom == null)
+        {
             return false;
         }
         IRBlock b = dom.getImmediateDominator(block);
-        while (b != null && b != block) {
+        while (b != null && b != block)
+        {
             Value v = lastSlotStoreValueBefore(b, null, slot);
-            if (v != null) {
+            if (v != null)
+            {
                 return !isDefaultIrValue(v);
             }
             IRBlock next = dom.getImmediateDominator(b);
-            if (next == b) {
+            if (next == b)
+            {
                 break; // the entry block immediately dominates itself; stop at the root
             }
             b = next;
@@ -10568,35 +12900,47 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * The value of the last {@code store_local slot} in {@code block} occurring before {@code limit} (or the
      * last one in the block when {@code limit} is null), or null when the block stores nothing to {@code slot}.
      */
-    private Value lastSlotStoreValueBefore(IRBlock block, IRInstruction limit, int slot) {
+    private Value lastSlotStoreValueBefore(IRBlock block, IRInstruction limit, int slot)
+    {
         Value found = null;
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr == limit) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr == limit)
+            {
                 break;
             }
-            if (instr instanceof StoreLocalInstruction && ((StoreLocalInstruction) instr).getLocalIndex() == slot) {
+            if (instr instanceof StoreLocalInstruction && ((StoreLocalInstruction) instr).getLocalIndex() == slot)
+            {
                 found = ((StoreLocalInstruction) instr).getValue();
             }
         }
         return found;
     }
 
-    /** True when an IR value is a default constant (0, 0.0, false, or null). */
-    private boolean isDefaultIrValue(Value value) {
-        if (value instanceof NullConstant) {
+    /**
+     * True when an IR value is a default constant (0, 0.0, false, or null).
+     */
+    private boolean isDefaultIrValue(Value value)
+    {
+        if (value instanceof NullConstant)
+        {
             return true;
         }
         IRInstruction def = value instanceof SSAValue ? ((SSAValue) value).getDefinition() : null;
-        if (def instanceof ConstantInstruction) {
+        if (def instanceof ConstantInstruction)
+        {
             Constant c = ((ConstantInstruction) def).getConstant();
-            if (c instanceof NullConstant) {
+            if (c instanceof NullConstant)
+            {
                 return true;
             }
             Object v = c.getValue();
-            if (v instanceof Number) {
+            if (v instanceof Number)
+            {
                 return ((Number) v).doubleValue() == 0.0;
             }
-            if (v instanceof Boolean) {
+            if (v instanceof Boolean)
+            {
                 return !((Boolean) v);
             }
         }
@@ -10604,15 +12948,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
 
-    private Statement recoverReturn(ReturnInstruction ret) {
-        if (ret.isVoidReturn()) {
+    private Statement recoverReturn(ReturnInstruction ret)
+    {
+        if (ret.isVoidReturn())
+        {
             return new ReturnStmt(null);
         }
         String methodDesc = context.getIrMethod().getDescriptor();
         SourceType returnType = null;
-        if (methodDesc != null) {
+        if (methodDesc != null)
+        {
             int parenEnd = methodDesc.indexOf(')');
-            if (parenEnd >= 0 && parenEnd + 1 < methodDesc.length()) {
+            if (parenEnd >= 0 && parenEnd + 1 < methodDesc.length())
+            {
                 String retDesc = methodDesc.substring(parenEnd + 1);
                 returnType = typeRecoverer.recoverType(retDesc);
             }
@@ -10624,17 +12972,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return returnStmt;
     }
 
-    private Expression applyReturnTypeCoercion(Expression expr, SourceType returnType) {
+    private Expression applyReturnTypeCoercion(Expression expr, SourceType returnType)
+    {
         if (returnType == null) return expr;
-        if (expr instanceof LiteralExpr) {
+        if (expr instanceof LiteralExpr)
+        {
             LiteralExpr lit = (LiteralExpr) expr;
             Object val = lit.getValue();
-            if (val instanceof Integer) {
+            if (val instanceof Integer)
+            {
                 int intVal = (Integer) val;
-                if (returnType == PrimitiveSourceType.BOOLEAN) {
+                if (returnType == PrimitiveSourceType.BOOLEAN)
+                {
                     return LiteralExpr.ofBoolean(intVal != 0);
                 }
-                if (returnType == PrimitiveSourceType.CHAR) {
+                if (returnType == PrimitiveSourceType.CHAR)
+                {
                     return LiteralExpr.ofChar((char) intVal);
                 }
             }
@@ -10642,30 +12995,38 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // `cond ? 1 : 0` returned from a boolean method is the JVM's int form of the boolean; in source it is
         // just `cond`. Folding it makes the round trip stable (recovery materializes the boolean differently on
         // recompiled vs javac bytecode, so one pass produces the ternary and the other the bare condition).
-        if (returnType == PrimitiveSourceType.BOOLEAN && expr instanceof TernaryExpr) {
+        if (returnType == PrimitiveSourceType.BOOLEAN && expr instanceof TernaryExpr)
+        {
             TernaryExpr tern = (TernaryExpr) expr;
             Integer thenV = intLiteralValue(tern.getThenExpr());
             Integer elseV = intLiteralValue(tern.getElseExpr());
-            if (thenV != null && elseV != null && thenV == 1 && elseV == 0) {
+            if (thenV != null && elseV != null && thenV == 1 && elseV == 0)
+            {
                 return tern.getCondition();
             }
         }
         return expr;
     }
 
-    /** The int value of {@code e} when it is an integer literal, else null. */
-    private Integer intLiteralValue(Expression e) {
-        if (e instanceof LiteralExpr && ((LiteralExpr) e).getValue() instanceof Integer) {
+    /**
+     * The int value of {@code e} when it is an integer literal, else null.
+     */
+    private Integer intLiteralValue(Expression e)
+    {
+        if (e instanceof LiteralExpr && ((LiteralExpr) e).getValue() instanceof Integer)
+        {
             return (Integer) ((LiteralExpr) e).getValue();
         }
         return null;
     }
 
 
-    private Statement recoverVarDecl(IRInstruction instr) {
+    private Statement recoverVarDecl(IRInstruction instr)
+    {
         SSAValue result = instr.getResult();
         String name = context.getExpressionContext().getVariableName(result);
-        if (name == null) {
+        if (name == null)
+        {
             name = "v" + result.getId();
         }
 
@@ -10677,13 +13038,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         context.getExpressionContext().markMaterialized(result);
         context.getExpressionContext().setVariableName(result, name);
 
-        if (value instanceof VarRefExpr && name.equals(((VarRefExpr) value).getName())) {
+        if (value instanceof VarRefExpr && name.equals(((VarRefExpr) value).getName()))
+        {
             // An identity copy (a cyclic loop-carried copy chain resolves to the variable itself):
             // the variable already holds the value, so neither `T x = x;` nor `x = x;` is emitted.
             return null;
         }
 
-        if (context.getExpressionContext().isDeclared(name)) {
+        if (context.getExpressionContext().isDeclared(name))
+        {
             VarRefExpr target = new VarRefExpr(name, type, result);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, value, type));
         }
@@ -10700,47 +13063,57 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * but {@code primary} is the clause's caught exception, which a source-level {@code finally} cannot
      * name; the recovered finally keeps the plain close, matching the single-resource convention.
      */
-    private Statement unwrapSuppressScaffold(Statement stmt) {
-        if (stmt instanceof IfStmt) {
+    private Statement unwrapSuppressScaffold(Statement stmt)
+    {
+        if (stmt instanceof IfStmt)
+        {
             IfStmt ifs = (IfStmt) stmt;
             Statement then = unwrapSuppressScaffold(ifs.getThenBranch());
-            if (then != ifs.getThenBranch() && ifs.getElseBranch() == null) {
+            if (then != ifs.getThenBranch() && ifs.getElseBranch() == null)
+            {
                 return new IfStmt(ifs.getCondition(), then, null, ifs.getLocation());
             }
             return stmt;
         }
-        if (stmt instanceof BlockStmt) {
+        if (stmt instanceof BlockStmt)
+        {
             List<Statement> inner = ((BlockStmt) stmt).getStatements();
             List<Statement> out = new ArrayList<>(inner.size());
             boolean changed = false;
-            for (Statement s : inner) {
+            for (Statement s : inner)
+            {
                 Statement u = unwrapSuppressScaffold(s);
                 changed |= u != s;
                 out.add(u);
             }
             return changed ? new BlockStmt(out) : stmt;
         }
-        if (!(stmt instanceof TryCatchStmt)) {
+        if (!(stmt instanceof TryCatchStmt))
+        {
             return stmt;
         }
         TryCatchStmt tcs = (TryCatchStmt) stmt;
-        if (tcs.hasFinally() || tcs.hasResources() || tcs.getCatches().size() != 1) {
+        if (tcs.hasFinally() || tcs.hasResources() || tcs.getCatches().size() != 1)
+        {
             return stmt;
         }
         CatchClause cc = tcs.getCatches().get(0);
         Statement cbody = cc.body();
         List<Statement> cstmts = cbody instanceof BlockStmt
                 ? ((BlockStmt) cbody).getStatements() : Collections.singletonList(cbody);
-        if (cstmts.size() != 1 || !(cstmts.get(0) instanceof ExprStmt)) {
+        if (cstmts.size() != 1 || !(cstmts.get(0) instanceof ExprStmt))
+        {
             return stmt;
         }
         Expression e = ((ExprStmt) cstmts.get(0)).getExpression();
-        if (!(e instanceof MethodCallExpr) || !"addSuppressed".equals(((MethodCallExpr) e).getMethodName())) {
+        if (!(e instanceof MethodCallExpr) || !"addSuppressed".equals(((MethodCallExpr) e).getMethodName()))
+        {
             return stmt;
         }
         MethodCallExpr call = (MethodCallExpr) e;
         if (call.getArguments().size() != 1 || !(call.getArguments().get(0) instanceof VarRefExpr)
-                || !cc.variableName().equals(((VarRefExpr) call.getArguments().get(0)).getName())) {
+                || !cc.variableName().equals(((VarRefExpr) call.getArguments().get(0)).getName()))
+        {
             return stmt;
         }
         return tcs.getTryBlock();
@@ -10755,26 +13128,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * typed signal for a handler-free method and re-recovers it as a faithful dispatch loop - the
      * totality fallback for shapes no structured route owns (e.g. irreducible flow).
      */
-    private RetiredSchemaRecoveryException retiredSchemaRecovery(String kind, IRBlock header) {
+    private RetiredSchemaRecoveryException retiredSchemaRecovery(String kind, IRBlock header)
+    {
         return new RetiredSchemaRecoveryException("schema " + kind + " recovery retired; unrouted " + kind
                 + " at offset " + header.getBytecodeOffset() + " in " + context.getIrMethod().getName());
     }
 
-    /** Signals a region classification whose schema recoverer is retired and which no engine route owned. */
-    public static final class RetiredSchemaRecoveryException extends IllegalStateException {
-        RetiredSchemaRecoveryException(String message) {
+    /**
+     * Signals a region classification whose schema recoverer is retired and which no engine route owned.
+     */
+    public static final class RetiredSchemaRecoveryException extends IllegalStateException
+    {
+        RetiredSchemaRecoveryException(String message)
+        {
             super(message);
         }
     }
 
 
-    private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store) {
+    private Statement recoverStoreLocalAsForInit(StoreLocalInstruction store)
+    {
         int localIndex = store.getLocalIndex();
         Value storedValue = store.getValue();
 
         SourceType storedType = typeRecoverer.recoverType(storedValue);
         String localName = partitionName(store);
-        if (localName == null) {
+        if (localName == null)
+        {
             localName = getNameForLocalSlotWithType(localIndex, storedType);
         }
 
@@ -10783,7 +13163,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // as the variable's own name and produce a self-referential `int i = i`. Un-materialize it
         // across recovery so its defining expression is inlined, mirroring recoverStoreLocal.
         boolean shouldUnmaterialize = false;
-        if (storedValue instanceof SSAValue) {
+        if (storedValue instanceof SSAValue)
+        {
             SSAValue ssaValue = (SSAValue) storedValue;
             boolean wasMaterialized = context.getExpressionContext().isMaterialized(ssaValue);
             int previousSlot = context.getExpressionContext().getSSAValueSlot(ssaValue);
@@ -10794,39 +13175,48 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     && context.getExpressionContext().isDeclared(valueName);
             shouldUnmaterialize = wasMaterialized && !declaredArrayInit
                     && (previousSlot == -1 || previousSlot == localIndex);
-            if (shouldUnmaterialize) {
+            if (shouldUnmaterialize)
+            {
                 context.getExpressionContext().unmarkMaterialized(ssaValue);
             }
         }
 
         Expression valueExpr = recoverExpressionDirectly(storedValue, storedType);
 
-        if (shouldUnmaterialize) {
+        if (shouldUnmaterialize)
+        {
             context.getExpressionContext().markMaterialized((SSAValue) storedValue);
         }
 
-        if (context.getExpressionContext().isDeclared(localName)) {
+        if (context.getExpressionContext().isDeclared(localName))
+        {
             VarRefExpr target = new VarRefExpr(localName, storedType, null);
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, valueExpr, storedType));
-        } else {
+        }
+        else
+        {
             context.getExpressionContext().markDeclaredInForLoopInit(localName);
             return new VarDeclStmt(storedType, localName, valueExpr);
         }
     }
 
-    private Expression recoverExpressionDirectly(Value value, SourceType typeHint) {
-        if (value instanceof Constant) {
+    private Expression recoverExpressionDirectly(Value value, SourceType typeHint)
+    {
+        if (value instanceof Constant)
+        {
             return exprRecoverer.recoverConstant((Constant) value, typeHint);
         }
 
         SSAValue ssa = (SSAValue) value;
         IRInstruction def = ssa.getDefinition();
 
-        if (def instanceof ConstantInstruction) {
+        if (def instanceof ConstantInstruction)
+        {
             return exprRecoverer.recoverConstant(((ConstantInstruction) def).getConstant(), typeHint);
         }
 
-        if (def instanceof BinaryOpInstruction) {
+        if (def instanceof BinaryOpInstruction)
+        {
             BinaryOpInstruction binOp = (BinaryOpInstruction) def;
             Expression left = recoverExpressionOrVarRef(binOp.getLeft());
             Expression right = recoverExpressionOrVarRef(binOp.getRight());
@@ -10838,41 +13228,51 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return exprRecoverer.recoverOperand(value, typeHint);
     }
 
-    private Expression recoverExpressionOrVarRef(Value value) {
-        if (value instanceof Constant) {
+    private Expression recoverExpressionOrVarRef(Value value)
+    {
+        if (value instanceof Constant)
+        {
             return exprRecoverer.recoverConstant((Constant) value, null);
         }
 
         SSAValue ssa = (SSAValue) value;
         IRInstruction def = ssa.getDefinition();
 
-        if (def instanceof ConstantInstruction) {
+        if (def instanceof ConstantInstruction)
+        {
             return exprRecoverer.recoverConstant(((ConstantInstruction) def).getConstant(), null);
         }
 
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             LoadLocalInstruction load = (LoadLocalInstruction) def;
             int localIndex = load.getLocalIndex();
             SourceType type = typeRecoverer.recoverType(ssa);
             String name = partitionName(load);
-            if (name == null) {
+            if (name == null)
+            {
                 name = getNameForLocalSlotWithType(localIndex, type);
             }
             return new VarRefExpr(name, type, ssa);
         }
 
-        if (def instanceof PhiInstruction) {
+        if (def instanceof PhiInstruction)
+        {
             PhiInstruction phi = (PhiInstruction) def;
-            for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+            for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+            {
                 Value incoming = entry.getValue();
-                if (incoming instanceof SSAValue) {
+                if (incoming instanceof SSAValue)
+                {
                     SSAValue incomingSSA = (SSAValue) incoming;
-                    if (incomingSSA.getDefinition() instanceof LoadLocalInstruction) {
+                    if (incomingSSA.getDefinition() instanceof LoadLocalInstruction)
+                    {
                         LoadLocalInstruction load = (LoadLocalInstruction) incomingSSA.getDefinition();
                         int localIndex = load.getLocalIndex();
                         SourceType type = typeRecoverer.recoverType(incomingSSA);
                         String name = partitionName(load);
-                        if (name == null) {
+                        if (name == null)
+                        {
                             name = getNameForLocalSlotWithType(localIndex, type);
                         }
                         return new VarRefExpr(name, type, incomingSSA);
@@ -10884,8 +13284,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return exprRecoverer.recoverOperand(value);
     }
 
-    private BinaryOperator mapBinaryOp(BinaryOp op) {
-        switch (op) {
+    private BinaryOperator mapBinaryOp(BinaryOp op)
+    {
+        switch (op)
+        {
             case SUB: return BinaryOperator.SUB;
             case MUL: return BinaryOperator.MUL;
             case DIV: return BinaryOperator.DIV;
@@ -10901,38 +13303,45 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     /**
-     * If {@code value} is a single-use operand of a phi whose variable is already declared — a
-     * structured switch-expression / if-merge — returns the {@code phiVar = expr} assignment that
+     * If {@code value} is a single-use operand of a phi whose variable is already declared - a
+     * structured switch-expression / if-merge - returns the {@code phiVar = expr} assignment that
      * destructs the phi at this predecessor block. The structured recovery path has no
      * {@code lowerPhisOnEdge} step, so without this a non-constant arm value (e.g. a string concat)
      * feeding the merge phi would be silently dropped. Returns null otherwise (caller caches).
      */
-    private Statement phiCopyForDeclaredMerge(SSAValue value, Expression expr) {
+    private Statement phiCopyForDeclaredMerge(SSAValue value, Expression expr)
+    {
         PhiInstruction targetPhi = getPhiUsingValue(value);
-        if (targetPhi == null || targetPhi.getResult() == null) {
+        if (targetPhi == null || targetPhi.getResult() == null)
+        {
             return null;
         }
-        if (context.isForLoopInductionPhi(targetPhi.getResult()) || selfStorePhis.contains(targetPhi)) {
+        if (context.isForLoopInductionPhi(targetPhi.getResult()) || selfStorePhis.contains(targetPhi))
+        {
             return null;
         }
         // A phi mixing primitives with references is a type-pun across a reused slot, verifier-legal only
         // because its result is dead - the declarations already skip it, and a copy INTO it is the same
         // nonsense written as an assignment (`cIndex = sdBuf` with cIndex an int and sdBuf a buffer).
         // A dead result more generally has nothing downstream to read the copy.
-        if (isTypePunDeadPhi(targetPhi) || targetPhi.getResult().getUses().isEmpty()) {
+        if (isTypePunDeadPhi(targetPhi) || targetPhi.getResult().getUses().isEmpty())
+        {
             return null;
         }
         String phiVarName = context.getExpressionContext().getVariableName(targetPhi.getResult());
         if (phiVarName == null || !context.getExpressionContext().isDeclared(phiVarName)
                 || phiVarName.equals("this")
-                || isParameterOrThisRef(targetPhi.getResult())) {
+                || isParameterOrThisRef(targetPhi.getResult()))
+        {
             return null;
         }
         SourceType type = getLocalSlotUnifiedType(phiVarName);
-        if (type == null) {
+        if (type == null)
+        {
             type = expr.getType();
         }
-        if (type == null) {
+        if (type == null)
+        {
             type = typeRecoverer.recoverType(value);
         }
         VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
@@ -10944,7 +13353,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code s.hashCode()} whose cases run {@code s.equals("literal")} guards and, on a match, assign a dense
      * index to a synthetic local, followed by a second {@code switch} on that index holding the real bodies.
      */
-    private static final class StringSwitchInfo {
+    private static final class StringSwitchInfo
+    {
         final Value stringValue;
         final Map<String, Integer> literalToIndex;
         final IRBlock mergeBlock;
@@ -10952,7 +13362,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         final Set<IRBlock> scaffolding;
 
         StringSwitchInfo(Value stringValue, Map<String, Integer> literalToIndex, IRBlock mergeBlock,
-                         SwitchInstruction indexSwitch, Set<IRBlock> scaffolding) {
+                         SwitchInstruction indexSwitch, Set<IRBlock> scaffolding)
+                         {
             this.stringValue = stringValue;
             this.literalToIndex = literalToIndex;
             this.mergeBlock = mergeBlock;
@@ -10961,12 +13372,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    private static final class EqualsStep {
+    private static final class EqualsStep
+    {
         final String literal;
         final IRBlock matchBlock;
         final IRBlock noMatchBlock;
 
-        EqualsStep(String literal, IRBlock matchBlock, IRBlock noMatchBlock) {
+        EqualsStep(String literal, IRBlock matchBlock, IRBlock noMatchBlock)
+        {
             this.literal = literal;
             this.matchBlock = matchBlock;
             this.noMatchBlock = noMatchBlock;
@@ -10977,27 +13390,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Recognizes javac's two-phase {@code String} switch rooted at a {@code switch (s.hashCode())} and returns
      * the data needed to rebuild a single {@code switch (s)}, or null if {@code header} is an ordinary switch.
      */
-    private StringSwitchInfo detectStringSwitch(IRBlock header) {
+    private StringSwitchInfo detectStringSwitch(IRBlock header)
+    {
         IRInstruction term = header.getTerminator();
-        if (!(term instanceof SwitchInstruction)) {
+        if (!(term instanceof SwitchInstruction))
+        {
             return null;
         }
         SwitchInstruction hashSwitch = (SwitchInstruction) term;
 
         Value key = hashSwitch.getKey();
-        if (!(key instanceof SSAValue)) {
+        if (!(key instanceof SSAValue))
+        {
             return null;
         }
         IRInstruction keyDef = ((SSAValue) key).getDefinition();
-        if (!(keyDef instanceof InvokeInstruction)) {
+        if (!(keyDef instanceof InvokeInstruction))
+        {
             return null;
         }
         InvokeInstruction hashCall = (InvokeInstruction) keyDef;
-        if (!"hashCode".equals(hashCall.getName()) || !"()I".equals(hashCall.getDescriptor())) {
+        if (!"hashCode".equals(hashCall.getName()) || !"()I".equals(hashCall.getDescriptor()))
+        {
             return null;
         }
         Value stringValue = hashCall.getReceiver();
-        if (stringValue == null) {
+        if (stringValue == null)
+        {
             return null;
         }
 
@@ -11006,22 +13425,29 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         scaffolding.add(header);
         IRBlock mergeBlock = null;
 
-        for (IRBlock caseTarget : hashSwitch.getCases().values()) {
+        for (IRBlock caseTarget : hashSwitch.getCases().values())
+        {
             IRBlock current = caseTarget;
             Set<IRBlock> guard = new HashSet<>();
-            while (current != null && guard.add(current)) {
+            while (current != null && guard.add(current))
+            {
                 EqualsStep step = matchEqualsStep(current);
-                if (step == null) {
+                if (step == null)
+                {
                     return null;
                 }
                 Integer index = indexAssignedIn(step.matchBlock);
                 IRBlock matchMerge = singleSuccessor(step.matchBlock);
-                if (index == null || matchMerge == null) {
+                if (index == null || matchMerge == null)
+                {
                     return null;
                 }
-                if (mergeBlock == null) {
+                if (mergeBlock == null)
+                {
                     mergeBlock = matchMerge;
-                } else if (mergeBlock != matchMerge) {
+                }
+                else if (mergeBlock != matchMerge)
+                {
                     return null;
                 }
                 literalToIndex.put(step.literal, index);
@@ -11032,16 +13458,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             }
         }
 
-        if (literalToIndex.isEmpty()) {
+        if (literalToIndex.isEmpty())
+        {
             return null;
         }
         IRInstruction mergeTerm = mergeBlock.getTerminator();
-        if (!(mergeTerm instanceof SwitchInstruction)) {
+        if (!(mergeTerm instanceof SwitchInstruction))
+        {
             return null;
         }
         SwitchInstruction indexSwitch = (SwitchInstruction) mergeTerm;
-        for (Integer index : literalToIndex.values()) {
-            if (!indexSwitch.getCases().containsKey(index)) {
+        for (Integer index : literalToIndex.values())
+        {
+            if (!indexSwitch.getCases().containsKey(index))
+            {
                 return null;
             }
         }
@@ -11049,64 +13479,85 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return new StringSwitchInfo(stringValue, literalToIndex, mergeBlock, indexSwitch, scaffolding);
     }
 
-    /** The block following the entire string switch (where non-returning cases converge), or null. */
-    private IRBlock stringSwitchExit(StringSwitchInfo info) {
+    /**
+     * The block following the entire string switch (where non-returning cases converge), or null.
+     */
+    private IRBlock stringSwitchExit(StringSwitchInfo info)
+    {
         var postDom = analyzer.getPostDominatorTree();
-        if (postDom == null) {
+        if (postDom == null)
+        {
             return null;
         }
         IRBlock exit = postDom.getImmediatePostDominator(info.mergeBlock);
-        if (exit == null || info.scaffolding.contains(exit) || info.indexSwitch.getCases().containsValue(exit)) {
+        if (exit == null || info.scaffolding.contains(exit) || info.indexSwitch.getCases().containsValue(exit))
+        {
             return null;
         }
         return exit;
     }
 
-    private EqualsStep matchEqualsStep(IRBlock block) {
-        if (block == null) {
+    private EqualsStep matchEqualsStep(IRBlock block)
+    {
+        if (block == null)
+        {
             return null;
         }
         InvokeInstruction equalsCall = null;
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof InvokeInstruction) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof InvokeInstruction)
+            {
                 InvokeInstruction invoke = (InvokeInstruction) instr;
-                if ("equals".equals(invoke.getName()) && "(Ljava/lang/Object;)Z".equals(invoke.getDescriptor())) {
+                if ("equals".equals(invoke.getName()) && "(Ljava/lang/Object;)Z".equals(invoke.getDescriptor()))
+                {
                     equalsCall = invoke;
                 }
             }
         }
-        if (equalsCall == null || equalsCall.getMethodArguments().size() != 1) {
+        if (equalsCall == null || equalsCall.getMethodArguments().size() != 1)
+        {
             return null;
         }
         String literal = stringConstantOf(equalsCall.getMethodArguments().get(0));
-        if (literal == null) {
+        if (literal == null)
+        {
             return null;
         }
-        if (!(block.getTerminator() instanceof BranchInstruction)) {
+        if (!(block.getTerminator() instanceof BranchInstruction))
+        {
             return null;
         }
         BranchInstruction branch = (BranchInstruction) block.getTerminator();
-        if (branch.getLeft() != equalsCall.getResult()) {
+        if (branch.getLeft() != equalsCall.getResult())
+        {
             return null;
         }
-        if (branch.getCondition() == CompareOp.IFEQ) {
+        if (branch.getCondition() == CompareOp.IFEQ)
+        {
             return new EqualsStep(literal, branch.getFalseTarget(), branch.getTrueTarget());
         }
-        if (branch.getCondition() == CompareOp.IFNE) {
+        if (branch.getCondition() == CompareOp.IFNE)
+        {
             return new EqualsStep(literal, branch.getTrueTarget(), branch.getFalseTarget());
         }
         return null;
     }
 
-    private Integer indexAssignedIn(IRBlock block) {
-        if (block == null) {
+    private Integer indexAssignedIn(IRBlock block)
+    {
+        if (block == null)
+        {
             return null;
         }
         Integer index = null;
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof StoreLocalInstruction) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 Integer constant = intConstantOf(((StoreLocalInstruction) instr).getValue());
-                if (constant != null) {
+                if (constant != null)
+                {
                     index = constant;
                 }
             }
@@ -11114,34 +13565,43 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return index;
     }
 
-    private IRBlock singleSuccessor(IRBlock block) {
-        if (block == null) {
+    private IRBlock singleSuccessor(IRBlock block)
+    {
+        if (block == null)
+        {
             return null;
         }
         IRInstruction term = block.getTerminator();
-        if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.GOTO) {
+        if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.GOTO)
+        {
             return ((SimpleInstruction) term).getTarget();
         }
         return block.getSuccessors().size() == 1 ? block.getSuccessors().iterator().next() : null;
     }
 
-    private String stringConstantOf(Value value) {
-        if (!(value instanceof SSAValue)) {
+    private String stringConstantOf(Value value)
+    {
+        if (!(value instanceof SSAValue))
+        {
             return null;
         }
         IRInstruction def = ((SSAValue) value).getDefinition();
-        if (def instanceof ConstantInstruction && ((ConstantInstruction) def).getConstant() instanceof StringConstant) {
+        if (def instanceof ConstantInstruction && ((ConstantInstruction) def).getConstant() instanceof StringConstant)
+        {
             return ((StringConstant) ((ConstantInstruction) def).getConstant()).getValue();
         }
         return null;
     }
 
-    private Integer intConstantOf(Value value) {
-        if (!(value instanceof SSAValue)) {
+    private Integer intConstantOf(Value value)
+    {
+        if (!(value instanceof SSAValue))
+        {
             return null;
         }
         IRInstruction def = ((SSAValue) value).getDefinition();
-        if (def instanceof ConstantInstruction && ((ConstantInstruction) def).getConstant() instanceof IntConstant) {
+        if (def instanceof ConstantInstruction && ((ConstantInstruction) def).getConstant() instanceof IntConstant)
+        {
             return ((IntConstant) ((ConstantInstruction) def).getConstant()).getValue();
         }
         return null;
@@ -11152,7 +13612,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
 
 
-    private static class EnumSwitchInfo {
+    private static class EnumSwitchInfo
+    {
         Expression enumVariable;
         Expression ordinalExpression;
         String enumClassName;
@@ -11160,15 +13621,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean rawOrdinals;
     }
 
-    private EnumSwitchInfo detectEnumSwitchPattern(Expression selector) {
-        if (!(selector instanceof ArrayAccessExpr)) {
+    private EnumSwitchInfo detectEnumSwitchPattern(Expression selector)
+    {
+        if (!(selector instanceof ArrayAccessExpr))
+        {
             // A switch dispatched on the ordinal directly, without javac's $SwitchMap indirection - the
             // relowered form of an enum switch. The case keys ARE the ordinals, and the enum class is the
             // ordinal() call's owner, so the constants resolve from the enum itself with no holder.
-            if (selector instanceof MethodCallExpr) {
+            if (selector instanceof MethodCallExpr)
+            {
                 MethodCallExpr call = (MethodCallExpr) selector;
                 if ("ordinal".equals(call.getMethodName()) && call.getReceiver() != null
-                        && call.getOwnerClass() != null) {
+                        && call.getOwnerClass() != null)
+                {
                     EnumSwitchInfo info = new EnumSwitchInfo();
                     info.enumVariable = call.getReceiver();
                     info.ordinalExpression = call;
@@ -11184,28 +13649,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Expression array = arrayAccess.getArray();
         Expression index = arrayAccess.getIndex();
 
-        if (!(array instanceof FieldAccessExpr)) {
+        if (!(array instanceof FieldAccessExpr))
+        {
             return null;
         }
 
         FieldAccessExpr fieldAccess = (FieldAccessExpr) array;
         String fieldName = fieldAccess.getFieldName();
 
-        if (!fieldName.startsWith("$SwitchMap$")) {
+        if (!fieldName.startsWith("$SwitchMap$"))
+        {
             return null;
         }
 
-        if (!(index instanceof MethodCallExpr)) {
+        if (!(index instanceof MethodCallExpr))
+        {
             return null;
         }
 
         MethodCallExpr methodCall = (MethodCallExpr) index;
-        if (!"ordinal".equals(methodCall.getMethodName())) {
+        if (!"ordinal".equals(methodCall.getMethodName()))
+        {
             return null;
         }
 
         Expression enumVar = methodCall.getReceiver();
-        if (enumVar == null) {
+        if (enumVar == null)
+        {
             return null;
         }
 
@@ -11217,31 +13687,44 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return info;
     }
 
-    /** True when every case value of an enum switch resolves to a constant name via the switch-map registry. */
-    private boolean allEnumCasesResolve(RegionInfo info, EnumSwitchInfo enumInfo) {
-        if (enumInfo.rawOrdinals) {
-            for (Integer caseValue : info.getSwitchCases().keySet()) {
-                if (enumConstantForCase(enumInfo, caseValue) == null) {
+    /**
+     * True when every case value of an enum switch resolves to a constant name via the switch-map registry.
+     */
+    private boolean allEnumCasesResolve(RegionInfo info, EnumSwitchInfo enumInfo)
+    {
+        if (enumInfo.rawOrdinals)
+        {
+            for (Integer caseValue : info.getSwitchCases().keySet())
+            {
+                if (enumConstantForCase(enumInfo, caseValue) == null)
+                {
                     return false;
                 }
             }
             return true;
         }
         EnumSwitchMapRegistry registry = EnumSwitchMapRegistry.getInstance();
-        if (!registry.hasMapping(enumInfo.holderClass, enumInfo.enumClassName)) {
+        if (!registry.hasMapping(enumInfo.holderClass, enumInfo.enumClassName))
+        {
             return false;
         }
-        for (Integer caseValue : info.getSwitchCases().keySet()) {
-            if (registry.lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue) == null) {
+        for (Integer caseValue : info.getSwitchCases().keySet())
+        {
+            if (registry.lookupEnumConstant(enumInfo.holderClass, enumInfo.enumClassName, caseValue) == null)
+            {
                 return false;
             }
         }
         return true;
     }
 
-    /** The enum constant a case key selects: the ordinal itself, or the holder's switch-map entry. */
-    private String enumConstantForCase(EnumSwitchInfo enumInfo, int caseValue) {
-        if (enumInfo.rawOrdinals) {
+    /**
+     * The enum constant a case key selects: the ordinal itself, or the holder's switch-map entry.
+     */
+    private String enumConstantForCase(EnumSwitchInfo enumInfo, int caseValue)
+    {
+        if (enumInfo.rawOrdinals)
+        {
             return EnumConstants.nameByOrdinal(enumClassPool, enumInfo.enumClassName, caseValue);
         }
         return EnumSwitchMapRegistry.getInstance()
@@ -11253,7 +13736,7 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     private static final String DISPATCH_LABEL = "$dispatch$";
 
     /** Invoke names that legitimately have no MethodCallExpr in faithful output because the
-     * recovery folds them into syntax (string concat -> +, boxing, for-each, constructors -> new). */
+     * recovery folds them into syntax (string concat -&gt; +, boxing, for-each, constructors -&gt; new). */
     private static final Set<String> FOLDED_CALL_NAMES = new HashSet<>(Arrays.asList(
         "<init>", "<clinit>", "append", "toString", "valueOf",
         "intValue", "longValue", "doubleValue", "floatValue", "booleanValue",
@@ -11267,57 +13750,73 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Completeness invariant: reports whether any observable operation reachable from the entry in
      * the bytecode is absent from the recovered source AST. This is the authoritative signal that
-     * the structured recovery dropped an operation — by any mechanism (never-visited block,
+     * the structured recovery dropped an operation - by any mechanism (never-visited block,
      * irreducible region, or a block recovered then discarded during region assembly). Compares the
      * set of reachable IR method calls (keyed owner.name, excluding folded-into-syntax calls)
      * against the calls actually present in {@code body}.
+     *
+     * @param body the recovered method body to audit
+     * @return true if a reachable call is missing from the body
      */
-    public boolean hasDroppedOperations(BlockStmt body) {
+    public boolean hasDroppedOperations(BlockStmt body)
+    {
         IRMethod method = context.getIrMethod();
         IRBlock entry = method.getEntryBlock();
-        if (entry == null) {
+        if (entry == null)
+        {
             return false;
         }
         Set<IRBlock> reachable = new HashSet<>();
         collectReachableBlocks(entry, reachable);
 
         Set<String> irCalls = new HashSet<>();
-        for (IRBlock block : reachable) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof InvokeInstruction) {
+        for (IRBlock block : reachable)
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction inv = (InvokeInstruction) instr;
-                    if (FOLDED_CALL_NAMES.contains(inv.getName())) {
+                    if (FOLDED_CALL_NAMES.contains(inv.getName()))
+                    {
                         continue;
                     }
-                    if (inv.isDynamic()) {
+                    if (inv.isDynamic())
+                    {
                         continue;
                     }
                     irCalls.add(simpleName(inv.getOwner()) + "." + inv.getName());
                 }
             }
         }
-        if (irCalls.isEmpty()) {
+        if (irCalls.isEmpty())
+        {
             return false;
         }
 
         Set<String> astCalls = new HashSet<>();
         body.walk(node -> {
-            if (node instanceof MethodCallExpr) {
+            if (node instanceof MethodCallExpr)
+            {
                 MethodCallExpr call = (MethodCallExpr) node;
                 astCalls.add(simpleName(call.getOwnerClass()) + "." + call.getMethodName());
             }
         });
 
-        for (String key : irCalls) {
-            if (!astCalls.contains(key)) {
+        for (String key : irCalls)
+        {
+            if (!astCalls.contains(key))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private static String simpleName(String owner) {
-        if (owner == null) {
+    private static String simpleName(String owner)
+    {
+        if (owner == null)
+        {
             return "";
         }
         int slash = owner.lastIndexOf('/');
@@ -11331,11 +13830,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * ({@code int $pc$ = entry; $dispatch$: while(true){ switch($pc$){ case L: ...; $pc$ = T; break; } }}),
      * which is complete and faithful for any (reducible or irreducible) CFG. Used as the fallback
      * when {@link #hasDroppedOperations(BlockStmt)} is true; must run on a fresh context.
+     *
+     * @return the method body as a dispatch loop, or an empty block when the method has no entry
      */
-    public BlockStmt recoverMethodAsDispatch() {
+    public BlockStmt recoverMethodAsDispatch()
+    {
         IRMethod method = context.getIrMethod();
         IRBlock entry = method.getEntryBlock();
-        if (entry == null) {
+        if (entry == null)
+        {
             return new BlockStmt(Collections.emptyList());
         }
         List<Statement> statements = new ArrayList<>();
@@ -11347,8 +13850,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Set<IRBlock> reachable = new HashSet<>();
         collectReachableBlocks(entry, reachable);
         List<IRBlock> ordered = new ArrayList<>();
-        for (IRBlock block : method.getBlocksInOrder()) {
-            if (reachable.contains(block)) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            if (reachable.contains(block))
+            {
                 ordered.add(block);
             }
         }
@@ -11363,31 +13868,40 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * a sibling case. Mirrors recoverStoreLocal's naming so subsequent stores become assignments
      * (the decl-vs-assign decision keys on isDeclared).
      */
-    private void hoistDispatchLocals(List<IRBlock> blocks, List<Statement> statements) {
+    private void hoistDispatchLocals(List<IRBlock> blocks, List<Statement> statements)
+    {
         Set<String> done = new HashSet<>();
-        for (IRBlock block : blocks) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (!(instr instanceof StoreLocalInstruction)) {
+        for (IRBlock block : blocks)
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (!(instr instanceof StoreLocalInstruction))
+                {
                     continue;
                 }
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
                 String name = partitionName(store);
-                if (name == null) {
+                if (name == null)
+                {
                     name = getNameForLocalSlotWithType(store.getLocalIndex(),
                         typeRecoverer.recoverType(store.getValue()));
                 }
                 if (name == null || name.equals("this")
-                        || context.getExpressionContext().isParameterOrThisSlot(store.getLocalIndex())) {
+                        || context.getExpressionContext().isParameterOrThisSlot(store.getLocalIndex()))
+                {
                     continue;
                 }
-                if (!done.add(name) || context.getExpressionContext().isDeclared(name)) {
+                if (!done.add(name) || context.getExpressionContext().isDeclared(name))
+                {
                     continue;
                 }
                 SourceType type = getLocalSlotUnifiedType(name);
-                if (type == null) {
+                if (type == null)
+                {
                     type = typeRecoverer.recoverType(store.getValue());
                 }
-                if (type == null) {
+                if (type == null)
+                {
                     type = PrimitiveSourceType.INT;
                 }
                 statements.add(new VarDeclStmt(type, name, getDefaultValue(type)));
@@ -11396,23 +13910,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    private List<Statement> buildDispatchLoop(List<IRBlock> ordered, IRBlock entry) {
+    private List<Statement> buildDispatchLoop(List<IRBlock> ordered, IRBlock entry)
+    {
         Map<IRBlock, Integer> pc = new LinkedHashMap<>();
         int next = 0;
-        for (IRBlock block : ordered) {
+        for (IRBlock block : ordered)
+        {
             pc.put(block, next++);
         }
         String pcName = "$pc$";
-        while (context.getExpressionContext().isDeclared(pcName)) {
+        while (context.getExpressionContext().isDeclared(pcName))
+        {
             pcName = pcName + "$";
         }
 
         List<Statement> out = new ArrayList<>();
-        out.add(new VarDeclStmt(PrimitiveSourceType.INT, pcName,
-            LiteralExpr.ofInt(pc.getOrDefault(entry, 0))));
+        out.add(new VarDeclStmt(PrimitiveSourceType.INT, pcName, LiteralExpr.ofInt(pc.getOrDefault(entry, 0))));
 
         List<SwitchCase> cases = new ArrayList<>();
-        for (IRBlock block : ordered) {
+        for (IRBlock block : ordered)
+        {
             List<Statement> body = new ArrayList<>(recoverSimpleBlock(block));
             body.addAll(dispatchCaseTail(block, pc, pcName));
             context.markProcessed(block);
@@ -11430,7 +13947,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return out;
     }
 
-    private Statement assignPc(String pcName, Map<IRBlock, Integer> pc, IRBlock target) {
+    private Statement assignPc(String pcName, Map<IRBlock, Integer> pc, IRBlock target)
+    {
         int label = pc.getOrDefault(target, -1);
         return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
             new VarRefExpr(pcName, PrimitiveSourceType.INT),
@@ -11442,19 +13960,24 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * edge, the {@code $pc$ = target} assignment, then a break. Return/throw blocks are already
      * emitted by recoverSimpleBlock and need no tail.
      */
-    private List<Statement> dispatchCaseTail(IRBlock block, Map<IRBlock, Integer> pc, String pcName) {
+    private List<Statement> dispatchCaseTail(IRBlock block, Map<IRBlock, Integer> pc, String pcName)
+    {
         List<Statement> tail = new ArrayList<>();
         IRInstruction term = block.getTerminator();
 
-        if (term instanceof ReturnInstruction) {
+        if (term instanceof ReturnInstruction)
+        {
             return tail;
         }
-        if (term instanceof SimpleInstruction) {
+        if (term instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) term;
-            if (simple.getOp() == SimpleOp.ATHROW) {
+            if (simple.getOp() == SimpleOp.ATHROW)
+            {
                 return tail;
             }
-            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() != null) {
+            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() != null)
+            {
                 IRBlock t = simple.getTarget();
                 tail.addAll(lowerPhisOnEdge(block, t));
                 tail.add(assignPc(pcName, pc, t));
@@ -11462,7 +13985,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 return tail;
             }
         }
-        if (term instanceof BranchInstruction) {
+        if (term instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) term;
             IRBlock t = branch.getTrueTarget();
             IRBlock f = branch.getFalseTarget();
@@ -11475,11 +13999,13 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             tail.add(new BreakStmt());
             return tail;
         }
-        if (term instanceof SwitchInstruction) {
+        if (term instanceof SwitchInstruction)
+        {
             SwitchInstruction switchInstr = (SwitchInstruction) term;
             Expression key = exprRecoverer.recoverOperand(switchInstr.getKey());
             List<SwitchCase> inner = new ArrayList<>();
-            for (Map.Entry<Integer, IRBlock> e : switchInstr.getCases().entrySet()) {
+            for (Map.Entry<Integer, IRBlock> e : switchInstr.getCases().entrySet())
+            {
                 List<Statement> cs = new ArrayList<>(lowerPhisOnEdge(block, e.getValue()));
                 cs.add(assignPc(pcName, pc, e.getValue()));
                 cs.add(new BreakStmt());
@@ -11495,12 +14021,15 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
 
         Set<IRBlock> succs = block.getSuccessors();
-        if (succs.size() == 1) {
+        if (succs.size() == 1)
+        {
             IRBlock s = succs.iterator().next();
             tail.addAll(lowerPhisOnEdge(block, s));
             tail.add(assignPc(pcName, pc, s));
             tail.add(new BreakStmt());
-        } else {
+        }
+        else
+        {
             tail.add(new BreakStmt(DISPATCH_LABEL));
         }
         return tail;
@@ -11512,7 +14041,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * edge is taken. Reuses the phi result's already-bound name and method-scope declaration.
      */
     @Override
-    public List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ) {
+    public List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ)
+    {
         return lowerPhisOnEdge(pred, succ, false);
     }
 
@@ -11523,12 +14053,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * copy would re-emit a non-counter init the surrounding recovery already kept, duplicating it.
      */
     @Override
-    public List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ) {
+    public List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ)
+    {
         return lowerPhisOnEdge(pred, succ, true);
     }
 
     @Override
-    public List<Statement> recoverUnconsumedForLoopInits(IRBlock header) {
+    public List<Statement> recoverUnconsumedForLoopInits(IRBlock header)
+    {
         // Scoped to loops living inside an exception handler's subtree: only there does the counter
         // carry no phi (handler-entry code is not merged into SSA form the same way), leaving the marked
         // init with no other re-emission point. A normal loop's init is realized by the for-init fold or
@@ -11536,41 +14068,52 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // slot-unified type and break the recompiled layout's fixed point.
         DominatorTree dt = context.getDominatorTree();
         boolean handlerOnly = false;
-        if (dt != null) {
-            for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers()) {
+        if (dt != null)
+        {
+            for (ExceptionHandler h : context.getIrMethod().getExceptionHandlers())
+            {
                 if (h.getHandlerBlock() != null
-                        && (h.getHandlerBlock() == header || dt.dominates(h.getHandlerBlock(), header))) {
+                        && (h.getHandlerBlock() == header || dt.dominates(h.getHandlerBlock(), header)))
+                {
                     handlerOnly = true;
                     break;
                 }
             }
         }
-        if (!handlerOnly) {
+        if (!handlerOnly)
+        {
             return Collections.emptyList();
         }
         List<Statement> inits = new ArrayList<>();
         LoopAnalysis.Loop loop = context.getLoopAnalysis() != null
                 ? context.getLoopAnalysis().getLoop(header) : null;
-        for (IRBlock pred : header.getPredecessors()) {
-            if (loop != null && loop.contains(pred)) {
+        for (IRBlock pred : header.getPredecessors())
+        {
+            if (loop != null && loop.contains(pred))
+            {
                 continue;
             }
-            for (IRInstruction instr : pred.getInstructions()) {
+            for (IRInstruction instr : pred.getInstructions())
+            {
                 if (!(instr instanceof StoreLocalInstruction) || !context.isForLoopInit(instr)
-                        || consumedForLoopInits.contains(instr)) {
+                        || consumedForLoopInits.contains(instr))
+                {
                     continue;
                 }
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
                 // A phi at the header for this slot owns the init: its edge copy (or the for-init fold)
                 // realizes the value, and re-emitting here would duplicate it.
                 boolean phiOwned = false;
-                for (PhiInstruction phi : header.getPhiInstructions()) {
-                    if (isPhiForLocal(phi, store.getLocalIndex(), loop)) {
+                for (PhiInstruction phi : header.getPhiInstructions())
+                {
+                    if (isPhiForLocal(phi, store.getLocalIndex(), loop))
+                    {
                         phiOwned = true;
                         break;
                     }
                 }
-                if (phiOwned) {
+                if (phiOwned)
+                {
                     continue;
                 }
                 consumedForLoopInits.add(instr);
@@ -11587,51 +14130,63 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * the other (either direction - the unified type may be narrower than the incoming's static
      * type). Unresolvable classes are assumed compatible.
      */
-    private boolean copyTypeCompatible(SourceType target, Value incoming) {
+    private boolean copyTypeCompatible(SourceType target, Value incoming)
+    {
         SourceType in = typeRecoverer.recoverType(incoming);
-        if (target == null || in == null) {
+        if (target == null || in == null)
+        {
             return true;
         }
         boolean targetPrim = target instanceof PrimitiveSourceType;
         boolean inPrim = in instanceof PrimitiveSourceType;
-        if (targetPrim != inPrim) {
+        if (targetPrim != inPrim)
+        {
             return false;
         }
-        if (targetPrim) {
+        if (targetPrim)
+        {
             return true;
         }
-        if (!(target instanceof ReferenceSourceType) || !(in instanceof ReferenceSourceType)) {
+        if (!(target instanceof ReferenceSourceType) || !(in instanceof ReferenceSourceType))
+        {
             return true;
         }
         String a = ((ReferenceSourceType) target).getInternalName();
         String b = ((ReferenceSourceType) in).getInternalName();
-        if (a.equals(b) || "java/lang/Object".equals(a) || "java/lang/Object".equals(b)) {
+        if (a.equals(b) || "java/lang/Object".equals(a) || "java/lang/Object".equals(b))
+        {
             return true;
         }
         return reachesInHierarchy(a, b) || reachesInHierarchy(b, a);
     }
 
-    /** The last name segment, splitting on every separator a nested reference can be spelled with. */
-    private static String nestedSimpleName(String internal) {
-        int cut = Math.max(internal.lastIndexOf('/'),
-                Math.max(internal.lastIndexOf('$'), internal.lastIndexOf('.')));
+    /**
+     * The last name segment, splitting on every separator a nested reference can be spelled with.
+     */
+    private static String nestedSimpleName(String internal)
+    {
+        int cut = Math.max(internal.lastIndexOf('/'), Math.max(internal.lastIndexOf('$'), internal.lastIndexOf('.')));
         return cut < 0 ? internal : internal.substring(cut + 1);
     }
 
     /**
      * Pool lookup tolerant of the source-dotted spelling of a nested class: tries the slashed name,
-     * then successively rewrites separators to {@code $} from the right ({@code a/b/Outer/Inner} ->
+     * then successively rewrites separators to {@code $} from the right ({@code a/b/Outer/Inner} -&gt;
      * {@code a/b/Outer$Inner}).
      */
-    private ClassFile poolClassFor(String name) {
-        if (enumClassPool == null) {
+    private ClassFile poolClassFor(String name)
+    {
+        if (enumClassPool == null)
+        {
             return null;
         }
         String n = name.replace('.', '/');
         ClassFile cf = enumClassPool.get(n);
         char[] chars = n.toCharArray();
-        for (int i = chars.length - 1; cf == null && i >= 0; i--) {
-            if (chars[i] == '/') {
+        for (int i = chars.length - 1; cf == null && i >= 0; i--)
+        {
+            if (chars[i] == '/')
+            {
                 chars[i] = '$';
                 cf = enumClassPool.get(new String(chars));
             }
@@ -11639,69 +14194,89 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return cf;
     }
 
-    /** Whether {@code sub} reaches {@code sup} walking supers and interfaces; unresolvable => true. */
-    private boolean reachesInHierarchy(String sub, String sup) {
+    /**
+     * Whether {@code sub} reaches {@code sup} walking supers and interfaces; unresolvable =&gt; true.
+     */
+    private boolean reachesInHierarchy(String sub, String sup)
+    {
         java.util.ArrayDeque<String> work = new java.util.ArrayDeque<>();
         java.util.Set<String> seen = new java.util.HashSet<>();
         work.add(sub);
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             String cur = work.poll();
-            if (cur == null || !seen.add(cur)) {
+            if (cur == null || !seen.add(cur))
+            {
                 continue;
             }
-            if (cur.equals(sup) || nestedSimpleName(cur).equals(nestedSimpleName(sup))) {
+            if (cur.equals(sup) || nestedSimpleName(cur).equals(nestedSimpleName(sup)))
+            {
                 return true;
             }
             ClassFile cf = poolClassFor(cur);
-            if (cf != null) {
-                if (cf.getSuperClassName() != null) {
+            if (cf != null)
+            {
+                if (cf.getSuperClassName() != null)
+                {
                     work.add(cf.getSuperClassName());
                 }
-                for (int idx : cf.getInterfaces()) {
+                for (int idx : cf.getInterfaces())
+                {
                     work.add(cf.resolveClassName(idx));
                 }
                 continue;
             }
-            try {
+            try
+            {
                 Class<?> c = Class.forName(cur.replace('/', '.'), false, getClass().getClassLoader());
-                if (c.getSuperclass() != null) {
+                if (c.getSuperclass() != null)
+                {
                     work.add(c.getSuperclass().getName().replace('.', '/'));
                 }
-                for (Class<?> i : c.getInterfaces()) {
+                for (Class<?> i : c.getInterfaces())
+                {
                     work.add(i.getName().replace('.', '/'));
                 }
-            } catch (Throwable unresolvable) {
+            }
+            catch (Throwable unresolvable)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly) {
+    private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly)
+    {
         List<Statement> copies = new ArrayList<>();
         List<Integer> copySlots = new ArrayList<>();
         boolean allLiteral = true;
-        for (PhiInstruction phi : succ.getPhiInstructions()) {
+        for (PhiInstruction phi : succ.getPhiInstructions())
+        {
             SSAValue result = phi.getResult();
-            if (result == null) {
+            if (result == null)
+            {
                 continue;
             }
-            if (inductionOnly && !isForLoopInductionPhi(phi)) {
+            if (inductionOnly && !isForLoopInductionPhi(phi))
+            {
                 continue;
             }
             // A dead phi has nothing downstream to read the copy, and a primitive/reference pun across a
             // reused slot exists only BECAUSE it is dead - a copy into either is a nonsense assignment
             // (`cIndex = sdBuf` with cIndex an int and sdBuf a buffer).
-            if (result.getUses().isEmpty() || isTypePunDeadPhi(phi)) {
+            if (result.getUses().isEmpty() || isTypePunDeadPhi(phi))
+            {
                 continue;
             }
             String target = context.getExpressionContext().getVariableName(result);
-            if (target == null || target.equals("this")
-                    || isParameterOrThisRef(result)) {
+            if (target == null || target.equals("this") || isParameterOrThisRef(result))
+            {
                 continue;
             }
             Value incoming = phi.getIncoming(pred);
-            if (incoming == null) {
+            if (incoming == null)
+            {
                 continue;
             }
             // A phi operand must dominate its predecessor (the SSA invariant). The lift's reaching defs
@@ -11709,30 +14284,36 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // branch's variable - `child = t` with t defined on a path that returns before the loop.
             // Rendering such an incoming borrows a disjoint component's name; the slot is really
             // undefined on this edge and the declaration's default covers it.
-            if (incoming instanceof SSAValue) {
+            if (incoming instanceof SSAValue)
+            {
                 SSAValue in = (SSAValue) incoming;
                 IRInstruction inDef = in.getDefinition();
-                if (inDef == null && !isParameterOrThisRef(in)) {
+                if (inDef == null && !isParameterOrThisRef(in))
+                {
                     continue;
                 }
                 if (inDef != null && (inDef.getBlock() == null
-                        || !analyzer.getDominatorTree().dominates(inDef.getBlock(), pred))) {
+                        || !analyzer.getDominatorTree().dominates(inDef.getBlock(), pred)))
+                {
                     continue;
                 }
             }
             SourceType type = getLocalSlotUnifiedType(target);
-            if (type == null) {
+            if (type == null)
+            {
                 type = typeRecoverer.recoverType(result);
             }
             // A copy whose incoming TYPE is unrelated to the target variable's (a float or an
             // Iterator into a Vertex) is the same reused-slot fiction the dominance filter catches
             // for cross-branch reads - no verified program produces it. Rendering it both emits a
             // nonsense assignment and poisons the variable's type at every later use.
-            if (!copyTypeCompatible(type, incoming)) {
+            if (!copyTypeCompatible(type, incoming))
+            {
                 continue;
             }
             Expression rhs = exprRecoverer.recoverOperand(incoming, type);
-            if (rhs instanceof VarRefExpr && target.equals(((VarRefExpr) rhs).getName())) {
+            if (rhs instanceof VarRefExpr && target.equals(((VarRefExpr) rhs).getName()))
+            {
                 // A for-induction phi's incoming is materialized UNDER THIS PHI'S OWN NAME because the
                 // for-init pre-pass SKIPPED its store - recoverOperand then echoes the variable being
                 // assigned while the real entry value was never emitted anywhere. Recover the constant
@@ -11741,27 +14322,30 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 Expression direct = isForLoopInductionPhi(phi)
                         && !context.getExpressionContext().isDeclared(target)
                         ? recoverEntryConstant(incoming, type) : null;
-                if (direct == null) {
+                if (direct == null)
+                {
                     continue;
                 }
                 rhs = direct;
             }
             allLiteral &= rhs instanceof LiteralExpr;
             copySlots.add(getLocalIndexFromPhi(phi));
-            copies.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
-                new VarRefExpr(target, type), rhs, type)));
+            copies.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, new VarRefExpr(target, type), rhs, type)));
         }
         // Copies on one edge are PARALLEL in SSA semantics; their emission order is an artifact of
         // phi order, which differs between the javac and relowered layouts. When every rhs is a
         // literal (no copy can read another's target), order them by slot so both layouts agree.
-        if (allLiteral && copies.size() > 1) {
+        if (allLiteral && copies.size() > 1)
+        {
             List<Statement> ordered = new ArrayList<>(copies);
             List<Integer> idx = new ArrayList<>();
-            for (int i = 0; i < copies.size(); i++) {
+            for (int i = 0; i < copies.size(); i++)
+            {
                 idx.add(i);
             }
             idx.sort(java.util.Comparator.comparingInt(copySlots::get));
-            for (int i = 0; i < idx.size(); i++) {
+            for (int i = 0; i < idx.size(); i++)
+            {
                 ordered.set(i, copies.get(idx.get(i)));
             }
             return ordered;
@@ -11774,16 +14358,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * {@code lcmp/fcmp/dcmp(a, b) <branchCond> 0} becomes {@code a <branchCond> b}. Returns null when the
      * branch's left operand is not a three-way compare, leaving the generic compare-to-zero handling.
      */
-    private Expression recoverThreeWayCompare(BranchInstruction branch, boolean negate) {
-        if (!(branch.getLeft() instanceof SSAValue)) {
+    private Expression recoverThreeWayCompare(BranchInstruction branch, boolean negate)
+    {
+        if (!(branch.getLeft() instanceof SSAValue))
+        {
             return null;
         }
         IRInstruction def = ((SSAValue) branch.getLeft()).getDefinition();
-        if (!(def instanceof BinaryOpInstruction)) {
+        if (!(def instanceof BinaryOpInstruction))
+        {
             return null;
         }
         BinaryOpInstruction cmp = (BinaryOpInstruction) def;
-        switch (cmp.getOp()) {
+        switch (cmp.getOp())
+        {
             case LCMP:
             case FCMPL:
             case FCMPG:
@@ -11796,7 +14384,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         Expression a = exprRecoverer.recoverOperand(cmp.getLeft());
         Expression b = exprRecoverer.recoverOperand(cmp.getRight());
         BinaryOperator op = OperatorMapper.mapCompareOp(branch.getCondition());
-        if (negate) {
+        if (negate)
+        {
             op = negateOperator(op);
         }
         // fcmpl/dcmpl bias NaN to -1, fcmpg/dcmpg to +1, so the int test reading in the biased
@@ -11806,7 +14395,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         boolean floatCmp = cmp.getOp() != BinaryOp.LCMP;
         if (floatCmp && (nanGreater
                 ? (op == BinaryOperator.GT || op == BinaryOperator.GE)
-                : (op == BinaryOperator.LT || op == BinaryOperator.LE))) {
+                : (op == BinaryOperator.LT || op == BinaryOperator.LE)))
+        {
             BinaryExpr complement = new BinaryExpr(negateOperator(op), a, b, PrimitiveSourceType.BOOLEAN);
             return new UnaryExpr(UnaryOperator.NOT, complement, PrimitiveSourceType.BOOLEAN);
         }
@@ -11814,18 +14404,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     @Override
-    public Expression recoverCondition(IRBlock block, boolean negate) {
+    public Expression recoverCondition(IRBlock block, boolean negate)
+    {
         IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof BranchInstruction) {
+        if (terminator instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) terminator;
 
             // `Xcmp(a,b) <cond> 0` - an lcmp/fcmp/dcmp result tested by a compare-to-zero branch - is the
             // direct relational comparison `a <cond> b`. Recovering it as `(a - b) <cond> 0` is wrong-looking
             // and non-idempotent: it re-lowers to `lcmp((a-b), 0L)`, which then recovers as `(a - b - 0)
             // <cond> 0`, accumulating a spurious `- 0` on every round trip.
-            if (branch.getRight() == null) {
+            if (branch.getRight() == null)
+            {
                 Expression threeWay = recoverThreeWayCompare(branch, negate);
-                if (threeWay != null) {
+                if (threeWay != null)
+                {
                     return threeWay;
                 }
             }
@@ -11833,93 +14427,112 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             Expression left = exprRecoverer.recoverOperand(branch.getLeft());
             CompareOp condition = branch.getCondition();
 
-            if (branch.getRight() != null) {
+            if (branch.getRight() != null)
+            {
                 Expression right = exprRecoverer.recoverOperand(branch.getRight());
                 BinaryOperator op =
                     OperatorMapper.mapCompareOp(condition);
-                if (negate) {
+                if (negate)
+                {
                     op = negateOperator(op);
                 }
-                return new BinaryExpr(
-                    op, left, right, PrimitiveSourceType.BOOLEAN);
+                return new BinaryExpr(op, left, right, PrimitiveSourceType.BOOLEAN);
             }
 
-            if (OperatorMapper.isNullCheck(condition)) {
+            if (OperatorMapper.isNullCheck(condition))
+            {
                 Expression nullExpr = LiteralExpr.ofNull();
                 BinaryOperator op =
                     OperatorMapper.mapCompareOp(condition);
-                if (negate) {
+                if (negate)
+                {
                     op = negateOperator(op);
                 }
-                return new BinaryExpr(
-                    op, left, nullExpr, PrimitiveSourceType.BOOLEAN);
+                return new BinaryExpr(op, left, nullExpr, PrimitiveSourceType.BOOLEAN);
             }
 
             if (isBooleanExpression(left) || isBooleanSSAValue(branch.getLeft())
-                    || isBooleanLocalAt(branch.getLeft(), branch.getBytecodeOffset())) {
+                    || isBooleanLocalAt(branch.getLeft(), branch.getBytecodeOffset()))
+            {
                 boolean wantTrue = (condition == CompareOp.NE || condition == CompareOp.IFNE);
-                if (negate) {
+                if (negate)
+                {
                     wantTrue = !wantTrue;
                 }
-                if (wantTrue) {
+                if (wantTrue)
+                {
                     return left;
-                } else {
-                    return new UnaryExpr(UnaryOperator.NOT, left,
-                        PrimitiveSourceType.BOOLEAN);
+                }
+                else
+                {
+                    return new UnaryExpr(UnaryOperator.NOT, left, PrimitiveSourceType.BOOLEAN);
                 }
             }
 
             BinaryOperator op =
                 OperatorMapper.mapCompareOp(condition);
-            if (negate) {
+            if (negate)
+            {
                 op = negateOperator(op);
             }
             Expression zero = LiteralExpr.ofInt(0);
-            return new BinaryExpr(
-                op, left, zero, PrimitiveSourceType.BOOLEAN);
+            return new BinaryExpr(op, left, zero, PrimitiveSourceType.BOOLEAN);
         }
         return LiteralExpr.ofBoolean(!negate);
     }
 
     @Override
-    public boolean conditionInlinesSideEffect(IRBlock block) {
+    public boolean conditionInlinesSideEffect(IRBlock block)
+    {
         IRInstruction terminator = block.getTerminator();
-        if (!(terminator instanceof BranchInstruction)) {
+        if (!(terminator instanceof BranchInstruction))
+        {
             return false;
         }
         BranchInstruction branch = (BranchInstruction) terminator;
-        if (branch.getLeft() != null && exprRecoverer.operandInlinesSideEffect(branch.getLeft())) {
+        if (branch.getLeft() != null && exprRecoverer.operandInlinesSideEffect(branch.getLeft()))
+        {
             return true;
         }
         return branch.getRight() != null && exprRecoverer.operandInlinesSideEffect(branch.getRight());
     }
 
     @Override
-    public boolean guardAtomExceptionFree(IRBlock block) {
+    public boolean guardAtomExceptionFree(IRBlock block)
+    {
         IRInstruction terminator = block.getTerminator();
-        if (!(terminator instanceof BranchInstruction)) {
+        if (!(terminator instanceof BranchInstruction))
+        {
             return false;
         }
         BranchInstruction branch = (BranchInstruction) terminator;
-        if (branch.getLeft() != null && exprRecoverer.operandMayThrowInline(branch.getLeft())) {
+        if (branch.getLeft() != null && exprRecoverer.operandMayThrowInline(branch.getLeft()))
+        {
             return false;
         }
         return branch.getRight() == null || !exprRecoverer.operandMayThrowInline(branch.getRight());
     }
 
     @Override
-    public boolean isDuplicationSafe(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof FieldAccessInstruction) {
+    public boolean isDuplicationSafe(IRBlock block)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof FieldAccessInstruction)
+            {
                 FieldAccessInstruction field = (FieldAccessInstruction) instr;
-                if (field.isStore()) {
+                if (field.isStore())
+                {
                     return false;
                 }
                 if (field.isLoad() && field.getResult() != null
-                        && fieldLoadClobberedBeforeUse(field, field.getResult())) {
+                        && fieldLoadClobberedBeforeUse(field, field.getResult()))
+                {
                     return false;
                 }
-            } else if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore()) {
+            }
+            else if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore())
+            {
                 return false;
             }
         }
@@ -11927,16 +14540,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     @Override
-    public boolean regionContainsUnprocessedHandler(Set<IRBlock> region) {
+    public boolean regionContainsUnprocessedHandler(Set<IRBlock> region)
+    {
         List<ExceptionHandler> handlers = context.getIrMethod().getExceptionHandlers();
-        if (handlers == null || handlers.isEmpty()) {
+        if (handlers == null || handlers.isEmpty())
+        {
             return false;
         }
-        for (IRBlock block : region) {
+        for (IRBlock block : region)
+        {
             // The widest UNPROCESSED handler, not widest-then-filtered: a split outer range can begin at
             // the same block as a nested try, and the processed outer piece must not mask the nested
             // handler (the engine would structure the region and silently drop the nested catch).
-            if (findUnprocessedHandlerStartingAt(block) != null) {
+            if (findUnprocessedHandlerStartingAt(block) != null)
+            {
                 return true;
             }
         }
@@ -11946,33 +14563,40 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Checks if an expression is boolean-typed.
      */
-    private boolean isBooleanExpression(Expression expr) {
+    private boolean isBooleanExpression(Expression expr)
+    {
         SourceType type = expr.getType();
-        if (type == PrimitiveSourceType.BOOLEAN) {
+        if (type == PrimitiveSourceType.BOOLEAN)
+        {
             return true;
         }
 
-        if (expr instanceof MethodCallExpr) {
+        if (expr instanceof MethodCallExpr)
+        {
             MethodCallExpr mce = (MethodCallExpr) expr;
             String name = mce.getMethodName();
             if (name.startsWith("is") || name.startsWith("has") || name.startsWith("can") ||
                 name.startsWith("should") || name.startsWith("was") ||
                 "equals".equals(name) || "contains".equals(name) ||
                 "startsWith".equals(name) || "endsWith".equals(name) ||
-                "isEmpty".equals(name) || "isPresent".equals(name)) {
+                "isEmpty".equals(name) || "isPresent".equals(name))
+                {
                 return true;
             }
         }
 
-        if (expr instanceof FieldAccessExpr) {
+        if (expr instanceof FieldAccessExpr)
+        {
             FieldAccessExpr fae = (FieldAccessExpr) expr;
             SourceType fieldType = fae.getType();
-            if (fieldType == PrimitiveSourceType.BOOLEAN) {
+            if (fieldType == PrimitiveSourceType.BOOLEAN)
+            {
                 return true;
             }
         }
 
-        if (expr instanceof VarRefExpr) {
+        if (expr instanceof VarRefExpr)
+        {
             int slot = slotOfValue(((VarRefExpr) expr).getSsaValue());
             return context.getExpressionContext().isParameterOrThisSlot(slot)
                     && isParameterBoolean(context.getExpressionContext().parameterIndexForSlot(slot));
@@ -11982,18 +14606,22 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     /**
-     * Checks if an SSAValue has boolean type directly from its IR type.
-     * This is a fallback when the recovered expression type isn't detected as boolean.
+     * Checks an SSAValue's IR type for boolean directly, as a fallback for when the recovered
+     * expression type is not detected as boolean.
      */
-    private boolean isBooleanSSAValue(Value value) {
-        if (value instanceof SSAValue) {
+    private boolean isBooleanSSAValue(Value value)
+    {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssaValue = (SSAValue) value;
             IRType type = ssaValue.getType();
-            if (type == PrimitiveType.BOOLEAN) {
+            if (type == PrimitiveType.BOOLEAN)
+            {
                 return true;
             }
             IRInstruction def = ssaValue.getDefinition();
-            if (def instanceof TypeCheckInstruction) {
+            if (def instanceof TypeCheckInstruction)
+            {
                 TypeCheckInstruction typeCheck = (TypeCheckInstruction) def;
                 return typeCheck.isInstanceOf();
             }
@@ -12007,15 +14635,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * recorded, and a branch on such a local is testing the variable itself. Without this the condition came
      * out as `flag == 0`, comparing a boolean to an int, which is not valid Java.
      */
-    private boolean isBooleanLocalAt(Value value, int offset) {
-        if (!(value instanceof SSAValue)) {
+    private boolean isBooleanLocalAt(Value value, int offset)
+    {
+        if (!(value instanceof SSAValue))
+        {
             return false;
         }
         IRInstruction def = ((SSAValue) value).getDefinition();
         int slot = -1;
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             slot = ((LoadLocalInstruction) def).getLocalIndex();
-        } else if (def instanceof PhiInstruction) {
+        }
+        else if (def instanceof PhiInstruction)
+        {
             slot = getLocalIndexFromPhi((PhiInstruction) def);
         }
         return slot >= 0 && "Z".equals(narrowLvtDescriptor(slot, offset));
@@ -12024,12 +14657,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     /**
      * Checks if a parameter at the given index is a boolean type based on method descriptor.
      */
-    private boolean isParameterBoolean(int argIndex) {
+    private boolean isParameterBoolean(int argIndex)
+    {
         String descriptor = context.getIrMethod().getDescriptor();
         if (descriptor == null) return false;
 
         List<String> paramTypes = parseParameterTypes(descriptor);
-        if (argIndex >= 0 && argIndex < paramTypes.size()) {
+        if (argIndex >= 0 && argIndex < paramTypes.size())
+        {
             return "Z".equals(paramTypes.get(argIndex));
         }
         return false;
@@ -12040,50 +14675,70 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * @param descriptor method descriptor like "(ZILjava/lang/String;)V"
      * @return list of type descriptors for each parameter
      */
-    private List<String> parseParameterTypes(String descriptor) {
+    private List<String> parseParameterTypes(String descriptor)
+    {
         List<String> types = new ArrayList<>();
         int start = descriptor.indexOf('(');
         int end = descriptor.indexOf(')', start);
-        if (start == -1 || end == -1 || end <= start) {
+        if (start == -1 || end == -1 || end <= start)
+        {
             return types;
         }
 
         int index = start + 1;
-        while (index < end) {
+        while (index < end)
+        {
             char c = descriptor.charAt(index);
-            if (c == 'B' || c == 'C' || c == 'D' || c == 'F' ||
-                c == 'I' || c == 'J' || c == 'S' || c == 'Z') {
+            if (c == 'B' || c == 'C' || c == 'D' || c == 'F' || c == 'I' || c == 'J' || c == 'S' || c == 'Z')
+            {
                 types.add(String.valueOf(c));
                 index++;
-            } else if (c == 'L') {
+            }
+            else if (c == 'L')
+            {
                 int semicolon = descriptor.indexOf(';', index);
-                if (semicolon > index) {
+                if (semicolon > index)
+                {
                     types.add(descriptor.substring(index, semicolon + 1));
                     index = semicolon + 1;
-                } else {
+                }
+                else
+                {
                     break;
                 }
-            } else if (c == '[') {
+            }
+            else if (c == '[')
+            {
                 int arrayStart = index;
-                while (index < end && descriptor.charAt(index) == '[') {
+                while (index < end && descriptor.charAt(index) == '[')
+                {
                     index++;
                 }
-                if (index < end) {
+                if (index < end)
+                {
                     char baseType = descriptor.charAt(index);
-                    if (baseType == 'L') {
+                    if (baseType == 'L')
+                    {
                         int semicolon = descriptor.indexOf(';', index);
-                        if (semicolon > index) {
+                        if (semicolon > index)
+                        {
                             types.add(descriptor.substring(arrayStart, semicolon + 1));
                             index = semicolon + 1;
-                        } else {
+                        }
+                        else
+                        {
                             break;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         types.add(descriptor.substring(arrayStart, index + 1));
                         index++;
                     }
                 }
-            } else {
+            }
+            else
+            {
                 index++;
             }
         }
@@ -12094,54 +14749,74 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
 
 
-    private BinaryOperator negateOperator(
-            BinaryOperator op) {
-        if (op == BinaryOperator.EQ) {
+    private BinaryOperator negateOperator(BinaryOperator op)
+    {
+        if (op == BinaryOperator.EQ)
+        {
             return BinaryOperator.NE;
-        } else if (op == BinaryOperator.NE) {
+        }
+        else if (op == BinaryOperator.NE)
+        {
             return BinaryOperator.EQ;
-        } else if (op == BinaryOperator.LT) {
+        }
+        else if (op == BinaryOperator.LT)
+        {
             return BinaryOperator.GE;
-        } else if (op == BinaryOperator.GE) {
+        }
+        else if (op == BinaryOperator.GE)
+        {
             return BinaryOperator.LT;
-        } else if (op == BinaryOperator.GT) {
+        }
+        else if (op == BinaryOperator.GT)
+        {
             return BinaryOperator.LE;
-        } else if (op == BinaryOperator.LE) {
+        }
+        else if (op == BinaryOperator.LE)
+        {
             return BinaryOperator.GT;
-        } else {
+        }
+        else
+        {
             return op;
         }
     }
 
-    private IRBlock getNextSequentialBlock(IRBlock block) {
-        if (block.getSuccessors().size() == 1) {
+    private IRBlock getNextSequentialBlock(IRBlock block)
+    {
+        if (block.getSuccessors().size() == 1)
+        {
             return block.getSuccessors().iterator().next();
         }
         return null;
     }
 
-    private boolean isReturnBlock(IRBlock block) {
+    private boolean isReturnBlock(IRBlock block)
+    {
         if (block == null) return false;
         IRInstruction terminator = block.getTerminator();
         return terminator instanceof ReturnInstruction;
     }
 
 
-    private IRBlock findSwitchMerge(RegionInfo info) {
+    private IRBlock findSwitchMerge(RegionInfo info)
+    {
         Set<IRBlock> caseTargets = new HashSet<>(info.getSwitchCases().values());
         Set<IRBlock> allTargets = new HashSet<>(caseTargets);
-        if (info.getDefaultTarget() != null) {
+        if (info.getDefaultTarget() != null)
+        {
             allTargets.add(info.getDefaultTarget());
         }
         var postDomTree = analyzer.getPostDominatorTree();
-        if (postDomTree != null) {
+        if (postDomTree != null)
+        {
             IRBlock ipdom = postDomTree.getImmediatePostDominator(info.getHeader());
             // The post-dominator tree is unreliable when the switch has several distinct `return`/`throw`
             // exits and no single sink: it can name a block reached through only one case body (e.g. the
             // `return true` arm of `case: return a && b; default: return false;`) as the header's ipdom,
             // even though the default path never reaches it. A genuine merge post-dominates the header, so
             // it must be reachable from every case target and the default; reject candidates that are not.
-            if (ipdom != null && !caseTargets.contains(ipdom) && reachedFromAllTargets(ipdom, allTargets)) {
+            if (ipdom != null && !caseTargets.contains(ipdom) && reachedFromAllTargets(ipdom, allTargets))
+            {
                 return ipdom;
             }
         }
@@ -12149,7 +14824,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // Reachable region of each target, stopping at the other targets so one case body's blocks
         // do not bleed into another's region.
         Map<IRBlock, Set<IRBlock>> reachableByTarget = new LinkedHashMap<>();
-        for (IRBlock target : allTargets) {
+        for (IRBlock target : allTargets)
+        {
             Set<IRBlock> reachable = new HashSet<>();
             Set<IRBlock> otherTargets = new HashSet<>(allTargets);
             otherTargets.remove(target);
@@ -12163,28 +14839,37 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // (including a throwing default) to reach the merge collapses the intersection to empty and
         // leaves the shared post-switch tail to be absorbed into whichever case is recovered first.
         Set<IRBlock> converging = new HashSet<>();
-        for (IRBlock a : allTargets) {
-            for (IRBlock b : allTargets) {
-                if (a != b && !Collections.disjoint(reachableByTarget.get(a), reachableByTarget.get(b))) {
+        for (IRBlock a : allTargets)
+        {
+            for (IRBlock b : allTargets)
+            {
+                if (a != b && !Collections.disjoint(reachableByTarget.get(a), reachableByTarget.get(b)))
+                {
                     converging.add(a);
                     break;
                 }
             }
         }
-        if (converging.size() < 2) {
+        if (converging.size() < 2)
+        {
             return null;
         }
 
         Set<IRBlock> commonSuccessors = null;
-        for (IRBlock target : converging) {
-            if (commonSuccessors == null) {
+        for (IRBlock target : converging)
+        {
+            if (commonSuccessors == null)
+            {
                 commonSuccessors = new HashSet<>(reachableByTarget.get(target));
-            } else {
+            }
+            else
+            {
                 commonSuccessors.retainAll(reachableByTarget.get(target));
             }
         }
         commonSuccessors.removeAll(caseTargets);
-        if (commonSuccessors.isEmpty()) {
+        if (commonSuccessors.isEmpty())
+        {
             return null;
         }
 
@@ -12193,21 +14878,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         // tail. Pick by lowest bytecode offset so the choice is deterministic.
         IRBlock merge = null;
         int mergeOffset = Integer.MAX_VALUE;
-        for (IRBlock candidate : commonSuccessors) {
+        for (IRBlock candidate : commonSuccessors)
+        {
             boolean isEntry = false;
-            for (IRBlock pred : candidate.getPredecessors()) {
-                if (!commonSuccessors.contains(pred)) {
+            for (IRBlock pred : candidate.getPredecessors())
+            {
+                if (!commonSuccessors.contains(pred))
+                {
                     isEntry = true;
                     break;
                 }
             }
-            if (!isEntry) {
+            if (!isEntry)
+            {
                 continue;
             }
             int off = candidate.getInstructions().isEmpty()
                     ? Integer.MAX_VALUE
                     : candidate.getInstructions().get(0).getBytecodeOffset();
-            if (off < mergeOffset) {
+            if (off < mergeOffset)
+            {
                 mergeOffset = off;
                 merge = candidate;
             }
@@ -12220,21 +14910,26 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * i.e. it is a real convergence point that post-dominates the header. Guards against a spurious
      * post-dominator that only one case body can reach.
      */
-    private boolean reachedFromAllTargets(IRBlock merge, Set<IRBlock> allTargets) {
-        for (IRBlock target : allTargets) {
-            if (target == merge) {
+    private boolean reachedFromAllTargets(IRBlock merge, Set<IRBlock> allTargets)
+    {
+        for (IRBlock target : allTargets)
+        {
+            if (target == merge)
+            {
                 continue;
             }
             Set<IRBlock> reachable = new HashSet<>();
             collectReachableBlocks(target, reachable);
-            if (!reachable.contains(merge)) {
+            if (!reachable.contains(merge))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private void collectReachableBlocks(IRBlock start, Set<IRBlock> result) {
+    private void collectReachableBlocks(IRBlock start, Set<IRBlock> result)
+    {
         collectReachableBlocks(start, result, Collections.emptySet());
     }
 
@@ -12245,26 +14940,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * unbounded reachability walk would claim the fall-through join and everything after the
      * try/catch, making the outer sequence drop the method's continuation.
      */
-    private void collectCatchConsumedBlocks(ExceptionHandler handler, Set<IRBlock> result) {
+    private void collectCatchConsumedBlocks(ExceptionHandler handler, Set<IRBlock> result)
+    {
         IRBlock handlerBlock = handler.getHandlerBlock();
         result.add(handlerBlock);
-        if (isGotoTerminated(handlerBlock) && !handler.isCatchAll()
-                && !gotoStaysInCatch(handlerBlock)) {
+        if (isGotoTerminated(handlerBlock) && !handler.isCatchAll() && !gotoStaysInCatch(handlerBlock))
+        {
             return;
         }
         Deque<IRBlock> worklist = new ArrayDeque<>(handlerBlock.getSuccessors());
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock current = worklist.poll();
-            if (!result.add(current)) {
+            if (!result.add(current))
+            {
                 continue;
             }
             IRInstruction terminator = current.getTerminator();
-            if (terminator instanceof ReturnInstruction) {
+            if (terminator instanceof ReturnInstruction)
+            {
                 continue;
             }
-            if (terminator instanceof SimpleInstruction) {
+            if (terminator instanceof SimpleInstruction)
+            {
                 SimpleOp op = ((SimpleInstruction) terminator).getOp();
-                if (op == SimpleOp.GOTO || op == SimpleOp.ATHROW) {
+                if (op == SimpleOp.GOTO || op == SimpleOp.ATHROW)
+                {
                     continue;
                 }
             }
@@ -12272,7 +14973,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    private static boolean isGotoTerminated(IRBlock block) {
+    private static boolean isGotoTerminated(IRBlock block)
+    {
         IRInstruction terminator = block.getTerminator();
         return terminator instanceof SimpleInstruction
                 && ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO;
@@ -12284,26 +14986,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * to the shared post-try merge. The former is catch code to consume and recover; the latter must stay
      * unconsumed or the merge is swallowed into the catch.
      */
-    private boolean gotoStaysInCatch(IRBlock handlerBlock) {
+    private boolean gotoStaysInCatch(IRBlock handlerBlock)
+    {
         DominatorTree dt = context.getDominatorTree();
-        if (dt == null) {
+        if (dt == null)
+        {
             return false;
         }
-        for (IRBlock succ : handlerBlock.getSuccessors()) {
-            if (succ != handlerBlock && dt.dominates(handlerBlock, succ)) {
+        for (IRBlock succ : handlerBlock.getSuccessors())
+        {
+            if (succ != handlerBlock && dt.dominates(handlerBlock, succ))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks) {
+    private void collectReachableBlocks(IRBlock start, Set<IRBlock> result, Set<IRBlock> stopBlocks)
+    {
         Deque<IRBlock> worklist = new ArrayDeque<>();
         worklist.add(start);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock current = worklist.poll();
-            if (result.contains(current) || stopBlocks.contains(current)) {
+            if (result.contains(current) || stopBlocks.contains(current))
+            {
                 continue;
             }
             result.add(current);
@@ -12322,18 +15031,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * For binary comparisons, inverts the operator (e.g., != to ==).
      * For other expressions, wraps in NOT.
      */
-    private Expression invertCondition(Expression condition) {
-        if (condition instanceof BinaryExpr) {
+    private Expression invertCondition(Expression condition)
+    {
+        if (condition instanceof BinaryExpr)
+        {
             BinaryExpr binExpr = (BinaryExpr) condition;
             BinaryOperator op = binExpr.getOperator();
             BinaryOperator inverted = negateOperator(op);
-            if (inverted != op) {
-                return new BinaryExpr(
-                    inverted, binExpr.getLeft(), binExpr.getRight(), binExpr.getType());
+            if (inverted != op)
+            {
+                return new BinaryExpr(inverted, binExpr.getLeft(), binExpr.getRight(), binExpr.getType());
             }
         }
-        return new UnaryExpr(UnaryOperator.NOT, condition,
-                PrimitiveSourceType.BOOLEAN);
+        return new UnaryExpr(UnaryOperator.NOT, condition, PrimitiveSourceType.BOOLEAN);
     }
 
     /**
@@ -12343,41 +15053,53 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * integral value into a boolean slot becomes {@code value != 0}. Otherwise the value
      * is returned unchanged. {@code !!x} collapses to {@code x} first so the result is clean.
      */
-    private Expression coerceForStore(Expression value, SourceType target) {
-        if (target == null) {
+    private Expression coerceForStore(Expression value, SourceType target)
+    {
+        if (target == null)
+        {
             return value;
         }
         value = stripDoubleNot(value);
         boolean targetBool = target == PrimitiveSourceType.BOOLEAN;
         boolean valueBool = value.getType() == PrimitiveSourceType.BOOLEAN;
-        if (targetBool == valueBool) {
+        if (targetBool == valueBool)
+        {
             return value;
         }
         // Exactly one side is boolean here: bridge the JVM's int-as-boolean representation.
-        if (valueBool && isIntegralType(target)) {
+        if (valueBool && isIntegralType(target))
+        {
             // a boolean expression stored into an int-like slot: `cond ? 1 : 0`
             return new TernaryExpr(value, LiteralExpr.ofInt(1), LiteralExpr.ofInt(0), target);
         }
-        if (targetBool && isIntegralType(value.getType())) {
+        if (targetBool && isIntegralType(value.getType()))
+        {
             // an int-like value stored into a boolean slot: `value != 0`
-            return new BinaryExpr(BinaryOperator.NE, value, LiteralExpr.ofInt(0),
-                    PrimitiveSourceType.BOOLEAN);
+            return new BinaryExpr(BinaryOperator.NE, value, LiteralExpr.ofInt(0), PrimitiveSourceType.BOOLEAN);
         }
         return value;
     }
 
-    private boolean isIntegralType(SourceType t) {
+    private boolean isIntegralType(SourceType t)
+    {
         return t == PrimitiveSourceType.INT || t == PrimitiveSourceType.SHORT
             || t == PrimitiveSourceType.BYTE || t == PrimitiveSourceType.CHAR;
     }
 
-    /** Collapses {@code !!x} to {@code x}. */
-    private Expression stripDoubleNot(Expression e) {
-        while (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator() == UnaryOperator.NOT) {
+    /**
+     * Collapses {@code !!x} to {@code x}.
+     */
+    private Expression stripDoubleNot(Expression e)
+    {
+        while (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator() == UnaryOperator.NOT)
+        {
             Expression inner = ((UnaryExpr) e).getOperand();
-            if (inner instanceof UnaryExpr && ((UnaryExpr) inner).getOperator() == UnaryOperator.NOT) {
+            if (inner instanceof UnaryExpr && ((UnaryExpr) inner).getOperator() == UnaryOperator.NOT)
+            {
                 e = ((UnaryExpr) inner).getOperand();
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
@@ -12388,26 +15110,33 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Extracts a boolean constant value (0 or 1) from an IR Value.
      * Handles both direct IntConstants and SSAValues defined by ConstantInstructions.
      */
-    private Integer extractBooleanConstant(Value val) {
-        if (val instanceof IntConstant) {
+    private Integer extractBooleanConstant(Value val)
+    {
+        if (val instanceof IntConstant)
+        {
             IntConstant ic = (IntConstant) val;
             int v = ic.getValue();
-            if (v == 0 || v == 1) {
+            if (v == 0 || v == 1)
+            {
                 return v;
             }
             return null;
         }
 
-        if (val instanceof SSAValue) {
+        if (val instanceof SSAValue)
+        {
             SSAValue ssaVal = (SSAValue) val;
             IRInstruction def = ssaVal.getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 ConstantInstruction constInstr = (ConstantInstruction) def;
                 Constant c = constInstr.getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     IntConstant ic = (IntConstant) c;
                     int v = ic.getValue();
-                    if (v == 0 || v == 1) {
+                    if (v == 0 || v == 1)
+                    {
                         return v;
                     }
                 }
@@ -12417,20 +15146,25 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private Expression tryConvertToBooleanLiteral(Expression expr, Value sourceValue) {
-        if (expr instanceof LiteralExpr) {
+    private Expression tryConvertToBooleanLiteral(Expression expr, Value sourceValue)
+    {
+        if (expr instanceof LiteralExpr)
+        {
             LiteralExpr lit = (LiteralExpr) expr;
             Object litValue = lit.getValue();
-            if (litValue instanceof Integer) {
+            if (litValue instanceof Integer)
+            {
                 int intVal = (Integer) litValue;
-                if (intVal == 0 || intVal == 1) {
+                if (intVal == 0 || intVal == 1)
+                {
                     return LiteralExpr.ofBoolean(intVal != 0);
                 }
             }
         }
 
         Integer boolConst = extractBooleanConstant(sourceValue);
-        if (boolConst != null) {
+        if (boolConst != null)
+        {
             return LiteralExpr.ofBoolean(boolConst != 0);
         }
 
@@ -12445,15 +15179,19 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
 
 
-    private boolean hasMultipleConditionalPredecessors(IRBlock block) {
+    private boolean hasMultipleConditionalPredecessors(IRBlock block)
+    {
         Set<IRBlock> preds = block.getPredecessors();
-        if (preds.size() <= 1) {
+        if (preds.size() <= 1)
+        {
             return false;
         }
         int conditionalCount = 0;
-        for (IRBlock pred : preds) {
+        for (IRBlock pred : preds)
+        {
             IRInstruction terminator = pred.getTerminator();
-            if (terminator instanceof BranchInstruction) {
+            if (terminator instanceof BranchInstruction)
+            {
                 conditionalCount++;
             }
         }
@@ -12466,14 +15204,18 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Checks if all phi operands are boolean constants (0 or 1).
      * Used to determine if a phi should be typed as boolean instead of int.
      */
-    private boolean phiReceivesBooleanConstantsOnly(PhiInstruction phi) {
+    private boolean phiReceivesBooleanConstantsOnly(PhiInstruction phi)
+    {
         List<Value> operands = phi.getOperands();
-        if (operands.isEmpty()) {
+        if (operands.isEmpty())
+        {
             return false;
         }
-        for (Value val : operands) {
+        for (Value val : operands)
+        {
             Integer constVal = extractBooleanConstant(val);
-            if (constVal == null) {
+            if (constVal == null)
+            {
                 return false;
             }
         }
@@ -12487,8 +15229,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * This allows them to be inlined into the for-loop declaration instead of
      * being emitted separately in predecessor blocks.
      */
-    private void collectForLoopInitInstructions() {
-        for (RegionInfo info : analyzer.getForLoopRegions()) {
+    private void collectForLoopInitInstructions()
+    {
+        for (RegionInfo info : analyzer.getForLoopRegions())
+        {
             int targetLocal = info.getInductionLocalIndex();
             if (targetLocal < 0) continue;
 
@@ -12498,21 +15242,28 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             context.markAsForLoopHeader(header);
             LoopAnalysis.Loop loop = info.getLoop();
 
-            for (PhiInstruction phi : header.getPhiInstructions()) {
-                if (isPhiForLocal(phi, targetLocal, loop)) {
+            for (PhiInstruction phi : header.getPhiInstructions())
+            {
+                if (isPhiForLocal(phi, targetLocal, loop))
+                {
                     context.markAsForLoopInductionPhi(phi.getResult());
                 }
             }
 
-            for (IRBlock pred : header.getPredecessors()) {
-                if (loop != null && loop.contains(pred)) {
+            for (IRBlock pred : header.getPredecessors())
+            {
+                if (loop != null && loop.contains(pred))
+                {
                     continue;
                 }
 
-                for (IRInstruction instr : pred.getInstructions()) {
-                    if (instr instanceof StoreLocalInstruction) {
+                for (IRInstruction instr : pred.getInstructions())
+                {
+                    if (instr instanceof StoreLocalInstruction)
+                    {
                         StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                        if (store.getLocalIndex() == targetLocal) {
+                        if (store.getLocalIndex() == targetLocal)
+                        {
                             context.markAsForLoopInit(instr);
                         }
                     }
@@ -12521,24 +15272,31 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         }
     }
 
-    private boolean isPhiForLocal(PhiInstruction phi, int localIndex, LoopAnalysis.Loop loop) {
-        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+    private boolean isPhiForLocal(PhiInstruction phi, int localIndex, LoopAnalysis.Loop loop)
+    {
+        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+        {
             IRBlock sourceBlock = entry.getKey();
             Value incomingValue = entry.getValue();
 
             boolean fromInsideLoop = loop != null && loop.contains(sourceBlock);
-            if (fromInsideLoop) {
-                if (incomingValue instanceof SSAValue) {
+            if (fromInsideLoop)
+            {
+                if (incomingValue instanceof SSAValue)
+                {
                     SSAValue ssaVal = (SSAValue) incomingValue;
                     IRInstruction def = ssaVal.getDefinition();
-                    if (def instanceof BinaryOpInstruction) {
+                    if (def instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) def;
                         if ((binOp.getOp() == BinaryOp.ADD || binOp.getOp() == BinaryOp.SUB)
-                                && isInductionStep(binOp, phi.getResult())) {
+                                && isInductionStep(binOp, phi.getResult()))
+                        {
                             return true;
                         }
                     }
-                    if (isValueFromLocal(ssaVal, localIndex)) {
+                    if (isValueFromLocal(ssaVal, localIndex))
+                    {
                         return true;
                     }
                 }
@@ -12548,12 +15306,14 @@ public class StatementRecoverer implements RegionRecoveryBridge {
     }
 
     /**
-     * True when {@code binOp} is {@code phiResult ± constant} — the canonical induction step. An
+     * True when {@code binOp} is {@code phiResult +/- constant} - the canonical induction step. An
      * accumulation like {@code s = s + element} (the addend is a variable, not a constant) is NOT an
      * induction step and must not be mistaken for the loop counter.
      */
-    private boolean isInductionStep(BinaryOpInstruction binOp, SSAValue phiResult) {
-        if (phiResult == null) {
+    private boolean isInductionStep(BinaryOpInstruction binOp, SSAValue phiResult)
+    {
+        if (phiResult == null)
+        {
             return false;
         }
         Value left = binOp.getLeft();
@@ -12562,16 +15322,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                 || (right == phiResult && isConstantOperand(left));
     }
 
-    private boolean isValueFromLocal(SSAValue value, int localIndex) {
+    private boolean isValueFromLocal(SSAValue value, int localIndex)
+    {
         IRInstruction def = value.getDefinition();
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) def).getLocalIndex() == localIndex;
         }
-        if (def instanceof BinaryOpInstruction) {
+        if (def instanceof BinaryOpInstruction)
+        {
             BinaryOpInstruction binOp = (BinaryOpInstruction) def;
             Value left = binOp.getLeft();
             Value right = binOp.getRight();
-            if (left instanceof SSAValue && isValueFromLocal((SSAValue) left, localIndex)) {
+            if (left instanceof SSAValue && isValueFromLocal((SSAValue) left, localIndex))
+            {
                 return true;
             }
             return right instanceof SSAValue && isValueFromLocal((SSAValue) right, localIndex);
@@ -12584,16 +15348,20 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * The phi in {@code mergeBlock} that a diamond over {@code thenBlock}/{@code elseBlock} collapses to a
      * ternary - one incoming value from each arm, each arm a valid single-value producer - or null.
      */
-    private PhiInstruction findTernaryPhi(IRBlock thenBlock, IRBlock elseBlock, IRBlock mergeBlock) {
-        if (thenBlock == null || elseBlock == null || mergeBlock == null) {
+    private PhiInstruction findTernaryPhi(IRBlock thenBlock, IRBlock elseBlock, IRBlock mergeBlock)
+    {
+        if (thenBlock == null || elseBlock == null || mergeBlock == null)
+        {
             return null;
         }
 
-        if (hasMultipleConditionalPredecessors(thenBlock) || hasMultipleConditionalPredecessors(elseBlock)) {
+        if (hasMultipleConditionalPredecessors(thenBlock) || hasMultipleConditionalPredecessors(elseBlock))
+        {
             return null;
         }
 
-        for (PhiInstruction phi : mergeBlock.getPhiInstructions()) {
+        for (PhiInstruction phi : mergeBlock.getPhiInstructions())
+        {
             // A phi taking one input from each arm is a ternary when each arm is either the classic
             // single-value block or a compound but provably pure computation (e.g. `-k` = load +
             // neg). Arms with calls/allocations stay on the single-value rule: their statements are
@@ -12603,7 +15371,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
                     && incomingBlocks.contains(thenBlock) && incomingBlocks.contains(elseBlock)
                     && phi.getIncoming(thenBlock) != null && phi.getIncoming(elseBlock) != null
                     && isTernaryArm(thenBlock, phi.getIncoming(thenBlock))
-                    && isTernaryArm(elseBlock, phi.getIncoming(elseBlock))) {
+                    && isTernaryArm(elseBlock, phi.getIncoming(elseBlock)))
+            {
                 return phi;
             }
         }
@@ -12611,7 +15380,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return null;
     }
 
-    private boolean isTernaryArm(IRBlock block, Value phiIncoming) {
+    private boolean isTernaryArm(IRBlock block, Value phiIncoming)
+    {
         return extractSingleProducedValue(block) != null || isPureComputeArm(block, phiIncoming)
                 || isSingleValueComputeArm(block, phiIncoming);
     }
@@ -12626,38 +15396,50 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * A side-effecting store or a value that escapes the arm for anything but the phi disqualifies it,
      * so the collapse never drops work.
      */
-    private boolean isSingleValueComputeArm(IRBlock block, Value phiIncoming) {
-        if (!(phiIncoming instanceof SSAValue)) {
+    private boolean isSingleValueComputeArm(IRBlock block, Value phiIncoming)
+    {
+        if (!(phiIncoming instanceof SSAValue))
+        {
             return false;
         }
         Set<IRInstruction> armInstrs = new HashSet<>(block.getInstructions());
         boolean producesIncoming = false;
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr.isTerminator()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr.isTerminator())
+            {
                 continue;
             }
-            if (instr instanceof StoreLocalInstruction) {
-                if (((StoreLocalInstruction) instr).getValue() != phiIncoming) {
+            if (instr instanceof StoreLocalInstruction)
+            {
+                if (((StoreLocalInstruction) instr).getValue() != phiIncoming)
+                {
                     return false;
                 }
                 continue;
             }
-            if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isStore()) {
+            if (instr instanceof FieldAccessInstruction && ((FieldAccessInstruction) instr).isStore())
+            {
                 return false;
             }
-            if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore()) {
+            if (instr instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) instr).isStore())
+            {
                 return false;
             }
             SSAValue result = instr.getResult();
-            if (result == null) {
+            if (result == null)
+            {
                 return false;
             }
-            if (result == phiIncoming) {
+            if (result == phiIncoming)
+            {
                 producesIncoming = true;
                 continue;
             }
-            for (IRInstruction use : result.getUses()) {
-                if (!armInstrs.contains(use)) {
+            for (IRInstruction use : result.getUses())
+            {
+                if (!armInstrs.contains(use))
+                {
                     return false;
                 }
             }
@@ -12671,29 +15453,42 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * it stores the phi's incoming value (the redundant temp materialization the lifter emits).
      * Calls, allocations and real stores disqualify - the collapse would drop them.
      */
-    private boolean isPureComputeArm(IRBlock block, Value phiIncoming) {
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr.isTerminator()) {
+    private boolean isPureComputeArm(IRBlock block, Value phiIncoming)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr.isTerminator())
+            {
                 continue;
             }
-            if (instr instanceof StoreLocalInstruction) {
-                if (((StoreLocalInstruction) instr).getValue() != phiIncoming) {
+            if (instr instanceof StoreLocalInstruction)
+            {
+                if (((StoreLocalInstruction) instr).getValue() != phiIncoming)
+                {
                     return false;
                 }
-            } else if (instr instanceof FieldAccessInstruction) {
-                if (((FieldAccessInstruction) instr).isStore()) {
+            }
+            else if (instr instanceof FieldAccessInstruction)
+            {
+                if (((FieldAccessInstruction) instr).isStore())
+                {
                     return false;
                 }
-            } else if (instr instanceof ArrayAccessInstruction) {
-                if (((ArrayAccessInstruction) instr).isStore()) {
+            }
+            else if (instr instanceof ArrayAccessInstruction)
+            {
+                if (((ArrayAccessInstruction) instr).isStore())
+                {
                     return false;
                 }
-            } else if (!(instr instanceof LoadLocalInstruction
+            }
+            else if (!(instr instanceof LoadLocalInstruction
                     || instr instanceof ConstantInstruction
                     || instr instanceof UnaryOpInstruction
                     || instr instanceof BinaryOpInstruction
                     || instr instanceof TypeCheckInstruction
-                    || instr instanceof CopyInstruction)) {
+                    || instr instanceof CopyInstruction))
+            {
                 return false;
             }
         }
@@ -12705,24 +15500,31 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * The block should only contain one value-producing instruction.
      * Returns null if the block produces no values or multiple values.
      */
-    private SSAValue extractSingleProducedValue(IRBlock block) {
+    private SSAValue extractSingleProducedValue(IRBlock block)
+    {
         List<IRInstruction> instructions = block.getInstructions();
 
         SSAValue producedValue = null;
-        for (IRInstruction instr : instructions) {
-            if (instr instanceof SimpleInstruction) {
+        for (IRInstruction instr : instructions)
+        {
+            if (instr instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) instr;
-                if (simple.getOp() == SimpleOp.GOTO) {
+                if (simple.getOp() == SimpleOp.GOTO)
+                {
                     continue;
                 }
             }
-            if (instr.isTerminator()) {
+            if (instr.isTerminator())
+            {
                 continue;
             }
 
             SSAValue result = instr.getResult();
-            if (result != null) {
-                if (producedValue != null) {
+            if (result != null)
+            {
+                if (producedValue != null)
+                {
                     return null;
                 }
                 producedValue = result;
@@ -12737,8 +15539,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Creates: condition ? thenValue : elseValue
      * and caches it for the PHI result so it gets inlined at usage sites.
      */
-    private void collapseToTernaryPhiExpression(Expression condition, PhiInstruction phi,
-                                                 IRBlock thenBlock, IRBlock elseBlock) {
+    private void collapseToTernaryPhiExpression(Expression condition, PhiInstruction phi, IRBlock thenBlock, IRBlock elseBlock)
+    {
         Value thenValue = phi.getIncoming(thenBlock);
         Value elseValue = phi.getIncoming(elseBlock);
 
@@ -12750,7 +15552,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         TernaryExpr ternaryExpr = new TernaryExpr(condition, thenExpr, elseExpr, type);
 
-        if (phiResult != null) {
+        if (phiResult != null)
+        {
             context.getExpressionContext().cacheExpression(phiResult, ternaryExpr);
             context.getExpressionContext().unmarkMaterialized(phiResult);
         }
@@ -12763,8 +15566,10 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * discarded temp name would leave an undefined variable. Un-materialize across the recovery so the
      * expression is inlined, then restore the flag so unrelated uses are unaffected.
      */
-    private Expression recoverTernaryArmValue(Value value, IRBlock armBlock) {
-        if (value instanceof SSAValue) {
+    private Expression recoverTernaryArmValue(Value value, IRBlock armBlock)
+    {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             // Only inline the defining expression for a value the arm itself produced (a temp the collapse
             // discards). A value defined before the arm - a pre-existing local like a loop-invariant bound -
@@ -12772,7 +15577,8 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // current (possibly mutated) operands, changing its meaning.
             boolean definedInArm = ssa.getDefinition() != null && ssa.getDefinition().getBlock() == armBlock;
             boolean wasMaterialized = context.getExpressionContext().isMaterialized(ssa);
-            if (definedInArm && wasMaterialized) {
+            if (definedInArm && wasMaterialized)
+            {
                 context.getExpressionContext().unmarkMaterialized(ssa);
             }
             // An arm-produced value's statements are discarded by the collapse, so any name the
@@ -12780,15 +15586,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             // allocation recoverOperand declines to inline) no longer exists. Derive the expression
             // from the definition itself; fall back to the operand path only when that yields nothing.
             Expression expr = exprRecoverer.recoverOperand(value);
-            if (definedInArm && expr instanceof VarRefExpr
-                    && !context.getExpressionContext().isMaterialized(ssa)) {
+            if (definedInArm && expr instanceof VarRefExpr && !context.getExpressionContext().isMaterialized(ssa))
+            {
                 Expression direct = exprRecoverer.recover(ssa.getDefinition());
-                if (direct != null) {
+                if (direct != null)
+                {
                     expr = direct;
                     context.getExpressionContext().cacheExpression(ssa, direct);
                 }
             }
-            if (definedInArm && wasMaterialized) {
+            if (definedInArm && wasMaterialized)
+            {
                 context.getExpressionContext().markMaterialized(ssa);
             }
             return expr;
@@ -12801,14 +15609,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Returns "this" for slot 0 in instance methods, "argN" for parameter slots,
      * and "localN" for true local variables.
      */
-    private String getNameForLocalSlot(int localIndex) {
+    private String getNameForLocalSlot(int localIndex)
+    {
         boolean isStatic = context.getIrMethod().isStatic();
-        if (!isStatic && localIndex == 0) {
+        if (!isStatic && localIndex == 0)
+        {
             return "this";
         }
 
         int paramIndex = getParamIndexForSlot(localIndex);
-        if (paramIndex >= 0) {
+        if (paramIndex >= 0)
+        {
             return "arg" + paramIndex;
         }
 
@@ -12819,13 +15630,17 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * True if the value is the null reference (directly or via a constant instruction). Null is
      * assignable to any reference type, so it must not widen a slot's unified type to Object.
      */
-    private boolean isNullValue(Value value) {
-        if (value instanceof NullConstant) {
+    private boolean isNullValue(Value value)
+    {
+        if (value instanceof NullConstant)
+        {
             return true;
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             IRInstruction def = ((SSAValue) value).getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 return ((ConstantInstruction) def).getConstant() instanceof NullConstant;
             }
         }
@@ -12836,31 +15651,39 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Resolves a local load/store/phi to its source-variable name via the reaching-definition
      * slot partition, or null when the partition could not place the instruction.
      */
-    private String partitionName(IRInstruction instr) {
+    private String partitionName(IRInstruction instr)
+    {
         SlotVariablePartition partition = context.getExpressionContext().getSlotPartition();
-        if (partition == null) {
+        if (partition == null)
+        {
             return null;
         }
-        if (instr instanceof StoreLocalInstruction) {
+        if (instr instanceof StoreLocalInstruction)
+        {
             return partition.nameForStore((StoreLocalInstruction) instr);
         }
-        if (instr instanceof LoadLocalInstruction) {
+        if (instr instanceof LoadLocalInstruction)
+        {
             return partition.nameForLoad((LoadLocalInstruction) instr);
         }
-        if (instr instanceof PhiInstruction) {
+        if (instr instanceof PhiInstruction)
+        {
             return partition.nameForPhi((PhiInstruction) instr);
         }
         return null;
     }
 
-    private String getNameForLocalSlotWithType(int localIndex, SourceType valueType) {
+    private String getNameForLocalSlotWithType(int localIndex, SourceType valueType)
+    {
         boolean isStatic = context.getIrMethod().isStatic();
-        if (!isStatic && localIndex == 0) {
+        if (!isStatic && localIndex == 0)
+        {
             return "this";
         }
 
         int paramIndex = getParamIndexForSlot(localIndex);
-        if (paramIndex >= 0) {
+        if (paramIndex >= 0)
+        {
             return "arg" + paramIndex;
         }
 
@@ -12870,13 +15693,16 @@ public class StatementRecoverer implements RegionRecoveryBridge {
             : getTypeCategory(valueType);
         Map<String, String> categoryMap = slotTypeCategoryToName.computeIfAbsent(localIndex, k -> new LinkedHashMap<>());
 
-        if (categoryMap.containsKey(typeCategory)) {
+        if (categoryMap.containsKey(typeCategory))
+        {
             return categoryMap.get(typeCategory);
         }
 
-        if (categoryMap.isEmpty()) {
+        if (categoryMap.isEmpty())
+        {
             String name = "local" + localIndex;
-            if (context.getExpressionContext().isDeclared(name)) {
+            if (context.getExpressionContext().isDeclared(name))
+            {
                 name = generateUniqueLocalName(localIndex);
             }
             categoryMap.put(typeCategory, name);
@@ -12885,38 +15711,46 @@ public class StatementRecoverer implements RegionRecoveryBridge {
 
         int suffix = categoryMap.size();
         String name = "local" + localIndex + "_" + suffix;
-        if (context.getExpressionContext().isDeclared(name)) {
+        if (context.getExpressionContext().isDeclared(name))
+        {
             name = generateUniqueLocalName(localIndex);
         }
         categoryMap.put(typeCategory, name);
         return name;
     }
 
-    private String getCoarseTypeCategory(SourceType type) {
-        if (type == null) {
+    private String getCoarseTypeCategory(SourceType type)
+    {
+        if (type == null)
+        {
             return "unknown";
         }
-        if (type.isPrimitive()) {
+        if (type.isPrimitive())
+        {
             // Distinguish by JVM verification width so a slot reused as int vs long
             // (genuinely distinct source variables) is not merged under one name.
-            switch (((PrimitiveSourceType) type).getKind()) {
+            switch (((PrimitiveSourceType) type).getKind())
+            {
                 case LONG:   return "primitive:long";
                 case FLOAT:  return "primitive:float";
                 case DOUBLE: return "primitive:double";
                 default:     return "primitive:int";
             }
         }
-        if (type instanceof ArraySourceType) {
+        if (type instanceof ArraySourceType)
+        {
             return "array";
         }
         return "object";
     }
 
-    private String generateUniqueLocalName(int baseIndex) {
+    private String generateUniqueLocalName(int baseIndex)
+    {
         String baseName = "local" + baseIndex;
         int suffix = 2;
         String candidate = baseName + "_" + suffix;
-        while (context.getExpressionContext().isDeclared(candidate)) {
+        while (context.getExpressionContext().isDeclared(candidate))
+        {
             suffix++;
             candidate = baseName + "_" + suffix;
         }
@@ -12928,30 +15762,36 @@ public class StatementRecoverer implements RegionRecoveryBridge {
      * Accounts for long/double parameters taking 2 slots.
      * Returns -1 if the slot is not a parameter slot (either 'this' or a local variable).
      */
-    private int getParamIndexForSlot(int slot) {
+    private int getParamIndexForSlot(int slot)
+    {
         IRMethod method = context.getIrMethod();
         boolean isStatic = method.isStatic();
 
-        if (!isStatic && slot == 0) {
+        if (!isStatic && slot == 0)
+        {
             return -1;
         }
 
         String descriptor = method.getDescriptor();
-        if (descriptor == null) {
+        if (descriptor == null)
+        {
             return isStatic ? slot : slot - 1;
         }
 
         List<String> paramTypes = parseParameterTypes(descriptor);
         int currentSlot = isStatic ? 0 : 1;
 
-        for (int paramIndex = 0; paramIndex < paramTypes.size(); paramIndex++) {
+        for (int paramIndex = 0; paramIndex < paramTypes.size(); paramIndex++)
+        {
             String paramType = paramTypes.get(paramIndex);
             int slotsForParam = 1;
-            if ("J".equals(paramType) || "D".equals(paramType)) {
+            if ("J".equals(paramType) || "D".equals(paramType))
+            {
                 slotsForParam = 2;
             }
 
-            if (slot >= currentSlot && slot < currentSlot + slotsForParam) {
+            if (slot >= currentSlot && slot < currentSlot + slotsForParam)
+            {
                 return paramIndex;
             }
             currentSlot += slotsForParam;
@@ -12960,26 +15800,32 @@ public class StatementRecoverer implements RegionRecoveryBridge {
         return -1;
     }
 
-    private String getTypeCategory(SourceType type) {
-        if (type == null) {
+    private String getTypeCategory(SourceType type)
+    {
+        if (type == null)
+        {
             return "unknown";
         }
-        if (type.isPrimitive()) {
+        if (type.isPrimitive())
+        {
             // Split primitives by JVM verification type so a slot reused across
             // incompatible widths (e.g. int vs long) gets distinct source variables.
             // boolean/byte/char/short/int share the "int" verification type and stay
             // grouped (preserving int<->boolean handling).
-            switch (((PrimitiveSourceType) type).getKind()) {
+            switch (((PrimitiveSourceType) type).getKind())
+            {
                 case LONG:   return "primitive:long";
                 case FLOAT:  return "primitive:float";
                 case DOUBLE: return "primitive:double";
                 default:     return "primitive:int";
             }
         }
-        if (type instanceof ArraySourceType) {
+        if (type instanceof ArraySourceType)
+        {
             return "array";
         }
-        if (type instanceof ReferenceSourceType) {
+        if (type instanceof ReferenceSourceType)
+        {
             ReferenceSourceType refType = (ReferenceSourceType) type;
             return refType.getInternalName();
         }

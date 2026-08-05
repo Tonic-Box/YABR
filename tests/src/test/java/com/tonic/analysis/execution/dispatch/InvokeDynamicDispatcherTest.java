@@ -24,7 +24,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class InvokeDynamicDispatcherTest {
+class InvokeDynamicDispatcherTest
+{
 
     private OpcodeDispatcher dispatcher;
     private StackFrame frame;
@@ -33,7 +34,8 @@ class InvokeDynamicDispatcherTest {
     private TestDispatchContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         dispatcher = new OpcodeDispatcher();
         stack = new ConcreteStack(20);
         locals = new ConcreteLocals(10);
@@ -41,10 +43,12 @@ class InvokeDynamicDispatcherTest {
     }
 
     @Nested
-    class InvokeDynamicInfoTests {
+    class InvokeDynamicInfoTests
+    {
 
         @Test
-        void testBasicConstruction() {
+        void testBasicConstruction()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()V", 10);
             assertEquals(0, info.getBootstrapMethodIndex());
             assertEquals("run", info.getMethodName());
@@ -53,159 +57,185 @@ class InvokeDynamicDispatcherTest {
         }
 
         @Test
-        void testParameterSlotsNoParams() {
+        void testParameterSlotsNoParams()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()V", 10);
             assertEquals(0, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsSingleInt() {
+        void testParameterSlotsSingleInt()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(I)I", 10);
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsSingleLong() {
+        void testParameterSlotsSingleLong()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(J)J", 10);
             assertEquals(2, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsSingleDouble() {
+        void testParameterSlotsSingleDouble()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(D)D", 10);
             assertEquals(2, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsObjectRef() {
+        void testParameterSlotsObjectRef()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(Ljava/lang/String;)V", 10);
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsArrayRef() {
+        void testParameterSlotsArrayRef()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "([I)V", 10);
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsMultiDimArray() {
+        void testParameterSlotsMultiDimArray()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "([[Ljava/lang/Object;)V", 10);
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void testParameterSlotsMixed() {
+        void testParameterSlotsMixed()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(IJDLjava/lang/String;FZ)V", 10);
             assertEquals(8, info.getParameterSlots());
         }
 
         @Test
-        void testReturnTypeVoid() {
+        void testReturnTypeVoid()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()V", 10);
             assertEquals("V", info.getReturnType());
             assertTrue(info.isVoidReturn());
         }
 
         @Test
-        void testReturnTypeInt() {
+        void testReturnTypeInt()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsInt", "()I", 10);
             assertEquals("I", info.getReturnType());
             assertFalse(info.isVoidReturn());
         }
 
         @Test
-        void testReturnTypeLong() {
+        void testReturnTypeLong()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsLong", "()J", 10);
             assertEquals("J", info.getReturnType());
         }
 
         @Test
-        void testReturnTypeObject() {
+        void testReturnTypeObject()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "()Ljava/lang/Object;", 10);
             assertEquals("Ljava/lang/Object;", info.getReturnType());
         }
 
         @Test
-        void testReturnTypeArray() {
+        void testReturnTypeArray()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "get", "()[I", 10);
             assertEquals("[I", info.getReturnType());
         }
 
         @Test
-        void testIsLambdaMetafactoryRun() {
+        void testIsLambdaMetafactoryRun()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()Ljava/lang/Runnable;", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryApply() {
+        void testIsLambdaMetafactoryApply()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryAccept() {
+        void testIsLambdaMetafactoryAccept()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "accept", "(Ljava/lang/Object;)V", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryTest() {
+        void testIsLambdaMetafactoryTest()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "(Ljava/lang/Object;)Z", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryGet() {
+        void testIsLambdaMetafactoryGet()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "get", "()Ljava/lang/Object;", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryGetAsInt() {
+        void testIsLambdaMetafactoryGetAsInt()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsInt", "()I", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryGetAsLong() {
+        void testIsLambdaMetafactoryGetAsLong()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsLong", "()J", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsLambdaMetafactoryGetAsDouble() {
+        void testIsLambdaMetafactoryGetAsDouble()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsDouble", "()D", 10);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsNotLambdaMetafactory() {
+        void testIsNotLambdaMetafactory()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "someOtherMethod", "()V", 10);
             assertFalse(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIsStringConcatMakeConcatWithConstants() {
+        void testIsStringConcatMakeConcatWithConstants()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(Ljava/lang/String;I)Ljava/lang/String;", 10);
             assertTrue(info.isStringConcat());
         }
 
         @Test
-        void testIsStringConcatMakeConcat() {
+        void testIsStringConcatMakeConcat()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", 10);
             assertTrue(info.isStringConcat());
         }
 
         @Test
-        void testIsNotStringConcat() {
+        void testIsNotStringConcat()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()V", 10);
             assertFalse(info.isStringConcat());
         }
 
         @Test
-        void testToString() {
+        void testToString()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(5, "run", "()V", 20);
             String str = info.toString();
             assertTrue(str.contains("bsm=5"));
@@ -215,14 +245,16 @@ class InvokeDynamicDispatcherTest {
         }
 
         @Test
-        void testNullDescriptor() {
+        void testNullDescriptor()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "method", null, 10);
             assertEquals(0, info.getParameterSlots());
             assertEquals("V", info.getReturnType());
         }
 
         @Test
-        void testInvalidDescriptor() {
+        void testInvalidDescriptor()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "method", "invalid", 10);
             assertEquals(0, info.getParameterSlots());
             assertEquals("V", info.getReturnType());
@@ -230,23 +262,28 @@ class InvokeDynamicDispatcherTest {
     }
 
     @Nested
-    class DispatchResultTests {
+    class DispatchResultTests
+    {
 
         @Test
-        void testInvokeDynamicEnumExists() {
+        void testInvokeDynamicEnumExists()
+        {
             OpcodeDispatcher.DispatchResult result = OpcodeDispatcher.DispatchResult.INVOKE_DYNAMIC;
             assertNotNull(result);
             assertEquals("INVOKE_DYNAMIC", result.name());
         }
 
         @Test
-        void testAllDispatchResultsPresent() {
+        void testAllDispatchResultsPresent()
+        {
             OpcodeDispatcher.DispatchResult[] values = OpcodeDispatcher.DispatchResult.values();
             assertTrue(values.length >= 13);
 
             boolean hasInvokeDynamic = false;
-            for (OpcodeDispatcher.DispatchResult r : values) {
-                if (r == OpcodeDispatcher.DispatchResult.INVOKE_DYNAMIC) {
+            for (OpcodeDispatcher.DispatchResult r : values)
+            {
+                if (r == OpcodeDispatcher.DispatchResult.INVOKE_DYNAMIC)
+                {
                     hasInvokeDynamic = true;
                     break;
                 }
@@ -256,10 +293,12 @@ class InvokeDynamicDispatcherTest {
     }
 
     @Nested
-    class OpcodeDispatchTests {
+    class OpcodeDispatchTests
+    {
 
         @Test
-        void testInvokeDynamicOpcode() {
+        void testInvokeDynamicOpcode()
+        {
             InvokeDynamicInstruction instr = mock(InvokeDynamicInstruction.class);
             when(instr.getOpcode()).thenReturn(0xBA);
             when(instr.getLength()).thenReturn(5);
@@ -275,7 +314,8 @@ class InvokeDynamicDispatcherTest {
         }
 
         @Test
-        void testInvokeDynamicSetsContext() {
+        void testInvokeDynamicSetsContext()
+        {
             InvokeDynamicInstruction instr = mock(InvokeDynamicInstruction.class);
             when(instr.getOpcode()).thenReturn(0xBA);
             when(instr.getLength()).thenReturn(5);
@@ -293,7 +333,8 @@ class InvokeDynamicDispatcherTest {
         }
 
         @Test
-        void testInvokeDynamicInfoFromDispatch() {
+        void testInvokeDynamicInfoFromDispatch()
+        {
             ConstPool cp = mock(ConstPool.class);
             when(cp.getItem(anyInt())).thenReturn(null);
 
@@ -319,22 +360,26 @@ class InvokeDynamicDispatcherTest {
     }
 
     @Nested
-    class DispatchContextTests {
+    class DispatchContextTests
+    {
 
         @Test
-        void testSetAndGetPendingInvokeDynamic() {
+        void testSetAndGetPendingInvokeDynamic()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(1, "test", "()V", 5);
             context.setPendingInvokeDynamic(info);
             assertSame(info, context.getPendingInvokeDynamic());
         }
 
         @Test
-        void testPendingInvokeDynamicInitiallyNull() {
+        void testPendingInvokeDynamicInitiallyNull()
+        {
             assertNull(context.getPendingInvokeDynamic());
         }
 
         @Test
-        void testPendingInvokeDynamicCanBeOverwritten() {
+        void testPendingInvokeDynamicCanBeOverwritten()
+        {
             InvokeDynamicInfo info1 = new InvokeDynamicInfo(1, "test1", "()V", 5);
             InvokeDynamicInfo info2 = new InvokeDynamicInfo(2, "test2", "()I", 10);
 
@@ -346,10 +391,12 @@ class InvokeDynamicDispatcherTest {
     }
 
     @Nested
-    class BytecodeEngineInvokeDynamicTests {
+    class BytecodeEngineInvokeDynamicTests
+    {
 
         @Test
-        void testEngineHandlesInvokeDynamic() {
+        void testEngineHandlesInvokeDynamic()
+        {
             SimpleHeapManager heap = new SimpleHeapManager();
             ClassResolver resolver = new ClassResolver(mock(ClassPool.class));
             BytecodeContext ctx = new BytecodeContext.Builder()
@@ -363,7 +410,8 @@ class InvokeDynamicDispatcherTest {
         }
     }
 
-    private StackFrame createMockFrame(Instruction instruction) {
+    private StackFrame createMockFrame(Instruction instruction)
+    {
         StackFrame mockFrame = mock(StackFrame.class);
         when(mockFrame.getStack()).thenReturn(stack);
         when(mockFrame.getLocals()).thenReturn(locals);
@@ -372,7 +420,8 @@ class InvokeDynamicDispatcherTest {
         return mockFrame;
     }
 
-    private static class TestDispatchContext implements DispatchContext {
+    private static class TestDispatchContext implements DispatchContext
+    {
         private MethodInfo pendingInvoke;
         private FieldInfo pendingFieldAccess;
         private String pendingNewClass;
@@ -381,27 +430,32 @@ class InvokeDynamicDispatcherTest {
         private InvokeDynamicInfo pendingInvokeDynamic;
 
         @Override
-        public int resolveIntConstant(int index) {
+        public int resolveIntConstant(int index)
+        {
             return 0;
         }
 
         @Override
-        public long resolveLongConstant(int index) {
+        public long resolveLongConstant(int index)
+        {
             return 0L;
         }
 
         @Override
-        public float resolveFloatConstant(int index) {
+        public float resolveFloatConstant(int index)
+        {
             return 0.0f;
         }
 
         @Override
-        public double resolveDoubleConstant(int index) {
+        public double resolveDoubleConstant(int index)
+        {
             return 0.0;
         }
 
         @Override
-        public String resolveStringConstant(int index) {
+        public String resolveStringConstant(int index)
+        {
             return "";
         }
 
@@ -409,126 +463,152 @@ class InvokeDynamicDispatcherTest {
         public ObjectInstance resolveStringObject(int index) { return null; }
 
         @Override
-        public ObjectInstance resolveClassConstant(int index) {
+        public ObjectInstance resolveClassConstant(int index)
+        {
             return null;
         }
 
         @Override
-        public ArrayInstance getArray(ObjectInstance ref) {
+        public ArrayInstance getArray(ObjectInstance ref)
+        {
             return null;
         }
 
         @Override
-        public void checkArrayBounds(ArrayInstance array, int index) {
+        public void checkArrayBounds(ArrayInstance array, int index)
+        {
         }
 
         @Override
-        public void checkNullReference(ObjectInstance ref, String operation) {
+        public void checkNullReference(ObjectInstance ref, String operation)
+        {
         }
 
         @Override
-        public FieldInfo resolveField(int cpIndex) {
+        public FieldInfo resolveField(int cpIndex)
+        {
             return new FieldInfo("Owner", "field", "I", false);
         }
 
         @Override
-        public MethodInfo resolveMethod(int cpIndex) {
+        public MethodInfo resolveMethod(int cpIndex)
+        {
             return new MethodInfo("Owner", "method", "()V", false, false);
         }
 
         @Override
-        public boolean isInstanceOf(ObjectInstance obj, String className) {
+        public boolean isInstanceOf(ObjectInstance obj, String className)
+        {
             return false;
         }
 
         @Override
-        public void checkCast(ObjectInstance obj, String className) {
+        public void checkCast(ObjectInstance obj, String className)
+        {
         }
 
         @Override
-        public MethodInfo getPendingInvoke() {
+        public MethodInfo getPendingInvoke()
+        {
             return pendingInvoke;
         }
 
         @Override
-        public FieldInfo getPendingFieldAccess() {
+        public FieldInfo getPendingFieldAccess()
+        {
             return pendingFieldAccess;
         }
 
         @Override
-        public String getPendingNewClass() {
+        public String getPendingNewClass()
+        {
             return pendingNewClass;
         }
 
         @Override
-        public int[] getPendingArrayDimensions() {
+        public int[] getPendingArrayDimensions()
+        {
             return pendingArrayDimensions;
         }
 
         @Override
-        public void setPendingInvoke(MethodInfo methodInfo) {
+        public void setPendingInvoke(MethodInfo methodInfo)
+        {
             this.pendingInvoke = methodInfo;
         }
 
         @Override
-        public void setPendingFieldAccess(FieldInfo fieldInfo) {
+        public void setPendingFieldAccess(FieldInfo fieldInfo)
+        {
             this.pendingFieldAccess = fieldInfo;
         }
 
         @Override
-        public void setPendingNewClass(String className) {
+        public void setPendingNewClass(String className)
+        {
             this.pendingNewClass = className;
         }
 
         @Override
-        public void setPendingArrayDimensions(int[] dimensions) {
+        public void setPendingArrayDimensions(int[] dimensions)
+        {
             this.pendingArrayDimensions = dimensions;
         }
 
         @Override
-        public void setBranchTarget(int target) {
+        public void setBranchTarget(int target)
+        {
             this.branchTarget = target;
         }
 
         @Override
-        public int getBranchTarget() {
+        public int getBranchTarget()
+        {
             return branchTarget;
         }
 
         @Override
-        public void setPendingInvokeDynamic(InvokeDynamicInfo info) {
+        public void setPendingInvokeDynamic(InvokeDynamicInfo info)
+        {
             this.pendingInvokeDynamic = info;
         }
 
         @Override
-        public InvokeDynamicInfo getPendingInvokeDynamic() {
+        public InvokeDynamicInfo getPendingInvokeDynamic()
+        {
             return pendingInvokeDynamic;
         }
 
         @Override
-        public void setPendingMethodHandle(MethodHandleInfo info) {
+        public void setPendingMethodHandle(MethodHandleInfo info)
+        {
         }
 
         @Override
-        public MethodHandleInfo getPendingMethodHandle() {
+        public MethodHandleInfo getPendingMethodHandle()
+        {
             return null;
         }
 
         @Override
-        public void setPendingMethodType(MethodTypeInfo info) {
+        public void setPendingMethodType(MethodTypeInfo info)
+        {
         }
 
         @Override
-        public MethodTypeInfo getPendingMethodType() {
+        public MethodTypeInfo getPendingMethodType()
+        {
             return null;
         }
 
         @Override
-        public void setPendingConstantDynamic(ConstantDynamicInfo info) {
+        public void setPendingConstantDynamic(ConstantDynamicInfo info)
+        {
         }
 
         @Override
-        public ConstantDynamicInfo getPendingConstantDynamic() {
+        public ConstantDynamicInfo getPendingConstantDynamic()
+        {
             return null;
         }
     }

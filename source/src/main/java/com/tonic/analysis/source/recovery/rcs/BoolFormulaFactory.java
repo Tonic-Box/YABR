@@ -8,43 +8,83 @@ package com.tonic.analysis.source.recovery.rcs;
  * whose "at most one" constraint is folded into a domain formula, so reasoning that is only sound under
  * that domain (a switch's default guard, dead-combination pruning) uses the {@code *Given} variants.
  *
- * <p>Atoms are opaque non-negative integer indices here; mapping an index to a concrete branch/switch
+ * Atoms are opaque non-negative integer indices here; mapping an index to a concrete branch/switch
  * predicate (and to a readable leaf {@code Expression}) is the caller's concern.
  */
-public final class BoolFormulaFactory {
+public final class BoolFormulaFactory
+{
 
     private final BddFactory bdds = new BddFactory();
     private final NnfFactory nnfs = new NnfFactory();
 
-    /** The constant true formula. */
+    /**
+     * The constant true formula.
+     */
     public final BoolFormula truth;
 
-    /** The constant false formula. */
+    /**
+     * The constant false formula.
+     */
     public final BoolFormula falsity;
 
-    /** Conjunction of every registered mutual-exclusion group's "at most one" constraint. */
+    /**
+     * Conjunction of every registered mutual-exclusion group's "at most one" constraint.
+     */
     private Bdd domain;
 
-    public BoolFormulaFactory() {
+    /**
+     * Creates an engine with fresh BDD and NNF factories and an unconstrained domain.
+     */
+    public BoolFormulaFactory()
+    {
         this.truth = new BoolFormula(bdds.one, nnfs.trueNode);
         this.falsity = new BoolFormula(bdds.zero, nnfs.falseNode);
         this.domain = bdds.one;
     }
 
-    /** The formula "atom {@code var} is true". */
-    public BoolFormula atom(int var) {
+    /**
+     * Builds the positive-literal formula for one atom.
+     *
+     * @param var non-negative atom index
+     * @return the formula asserting that atom
+     */
+    public BoolFormula atom(int var)
+    {
         return new BoolFormula(bdds.atom(var), nnfs.leaf(var, false));
     }
 
-    public BoolFormula and(BoolFormula a, BoolFormula b) {
+    /**
+     * Conjoins two formulas in both the BDD and NNF layers.
+     *
+     * @param a the left operand
+     * @param b the right operand
+     * @return the conjunction, collapsed to a constant when the BDD proves it constant
+     */
+    public BoolFormula and(BoolFormula a, BoolFormula b)
+    {
         return wrap(bdds.and(a.bdd, b.bdd), nnfs.and(a.nnf, b.nnf));
     }
 
-    public BoolFormula or(BoolFormula a, BoolFormula b) {
+    /**
+     * Disjoins two formulas in both the BDD and NNF layers.
+     *
+     * @param a the left operand
+     * @param b the right operand
+     * @return the disjunction, collapsed to a constant when the BDD proves it constant
+     */
+    public BoolFormula or(BoolFormula a, BoolFormula b)
+    {
         return wrap(bdds.or(a.bdd, b.bdd), nnfs.or(a.nnf, b.nnf));
     }
 
-    public BoolFormula not(BoolFormula a) {
+    /**
+     * Negates a formula in both the BDD and NNF layers.
+     *
+     * @param a the operand
+     * @return the negation, collapsed to a constant when the BDD proves it constant
+     */
+    public BoolFormula not(BoolFormula a)
+    {
         return wrap(bdds.not(a.bdd), nnfs.not(a.nnf));
     }
 
@@ -52,72 +92,149 @@ public final class BoolFormulaFactory {
      * Pairs a BDD with an NNF, collapsing to the shared constant formula when the BDD has proven the
      * result constant - that keeps the emitted NNF from carrying a redundant tautology/contradiction.
      */
-    private BoolFormula wrap(Bdd bdd, Nnf nnf) {
-        if (bdd == bdds.one) {
+    private BoolFormula wrap(Bdd bdd, Nnf nnf)
+    {
+        if (bdd == bdds.one)
+        {
             return truth;
         }
-        if (bdd == bdds.zero) {
+        if (bdd == bdds.zero)
+        {
             return falsity;
         }
         return new BoolFormula(bdd, nnf);
     }
 
-    /** True iff the two formulas denote the same boolean function (unconditionally). */
-    public boolean equivalent(BoolFormula a, BoolFormula b) {
+    /**
+     * Tests equality of the two canonical BDDs, ignoring the registered domains.
+     *
+     * @param a the left operand
+     * @param b the right operand
+     * @return true if both denote the same boolean function
+     */
+    public boolean equivalent(BoolFormula a, BoolFormula b)
+    {
         return a.bdd == b.bdd;
     }
 
-    public boolean isTautology(BoolFormula a) {
+    /**
+     * Tests whether a formula holds under every assignment, ignoring the registered domains.
+     *
+     * @param a the formula
+     * @return true if the formula is unconditionally true
+     */
+    public boolean isTautology(BoolFormula a)
+    {
         return a.bdd == bdds.one;
     }
 
-    public boolean isSatisfiable(BoolFormula a) {
+    /**
+     * Tests whether a formula holds under some assignment, ignoring the registered domains.
+     *
+     * @param a the formula
+     * @return true if the formula is not unconditionally false
+     */
+    public boolean isSatisfiable(BoolFormula a)
+    {
         return a.bdd != bdds.zero;
     }
 
-    public boolean implies(BoolFormula a, BoolFormula b) {
+    /**
+     * Tests entailment, ignoring the registered domains.
+     *
+     * @param a the antecedent
+     * @param b the consequent
+     * @return true if every assignment satisfying a satisfies b
+     */
+    public boolean implies(BoolFormula a, BoolFormula b)
+    {
         return bdds.implies(a.bdd, b.bdd);
     }
 
-    /** Registers {@code atoms} as the mutually-exclusive case atoms of one switch selector. */
-    public void addMutualExclusion(int[] atoms) {
+    /**
+     * Folds one switch selector's "at most one case holds" constraint into the domain.
+     *
+     * @param atoms the selector's case atom indices
+     */
+    public void addMutualExclusion(int[] atoms)
+    {
         domain = bdds.and(domain, bdds.atMostOne(atoms));
     }
 
-    /** True iff {@code a} and {@code b} agree on every assignment allowed by the registered domains. */
-    public boolean equivalentGiven(BoolFormula a, BoolFormula b) {
+    /**
+     * Tests equivalence restricted to the assignments the registered domains allow.
+     *
+     * @param a the left operand
+     * @param b the right operand
+     * @return true if both agree on every domain-consistent assignment
+     */
+    public boolean equivalentGiven(BoolFormula a, BoolFormula b)
+    {
         return bdds.and(domain, a.bdd) == bdds.and(domain, b.bdd);
     }
 
-    /** True iff some domain-consistent assignment satisfies {@code a}. */
-    public boolean satisfiableGiven(BoolFormula a) {
+    /**
+     * Tests satisfiability restricted to the assignments the registered domains allow.
+     *
+     * @param a the formula
+     * @return true if some domain-consistent assignment satisfies it
+     */
+    public boolean satisfiableGiven(BoolFormula a)
+    {
         return bdds.and(domain, a.bdd) != bdds.zero;
     }
 
-    /** True once the BDD node budget was exceeded; callers should emit from the NNF layer only. */
-    public boolean overflowed() {
+    /**
+     * Reports whether the BDD node budget was exceeded, after which callers must emit from the
+     * NNF layer only.
+     *
+     * @return true once the budget was exceeded
+     */
+    public boolean overflowed()
+    {
         return bdds.overflowed();
     }
 
-    /** The canonical-true terminal, for callers walking a formula's BDD to emit minimized conditions. */
-    Bdd bddOne() {
+    /**
+     * The canonical-true terminal, for callers walking a formula's BDD to emit minimized conditions.
+     */
+    Bdd bddOne()
+    {
         return bdds.one;
     }
 
-    /** The canonical-false terminal. */
-    Bdd bddZero() {
+    /**
+     * The canonical-false terminal.
+     */
+    Bdd bddZero()
+    {
         return bdds.zero;
     }
 
-    /** Evaluates the syntactic (NNF) layer under an assignment indexed by atom. */
-    public boolean evalSyntactic(BoolFormula f, boolean[] assignment) {
+    /**
+     * Evaluates the syntactic NNF layer.
+     *
+     * @param f the formula
+     * @param assignment truth values indexed by atom
+     * @return the value of the NNF under that assignment
+     */
+    public boolean evalSyntactic(BoolFormula f, boolean[] assignment)
+    {
         return NnfFactory.eval(f.nnf, assignment);
     }
 
-    /** Evaluates the canonical (BDD) layer under an assignment indexed by atom. */
-    public boolean evalCanonical(BoolFormula f, boolean[] assignment) {
+    /**
+     * Evaluates the canonical BDD layer by walking from its root to a terminal.
+     *
+     * @param f the formula
+     * @param assignment truth values indexed by atom
+     * @return the value of the BDD under that assignment
+     */
+    public boolean evalCanonical(BoolFormula f, boolean[] assignment)
+    {
         Bdd b = f.bdd;
-        while (!b.isTerminal()) {
+        while (!b.isTerminal())
+        {
             b = assignment[b.var] ? b.high : b.low;
         }
         return b == bdds.one;

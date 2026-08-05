@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * A differential EXECUTION gate for the recompile (decompile → recompile) round trip. The other round-trip gates
+ * A differential EXECUTION gate for the recompile (decompile -> recompile) round trip. The other round-trip gates
  * are decompile-only or re-decompile the recompiled bytecode - they never load and RUN it, so a class that
  * recompiles to bytecode that re-decompiles to the same source but throws {@code NoSuchMethodError},
  * {@code IncompatibleClassChangeError}, or {@code ClassFormatError} at load/call time passes them silently. Each
@@ -30,10 +30,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * lacks the JDK: a subtype argument to an interface/Object parameter, a call to a JDK interface method, a
  * constructor taking a supertype, a generic local, plus ordinary control flow, arithmetic, strings, and arrays.
  */
-class RecompileExecutionGateTest {
+class RecompileExecutionGateTest
+{
 
     private static final Map<String, String> FIXTURES = new LinkedHashMap<>();
-    static {
+    static
+    {
         FIXTURES.put("GateCollections",
                 "import java.util.*;\n"
                 + "public class GateCollections {\n"
@@ -152,11 +154,13 @@ class RecompileExecutionGateTest {
     private static Path classesDir;
 
     @BeforeAll
-    static void compileFixtures() throws Exception {
+    static void compileFixtures() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         classesDir = Files.createTempDirectory("recompile-exec-gate");
-        for (Map.Entry<String, String> e : FIXTURES.entrySet()) {
+        for (Map.Entry<String, String> e : FIXTURES.entrySet())
+        {
             Files.writeString(classesDir.resolve(e.getKey() + ".java"), e.getValue());
         }
         String[] sources = FIXTURES.keySet().stream()
@@ -170,13 +174,15 @@ class RecompileExecutionGateTest {
         assumeTrue(compiler.run(null, null, null, args) == 0, "fixtures compiled");
     }
 
-    static java.util.Set<String> fixtureNames() {
+    static java.util.Set<String> fixtureNames()
+    {
         return FIXTURES.keySet();
     }
 
     @ParameterizedTest
     @MethodSource("fixtureNames")
-    void recompiledBehavesLikeOriginal(String name) throws Exception {
+    void recompiledBehavesLikeOriginal(String name) throws Exception
+    {
         byte[] original = Files.readAllBytes(classesDir.resolve(name + ".class"));
         Object originalResult = runBytes(name, original);
 
@@ -195,11 +201,15 @@ class RecompileExecutionGateTest {
      * own verification and execution (not YABR's pool-dependent verifier) is the ground truth: it catches a
      * VerifyError or ClassFormatError at load, and a NoSuchMethodError or IncompatibleClassChangeError at call.
      */
-    private static Object runBytes(String name, byte[] bytes) throws Exception {
-        ClassLoader loader = new ClassLoader(RecompileExecutionGateTest.class.getClassLoader()) {
+    private static Object runBytes(String name, byte[] bytes) throws Exception
+    {
+        ClassLoader loader = new ClassLoader(RecompileExecutionGateTest.class.getClassLoader())
+        {
             @Override
-            protected Class<?> findClass(String n) throws ClassNotFoundException {
-                if (n.equals(name)) {
+            protected Class<?> findClass(String n) throws ClassNotFoundException
+            {
+                if (n.equals(name))
+                {
                     return defineClass(n, bytes, 0, bytes.length);
                 }
                 throw new ClassNotFoundException(n);

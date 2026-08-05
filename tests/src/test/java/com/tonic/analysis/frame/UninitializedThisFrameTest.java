@@ -13,10 +13,12 @@ import org.junit.jupiter.api.Test;
  * field store after an if). That makes the field store fail verification with the superclass not
  * assignable to the subclass.
  */
-public class UninitializedThisFrameTest {
+public class UninitializedThisFrameTest
+{
 
     @Test
-    public void uninitializedThisFrameUsesCurrentClass() throws Exception {
+    public void uninitializedThisFrameUsesCurrentClass() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("UninitThisRepro");
         // Regenerate the StackMapTable, then force the JVM verifier over the whole class. Before the fix
         // the constructor's merge frame declares this as java/lang/Object (the super() owner) and the

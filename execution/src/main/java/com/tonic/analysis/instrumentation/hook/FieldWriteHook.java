@@ -11,7 +11,8 @@ import java.util.List;
  * Configuration for field write instrumentation.
  * Hooks are called before PUTFIELD/PUTSTATIC instructions.
  */
-public class FieldWriteHook implements Hook {
+public class FieldWriteHook implements Hook
+{
 
     private final HookDescriptor hookDescriptor;
     private final List<InstrumentationFilter> filters;
@@ -25,7 +26,8 @@ public class FieldWriteHook implements Hook {
     private final boolean instrumentStatic;
     private final boolean instrumentInstance;
 
-    private FieldWriteHook(Builder builder) {
+    private FieldWriteHook(Builder builder)
+    {
         this.hookDescriptor = builder.hookDescriptor;
         this.filters = builder.filters;
         this.enabled = builder.enabled;
@@ -39,76 +41,128 @@ public class FieldWriteHook implements Hook {
         this.instrumentInstance = builder.instrumentInstance;
     }
 
-    public HookDescriptor getHookDescriptor() {
+    /**
+     * @return the hook descriptor
+     */
+    public HookDescriptor getHookDescriptor()
+    {
         return hookDescriptor;
     }
 
-    public List<InstrumentationFilter> getFilters() {
+    /**
+     * @return the filters
+     */
+    public List<InstrumentationFilter> getFilters()
+    {
         return filters;
     }
 
-    public boolean isEnabled() {
+    /**
+     * @return whether enabled
+     */
+    public boolean isEnabled()
+    {
         return enabled;
     }
 
-    public int getPriority() {
+    /**
+     * @return the priority
+     */
+    public int getPriority()
+    {
         return priority;
     }
 
-    /** Returns whether the field's owning object (null for static fields) is passed to the hook. */
-    public boolean isPassOwner() {
+    /**
+     * @return whether the field's owning object (null for static fields) is passed to the hook
+     */
+    public boolean isPassOwner()
+    {
         return passOwner;
     }
 
-    /** Returns whether the field name is passed to the hook. */
-    public boolean isPassFieldName() {
+    /**
+     * @return whether the field name is passed to the hook
+     */
+    public boolean isPassFieldName()
+    {
         return passFieldName;
     }
 
-    /** Returns whether the new value being written (boxed if primitive) is passed to the hook. */
-    public boolean isPassNewValue() {
+    /**
+     * @return whether the new value being written (boxed if primitive) is passed to the hook
+     */
+    public boolean isPassNewValue()
+    {
         return passNewValue;
     }
 
-    /** Returns whether the old value (requires an additional load) is passed to the hook. */
-    public boolean isPassOldValue() {
+    /**
+     * @return whether the old value (requires an additional load) is passed to the hook
+     */
+    public boolean isPassOldValue()
+    {
         return passOldValue;
     }
 
-    /** Returns whether the hook can replace the value being written (by returning a new one). */
-    public boolean isCanModifyValue() {
+    /**
+     * @return whether the hook can replace the value being written (by returning a new one)
+     */
+    public boolean isCanModifyValue()
+    {
         return canModifyValue;
     }
 
-    /** Returns whether static field writes are instrumented. */
-    public boolean isInstrumentStatic() {
+    /**
+     * @return whether static field writes are instrumented
+     */
+    public boolean isInstrumentStatic()
+    {
         return instrumentStatic;
     }
 
-    /** Returns whether instance field writes are instrumented. */
-    public boolean isInstrumentInstance() {
+    /**
+     * @return whether instance field writes are instrumented
+     */
+    public boolean isInstrumentInstance()
+    {
         return instrumentInstance;
     }
 
     @Override
-    public InstrumentationTarget getTarget() {
+    public InstrumentationTarget getTarget()
+    {
         return InstrumentationTarget.FIELD_WRITE;
     }
 
     /**
-     * Creates a simple field write hook.
+     * Creates a hook with default settings that calls a static method.
+     * @param hookOwner internal name of the class declaring the hook method
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the configured hook
      */
-    public static FieldWriteHook simple(String hookOwner, String hookName, String hookDescriptor) {
+    public static FieldWriteHook simple(String hookOwner, String hookName, String hookDescriptor)
+    {
         return FieldWriteHook.builder()
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Builder for {@link FieldWriteHook}, defaulting to enabled, priority 100, no values
+     * passed, and both static and instance writes instrumented.
+     */
+    public static class Builder
+    {
         private HookDescriptor hookDescriptor;
         private List<InstrumentationFilter> filters = new ArrayList<>();
         private boolean enabled = true;
@@ -121,62 +175,132 @@ public class FieldWriteHook implements Hook {
         private boolean instrumentStatic = true;
         private boolean instrumentInstance = true;
 
-        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+        /**
+         * Sets the method the instrumentation will call.
+         * @param hookDescriptor the hook method descriptor
+         * @return this builder
+         */
+        public Builder hookDescriptor(HookDescriptor hookDescriptor)
+        {
             this.hookDescriptor = hookDescriptor;
             return this;
         }
 
-        public Builder filters(List<InstrumentationFilter> filters) {
+        /**
+         * Replaces the filters deciding which sites are instrumented.
+         * @param filters the filter list
+         * @return this builder
+         */
+        public Builder filters(List<InstrumentationFilter> filters)
+        {
             this.filters = filters;
             return this;
         }
 
-        public Builder enabled(boolean enabled) {
+        /**
+         * Sets whether the hook is applied at all.
+         * @param enabled whether the hook is active
+         * @return this builder
+         */
+        public Builder enabled(boolean enabled)
+        {
             this.enabled = enabled;
             return this;
         }
 
-        public Builder priority(int priority) {
+        /**
+         * Sets the ordering weight against other hooks on the same site.
+         * @param priority the priority value
+         * @return this builder
+         */
+        public Builder priority(int priority)
+        {
             this.priority = priority;
             return this;
         }
 
-        public Builder passOwner(boolean passOwner) {
+        /**
+         * Sets whether the owning object is passed to the hook.
+         * @param passOwner whether to pass the owner
+         * @return this builder
+         */
+        public Builder passOwner(boolean passOwner)
+        {
             this.passOwner = passOwner;
             return this;
         }
 
-        public Builder passFieldName(boolean passFieldName) {
+        /**
+         * Sets whether the field name is passed to the hook.
+         * @param passFieldName whether to pass the field name
+         * @return this builder
+         */
+        public Builder passFieldName(boolean passFieldName)
+        {
             this.passFieldName = passFieldName;
             return this;
         }
 
-        public Builder passNewValue(boolean passNewValue) {
+        /**
+         * Sets whether the value being written is passed to the hook.
+         * @param passNewValue whether to pass the new value
+         * @return this builder
+         */
+        public Builder passNewValue(boolean passNewValue)
+        {
             this.passNewValue = passNewValue;
             return this;
         }
 
-        public Builder passOldValue(boolean passOldValue) {
+        /**
+         * Sets whether the previous field value is read and passed to the hook.
+         * @param passOldValue whether to pass the old value
+         * @return this builder
+         */
+        public Builder passOldValue(boolean passOldValue)
+        {
             this.passOldValue = passOldValue;
             return this;
         }
 
-        public Builder canModifyValue(boolean canModifyValue) {
+        /**
+         * Sets whether the hook's return value replaces the value written.
+         * @param canModifyValue whether the hook may substitute a value
+         * @return this builder
+         */
+        public Builder canModifyValue(boolean canModifyValue)
+        {
             this.canModifyValue = canModifyValue;
             return this;
         }
 
-        public Builder instrumentStatic(boolean instrumentStatic) {
+        /**
+         * Sets whether PUTSTATIC sites are instrumented.
+         * @param instrumentStatic whether to instrument static writes
+         * @return this builder
+         */
+        public Builder instrumentStatic(boolean instrumentStatic)
+        {
             this.instrumentStatic = instrumentStatic;
             return this;
         }
 
-        public Builder instrumentInstance(boolean instrumentInstance) {
+        /**
+         * Sets whether PUTFIELD sites are instrumented.
+         * @param instrumentInstance whether to instrument instance writes
+         * @return this builder
+         */
+        public Builder instrumentInstance(boolean instrumentInstance)
+        {
             this.instrumentInstance = instrumentInstance;
             return this;
         }
 
-        public FieldWriteHook build() {
+        /**
+         * @return the configured hook
+         */
+        public FieldWriteHook build()
+        {
             return new FieldWriteHook(this);
         }
     }

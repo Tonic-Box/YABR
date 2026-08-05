@@ -9,9 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Conditional branch instruction.
+ * A conditional branch comparing one or two operands and selecting a true or false target block.
  */
-public class BranchInstruction extends IRInstruction {
+public class BranchInstruction extends IRInstruction
+{
 
     private final CompareOp condition;
     private Value left;
@@ -19,7 +20,16 @@ public class BranchInstruction extends IRInstruction {
     private IRBlock trueTarget;
     private IRBlock falseTarget;
 
-    public BranchInstruction(CompareOp condition, Value left, Value right, IRBlock trueTarget, IRBlock falseTarget) {
+    /**
+     * Creates a two-operand comparison branch and registers uses of its SSA operands.
+     * @param condition the comparison to evaluate
+     * @param left the left operand
+     * @param right the right operand
+     * @param trueTarget the block taken when the comparison holds
+     * @param falseTarget the block taken otherwise
+     */
+    public BranchInstruction(CompareOp condition, Value left, Value right, IRBlock trueTarget, IRBlock falseTarget)
+    {
         super();
         this.condition = condition;
         this.left = left;
@@ -29,51 +39,91 @@ public class BranchInstruction extends IRInstruction {
         registerUses();
     }
 
-    public BranchInstruction(CompareOp condition, Value operand, IRBlock trueTarget, IRBlock falseTarget) {
+    /**
+     * Creates a single-operand branch comparing against an implicit zero or null.
+     * @param condition the comparison to evaluate
+     * @param operand the operand to test
+     * @param trueTarget the block taken when the comparison holds
+     * @param falseTarget the block taken otherwise
+     */
+    public BranchInstruction(CompareOp condition, Value operand, IRBlock trueTarget, IRBlock falseTarget)
+    {
         this(condition, operand, null, trueTarget, falseTarget);
     }
 
-    private void registerUses() {
-        if (left instanceof SSAValue) {
+    private void registerUses()
+    {
+        if (left instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) left;
             ssa.addUse(this);
         }
-        if (right instanceof SSAValue) {
+        if (right instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) right;
             ssa.addUse(this);
         }
     }
 
-    public CompareOp getCondition() {
+    /**
+     * @return the condition
+     */
+    public CompareOp getCondition()
+    {
         return condition;
     }
 
-    public Value getLeft() {
+    /**
+     * @return the left
+     */
+    public Value getLeft()
+    {
         return left;
     }
 
-    public Value getRight() {
+    /**
+     * @return the right
+     */
+    public Value getRight()
+    {
         return right;
     }
 
-    public IRBlock getTrueTarget() {
+    /**
+     * @return the true target
+     */
+    public IRBlock getTrueTarget()
+    {
         return trueTarget;
     }
 
-    public void setTrueTarget(IRBlock trueTarget) {
+    /**
+     * @param trueTarget the block taken when the comparison holds
+     */
+    public void setTrueTarget(IRBlock trueTarget)
+    {
         this.trueTarget = trueTarget;
     }
 
-    public IRBlock getFalseTarget() {
+    /**
+     * @return the false target
+     */
+    public IRBlock getFalseTarget()
+    {
         return falseTarget;
     }
 
-    public void setFalseTarget(IRBlock falseTarget) {
+    /**
+     * @param falseTarget the block taken when the comparison fails
+     */
+    public void setFalseTarget(IRBlock falseTarget)
+    {
         this.falseTarget = falseTarget;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         List<Value> ops = new ArrayList<>();
         ops.add(left);
         if (right != null) ops.add(right);
@@ -81,25 +131,32 @@ public class BranchInstruction extends IRInstruction {
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (left != null && left.equals(oldValue)) {
-            if (left instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (left != null && left.equals(oldValue))
+        {
+            if (left instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) left;
                 ssa.removeUse(this);
             }
             left = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) newValue;
                 ssa.addUse(this);
             }
         }
-        if (right != null && right.equals(oldValue)) {
-            if (right instanceof SSAValue) {
+        if (right != null && right.equals(oldValue))
+        {
+            if (right instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) right;
                 ssa.removeUse(this);
             }
             right = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) newValue;
                 ssa.addUse(this);
             }
@@ -107,29 +164,36 @@ public class BranchInstruction extends IRInstruction {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitBranch(this);
     }
 
     @Override
-    public boolean isTerminator() {
+    public boolean isTerminator()
+    {
         return true;
     }
 
     @Override
-    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget) {
-        if (trueTarget == oldTarget) {
+    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget)
+    {
+        if (trueTarget == oldTarget)
+        {
             trueTarget = newTarget;
         }
-        if (falseTarget == oldTarget) {
+        if (falseTarget == oldTarget)
+        {
             falseTarget = newTarget;
         }
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
         if (newOperands.isEmpty()) return null;
-        if (right == null) {
+        if (right == null)
+        {
             return new BranchInstruction(condition, newOperands.get(0), trueTarget, falseTarget);
         }
         if (newOperands.size() < 2) return null;
@@ -137,8 +201,10 @@ public class BranchInstruction extends IRInstruction {
     }
 
     @Override
-    public String toString() {
-        if (right == null) {
+    public String toString()
+    {
+        if (right == null)
+        {
             return "if " + condition.name().toLowerCase() + " " + left + " goto " + trueTarget.getName() + " else " + falseTarget.getName();
         }
         return "if " + left + " " + condition.name().toLowerCase() + " " + right + " goto " + trueTarget.getName() + " else " + falseTarget.getName();

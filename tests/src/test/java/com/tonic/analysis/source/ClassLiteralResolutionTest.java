@@ -14,15 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * {@code NoClassDefFoundError}/{@code ClassNotFoundException} when it resolved that class constant. Both constructs
  * below resolve the class constant at run time, so each reproduces the failure pre-fix and passes post-fix.
  */
-public class ClassLiteralResolutionTest {
+public class ClassLiteralResolutionTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void ownClassLiteralResolvesToFullyQualifiedName() throws Exception {
+    void ownClassLiteralResolvesToFullyQualifiedName() throws Exception
+    {
         String source =
             "package test;\n" +
             "public class Demo {\n" +
@@ -37,7 +40,8 @@ public class ClassLiteralResolutionTest {
     }
 
     @Test
-    void ownInstanceOfResolvesToFullyQualifiedName() throws Exception {
+    void ownInstanceOfResolvesToFullyQualifiedName() throws Exception
+    {
         String source =
             "package test;\n" +
             "public class InstDemo {\n" +

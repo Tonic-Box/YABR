@@ -19,49 +19,62 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Simplifies control flow in AST to reduce nesting depth and improve readability.
  * Transformations:
- * 1. Empty if-block inversion: if(x){} else{body} -> if(!x){body}
- * 2. AND-chain merging: if(a){if(b){body}} -> if(a && b){body}
- * 3. Guard clause conversion: if(x){long} else{return} -> if(!x)return; long
- * 4. If-else to ternary: if(c){x=0}else{x=1} -> x=c?0:1
- * 5. Sequential guard merging: if(a)ret; if(b)ret; -> if(a||b)ret;
- * 6. Boolean flag inlining: bool f=x; if(!f)... -> if(!x)...
- * 7. Nested negated guard flattening: if(!a){if(!b){body}} ret; -> if(a||b){ret} body
+ * 1. Empty if-block inversion: if(x){} else{body} -&gt; if(!x){body}
+ * 2. AND-chain merging: if(a){if(b){body}} -&gt; if(a &amp;&amp; b){body}
+ * 3. Guard clause conversion: if(x){long} else{return} -&gt; if(!x)return; long
+ * 4. If-else to ternary: if(c){x=0}else{x=1} -&gt; x=c?0:1
+ * 5. Sequential guard merging: if(a)ret; if(b)ret; -&gt; if(a||b)ret;
+ * 6. Boolean flag inlining: bool f=x; if(!f)... -&gt; if(!x)...
+ * 7. Nested negated guard flattening: if(!a){if(!b){body}} ret; -&gt; if(a||b){ret} body
  */
-public class ControlFlowSimplifier implements ASTTransform {
+public class ControlFlowSimplifier implements ASTTransform
+{
 
-    /** The method body of the in-progress top-level {@code transform} call; whole-method passes read it. */
+    /**
+     * The method body of the in-progress top-level {@code transform} call; whole-method passes read it.
+     */
     private BlockStmt methodRoot;
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "ControlFlowSimplifier";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         boolean top = methodRoot == null;
-        if (top) {
+        if (top)
+        {
             methodRoot = block;
         }
-        try {
+        try
+        {
             return transformBlock(block);
-        } finally {
-            if (top) {
+        }
+        finally
+        {
+            if (top)
+            {
                 methodRoot = null;
             }
         }
     }
 
-    private boolean transformBlock(BlockStmt block) {
+    private boolean transformBlock(BlockStmt block)
+    {
         boolean changed = false;
         List<Statement> stmts = block.getStatements();
 
-        for (Statement stmt : stmts) {
+        for (Statement stmt : stmts)
+        {
             changed |= recurseInto(stmt);
         }
 
         boolean passChanged;
-        do {
+        do
+        {
             passChanged = removeUnreachableStatements(stmts);
             passChanged |= removeRedundantStatements(stmts);
             passChanged |= moveDeclarationsToFirstUse(stmts);
@@ -91,14 +104,17 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         changed |= mergeGuardChainIntoSharedExit(stmts);
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
 
-            if (stmt instanceof IfStmt) {
+            if (stmt instanceof IfStmt)
+            {
                 IfStmt ifStmt = (IfStmt) stmt;
 
                 Statement replacement = tryConvertIfElseToAssignment(ifStmt);
-                if (replacement != null) {
+                if (replacement != null)
+                {
                     Locations.copy(ifStmt, replacement);
                     stmts.set(i, replacement);
                     changed = true;
@@ -117,15 +133,19 @@ public class ControlFlowSimplifier implements ASTTransform {
      * dynamic invocation, object/array creation, assignment, or pre/post increment-decrement).
      * Comparisons and other pure expressions are not statement expressions.
      */
-    private static boolean isStatementExpression(Expression e) {
+    private static boolean isStatementExpression(Expression e)
+    {
         if (e instanceof MethodCallExpr || e instanceof NewExpr
-                || e instanceof NewArrayExpr || e instanceof InvokeDynamicExpr) {
+                || e instanceof NewArrayExpr || e instanceof InvokeDynamicExpr)
+        {
             return true;
         }
-        if (e instanceof BinaryExpr) {
+        if (e instanceof BinaryExpr)
+        {
             return ((BinaryExpr) e).getOperator().isAssignment();
         }
-        if (e instanceof UnaryExpr) {
+        if (e instanceof UnaryExpr)
+        {
             UnaryOperator op = ((UnaryExpr) e).getOperator();
             return op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
                     || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC;
@@ -133,7 +153,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    private boolean transformIf(IfStmt ifStmt, List<Statement> parentList, int index) {
+    private boolean transformIf(IfStmt ifStmt, List<Statement> parentList, int index)
+    {
         boolean changed = false;
 
         // An if with an empty then-branch and no else is dead. If the condition is side-effect
@@ -141,15 +162,17 @@ public class ControlFlowSimplifier implements ASTTransform {
         // assignment/increment), lower it to that statement. Otherwise (e.g. an opaque-predicate
         // comparison wrapping a call) keep the empty if: a bare comparison is not a legal Java
         // statement, and extracting the call would break short-circuit semantics.
-        if (isEmptyBlock(ifStmt.getThenBranch()) && !ifStmt.hasElse()) {
+        if (isEmptyBlock(ifStmt.getThenBranch()) && !ifStmt.hasElse())
+        {
             Expression cond = ifStmt.getCondition();
-            boolean sideEffecting = Boolean.TRUE.equals(
-                    cond.accept(SideEffectDetector.INSTANCE));
-            if (!sideEffecting) {
+            boolean sideEffecting = Boolean.TRUE.equals(cond.accept(SideEffectDetector.INSTANCE));
+            if (!sideEffecting)
+            {
                 parentList.remove(index);
                 return true;
             }
-            if (isStatementExpression(cond)) {
+            if (isStatementExpression(cond))
+            {
                 ExprStmt condStmt = new ExprStmt(cond);
                 Locations.copy(ifStmt, condStmt);
                 parentList.set(index, condStmt);
@@ -158,7 +181,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             return false;
         }
 
-        if (isEmptyBlock(ifStmt.getThenBranch()) && ifStmt.hasElse()) {
+        if (isEmptyBlock(ifStmt.getThenBranch()) && ifStmt.hasElse())
+        {
             invertCondition(ifStmt);
             ifStmt.setThenBranch(ifStmt.getElseBranch());
             ifStmt.setElseBranch(null);
@@ -169,7 +193,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         // omits it anyway - but its presence blocks the AND-merge below (whose `!hasElse()` guard would fail).
         // The recompiled short-circuit shape gives each `&&` guard such an empty else, so without this a javac
         // `a && b && c` chain oscillates between nested and merged forms on round trip.
-        if (ifStmt.hasElse() && isEmptyBlock(ifStmt.getElseBranch())) {
+        if (ifStmt.hasElse() && isEmptyBlock(ifStmt.getElseBranch()))
+        {
             ifStmt.setElseBranch(null);
             changed = true;
         }
@@ -179,10 +204,12 @@ public class ControlFlowSimplifier implements ASTTransform {
         // after the if. Splice the else body out and drop the else. The recompiled bytecode omits the else too,
         // so this makes the first decompile a round-trip fixed point. Skipped when the else is itself an early
         // exit - the rule further down normalizes that shape to a leading guard instead.
-        if (ifStmt.hasElse() && !isEarlyExit(ifStmt.getElseBranch()) && isTerminal(ifStmt.getThenBranch())) {
+        if (ifStmt.hasElse() && !isEarlyExit(ifStmt.getElseBranch()) && isTerminal(ifStmt.getThenBranch()))
+        {
             List<Statement> elseStmts = getStatements(ifStmt.getElseBranch());
             ifStmt.setElseBranch(null);
-            for (int j = 0; j < elseStmts.size(); j++) {
+            for (int j = 0; j < elseStmts.size(); j++)
+            {
                 parentList.add(index + 1 + j, elseStmts.get(j));
             }
             changed = true;
@@ -204,7 +231,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                         && !isConstantEqualityGuard(ifStmt.getCondition())
                 : isNegativeCondition(ifStmt.getCondition()) && negationIsPositive(ifStmt.getCondition());
         if (ifStmt.hasElse() && orientable
-                && !isEmptyBlock(ifStmt.getThenBranch()) && !isEmptyBlock(ifStmt.getElseBranch())) {
+                && !isEmptyBlock(ifStmt.getThenBranch()) && !isEmptyBlock(ifStmt.getElseBranch()))
+        {
             Statement thenBody = ifStmt.getThenBranch();
             invertCondition(ifStmt);
             ifStmt.setThenBranch(ifStmt.getElseBranch());
@@ -223,7 +251,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                 && isNegativeCondition(ifStmt.getCondition())
                 && unwrapSingleStatement(ifStmt.getThenBranch()) instanceof ReturnStmt
                 && index + 1 < parentList.size()
-                && unwrapSingleStatement(parentList.get(index + 1)) instanceof ThrowStmt) {
+                && unwrapSingleStatement(parentList.get(index + 1)) instanceof ThrowStmt)
+        {
             Statement returned = unwrapSingleStatement(ifStmt.getThenBranch());
             Statement thrown = unwrapSingleStatement(parentList.get(index + 1));
             invertCondition(ifStmt);
@@ -256,12 +285,14 @@ public class ControlFlowSimplifier implements ASTTransform {
                 && isTerminal(ifStmt.getThenBranch())
                 && index + 1 < parentList.size()
                 && unwrapSingleStatement(parentList.get(index + 1)) instanceof ThrowStmt
-                && getStatements(ifStmt.getThenBranch()).size() > 1) {
+                && getStatements(ifStmt.getThenBranch()).size() > 1)
+        {
             List<Statement> thenStmts = new ArrayList<>(getStatements(ifStmt.getThenBranch()));
             // The long arm's own trailing exit only existed to leave the `if`; flat after the guard it is the
             // method's natural end, and leaving it in would be an unreachable-looking `return` at the tail.
             if (!thenStmts.isEmpty() && thenStmts.get(thenStmts.size() - 1) instanceof ReturnStmt
-                    && ((ReturnStmt) thenStmts.get(thenStmts.size() - 1)).getValue() == null) {
+                    && ((ReturnStmt) thenStmts.get(thenStmts.size() - 1)).getValue() == null)
+            {
                 thenStmts.remove(thenStmts.size() - 1);
             }
             Statement following = unwrapSingleStatement(parentList.get(index + 1));
@@ -270,7 +301,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             guardBody.add(following);
             ifStmt.setThenBranch(new BlockStmt(guardBody));
             parentList.remove(index + 1);
-            for (int j = 0; j < thenStmts.size(); j++) {
+            for (int j = 0; j < thenStmts.size(); j++)
+            {
                 parentList.add(index + 1 + j, thenStmts.get(j));
             }
             return true;
@@ -281,7 +313,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                 && !isSwitchChainGuard(ifStmt.getCondition())
                 && isTerminal(ifStmt.getThenBranch())
                 && index + 1 < parentList.size()
-                && isSingleTerminalExit(parentList.get(index + 1))) {
+                && isSingleTerminalExit(parentList.get(index + 1)))
+        {
             List<Statement> thenStmts = getStatements(ifStmt.getThenBranch());
             Statement following = unwrapSingleStatement(parentList.get(index + 1));
             invertCondition(ifStmt);
@@ -289,7 +322,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             guardBody.add(following);
             ifStmt.setThenBranch(new BlockStmt(guardBody));
             parentList.remove(index + 1);
-            for (int j = 0; j < thenStmts.size(); j++) {
+            for (int j = 0; j < thenStmts.size(); j++)
+            {
                 parentList.add(index + 1 + j, thenStmts.get(j));
             }
             changed = true;
@@ -316,12 +350,14 @@ public class ControlFlowSimplifier implements ASTTransform {
                 // A tail whose own terminal is the SAME return as the guard's is the shared-exit
                 // fold family's shape (both layouts fold it there); flipping it would diverge.
                 && !earlyExitsEqual(unwrapSingleStatement(ifStmt.getThenBranch()),
-                        parentList.get(parentList.size() - 1))) {
+                        parentList.get(parentList.size() - 1)))
+                        {
             Statement shortExit = unwrapSingleStatement(ifStmt.getThenBranch());
             List<Statement> tail = new ArrayList<>(parentList.subList(index + 1, parentList.size()));
             invertCondition(ifStmt);
             ifStmt.setThenBranch(new BlockStmt(tail));
-            while (parentList.size() > index + 1) {
+            while (parentList.size() > index + 1)
+            {
                 parentList.remove(parentList.size() - 1);
             }
             parentList.add(shortExit);
@@ -342,24 +378,29 @@ public class ControlFlowSimplifier implements ASTTransform {
                 && !isTerminal(ifStmt.getThenBranch())
                 && containsExit(ifStmt.getThenBranch())
                 && index + 1 < parentList.size()
-                && duplicableLiteralReturn(parentList.get(index + 1)) != null) {
+                && duplicableLiteralReturn(parentList.get(index + 1)) != null)
+        {
             Statement tailCopy = duplicableLiteralReturn(parentList.get(index + 1));
             List<Statement> body = getStatements(ifStmt.getThenBranch());
             invertCondition(ifStmt);
             List<Statement> guardBody = new ArrayList<>();
             guardBody.add(tailCopy);
             ifStmt.setThenBranch(new BlockStmt(guardBody));
-            for (int j = 0; j < body.size(); j++) {
+            for (int j = 0; j < body.size(); j++)
+            {
                 parentList.add(index + 1 + j, body.get(j));
             }
             changed = true;
         }
 
-        if (!ifStmt.hasElse()) {
+        if (!ifStmt.hasElse())
+        {
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
-            if (inner instanceof IfStmt) {
+            if (inner instanceof IfStmt)
+            {
                 IfStmt innerIf = (IfStmt) inner;
-                if (!innerIf.hasElse()) {
+                if (!innerIf.hasElse())
+                {
                     Expression combined = new BinaryExpr(
                         BinaryOperator.AND,
                         ifStmt.getCondition(),
@@ -373,11 +414,13 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
         }
 
-        if (ifStmt.hasElse() && isEarlyExit(ifStmt.getElseBranch())) {
+        if (ifStmt.hasElse() && isEarlyExit(ifStmt.getElseBranch()))
+        {
             boolean thenExits = isTerminal(ifStmt.getThenBranch());
             int thenLen = getStatements(ifStmt.getThenBranch()).size();
             int elseLen = getStatements(ifStmt.getElseBranch()).size();
-            if (thenExits && thenLen < elseLen && !isConstantEqualityGuard(ifStmt.getCondition())) {
+            if (thenExits && thenLen < elseLen && !isConstantEqualityGuard(ifStmt.getCondition()))
+            {
                 // Both arms exit and the condition is already positive: keep the then arm as the guard and flatten
                 // the else after it. Selecting on the condition's polarity rather than on arm LENGTHS is what makes
                 // this a round-trip fixed point - statement counts shift with layout, so the old size tie-break
@@ -386,11 +429,14 @@ public class ControlFlowSimplifier implements ASTTransform {
                 // those keep the guard-the-else path below.
                 List<Statement> elseStmts = getStatements(ifStmt.getElseBranch());
                 ifStmt.setElseBranch(null);
-                for (int j = 0; j < elseStmts.size(); j++) {
+                for (int j = 0; j < elseStmts.size(); j++)
+                {
                     parentList.add(index + 1 + j, elseStmts.get(j));
                 }
                 changed = true;
-            } else {
+            }
+            else
+            {
                 Statement earlyExit = unwrapSingleStatement(ifStmt.getElseBranch());
                 Statement thenBody = ifStmt.getThenBranch();
 
@@ -400,7 +446,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                 parentList.set(index, guard);
 
                 List<Statement> thenStmts = getStatements(thenBody);
-                for (int j = 0; j < thenStmts.size(); j++) {
+                for (int j = 0; j < thenStmts.size(); j++)
+                {
                     parentList.add(index + 1 + j, thenStmts.get(j));
                 }
                 changed = true;
@@ -412,14 +459,17 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     /**
      * Simplifies expressions within statements.
-     * - Ternary with equal branches: cond ? x : x -> x
+     * - Ternary with equal branches: cond ? x : x -&gt; x
      */
-    private boolean simplifyExpressions(List<Statement> stmts) {
+    private boolean simplifyExpressions(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
             Statement simplified = simplifyExpressionsInStatement(stmt);
-            if (simplified != stmt) {
+            if (simplified != stmt)
+            {
                 stmts.set(i, simplified);
                 changed = true;
             }
@@ -427,9 +477,11 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private Statement simplifyExpressionsInStatement(Statement stmt) {
+    private Statement simplifyExpressionsInStatement(Statement stmt)
+    {
         Statement simplified = simplifyExpressionsInStatement0(stmt);
-        if (simplified != stmt) {
+        if (simplified != stmt)
+        {
             Locations.copy(stmt, simplified);
         }
         return simplified;
@@ -442,15 +494,19 @@ public class ControlFlowSimplifier implements ASTTransform {
      * y)} to {@code if (5 >= 10)} for constant-valued locals, leaving {@code x}/{@code y} dead and drifting on
      * round trip. Conditions are mutated in place (preserving the statement's label and location).
      */
-    private boolean simplifyConditions(List<Statement> stmts) {
+    private boolean simplifyConditions(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             Expression cond = conditionOf(s);
-            if (cond == null) {
+            if (cond == null)
+            {
                 continue;
             }
             Expression simplified = foldConditionIdentities(cond);
-            if (simplified != cond) {
+            if (simplified != cond)
+            {
                 setConditionOf(s, simplified);
                 changed = true;
             }
@@ -458,89 +514,124 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    /** Recursively folds {@code x && true}/{@code x || false} identities, leaving all other operands untouched. */
-    private Expression foldConditionIdentities(Expression e) {
-        if (e instanceof BinaryExpr) {
+    /**
+     * Recursively folds {@code x && true}/{@code x || false} identities, leaving all other operands untouched.
+     */
+    private Expression foldConditionIdentities(Expression e)
+    {
+        if (e instanceof BinaryExpr)
+        {
             BinaryExpr b = (BinaryExpr) e;
             Expression left = foldConditionIdentities(b.getLeft());
             Expression right = foldConditionIdentities(b.getRight());
             Expression identity = foldBooleanIdentity(b.getOperator(), left, right);
-            if (identity != null) {
+            if (identity != null)
+            {
                 return identity;
             }
-            if (left != b.getLeft() || right != b.getRight()) {
+            if (left != b.getLeft() || right != b.getRight())
+            {
                 return new BinaryExpr(b.getOperator(), left, right, b.getType());
             }
-        } else if (e instanceof UnaryExpr) {
+        }
+        else if (e instanceof UnaryExpr)
+        {
             UnaryExpr u = (UnaryExpr) e;
             Expression operand = foldConditionIdentities(u.getOperand());
-            if (operand != u.getOperand()) {
+            if (operand != u.getOperand())
+            {
                 return new UnaryExpr(u.getOperator(), operand, u.getType());
             }
         }
         return e;
     }
 
-    private Expression conditionOf(Statement s) {
-        if (s instanceof IfStmt) {
+    private Expression conditionOf(Statement s)
+    {
+        if (s instanceof IfStmt)
+        {
             return ((IfStmt) s).getCondition();
         }
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             return ((WhileStmt) s).getCondition();
         }
-        if (s instanceof ForStmt) {
+        if (s instanceof ForStmt)
+        {
             return ((ForStmt) s).getCondition();
         }
-        if (s instanceof DoWhileStmt) {
+        if (s instanceof DoWhileStmt)
+        {
             return ((DoWhileStmt) s).getCondition();
         }
         return null;
     }
 
-    private void setConditionOf(Statement s, Expression cond) {
-        if (s instanceof IfStmt) {
+    private void setConditionOf(Statement s, Expression cond)
+    {
+        if (s instanceof IfStmt)
+        {
             ((IfStmt) s).setCondition(cond);
-        } else if (s instanceof WhileStmt) {
+        }
+        else if (s instanceof WhileStmt)
+        {
             ((WhileStmt) s).setCondition(cond);
-        } else if (s instanceof ForStmt) {
+        }
+        else if (s instanceof ForStmt)
+        {
             ((ForStmt) s).setCondition(cond);
-        } else if (s instanceof DoWhileStmt) {
+        }
+        else if (s instanceof DoWhileStmt)
+        {
             ((DoWhileStmt) s).setCondition(cond);
         }
     }
 
-    private Statement simplifyExpressionsInStatement0(Statement stmt) {
-        if (stmt instanceof ReturnStmt) {
+    private Statement simplifyExpressionsInStatement0(Statement stmt)
+    {
+        if (stmt instanceof ReturnStmt)
+        {
             ReturnStmt ret = (ReturnStmt) stmt;
-            if (ret.getValue() != null) {
+            if (ret.getValue() != null)
+            {
                 Expression simplified = simplifyExpression(ret.getValue());
                 // `cond ? 1 : 0` returned from a boolean method is the boolean `cond` (the JVM's int form of
                 // the boolean). Fold it here, after inlining has resolved the ternary arms to their 1/0
                 // literals, so a boolean-returning comparison round-trips stably instead of drifting to a
                 // ternary. (The recovery's own coercion runs before the arms resolve, so it cannot see this.)
-                if (ret.getMethodReturnType() == PrimitiveSourceType.BOOLEAN) {
+                if (ret.getMethodReturnType() == PrimitiveSourceType.BOOLEAN)
+                {
                     Expression bool = foldBooleanIntTernary(simplified);
-                    if (bool != null) {
+                    if (bool != null)
+                    {
                         simplified = bool;
                     }
                 }
-                if (simplified != ret.getValue()) {
+                if (simplified != ret.getValue())
+                {
                     ReturnStmt newRet = new ReturnStmt(simplified);
                     newRet.setMethodReturnType(ret.getMethodReturnType());
                     return newRet;
                 }
             }
-        } else if (stmt instanceof ExprStmt) {
+        }
+        else if (stmt instanceof ExprStmt)
+        {
             ExprStmt exprStmt = (ExprStmt) stmt;
             Expression simplified = simplifyExpression(exprStmt.getExpression());
-            if (simplified != exprStmt.getExpression()) {
+            if (simplified != exprStmt.getExpression())
+            {
                 return new ExprStmt(simplified);
             }
-        } else if (stmt instanceof VarDeclStmt) {
+        }
+        else if (stmt instanceof VarDeclStmt)
+        {
             VarDeclStmt decl = (VarDeclStmt) stmt;
-            if (decl.getInitializer() != null) {
+            if (decl.getInitializer() != null)
+            {
                 Expression simplified = simplifyExpression(decl.getInitializer());
-                if (simplified != decl.getInitializer()) {
+                if (simplified != decl.getInitializer())
+                {
                     return new VarDeclStmt(decl.getType(), decl.getName(), simplified);
                 }
             }
@@ -552,21 +643,26 @@ public class ControlFlowSimplifier implements ASTTransform {
      * Folds {@code cond ? 1 : 0} to {@code cond} - the boolean whose int materialization the ternary is.
      * Returns null when {@code e} is not that shape.
      */
-    private Expression foldBooleanIntTernary(Expression e) {
-        if (!(e instanceof TernaryExpr)) {
+    private Expression foldBooleanIntTernary(Expression e)
+    {
+        if (!(e instanceof TernaryExpr))
+        {
             return null;
         }
         TernaryExpr t = (TernaryExpr) e;
         Integer thenV = constInt(t.getThenExpr());
         Integer elseV = constInt(t.getElseExpr());
-        if (thenV != null && thenV == 1 && elseV != null && elseV == 0) {
+        if (thenV != null && thenV == 1 && elseV != null && elseV == 0)
+        {
             return t.getCondition();
         }
         return null;
     }
 
-    private Integer constInt(Expression e) {
-        if (e instanceof LiteralExpr && ((LiteralExpr) e).getValue() instanceof Integer) {
+    private Integer constInt(Expression e)
+    {
+        if (e instanceof LiteralExpr && ((LiteralExpr) e).getValue() instanceof Integer)
+        {
             return (Integer) ((LiteralExpr) e).getValue();
         }
         return null;
@@ -579,102 +675,136 @@ public class ControlFlowSimplifier implements ASTTransform {
      * and decompiling it yields this int-ternary shape; folding it makes the round trip a fixed point. Returns
      * null when the ternary is a genuine value select (neither arm is a boolean-materialized {@code 0}/{@code 1}).
      */
-    private Expression foldBooleanShortCircuit(Expression cond, Expression thenExpr, Expression elseExpr) {
+    private Expression foldBooleanShortCircuit(Expression cond, Expression thenExpr, Expression elseExpr)
+    {
         Integer t = constInt(thenExpr);
         Integer e = constInt(elseExpr);
-        if (t != null && t == 1 && e != null && e == 0) {
+        if (t != null && t == 1 && e != null && e == 0)
+        {
             return cond;
         }
-        if (t != null && t == 0 && e != null && e == 1) {
+        if (t != null && t == 0 && e != null && e == 1)
+        {
             return negate(cond);
         }
-        if (t != null && t == 1 && isBooleanExpr(elseExpr)) {
+        if (t != null && t == 1 && isBooleanExpr(elseExpr))
+        {
             return new BinaryExpr(BinaryOperator.OR, cond, elseExpr, PrimitiveSourceType.BOOLEAN);
         }
-        if (t != null && t == 0 && isBooleanExpr(elseExpr)) {
+        if (t != null && t == 0 && isBooleanExpr(elseExpr))
+        {
             return new BinaryExpr(BinaryOperator.AND, negate(cond), elseExpr, PrimitiveSourceType.BOOLEAN);
         }
-        if (e != null && e == 0 && isBooleanExpr(thenExpr)) {
+        if (e != null && e == 0 && isBooleanExpr(thenExpr))
+        {
             return new BinaryExpr(BinaryOperator.AND, cond, thenExpr, PrimitiveSourceType.BOOLEAN);
         }
-        if (e != null && e == 1 && isBooleanExpr(thenExpr)) {
+        if (e != null && e == 1 && isBooleanExpr(thenExpr))
+        {
             return new BinaryExpr(BinaryOperator.OR, negate(cond), thenExpr, PrimitiveSourceType.BOOLEAN);
         }
         return null;
     }
 
-    /** A boolean-valued expression: a comparison/logical operator, a negation, or a boolean-typed leaf. */
-    private boolean isBooleanExpr(Expression e) {
-        if (e instanceof BinaryExpr) {
+    /**
+     * A boolean-valued expression: a comparison/logical operator, a negation, or a boolean-typed leaf.
+     */
+    private boolean isBooleanExpr(Expression e)
+    {
+        if (e instanceof BinaryExpr)
+        {
             BinaryOperator op = ((BinaryExpr) e).getOperator();
-            switch (op) {
+            switch (op)
+            {
                 case EQ: case NE: case LT: case LE: case GT: case GE: case AND: case OR:
                     return true;
                 default:
                     break;
             }
         }
-        if (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator() == UnaryOperator.NOT) {
+        if (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator() == UnaryOperator.NOT)
+        {
             return true;
         }
         return isBooleanType(e.getType());
     }
 
-    private Expression simplifyExpression(Expression expr) {
-        if (expr instanceof VarRefExpr) {
+    private Expression simplifyExpression(Expression expr)
+    {
+        if (expr instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) expr;
             Expression inlined = tryInlineConstantVarRef(varRef);
-            if (inlined != null) {
+            if (inlined != null)
+            {
                 return inlined;
             }
         }
 
-        if (expr instanceof TernaryExpr) {
+        if (expr instanceof TernaryExpr)
+        {
             TernaryExpr ternary = (TernaryExpr) expr;
             Expression cond = simplifyExpression(ternary.getCondition());
             Expression thenExpr = simplifyExpression(ternary.getThenExpr());
             Expression elseExpr = simplifyExpression(ternary.getElseExpr());
 
-            if (expressionsEqual(thenExpr, elseExpr)) {
+            if (expressionsEqual(thenExpr, elseExpr))
+            {
                 return thenExpr;
             }
 
             Expression shortCircuit = foldBooleanShortCircuit(cond, thenExpr, elseExpr);
-            if (shortCircuit != null) {
+            if (shortCircuit != null)
+            {
                 return shortCircuit;
             }
 
             if (cond != ternary.getCondition() || thenExpr != ternary.getThenExpr()
-                    || elseExpr != ternary.getElseExpr()) {
+                    || elseExpr != ternary.getElseExpr())
+            {
                 return new TernaryExpr(cond, thenExpr, elseExpr, ternary.getType());
             }
-        } else if (expr instanceof BinaryExpr) {
+        }
+        else if (expr instanceof BinaryExpr)
+        {
             BinaryExpr binary = (BinaryExpr) expr;
             Expression left = simplifyExpression(binary.getLeft());
             Expression right = simplifyExpression(binary.getRight());
             Expression identity = foldBooleanIdentity(binary.getOperator(), left, right);
-            if (identity != null) {
+            if (identity != null)
+            {
                 return identity;
             }
-            if (left != binary.getLeft() || right != binary.getRight()) {
+            if (left != binary.getLeft() || right != binary.getRight())
+            {
                 return new BinaryExpr(binary.getOperator(), left, right, binary.getType());
             }
-        } else if (expr instanceof UnaryExpr) {
+        }
+        else if (expr instanceof UnaryExpr)
+        {
             UnaryExpr unary = (UnaryExpr) expr;
             Expression operand = simplifyExpression(unary.getOperand());
-            if (operand != unary.getOperand()) {
+            if (operand != unary.getOperand())
+            {
                 return new UnaryExpr(unary.getOperator(), operand, unary.getType());
             }
-        } else if (expr instanceof CastExpr) {
+        }
+        else if (expr instanceof CastExpr)
+        {
             CastExpr cast = (CastExpr) expr;
             Expression inner = simplifyExpression(cast.getExpression());
-            if (inner != cast.getExpression()) {
+            if (inner != cast.getExpression())
+            {
                 return new CastExpr(cast.getTargetType(), inner);
             }
-        } else if (expr instanceof MethodCallExpr) {
+        }
+        else if (expr instanceof MethodCallExpr)
+        {
             MethodCallExpr call = (MethodCallExpr) expr;
             simplifyArguments(call.getArguments(), call.getDescriptor());
-        } else if (expr instanceof NewExpr) {
+        }
+        else if (expr instanceof NewExpr)
+        {
             NewExpr ctor = (NewExpr) expr;
             simplifyArguments(ctor.getArguments(), ctor.getDescriptor());
         }
@@ -688,38 +818,52 @@ public class ControlFlowSimplifier implements ASTTransform {
      * {@code 0}/{@code 1} inlined after recovery, past every type hint. Nothing else descends into argument
      * lists, so without this the call keeps an int where the callee declares a boolean: not valid Java.
      */
-    private void simplifyArguments(List<Expression> arguments, String descriptor) {
+    private void simplifyArguments(List<Expression> arguments, String descriptor)
+    {
         List<String> params = parameterDescriptors(descriptor);
-        for (int i = 0; i < arguments.size(); i++) {
+        for (int i = 0; i < arguments.size(); i++)
+        {
             Expression arg = simplifyExpression(arguments.get(i));
             if (params != null && i < params.size() && "Z".equals(params.get(i))
-                    && arg instanceof LiteralExpr && ((LiteralExpr) arg).getValue() instanceof Integer) {
+                    && arg instanceof LiteralExpr && ((LiteralExpr) arg).getValue() instanceof Integer)
+            {
                 int v = (Integer) ((LiteralExpr) arg).getValue();
-                if (v == 0 || v == 1) {
+                if (v == 0 || v == 1)
+                {
                     arg = LiteralExpr.ofBoolean(v != 0);
                 }
             }
-            if (arg != arguments.get(i)) {
+            if (arg != arguments.get(i))
+            {
                 arguments.set(i, arg);
             }
         }
     }
 
-    /** The parameter descriptors of a JVM method descriptor, in order; null when there is none to read. */
-    private List<String> parameterDescriptors(String descriptor) {
-        if (descriptor == null || !descriptor.startsWith("(")) {
+    /**
+     * The parameter descriptors of a JVM method descriptor, in order; null when there is none to read.
+     */
+    private List<String> parameterDescriptors(String descriptor)
+    {
+        if (descriptor == null || !descriptor.startsWith("("))
+        {
             return null;
         }
         List<String> params = new ArrayList<>();
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             int begin = i;
-            while (descriptor.charAt(i) == '[') {
+            while (descriptor.charAt(i) == '[')
+            {
                 i++;
             }
-            if (descriptor.charAt(i) == 'L') {
+            if (descriptor.charAt(i) == 'L')
+            {
                 i = descriptor.indexOf(';', i) + 1;
-            } else {
+            }
+            else
+            {
                 i++;
             }
             params.add(descriptor.substring(begin, i));
@@ -732,14 +876,17 @@ public class ControlFlowSimplifier implements ASTTransform {
      * This handles cases where phi constant propagation left a reference to a variable
      * that was never declared because the ternary was simplified away.
      */
-    private Expression tryInlineConstantVarRef(VarRefExpr varRef) {
+    private Expression tryInlineConstantVarRef(VarRefExpr varRef)
+    {
         SSAValue ssaValue = varRef.getSsaValue();
-        if (ssaValue == null) {
+        if (ssaValue == null)
+        {
             return null;
         }
 
         IRInstruction def = ssaValue.getDefinition();
-        if (def instanceof ConstantInstruction) {
+        if (def instanceof ConstantInstruction)
+        {
             ConstantInstruction constInstr = (ConstantInstruction) def;
             Constant constant = constInstr.getConstant();
             return constantToLiteral(constant);
@@ -751,71 +898,106 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Converts an SSA constant to a literal expression.
      */
-    private Expression constantToLiteral(Constant constant) {
-        if (constant instanceof IntConstant) {
+    private Expression constantToLiteral(Constant constant)
+    {
+        if (constant instanceof IntConstant)
+        {
             return LiteralExpr.ofInt(((IntConstant) constant).getValue());
-        } else if (constant instanceof LongConstant) {
+        }
+        else if (constant instanceof LongConstant)
+        {
             return LiteralExpr.ofLong(((LongConstant) constant).getValue());
-        } else if (constant instanceof FloatConstant) {
+        }
+        else if (constant instanceof FloatConstant)
+        {
             return LiteralExpr.ofFloat(((FloatConstant) constant).getValue());
-        } else if (constant instanceof DoubleConstant) {
+        }
+        else if (constant instanceof DoubleConstant)
+        {
             return LiteralExpr.ofDouble(((DoubleConstant) constant).getValue());
-        } else if (constant instanceof StringConstant) {
+        }
+        else if (constant instanceof StringConstant)
+        {
             return LiteralExpr.ofString(((StringConstant) constant).getValue());
-        } else if (constant instanceof NullConstant) {
+        }
+        else if (constant instanceof NullConstant)
+        {
             return LiteralExpr.ofNull();
         }
         return null;
     }
 
-    private boolean recurseInto(Statement stmt) {
+    private boolean recurseInto(Statement stmt)
+    {
         boolean changed = false;
 
-        if (stmt instanceof BlockStmt) {
+        if (stmt instanceof BlockStmt)
+        {
             changed |= transform((BlockStmt) stmt);
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
-            if (ifStmt.getThenBranch() instanceof BlockStmt) {
+            if (ifStmt.getThenBranch() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) ifStmt.getThenBranch());
             }
-            if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt) {
+            if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) ifStmt.getElseBranch());
             }
-        } else if (stmt instanceof WhileStmt) {
+        }
+        else if (stmt instanceof WhileStmt)
+        {
             WhileStmt ws = (WhileStmt) stmt;
-            if (ws.getBody() instanceof BlockStmt) {
+            if (ws.getBody() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) ws.getBody());
                 changed |= stripRedundantSwitchContinue((BlockStmt) ws.getBody());
                 changed |= stripTailContinue(ws.getBody());
                 changed |= stripNoOpTailContinueGuard((BlockStmt) ws.getBody());
             }
-        } else if (stmt instanceof ForStmt) {
+        }
+        else if (stmt instanceof ForStmt)
+        {
             ForStmt fs = (ForStmt) stmt;
-            if (fs.getBody() instanceof BlockStmt) {
+            if (fs.getBody() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) fs.getBody());
                 changed |= stripRedundantSwitchContinue((BlockStmt) fs.getBody());
                 changed |= stripTailContinue(fs.getBody());
                 changed |= stripNoOpTailContinueGuard((BlockStmt) fs.getBody());
             }
-        } else if (stmt instanceof TryCatchStmt) {
+        }
+        else if (stmt instanceof TryCatchStmt)
+        {
             TryCatchStmt tc = (TryCatchStmt) stmt;
-            if (tc.getTryBlock() instanceof BlockStmt) {
+            if (tc.getTryBlock() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) tc.getTryBlock());
             }
-            for (CatchClause cc : tc.getCatches()) {
-                if (cc.body() instanceof BlockStmt) {
+            for (CatchClause cc : tc.getCatches())
+            {
+                if (cc.body() instanceof BlockStmt)
+                {
                     changed |= transform((BlockStmt) cc.body());
                 }
             }
-            if (tc.getFinallyBlock() instanceof BlockStmt) {
+            if (tc.getFinallyBlock() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) tc.getFinallyBlock());
             }
-        } else if (stmt instanceof SynchronizedStmt) {
+        }
+        else if (stmt instanceof SynchronizedStmt)
+        {
             SynchronizedStmt sync = (SynchronizedStmt) stmt;
-            if (sync.getBody() instanceof BlockStmt) {
+            if (sync.getBody() instanceof BlockStmt)
+            {
                 changed |= transform((BlockStmt) sync.getBody());
             }
-        } else if (stmt instanceof SwitchStmt) {
+        }
+        else if (stmt instanceof SwitchStmt)
+        {
             changed |= simplifySwitchCases((SwitchStmt) stmt);
         }
 
@@ -828,23 +1010,28 @@ public class ControlFlowSimplifier implements ASTTransform {
      * the continue is a no-op. javac omits it; the recovery emits it for its own recompiled shape, so it drifts
      * on round trip. The last case has no case after it, so dropping the continue cannot introduce fall-through.
      */
-    private boolean stripRedundantSwitchContinue(BlockStmt loopBody) {
+    private boolean stripRedundantSwitchContinue(BlockStmt loopBody)
+    {
         List<Statement> stmts = loopBody.getStatements();
-        if (stmts.isEmpty() || !(stmts.get(stmts.size() - 1) instanceof SwitchStmt)) {
+        if (stmts.isEmpty() || !(stmts.get(stmts.size() - 1) instanceof SwitchStmt))
+        {
             return false;
         }
         List<SwitchCase> cases = ((SwitchStmt) stmts.get(stmts.size() - 1)).getCases();
-        if (cases.isEmpty()) {
+        if (cases.isEmpty())
+        {
             return false;
         }
         int last = cases.size() - 1;
         SwitchCase c = cases.get(last);
         List<Statement> body = c.statements();
-        if (body == null || body.isEmpty()) {
+        if (body == null || body.isEmpty())
+        {
             return false;
         }
         Statement tail = body.get(body.size() - 1);
-        if (!(tail instanceof ContinueStmt) || ((ContinueStmt) tail).hasLabel()) {
+        if (!(tail instanceof ContinueStmt) || ((ContinueStmt) tail).hasLabel())
+        {
             return false;
         }
         List<Statement> trimmed = new java.util.ArrayList<>(body.subList(0, body.size() - 1));
@@ -865,13 +1052,16 @@ public class ControlFlowSimplifier implements ASTTransform {
      * The reaching-condition structurer emits such a guard for a settled fall-through tail; javac never
      * does, and the leftover reference can also pin a loop counter out of its for-init scope.
      */
-    private boolean stripNoOpTailContinueGuard(BlockStmt loopBody) {
+    private boolean stripNoOpTailContinueGuard(BlockStmt loopBody)
+    {
         List<Statement> stmts = loopBody.getStatements();
-        if (stmts.isEmpty() || !(stmts.get(stmts.size() - 1) instanceof IfStmt)) {
+        if (stmts.isEmpty() || !(stmts.get(stmts.size() - 1) instanceof IfStmt))
+        {
             return false;
         }
         IfStmt guard = (IfStmt) stmts.get(stmts.size() - 1);
-        if (guard.hasElse()) {
+        if (guard.hasElse())
+        {
             return false;
         }
         Statement then = guard.getThenBranch();
@@ -879,10 +1069,12 @@ public class ControlFlowSimplifier implements ASTTransform {
                 ? ((BlockStmt) then).getStatements()
                 : java.util.Collections.singletonList(then);
         if (thenStmts.size() != 1 || !(thenStmts.get(0) instanceof ContinueStmt)
-                || ((ContinueStmt) thenStmts.get(0)).hasLabel()) {
+                || ((ContinueStmt) thenStmts.get(0)).hasLabel())
+        {
             return false;
         }
-        if (guard.getCondition().accept(TAIL_GUARD_PURITY)) {
+        if (guard.getCondition().accept(TAIL_GUARD_PURITY))
+        {
             return false;
         }
         stmts.remove(stmts.size() - 1);
@@ -896,8 +1088,10 @@ public class ControlFlowSimplifier implements ASTTransform {
      */
     private static final SideEffectDetector TAIL_GUARD_PURITY = new SideEffectDetector() {
         @Override
-        public Boolean visitMethodCall(MethodCallExpr expr) {
-            switch (expr.getMethodName()) {
+        public Boolean visitMethodCall(MethodCallExpr expr)
+        {
+            switch (expr.getMethodName())
+            {
                 case "equals":
                 case "equalsIgnoreCase":
                 case "isEmpty":
@@ -911,11 +1105,14 @@ public class ControlFlowSimplifier implements ASTTransform {
                 default:
                     return true;
             }
-            if (expr.getReceiver() != null && expr.getReceiver().accept(this)) {
+            if (expr.getReceiver() != null && expr.getReceiver().accept(this))
+            {
                 return true;
             }
-            for (Expression arg : expr.getArguments()) {
-                if (arg.accept(this)) {
+            for (Expression arg : expr.getArguments())
+            {
+                if (arg.accept(this))
+                {
                     return true;
                 }
             }
@@ -923,13 +1120,16 @@ public class ControlFlowSimplifier implements ASTTransform {
         }
     };
 
-    private boolean simplifySwitchCases(SwitchStmt sw) {
+    private boolean simplifySwitchCases(SwitchStmt sw)
+    {
         boolean changed = false;
         List<SwitchCase> cases = sw.getCases();
-        for (int i = 0; i < cases.size(); i++) {
+        for (int i = 0; i < cases.size(); i++)
+        {
             SwitchCase c = cases.get(i);
             BlockStmt body = new BlockStmt(new java.util.ArrayList<>(c.statements()));
-            if (transform(body)) {
+            if (transform(body))
+            {
                 List<Statement> newBody = new java.util.ArrayList<>(body.getStatements());
                 SwitchCase rebuilt = (c.isDefault()
                         ? SwitchCase.defaultCase(newBody)
@@ -950,21 +1150,26 @@ public class ControlFlowSimplifier implements ASTTransform {
      * than of the program - so the guard-clause swap treats them alike, and a decompile reaches the same form
      * from either layout.
      */
-    private boolean isSingleTerminalExit(Statement stmt) {
+    private boolean isSingleTerminalExit(Statement stmt)
+    {
         Statement single = unwrapSingleStatement(stmt);
         return single instanceof ReturnStmt || single instanceof ThrowStmt;
     }
 
-    private boolean isEmptyBlock(Statement stmt) {
-        if (stmt instanceof BlockStmt) {
+    private boolean isEmptyBlock(Statement stmt)
+    {
+        if (stmt instanceof BlockStmt)
+        {
             return ((BlockStmt) stmt).isEmpty();
         }
         return false;
     }
 
-    private boolean isEarlyExit(Statement stmt) {
+    private boolean isEarlyExit(Statement stmt)
+    {
         Statement unwrapped = unwrapSingleStatement(stmt);
-        if (unwrapped instanceof ReturnStmt || unwrapped instanceof ThrowStmt) {
+        if (unwrapped instanceof ReturnStmt || unwrapped instanceof ThrowStmt)
+        {
             return true;
         }
         // A multi-statement block is also an early exit when its last statement unconditionally returns or
@@ -972,9 +1177,11 @@ public class ControlFlowSimplifier implements ASTTransform {
         // block becomes the guard body). The decompiler recovers a multi-statement guard like
         // `if (expired) { invalidate(); return ...; }` as an if/else with a negated condition; widening this
         // rule recovers the original guard form (and makes the first decompile a round-trip fixed point).
-        if (stmt instanceof BlockStmt) {
+        if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
-            if (!block.getStatements().isEmpty()) {
+            if (!block.getStatements().isEmpty())
+            {
                 Statement last = block.getStatements().get(block.size() - 1);
                 return last instanceof ReturnStmt || last instanceof ThrowStmt;
             }
@@ -982,21 +1189,26 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    private boolean isTerminal(Statement stmt) {
+    private boolean isTerminal(Statement stmt)
+    {
         Statement unwrapped = unwrapSingleStatement(stmt);
-        if (isTerminalLeaf(unwrapped)) {
+        if (isTerminalLeaf(unwrapped))
+        {
             return true;
         }
-        if (stmt instanceof BlockStmt) {
+        if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
-            if (!block.getStatements().isEmpty()) {
+            if (!block.getStatements().isEmpty())
+            {
                 return isTerminalLeaf(block.getStatements().get(block.size() - 1));
             }
         }
         return false;
     }
 
-    private boolean isTerminalLeaf(Statement stmt) {
+    private boolean isTerminalLeaf(Statement stmt)
+    {
         return stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
                 || stmt instanceof BreakStmt || stmt instanceof ContinueStmt;
     }
@@ -1007,14 +1219,18 @@ public class ControlFlowSimplifier implements ASTTransform {
      * layout-dependent, so flipping it would not converge; it recovers identically from either layout when
      * left as recovered, so the both-exit normalization skips it.
      */
-    private boolean isPurelyLogicalNegation(Expression e) {
-        if (e instanceof UnaryExpr) {
+    private boolean isPurelyLogicalNegation(Expression e)
+    {
+        if (e instanceof UnaryExpr)
+        {
             return ((UnaryExpr) e).getOperator() == UnaryOperator.NOT;
         }
-        if (e instanceof BinaryExpr) {
+        if (e instanceof BinaryExpr)
+        {
             BinaryExpr binary = (BinaryExpr) e;
             BinaryOperator op = binary.getOperator();
-            if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+            if (op == BinaryOperator.AND || op == BinaryOperator.OR)
+            {
                 // De Morgan: a conjunction of negations IS a negation (`a != null && !b()` reads as
                 // `!(a == null || b())`), so it inverts to a positive guard just like a leaf does. Every
                 // operand must be one, or inverting would leave a negation behind and not converge.
@@ -1030,13 +1246,17 @@ public class ControlFlowSimplifier implements ASTTransform {
      * As {@link #isConstantEqualityGuard}, but a null literal does not count: null is never a switch label,
      * so a null-check guard has no switch-chain form to preserve and may be normalized freely.
      */
-    private boolean isSwitchChainGuard(Expression cond) {
-        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT) {
+    private boolean isSwitchChainGuard(Expression cond)
+    {
+        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT)
+        {
             return isSwitchChainGuard(((UnaryExpr) cond).getOperand());
         }
-        if (cond instanceof BinaryExpr) {
+        if (cond instanceof BinaryExpr)
+        {
             BinaryExpr b = (BinaryExpr) cond;
-            if (b.getOperator() == BinaryOperator.EQ || b.getOperator() == BinaryOperator.NE) {
+            if (b.getOperator() == BinaryOperator.EQ || b.getOperator() == BinaryOperator.NE)
+            {
                 return (b.getLeft() instanceof LiteralExpr && ((LiteralExpr) b.getLeft()).getValue() != null)
                         || (b.getRight() instanceof LiteralExpr && ((LiteralExpr) b.getRight()).getValue() != null);
             }
@@ -1044,20 +1264,28 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    /** True when the statement (recursively) contains a return or throw - the then-arm has early exits. */
-    private boolean containsExit(Statement stmt) {
-        if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt) {
+    /**
+     * True when the statement (recursively) contains a return or throw - the then-arm has early exits.
+     */
+    private boolean containsExit(Statement stmt)
+    {
+        if (stmt instanceof ReturnStmt || stmt instanceof ThrowStmt)
+        {
             return true;
         }
-        if (stmt instanceof BlockStmt) {
-            for (Statement s : ((BlockStmt) stmt).getStatements()) {
-                if (containsExit(s)) {
+        if (stmt instanceof BlockStmt)
+        {
+            for (Statement s : ((BlockStmt) stmt).getStatements())
+            {
+                if (containsExit(s))
+                {
                     return true;
                 }
             }
             return false;
         }
-        if (stmt instanceof IfStmt) {
+        if (stmt instanceof IfStmt)
+        {
             IfStmt f = (IfStmt) stmt;
             return containsExit(f.getThenBranch())
                     || (f.getElseBranch() != null && containsExit(f.getElseBranch()));
@@ -1069,16 +1297,20 @@ public class ControlFlowSimplifier implements ASTTransform {
      * A fresh copy of {@code stmt} when it is a bare or literal-valued return - the only terminal cheap and
      * side-effect-free enough to duplicate into a guard - else null.
      */
-    private Statement duplicableLiteralReturn(Statement stmt) {
+    private Statement duplicableLiteralReturn(Statement stmt)
+    {
         Statement s = unwrapSingleStatement(stmt);
-        if (!(s instanceof ReturnStmt)) {
+        if (!(s instanceof ReturnStmt))
+        {
             return null;
         }
         Expression value = ((ReturnStmt) s).getValue();
-        if (value == null) {
+        if (value == null)
+        {
             return new ReturnStmt(null);
         }
-        if (value instanceof LiteralExpr) {
+        if (value instanceof LiteralExpr)
+        {
             LiteralExpr lit = (LiteralExpr) value;
             return new ReturnStmt(new LiteralExpr(lit.getValue(), lit.getType()));
         }
@@ -1091,33 +1323,42 @@ public class ControlFlowSimplifier implements ASTTransform {
      * would turn the positive form into the negative one and the next pass would swap straight back,
      * oscillating forever. Such a condition is already as positive as it can be written.
      */
-    private boolean negationIsPositive(Expression e) {
+    private boolean negationIsPositive(Expression e)
+    {
         return !(e instanceof BinaryExpr) || !flipChangesNanAnswer((BinaryExpr) e);
     }
 
-    private boolean isNegativeCondition(Expression e) {
-        if (e instanceof UnaryExpr) {
+    private boolean isNegativeCondition(Expression e)
+    {
+        if (e instanceof UnaryExpr)
+        {
             return ((UnaryExpr) e).getOperator() == UnaryOperator.NOT;
         }
-        if (e instanceof BinaryExpr) {
+        if (e instanceof BinaryExpr)
+        {
             BinaryOperator op = ((BinaryExpr) e).getOperator();
             return op == BinaryOperator.NE || op == BinaryOperator.GT || op == BinaryOperator.GE;
         }
         return false;
     }
 
-    private Statement unwrapSingleStatement(Statement stmt) {
-        if (stmt instanceof BlockStmt) {
+    private Statement unwrapSingleStatement(Statement stmt)
+    {
+        if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
-            if (block.size() == 1) {
+            if (block.size() == 1)
+            {
                 return block.getStatements().get(0);
             }
         }
         return stmt;
     }
 
-    private List<Statement> getStatements(Statement stmt) {
-        if (stmt instanceof BlockStmt) {
+    private List<Statement> getStatements(Statement stmt)
+    {
+        if (stmt instanceof BlockStmt)
+        {
             return new ArrayList<>(((BlockStmt) stmt).getStatements());
         }
         List<Statement> list = new ArrayList<>();
@@ -1125,7 +1366,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         return list;
     }
 
-    private void invertCondition(IfStmt ifStmt) {
+    private void invertCondition(IfStmt ifStmt)
+    {
         ifStmt.setCondition(negate(ifStmt.getCondition()));
     }
 
@@ -1134,31 +1376,40 @@ public class ControlFlowSimplifier implements ASTTransform {
      * {@code !(x == k)}. These are the guards a switch-dispatch chain is built from, so they must keep the negated-
      * nested guard form the switch reconstructor recognizes rather than being flattened to a positive leading guard.
      */
-    private boolean isConstantEqualityGuard(Expression cond) {
-        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT) {
+    private boolean isConstantEqualityGuard(Expression cond)
+    {
+        if (cond instanceof UnaryExpr && ((UnaryExpr) cond).getOperator() == UnaryOperator.NOT)
+        {
             return isConstantEqualityGuard(((UnaryExpr) cond).getOperand());
         }
-        if (cond instanceof BinaryExpr) {
+        if (cond instanceof BinaryExpr)
+        {
             BinaryExpr b = (BinaryExpr) cond;
-            if (b.getOperator() == BinaryOperator.EQ || b.getOperator() == BinaryOperator.NE) {
+            if (b.getOperator() == BinaryOperator.EQ || b.getOperator() == BinaryOperator.NE)
+            {
                 return b.getLeft() instanceof LiteralExpr || b.getRight() instanceof LiteralExpr;
             }
         }
         return false;
     }
 
-    private Expression negate(Expression expr) {
-        if (expr instanceof UnaryExpr) {
+    private Expression negate(Expression expr)
+    {
+        if (expr instanceof UnaryExpr)
+        {
             UnaryExpr unary = (UnaryExpr) expr;
-            if (unary.getOperator() == UnaryOperator.NOT) {
+            if (unary.getOperator() == UnaryOperator.NOT)
+            {
                 return unary.getOperand();
             }
         }
 
-        if (expr instanceof BinaryExpr) {
+        if (expr instanceof BinaryExpr)
+        {
             BinaryExpr binary = (BinaryExpr) expr;
             BinaryOperator op = binary.getOperator();
-            if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+            if (op == BinaryOperator.AND || op == BinaryOperator.OR)
+            {
                 // Push the negation inward rather than wrapping the whole condition: `!(a && b)` reads as
                 // `!a || !b`, which is the form the source had and the one a further inversion cancels
                 // cleanly. Wrapping instead leaves a `!(...)` that no later rule unwraps.
@@ -1166,7 +1417,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                         negate(binary.getLeft()), negate(binary.getRight()), binary.getType());
             }
             BinaryOperator flipped = flipComparison(op);
-            if (flipped != null && !flipChangesNanAnswer(binary)) {
+            if (flipped != null && !flipChangesNanAnswer(binary))
+            {
                 return new BinaryExpr(flipped, binary.getLeft(), binary.getRight(), binary.getType());
             }
         }
@@ -1182,23 +1434,29 @@ public class ControlFlowSimplifier implements ASTTransform {
      * guards evaluated C then !C) and A does not write a variable C reads (so C's truth is unchanged once A has run
      * and the else is correctly not entered).
      */
-    private boolean mergeComplementaryGuards(List<Statement> stmts) {
+    private boolean mergeComplementaryGuards(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i + 1 < stmts.size(); i++) {
-            if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof IfStmt)) {
+        for (int i = 0; i + 1 < stmts.size(); i++)
+        {
+            if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof IfStmt))
+            {
                 continue;
             }
             IfStmt first = (IfStmt) stmts.get(i);
             IfStmt second = (IfStmt) stmts.get(i + 1);
-            if (first.hasElse() || second.hasElse()) {
+            if (first.hasElse() || second.hasElse())
+            {
                 continue;
             }
             Expression c1 = first.getCondition();
             Expression c2 = second.getCondition();
-            if (isSideEffecting(c1) || isSideEffecting(c2) || !areComplementary(c1, c2)) {
+            if (isSideEffecting(c1) || isSideEffecting(c2) || !areComplementary(c1, c2))
+            {
                 continue;
             }
-            if (writesAnyReadVar(first.getThenBranch(), c1)) {
+            if (writesAnyReadVar(first.getThenBranch(), c1))
+            {
                 continue;
             }
             IfStmt merged = new IfStmt(c1, first.getThenBranch(), second.getThenBranch());
@@ -1219,31 +1477,39 @@ public class ControlFlowSimplifier implements ASTTransform {
      * the second condition does not read them; deleting the complement's evaluation requires it to be
      * side-effect-free.
      */
-    private boolean unguardComplementOfExitedGuard(List<Statement> stmts) {
+    private boolean unguardComplementOfExitedGuard(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i < stmts.size(); i++) {
-            if (!(stmts.get(i) instanceof IfStmt)) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
+            if (!(stmts.get(i) instanceof IfStmt))
+            {
                 continue;
             }
             IfStmt guard = (IfStmt) stmts.get(i);
-            if (guard.hasElse() || !isTerminal(guard.getThenBranch())) {
+            if (guard.hasElse() || !isTerminal(guard.getThenBranch()))
+            {
                 continue;
             }
             int j = i + 1;
             List<String> declared = new ArrayList<>();
-            while (j < stmts.size() && stmts.get(j) instanceof VarDeclStmt) {
+            while (j < stmts.size() && stmts.get(j) instanceof VarDeclStmt)
+            {
                 VarDeclStmt decl = (VarDeclStmt) stmts.get(j);
-                if (decl.getInitializer() != null && !(decl.getInitializer() instanceof LiteralExpr)) {
+                if (decl.getInitializer() != null && !(decl.getInitializer() instanceof LiteralExpr))
+                {
                     break;
                 }
                 declared.add(decl.getName());
                 j++;
             }
-            if (j >= stmts.size() || !(stmts.get(j) instanceof IfStmt)) {
+            if (j >= stmts.size() || !(stmts.get(j) instanceof IfStmt))
+            {
                 continue;
             }
             IfStmt second = (IfStmt) stmts.get(j);
-            if (second.hasElse() || !areComplementary(guard.getCondition(), second.getCondition())) {
+            if (second.hasElse() || !areComplementary(guard.getCondition(), second.getCondition()))
+            {
                 continue;
             }
             // The guard is IMPLIED by control flow (its complement just exited), so deleting it is
@@ -1252,17 +1518,21 @@ public class ControlFlowSimplifier implements ASTTransform {
             // the one form whose deletion could lose a real store, so it stays.
             WrittenVarCollector writes = new WrittenVarCollector();
             new ExprStmt(second.getCondition()).accept(writes);
-            if (!writes.written.isEmpty()) {
+            if (!writes.written.isEmpty())
+            {
                 continue;
             }
             boolean readsDecl = false;
-            for (String name : declared) {
-                if (countVariableUses(second.getCondition(), name) > 0) {
+            for (String name : declared)
+            {
+                if (countVariableUses(second.getCondition(), name) > 0)
+                {
                     readsDecl = true;
                     break;
                 }
             }
-            if (readsDecl) {
+            if (readsDecl)
+            {
                 continue;
             }
             List<Statement> body = getStatements(second.getThenBranch());
@@ -1281,46 +1551,57 @@ public class ControlFlowSimplifier implements ASTTransform {
      * source never had. Sound only when every catch is terminal (nothing can fall through to read
      * the declaration's null) and the temp has no other reader.
      */
-    private boolean foldTrySpilledReturn(List<Statement> stmts) {
-        if (methodRoot == null || stmts.size() < 2) {
+    private boolean foldTrySpilledReturn(List<Statement> stmts)
+    {
+        if (methodRoot == null || stmts.size() < 2)
+        {
             return false;
         }
         boolean changed = false;
-        for (int i = 0; i + 1 < stmts.size(); i++) {
+        for (int i = 0; i + 1 < stmts.size(); i++)
+        {
             if (!(stmts.get(i) instanceof TryCatchStmt)
                     || !(stmts.get(i + 1) instanceof ReturnStmt)
-                    || i + 2 != stmts.size()) {
+                    || i + 2 != stmts.size())
+            {
                 continue;
             }
             TryCatchStmt tryCatch = (TryCatchStmt) stmts.get(i);
             ReturnStmt ret = (ReturnStmt) stmts.get(i + 1);
             if (tryCatch.hasFinally() || !tryCatch.getResources().isEmpty()
                     || !(tryCatch.getTryBlock() instanceof BlockStmt)
-                    || !(ret.getValue() instanceof VarRefExpr)) {
+                    || !(ret.getValue() instanceof VarRefExpr))
+            {
                 continue;
             }
             String name = ((VarRefExpr) ret.getValue()).getName();
             boolean catchesTerminal = true;
-            for (CatchClause clause : tryCatch.getCatches()) {
-                if (!isTerminal(clause.body())) {
+            for (CatchClause clause : tryCatch.getCatches())
+            {
+                if (!isTerminal(clause.body()))
+                {
                     catchesTerminal = false;
                     break;
                 }
             }
-            if (!catchesTerminal) {
+            if (!catchesTerminal)
+            {
                 continue;
             }
             List<Statement> tryStmts = ((BlockStmt) tryCatch.getTryBlock()).getStatements();
-            if (tryStmts.isEmpty()) {
+            if (tryStmts.isEmpty())
+            {
                 continue;
             }
             Statement last = tryStmts.get(tryStmts.size() - 1);
             if (!(last instanceof VarDeclStmt)
                     || !((VarDeclStmt) last).getName().equals(name)
-                    || ((VarDeclStmt) last).getInitializer() == null) {
+                    || ((VarDeclStmt) last).getInitializer() == null)
+            {
                 continue;
             }
-            if (countUsesInTree(methodRoot, name) != 1) {
+            if (countUsesInTree(methodRoot, name) != 1)
+            {
                 continue;
             }
             ReturnStmt folded = new ReturnStmt(((VarDeclStmt) last).getInitializer());
@@ -1332,21 +1613,26 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private boolean areComplementary(Expression a, Expression b) {
-        if (isNotOf(a, b) || isNotOf(b, a)) {
+    private boolean areComplementary(Expression a, Expression b)
+    {
+        if (isNotOf(a, b) || isNotOf(b, a))
+        {
             return true;
         }
-        if (a instanceof BinaryExpr && b instanceof BinaryExpr) {
+        if (a instanceof BinaryExpr && b instanceof BinaryExpr)
+        {
             BinaryExpr ba = (BinaryExpr) a;
             BinaryExpr bb = (BinaryExpr) b;
             BinaryOperator flipped = flipComparison(ba.getOperator());
             if (flipped != null && !flipChangesNanAnswer(ba) && flipped == bb.getOperator()
                     && expressionsEqual(ba.getLeft(), bb.getLeft())
-                    && expressionsEqual(ba.getRight(), bb.getRight())) {
+                    && expressionsEqual(ba.getRight(), bb.getRight()))
+            {
                 return true;
             }
             if ((ba.getOperator() == BinaryOperator.AND && bb.getOperator() == BinaryOperator.OR)
-                    || (ba.getOperator() == BinaryOperator.OR && bb.getOperator() == BinaryOperator.AND)) {
+                    || (ba.getOperator() == BinaryOperator.OR && bb.getOperator() == BinaryOperator.AND))
+            {
                 return areComplementary(ba.getLeft(), bb.getLeft())
                         && areComplementary(ba.getRight(), bb.getRight());
             }
@@ -1354,42 +1640,55 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    /** Whether {@code notExpr} is {@code !base}. */
-    private boolean isNotOf(Expression base, Expression notExpr) {
+    /**
+     * Whether {@code notExpr} is {@code !base}.
+     */
+    private boolean isNotOf(Expression base, Expression notExpr)
+    {
         return notExpr instanceof UnaryExpr
                 && ((UnaryExpr) notExpr).getOperator() == UnaryOperator.NOT
                 && expressionsEqual(((UnaryExpr) notExpr).getOperand(), base);
     }
 
-    /** Whether {@code body} writes (assigns or increments) any variable that {@code cond} reads. */
-    private boolean writesAnyReadVar(Statement body, Expression cond) {
+    /**
+     * Whether {@code body} writes (assigns or increments) any variable that {@code cond} reads.
+     */
+    private boolean writesAnyReadVar(Statement body, Expression cond)
+    {
         WrittenVarCollector collector = new WrittenVarCollector();
         body.accept(collector);
-        for (String written : collector.written) {
-            if (countVariableUses(cond, written) > 0) {
+        for (String written : collector.written)
+        {
+            if (countVariableUses(cond, written) > 0)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private static final class WrittenVarCollector extends AbstractSourceVisitor<Void> {
+    private static final class WrittenVarCollector extends AbstractSourceVisitor<Void>
+    {
         final java.util.Set<String> written = new java.util.HashSet<>();
 
         @Override
-        public Void visitBinary(BinaryExpr expr) {
-            if (expr.getOperator().isAssignment() && expr.getLeft() instanceof VarRefExpr) {
+        public Void visitBinary(BinaryExpr expr)
+        {
+            if (expr.getOperator().isAssignment() && expr.getLeft() instanceof VarRefExpr)
+            {
                 written.add(((VarRefExpr) expr.getLeft()).getName());
             }
             return super.visitBinary(expr);
         }
 
         @Override
-        public Void visitUnary(UnaryExpr expr) {
+        public Void visitUnary(UnaryExpr expr)
+        {
             UnaryOperator op = expr.getOperator();
             if ((op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
                     || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
-                    && expr.getOperand() instanceof VarRefExpr) {
+                    && expr.getOperand() instanceof VarRefExpr)
+            {
                 written.add(((VarRefExpr) expr.getOperand()).getName());
             }
             return super.visitUnary(expr);
@@ -1403,8 +1702,10 @@ public class ControlFlowSimplifier implements ASTTransform {
      * apart with different compare opcodes ({@code dcmpg} versus {@code dcmpl}). Only the ordered operators
      * are affected: {@code ==} and {@code !=} do stay each other's negation for NaN.
      */
-    private boolean flipChangesNanAnswer(BinaryExpr comparison) {
-        switch (comparison.getOperator()) {
+    private boolean flipChangesNanAnswer(BinaryExpr comparison)
+    {
+        switch (comparison.getOperator())
+        {
             case LT:
             case LE:
             case GT:
@@ -1416,9 +1717,11 @@ public class ControlFlowSimplifier implements ASTTransform {
         return isFloatingPoint(comparison.getLeft()) || isFloatingPoint(comparison.getRight());
     }
 
-    private boolean isFloatingPoint(Expression expr) {
+    private boolean isFloatingPoint(Expression expr)
+    {
         SourceType type = expr == null ? null : expr.getType();
-        if (!(type instanceof PrimitiveSourceType)) {
+        if (!(type instanceof PrimitiveSourceType))
+        {
             return false;
         }
         PrimitiveSourceType.PrimitiveKind kind = ((PrimitiveSourceType) type).getKind();
@@ -1426,8 +1729,10 @@ public class ControlFlowSimplifier implements ASTTransform {
                 || kind == PrimitiveSourceType.PrimitiveKind.DOUBLE;
     }
 
-    private BinaryOperator flipComparison(BinaryOperator op) {
-        switch (op) {
+    private BinaryOperator flipComparison(BinaryOperator op)
+    {
+        switch (op)
+        {
             case EQ: return BinaryOperator.NE;
             case NE: return BinaryOperator.EQ;
             case LT: return BinaryOperator.GE;
@@ -1444,12 +1749,16 @@ public class ControlFlowSimplifier implements ASTTransform {
      * does not compile. Only a bare exit is treated as terminal here; a block or {@code if} whose paths
      * all exit is left alone, since its own statement list is cleaned by the recursion.
      */
-    private boolean removeUnreachableStatements(List<Statement> stmts) {
-        for (int i = 0; i < stmts.size() - 1; i++) {
-            if (!isUnconditionalExit(stmts.get(i))) {
+    private boolean removeUnreachableStatements(List<Statement> stmts)
+    {
+        for (int i = 0; i < stmts.size() - 1; i++)
+        {
+            if (!isUnconditionalExit(stmts.get(i)))
+            {
                 continue;
             }
-            while (stmts.size() > i + 1) {
+            while (stmts.size() > i + 1)
+            {
                 stmts.remove(stmts.size() - 1);
             }
             return true;
@@ -1457,7 +1766,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    private boolean isUnconditionalExit(Statement stmt) {
+    private boolean isUnconditionalExit(Statement stmt)
+    {
         return stmt instanceof ReturnStmt || stmt instanceof ThrowStmt
                 || stmt instanceof BreakStmt || stmt instanceof ContinueStmt;
     }
@@ -1470,23 +1780,29 @@ public class ControlFlowSimplifier implements ASTTransform {
      * carries finally semantics. A lone {@code continue} is kept so an arm is never emptied - the
      * neighbouring guard rules own that shape.
      */
-    private boolean stripTailContinue(Statement tail) {
-        if (tail instanceof BlockStmt) {
+    private boolean stripTailContinue(Statement tail)
+    {
+        if (tail instanceof BlockStmt)
+        {
             List<Statement> stmts = ((BlockStmt) tail).getStatements();
-            if (stmts.isEmpty()) {
+            if (stmts.isEmpty())
+            {
                 return false;
             }
             Statement last = stmts.get(stmts.size() - 1);
-            if (stmts.size() > 1 && last instanceof ContinueStmt && !((ContinueStmt) last).hasLabel()) {
+            if (stmts.size() > 1 && last instanceof ContinueStmt && !((ContinueStmt) last).hasLabel())
+            {
                 stmts.remove(stmts.size() - 1);
                 return true;
             }
             return stripTailContinue(last);
         }
-        if (tail instanceof IfStmt) {
+        if (tail instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) tail;
             boolean changed = stripTailContinue(ifStmt.getThenBranch());
-            if (ifStmt.hasElse()) {
+            if (ifStmt.hasElse())
+            {
                 changed |= stripTailContinue(ifStmt.getElseBranch());
             }
             return changed;
@@ -1494,35 +1810,44 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    private boolean removeRedundantStatements(List<Statement> stmts) {
+    private boolean removeRedundantStatements(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = stmts.size() - 1; i >= 0; i--) {
+        for (int i = stmts.size() - 1; i >= 0; i--)
+        {
             Statement stmt = stmts.get(i);
 
-            if (stmt instanceof BlockStmt && ((BlockStmt) stmt).isEmpty()) {
+            if (stmt instanceof BlockStmt && ((BlockStmt) stmt).isEmpty())
+            {
                 stmts.remove(i);
                 changed = true;
                 continue;
             }
 
-            if (stmt instanceof ExprStmt) {
+            if (stmt instanceof ExprStmt)
+            {
                 Expression expr = ((ExprStmt) stmt).getExpression();
-                if (expr instanceof BinaryExpr) {
+                if (expr instanceof BinaryExpr)
+                {
                     BinaryExpr binary = (BinaryExpr) expr;
-                    if (binary.getOperator() == BinaryOperator.ASSIGN) {
-                        if (isSameVariable(binary.getLeft(), binary.getRight())) {
+                    if (binary.getOperator() == BinaryOperator.ASSIGN)
+                    {
+                        if (isSameVariable(binary.getLeft(), binary.getRight()))
+                        {
                             stmts.remove(i);
                             changed = true;
                             continue;
                         }
 
-                        if (i > 0) {
+                        if (i > 0)
+                        {
                             Statement prev = stmts.get(i - 1);
                             // The prior assignment to this variable is dead only if the current
                             // assignment does not read it; `x = f(); x = x.g()` keeps the first store.
                             if (isDuplicateAssignment(prev, binary.getLeft())
-                                    && !references(binary.getRight(), binary.getLeft())) {
+                                    && !references(binary.getRight(), binary.getLeft()))
+                            {
                                 stmts.remove(i - 1);
                                 i--;
                                 changed = true;
@@ -1536,32 +1861,42 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private boolean isSameVariable(Expression left, Expression right) {
-        if (left instanceof VarRefExpr && right instanceof VarRefExpr) {
+    private boolean isSameVariable(Expression left, Expression right)
+    {
+        if (left instanceof VarRefExpr && right instanceof VarRefExpr)
+        {
             return ((VarRefExpr) left).getName().equals(((VarRefExpr) right).getName());
         }
         return false;
     }
 
-    /** Whether {@code expr} reads the variable named by {@code varRef}. */
-    private static boolean references(Expression expr, Expression varRef) {
+    /**
+     * Whether {@code expr} reads the variable named by {@code varRef}.
+     */
+    private static boolean references(Expression expr, Expression varRef)
+    {
         return varRef instanceof VarRefExpr
                 && referencesName(expr, ((VarRefExpr) varRef).getName());
     }
 
-    private static boolean referencesName(ASTNode node, String name) {
-        if (node instanceof VarRefExpr && ((VarRefExpr) node).getName().equals(name)) {
+    private static boolean referencesName(ASTNode node, String name)
+    {
+        if (node instanceof VarRefExpr && ((VarRefExpr) node).getName().equals(name))
+        {
             return true;
         }
-        for (ASTNode child : node.getChildren()) {
-            if (referencesName(child, name)) {
+        for (ASTNode child : node.getChildren())
+        {
+            if (referencesName(child, name))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isDuplicateAssignment(Statement prev, Expression targetVar) {
+    private boolean isDuplicateAssignment(Statement prev, Expression targetVar)
+    {
         if (!(prev instanceof ExprStmt)) return false;
         Expression prevExpr = ((ExprStmt) prev).getExpression();
         if (!(prevExpr instanceof BinaryExpr)) return false;
@@ -1572,10 +1907,11 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     /**
      * Converts if-else that assigns 0/1 to same variable into boolean expression.
-     * if (cond) { x = 0; } else { x = 1; } -> x = cond ? 0 : 1;
-     * if (cond) { x = 0; } else { x = 1; } where x is int assigned 0/1 -> x = !cond ? 1 : 0 or simplified
+     * if (cond) { x = 0; } else { x = 1; } -&gt; x = cond ? 0 : 1;
+     * if (cond) { x = 0; } else { x = 1; } where x is int assigned 0/1 -&gt; x = !cond ? 1 : 0 or simplified
      */
-    private Statement tryConvertIfElseToAssignment(IfStmt ifStmt) {
+    private Statement tryConvertIfElseToAssignment(IfStmt ifStmt)
+    {
         if (!ifStmt.hasElse()) return null;
 
         Statement thenStmt = unwrapSingleStatement(ifStmt.getThenBranch());
@@ -1592,21 +1928,26 @@ public class ControlFlowSimplifier implements ASTTransform {
         if (thenVal == null || elseVal == null) return null;
 
         Expression newValue;
-        if (thenVal == 0 && elseVal == 1) {
+        if (thenVal == 0 && elseVal == 1)
+        {
             newValue = new TernaryExpr(
                 ifStmt.getCondition(),
                 LiteralExpr.ofInt(0),
                 LiteralExpr.ofInt(1),
                 thenAssign.getType()
             );
-        } else if (thenVal == 1 && elseVal == 0) {
+        }
+        else if (thenVal == 1 && elseVal == 0)
+        {
             newValue = new TernaryExpr(
                 ifStmt.getCondition(),
                 LiteralExpr.ofInt(1),
                 LiteralExpr.ofInt(0),
                 thenAssign.getType()
             );
-        } else {
+        }
+        else
+        {
             newValue = new TernaryExpr(
                 ifStmt.getCondition(),
                 thenAssign.getRight(),
@@ -1625,7 +1966,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         return new ExprStmt(newAssign);
     }
 
-    private BinaryExpr getAssignment(Statement stmt) {
+    private BinaryExpr getAssignment(Statement stmt)
+    {
         if (!(stmt instanceof ExprStmt)) return null;
         Expression expr = ((ExprStmt) stmt).getExpression();
         if (!(expr instanceof BinaryExpr)) return null;
@@ -1634,7 +1976,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         return binary;
     }
 
-    private Integer getIntLiteral(Expression expr) {
+    private Integer getIntLiteral(Expression expr)
+    {
         if (!(expr instanceof LiteralExpr)) return null;
         Object val = ((LiteralExpr) expr).getValue();
         if (val instanceof Integer) return (Integer) val;
@@ -1644,10 +1987,12 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Moves variable declarations to their first use point.
      */
-    private boolean moveDeclarationsToFirstUse(List<Statement> stmts) {
+    private boolean moveDeclarationsToFirstUse(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
             if (!(stmt instanceof VarDeclStmt)) continue;
 
@@ -1663,7 +2008,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             BinaryExpr assign = getAssignmentTo(stmts.get(firstAssignIdx), varName);
             if (assign == null) continue;
 
-            if (isDefaultValue(assign.getRight())) {
+            if (isDefaultValue(assign.getRight()))
+            {
                 stmts.remove(firstAssignIdx);
                 changed = true;
                 i--;
@@ -1689,10 +2035,12 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private boolean moveDeclarationsIntoBlocks(List<Statement> stmts) {
+    private boolean moveDeclarationsIntoBlocks(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
             if (!(stmt instanceof VarDeclStmt)) continue;
 
@@ -1716,39 +2064,49 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private BlockStmt findExclusiveUseBlock(List<Statement> stmts, int start, String varName) {
+    private BlockStmt findExclusiveUseBlock(List<Statement> stmts, int start, String varName)
+    {
         BlockStmt candidate = null;
 
-        for (int i = start; i < stmts.size(); i++) {
+        for (int i = start; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
 
-            if (s instanceof ExprStmt || s instanceof VarDeclStmt || s instanceof ReturnStmt) {
+            if (s instanceof ExprStmt || s instanceof VarDeclStmt || s instanceof ReturnStmt)
+            {
                 if (readsVariable(s, varName)) return null;
                 continue;
             }
 
-            if (s instanceof TryCatchStmt) {
+            if (s instanceof TryCatchStmt)
+            {
                 TryCatchStmt tc = (TryCatchStmt) s;
                 boolean usedInTry = usesVariable(tc.getTryBlock(), varName);
                 boolean usedInCatch = false;
-                for (CatchClause cc : tc.getCatches()) {
+                for (CatchClause cc : tc.getCatches())
+                {
                     if (usesVariable(cc.body(), varName)) usedInCatch = true;
                 }
                 boolean usedInFinally = tc.getFinallyBlock() != null && usesVariable(tc.getFinallyBlock(), varName);
 
-                if (usedInTry && !usedInCatch && !usedInFinally) {
+                if (usedInTry && !usedInCatch && !usedInFinally)
+                {
                     if (candidate != null) return null;
-                    if (tc.getTryBlock() instanceof BlockStmt) {
+                    if (tc.getTryBlock() instanceof BlockStmt)
+                    {
                         candidate = (BlockStmt) tc.getTryBlock();
                     }
-                } else if (usedInCatch || usedInFinally) {
+                }
+                else if (usedInCatch || usedInFinally)
+                {
                     return null;
                 }
                 continue;
             }
 
             BlockStmt body = exclusiveBodyOf(s, varName);
-            if (body != null) {
+            if (body != null)
+            {
                 if (candidate != null) return null;
                 candidate = body;
                 continue;
@@ -1766,51 +2124,67 @@ public class ControlFlowSimplifier implements ASTTransform {
      * qualifies only under that write-first rule: a variable read before it is written carries its value from
      * the previous iteration, and a declaration moved inside would reset it every time. An if-arm needs the
      * same rule for a different reason - moved inside, the default initializer no longer precedes the read.
-     * <p>
      * This is what lets a temporary the relowered layout spilled to a slot end up beside its use, where the
      * single-use inliner can fold it away again; left at method level with the assignment further down, the
      * inliner sees a statement in between and declines, and the temporary survives into the output.
      */
-    private BlockStmt exclusiveBodyOf(Statement s, String varName) {
+    private BlockStmt exclusiveBodyOf(Statement s, String varName)
+    {
         Statement body;
-        if (s instanceof WhileStmt) {
+        if (s instanceof WhileStmt)
+        {
             WhileStmt loop = (WhileStmt) s;
             if (readsVariableExpr(loop.getCondition(), varName, true)) return null;
             body = loop.getBody();
-        } else if (s instanceof DoWhileStmt) {
+        }
+        else if (s instanceof DoWhileStmt)
+        {
             DoWhileStmt loop = (DoWhileStmt) s;
             if (readsVariableExpr(loop.getCondition(), varName, true)) return null;
             body = loop.getBody();
-        } else if (s instanceof ForStmt) {
+        }
+        else if (s instanceof ForStmt)
+        {
             ForStmt loop = (ForStmt) s;
-            if (loop.getCondition() != null && readsVariableExpr(loop.getCondition(), varName, true)) {
+            if (loop.getCondition() != null && readsVariableExpr(loop.getCondition(), varName, true))
+            {
                 return null;
             }
-            for (Statement init : loop.getInit()) {
+            for (Statement init : loop.getInit())
+            {
                 if (usesVariable(init, varName)) return null;
             }
-            for (Expression update : loop.getUpdate()) {
+            for (Expression update : loop.getUpdate())
+            {
                 if (readsVariableExpr(update, varName, true)) return null;
             }
             body = loop.getBody();
-        } else if (s instanceof ForEachStmt) {
+        }
+        else if (s instanceof ForEachStmt)
+        {
             ForEachStmt loop = (ForEachStmt) s;
             if (readsVariableExpr(loop.getIterable(), varName, true)) return null;
             body = loop.getBody();
-        } else if (s instanceof IfStmt) {
+        }
+        else if (s instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) s;
             if (readsVariableExpr(ifStmt.getCondition(), varName, true)) return null;
             boolean inThen = usesVariable(ifStmt.getThenBranch(), varName);
             boolean inElse = ifStmt.hasElse() && usesVariable(ifStmt.getElseBranch(), varName);
             if (inThen == inElse) return null; // used in both arms, or in neither
             body = inThen ? ifStmt.getThenBranch() : ifStmt.getElseBranch();
-        } else {
+        }
+        else
+        {
             return null;
         }
-        if (!(body instanceof BlockStmt) || !usesVariable(body, varName)) {
+        if (!(body instanceof BlockStmt) || !usesVariable(body, varName))
+        {
             return null;
         }
-        if (drivesALoopWithin((BlockStmt) body, varName)) {
+        if (drivesALoopWithin((BlockStmt) body, varName))
+        {
             return null;
         }
         return writesBeforeReading((BlockStmt) body, varName) ? (BlockStmt) body : null;
@@ -1821,16 +2195,21 @@ public class ControlFlowSimplifier implements ASTTransform {
      * variable, making it that loop's counter. A counter's declaration belongs to the loop it drives, which the
      * for-counter folder places; moving it here as well leaves the two passes disagreeing about where it goes.
      */
-    private boolean drivesALoopWithin(BlockStmt body, String varName) {
+    private boolean drivesALoopWithin(BlockStmt body, String varName)
+    {
         AtomicBoolean found = new AtomicBoolean(false);
         body.accept(new AbstractSourceVisitor<Void>() {
             @Override
-            public Void visitFor(ForStmt stmt) {
-                if (stmt.getCondition() != null && readsVariableExpr(stmt.getCondition(), varName, true)) {
+            public Void visitFor(ForStmt stmt)
+            {
+                if (stmt.getCondition() != null && readsVariableExpr(stmt.getCondition(), varName, true))
+                {
                     found.set(true);
                 }
-                for (Expression update : stmt.getUpdate()) {
-                    if (readsVariableExpr(update, varName, true)) {
+                for (Expression update : stmt.getUpdate())
+                {
+                    if (readsVariableExpr(update, varName, true))
+                    {
                         found.set(true);
                     }
                 }
@@ -1838,16 +2217,20 @@ public class ControlFlowSimplifier implements ASTTransform {
             }
 
             @Override
-            public Void visitWhile(WhileStmt stmt) {
-                if (readsVariableExpr(stmt.getCondition(), varName, true)) {
+            public Void visitWhile(WhileStmt stmt)
+            {
+                if (readsVariableExpr(stmt.getCondition(), varName, true))
+                {
                     found.set(true);
                 }
                 return super.visitWhile(stmt);
             }
 
             @Override
-            public Void visitDoWhile(DoWhileStmt stmt) {
-                if (readsVariableExpr(stmt.getCondition(), varName, true)) {
+            public Void visitDoWhile(DoWhileStmt stmt)
+            {
+                if (readsVariableExpr(stmt.getCondition(), varName, true))
+                {
                     found.set(true);
                 }
                 return super.visitDoWhile(stmt);
@@ -1856,10 +2239,15 @@ public class ControlFlowSimplifier implements ASTTransform {
         return found.get();
     }
 
-    /** Whether the first statement of {@code body} that touches {@code varName} assigns to it. */
-    private boolean writesBeforeReading(BlockStmt body, String varName) {
-        for (Statement s : body.getStatements()) {
-            if (!usesVariable(s, varName)) {
+    /**
+     * Whether the first statement of {@code body} that touches {@code varName} assigns to it.
+     */
+    private boolean writesBeforeReading(BlockStmt body, String varName)
+    {
+        for (Statement s : body.getStatements())
+        {
+            if (!usesVariable(s, varName))
+            {
                 continue;
             }
             BinaryExpr assign = getAssignmentTo(s, varName);
@@ -1871,21 +2259,26 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Checks if a statement uses (reads or declares) the given variable.
      */
-    private boolean usesVariable(Statement stmt, String varName) {
+    private boolean usesVariable(Statement stmt, String varName)
+    {
         if (stmt == null) return false;
         AtomicBoolean found = new AtomicBoolean(false);
         stmt.accept(new AbstractSourceVisitor<Void>() {
             @Override
-            public Void visitVarRef(VarRefExpr expr) {
-                if (expr.getName().equals(varName)) {
+            public Void visitVarRef(VarRefExpr expr)
+            {
+                if (expr.getName().equals(varName))
+                {
                     found.set(true);
                 }
                 return super.visitVarRef(expr);
             }
 
             @Override
-            public Void visitVarDecl(VarDeclStmt stmt) {
-                if (stmt.getName().equals(varName)) {
+            public Void visitVarDecl(VarDeclStmt stmt)
+            {
+                if (stmt.getName().equals(varName))
+                {
                     found.set(true);
                 }
                 return super.visitVarDecl(stmt);
@@ -1894,7 +2287,8 @@ public class ControlFlowSimplifier implements ASTTransform {
         return found.get();
     }
 
-    private boolean isDefaultValue(Expression expr) {
+    private boolean isDefaultValue(Expression expr)
+    {
         if (expr == null) return true;
         if (!(expr instanceof LiteralExpr)) return false;
         Object val = ((LiteralExpr) expr).getValue();
@@ -1908,8 +2302,10 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    private int findFirstAssignment(List<Statement> stmts, int start, String varName) {
-        for (int i = start; i < stmts.size(); i++) {
+    private int findFirstAssignment(List<Statement> stmts, int start, String varName)
+    {
+        for (int i = start; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
             if (getAssignmentTo(s, varName) != null) return i;
             if (containsControlFlow(s)) return -1;
@@ -1917,13 +2313,15 @@ public class ControlFlowSimplifier implements ASTTransform {
         return -1;
     }
 
-    private boolean containsControlFlow(Statement s) {
+    private boolean containsControlFlow(Statement s)
+    {
         return s instanceof IfStmt || s instanceof WhileStmt ||
                s instanceof ForStmt || s instanceof TryCatchStmt ||
                s instanceof SwitchStmt || s instanceof DoWhileStmt;
     }
 
-    private BinaryExpr getAssignmentTo(Statement stmt, String varName) {
+    private BinaryExpr getAssignmentTo(Statement stmt, String varName)
+    {
         if (!(stmt instanceof ExprStmt)) return null;
         Expression expr = ((ExprStmt) stmt).getExpression();
         if (!(expr instanceof BinaryExpr)) return null;
@@ -1934,22 +2332,28 @@ public class ControlFlowSimplifier implements ASTTransform {
         return binary;
     }
 
-    private boolean isVariableReadBetween(List<Statement> stmts, int start, int end, String varName) {
-        for (int i = start; i < end; i++) {
+    private boolean isVariableReadBetween(List<Statement> stmts, int start, int end, String varName)
+    {
+        for (int i = start; i < end; i++)
+        {
             if (readsVariable(stmts.get(i), varName)) return true;
         }
         return false;
     }
 
-    private boolean readsVariable(Statement stmt, String varName) {
-        if (stmt instanceof ExprStmt) {
+    private boolean readsVariable(Statement stmt, String varName)
+    {
+        if (stmt instanceof ExprStmt)
+        {
             return readsVariableExpr(((ExprStmt) stmt).getExpression(), varName, true);
         }
-        if (stmt instanceof VarDeclStmt) {
+        if (stmt instanceof VarDeclStmt)
+        {
             VarDeclStmt vd = (VarDeclStmt) stmt;
             return vd.getInitializer() != null && readsVariableExpr(vd.getInitializer(), varName, false);
         }
-        if (stmt instanceof ReturnStmt) {
+        if (stmt instanceof ReturnStmt)
+        {
             ReturnStmt rs = (ReturnStmt) stmt;
             return rs.getValue() != null && readsVariableExpr(rs.getValue(), varName, false);
         }
@@ -1960,21 +2364,26 @@ public class ControlFlowSimplifier implements ASTTransform {
      * Checks if an expression reads the given variable.
      * Uses visitor pattern with special handling for assignment LHS.
      */
-    private boolean readsVariableExpr(Expression expr, String varName, boolean skipAssignLeft) {
+    private boolean readsVariableExpr(Expression expr, String varName, boolean skipAssignLeft)
+    {
         if (expr == null) return false;
         AtomicBoolean found = new AtomicBoolean(false);
         expr.accept(new AbstractSourceVisitor<Void>() {
             @Override
-            public Void visitVarRef(VarRefExpr e) {
-                if (e.getName().equals(varName)) {
+            public Void visitVarRef(VarRefExpr e)
+            {
+                if (e.getName().equals(varName))
+                {
                     found.set(true);
                 }
                 return null;
             }
 
             @Override
-            public Void visitBinary(BinaryExpr e) {
-                if (skipAssignLeft && e.getOperator() == BinaryOperator.ASSIGN) {
+            public Void visitBinary(BinaryExpr e)
+            {
+                if (skipAssignLeft && e.getOperator() == BinaryOperator.ASSIGN)
+                {
                     e.getRight().accept(this);
                     return null;
                 }
@@ -1986,12 +2395,14 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     /**
      * Merges sequential guard clauses with identical early-exit bodies.
-     * Pattern: if(a) { return X; } if(b) { return X; } -> if(a || b) { return X; }
+     * Pattern: if(a) { return X; } if(b) { return X; } -&gt; if(a || b) { return X; }
      */
-    private boolean mergeSequentialGuards(List<Statement> stmts) {
+    private boolean mergeSequentialGuards(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             if (!(stmts.get(i) instanceof IfStmt)) continue;
             IfStmt firstIf = (IfStmt) stmts.get(i);
 
@@ -2002,7 +2413,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             guards.add(firstIf);
 
             int j = i + 1;
-            while (j < stmts.size() && stmts.get(j) instanceof IfStmt) {
+            while (j < stmts.size() && stmts.get(j) instanceof IfStmt)
+            {
                 IfStmt nextIf = (IfStmt) stmts.get(j);
                 if (nextIf.hasElse()) break;
                 if (!isEarlyExit(nextIf.getThenBranch())) break;
@@ -2014,7 +2426,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (guards.size() < 2) continue;
 
             Expression combined = guards.get(0).getCondition();
-            for (int k = 1; k < guards.size(); k++) {
+            for (int k = 1; k < guards.size(); k++)
+            {
                 combined = new BinaryExpr(
                     BinaryOperator.OR,
                     combined,
@@ -2027,7 +2440,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             Locations.copy(firstIf, mergedIf);
             stmts.set(i, mergedIf);
 
-            for (int k = 1; k < guards.size(); k++) {
+            for (int k = 1; k < guards.size(); k++)
+            {
                 stmts.remove(i + 1);
             }
 
@@ -2040,19 +2454,22 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Compares two early-exit statements for semantic equality.
      */
-    private boolean earlyExitsEqual(Statement a, Statement b) {
+    private boolean earlyExitsEqual(Statement a, Statement b)
+    {
         Statement ua = unwrapSingleStatement(a);
         Statement ub = unwrapSingleStatement(b);
 
         if (ua.getClass() != ub.getClass()) return false;
 
-        if (ua instanceof ReturnStmt) {
+        if (ua instanceof ReturnStmt)
+        {
             ReturnStmt ra = (ReturnStmt) ua;
             ReturnStmt rb = (ReturnStmt) ub;
             return expressionsEqual(ra.getValue(), rb.getValue());
         }
 
-        if (ua instanceof ThrowStmt) {
+        if (ua instanceof ThrowStmt)
+        {
             ThrowStmt ta = (ThrowStmt) ua;
             ThrowStmt tb = (ThrowStmt) ub;
             return expressionsEqual(ta.getException(), tb.getException());
@@ -2062,20 +2479,23 @@ public class ControlFlowSimplifier implements ASTTransform {
         // unsound: BlockStmt.toString() reports only the statement count ("{ 2 statements }") and
         // IfStmt.toString() omits its body, so two guards with different bodies but the same shape compared
         // equal - merging `if(x==0){A} if(y==0){B}` into `if(x==0||y==0){A}` and silently dropping B.
-        if (ua instanceof BlockStmt) {
+        if (ua instanceof BlockStmt)
+        {
             // Normalize a trailing single-use return temp first: an asymmetric `||` lowering can emit
             // `temp = expr; return temp` on one merge path and `return expr` on the other; both mean the same
             // exit, so collapse them before comparing (else equal guards fail to merge and the round trip drifts).
             List<Statement> sa = normalizeReturnTemp(((BlockStmt) ua).getStatements());
             List<Statement> sb = normalizeReturnTemp(((BlockStmt) ub).getStatements());
             if (sa.size() != sb.size()) return false;
-            for (int k = 0; k < sa.size(); k++) {
+            for (int k = 0; k < sa.size(); k++)
+            {
                 if (!earlyExitsEqual(sa.get(k), sb.get(k))) return false;
             }
             return true;
         }
 
-        if (ua instanceof IfStmt) {
+        if (ua instanceof IfStmt)
+        {
             IfStmt ia = (IfStmt) ua;
             IfStmt ib = (IfStmt) ub;
             if (!expressionsEqual(ia.getCondition(), ib.getCondition())) return false;
@@ -2084,7 +2504,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             return !ia.hasElse() || earlyExitsEqual(ia.getElseBranch(), ib.getElseBranch());
         }
 
-        if (ua instanceof ExprStmt) {
+        if (ua instanceof ExprStmt)
+        {
             return expressionsEqual(((ExprStmt) ua).getExpression(), ((ExprStmt) ub).getExpression());
         }
 
@@ -2098,7 +2519,8 @@ public class ControlFlowSimplifier implements ASTTransform {
      * referenced earlier in the list), returns the list with that pair replaced by {@code return expr}; else
      * returns {@code stmts} unchanged. Used only to normalize guard bodies for equality comparison.
      */
-    private List<Statement> normalizeReturnTemp(List<Statement> stmts) {
+    private List<Statement> normalizeReturnTemp(List<Statement> stmts)
+    {
         int n = stmts.size();
         if (n < 2) return stmts;
         Statement last = stmts.get(n - 1);
@@ -2112,10 +2534,12 @@ public class ControlFlowSimplifier implements ASTTransform {
         BinaryExpr assign = (BinaryExpr) pe;
         if (assign.getOperator() != BinaryOperator.ASSIGN
                 || !(assign.getLeft() instanceof VarRefExpr)
-                || !((VarRefExpr) assign.getLeft()).getName().equals(var)) {
+                || !((VarRefExpr) assign.getLeft()).getName().equals(var))
+        {
             return stmts;
         }
-        for (int i = 0; i < n - 2; i++) {
+        for (int i = 0; i < n - 2; i++)
+        {
             if (referencesVar(stmts.get(i), var)) return stmts;
         }
         List<Statement> out = new ArrayList<>(stmts.subList(0, n - 2));
@@ -2123,12 +2547,15 @@ public class ControlFlowSimplifier implements ASTTransform {
         return out;
     }
 
-    private boolean referencesVar(Statement stmt, String var) {
+    private boolean referencesVar(Statement stmt, String var)
+    {
         AtomicBoolean found = new AtomicBoolean(false);
         stmt.accept(new AbstractSourceVisitor<Void>() {
             @Override
-            public Void visitVarRef(VarRefExpr e) {
-                if (e.getName().equals(var)) {
+            public Void visitVarRef(VarRefExpr e)
+            {
+                if (e.getName().equals(var))
+                {
                     found.set(true);
                 }
                 return null;
@@ -2140,36 +2567,43 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Compares two expressions for semantic equality.
      */
-    private boolean expressionsEqual(Expression a, Expression b) {
+    private boolean expressionsEqual(Expression a, Expression b)
+    {
         if (a == b) return true;
         if (a == null || b == null) return false;
         if (a.getClass() != b.getClass()) return false;
 
-        if (a instanceof LiteralExpr) {
+        if (a instanceof LiteralExpr)
+        {
             Object va = ((LiteralExpr) a).getValue();
             Object vb = ((LiteralExpr) b).getValue();
             return Objects.equals(va, vb);
         }
 
-        if (a instanceof VarRefExpr) {
+        if (a instanceof VarRefExpr)
+        {
             return ((VarRefExpr) a).getName().equals(((VarRefExpr) b).getName());
         }
 
-        if (a instanceof MethodCallExpr) {
+        if (a instanceof MethodCallExpr)
+        {
             MethodCallExpr ma = (MethodCallExpr) a;
             MethodCallExpr mb = (MethodCallExpr) b;
             if (!ma.getMethodName().equals(mb.getMethodName())) return false;
             if (!ma.getOwnerClass().equals(mb.getOwnerClass())) return false;
             if (ma.getArguments().size() != mb.getArguments().size()) return false;
-            for (int i = 0; i < ma.getArguments().size(); i++) {
-                if (!expressionsEqual(ma.getArguments().get(i), mb.getArguments().get(i))) {
+            for (int i = 0; i < ma.getArguments().size(); i++)
+            {
+                if (!expressionsEqual(ma.getArguments().get(i), mb.getArguments().get(i)))
+                {
                     return false;
                 }
             }
             return expressionsEqual(ma.getReceiver(), mb.getReceiver());
         }
 
-        if (a instanceof BinaryExpr) {
+        if (a instanceof BinaryExpr)
+        {
             BinaryExpr ba = (BinaryExpr) a;
             BinaryExpr bb = (BinaryExpr) b;
             return ba.getOperator() == bb.getOperator() &&
@@ -2177,7 +2611,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                    expressionsEqual(ba.getRight(), bb.getRight());
         }
 
-        if (a instanceof UnaryExpr) {
+        if (a instanceof UnaryExpr)
+        {
             UnaryExpr ua = (UnaryExpr) a;
             UnaryExpr ub = (UnaryExpr) b;
             return ua.getOperator() == ub.getOperator() &&
@@ -2189,12 +2624,14 @@ public class ControlFlowSimplifier implements ASTTransform {
 
     /**
      * Inlines single-use boolean variables into their condition usage.
-     * Pattern: boolean flag = expr; if (!flag) { ... } -> if (!expr) { ... }
+     * Pattern: boolean flag = expr; if (!flag) { ... } -&gt; if (!expr) { ... }
      */
-    private boolean inlineSingleUseBooleans(List<Statement> stmts) {
+    private boolean inlineSingleUseBooleans(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = 0; i < stmts.size() - 1; i++) {
+        for (int i = 0; i < stmts.size() - 1; i++)
+        {
             Statement stmt = stmts.get(i);
 
             if (!(stmt instanceof VarDeclStmt)) continue;
@@ -2207,7 +2644,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             Expression initExpr = decl.getInitializer();
 
             Statement next = stmts.get(i + 1);
-            if (next instanceof IfStmt) {
+            if (next instanceof IfStmt)
+            {
                 IfStmt ifStmt = (IfStmt) next;
                 Expression cond = ifStmt.getCondition();
 
@@ -2218,20 +2656,24 @@ public class ControlFlowSimplifier implements ASTTransform {
                 // the inline.
                 if (useCount == 1 && !usesVariable(ifStmt.getThenBranch(), varName)
                         && !(ifStmt.hasElse() && usesVariable(ifStmt.getElseBranch(), varName))
-                        && !isVariableUsedAfter(stmts, i + 1, varName, ifStmt)) {
+                        && !isVariableUsedAfter(stmts, i + 1, varName, ifStmt))
+                {
                     Expression newCond = substituteVariable(cond, varName, initExpr);
                     ifStmt.setCondition(newCond);
                     stmts.remove(i);
                     changed = true;
                     i--;
                 }
-            } else if (next instanceof WhileStmt) {
+            }
+            else if (next instanceof WhileStmt)
+            {
                 WhileStmt whileStmt = (WhileStmt) next;
                 Expression cond = whileStmt.getCondition();
 
                 int useCount = countVariableUses(cond, varName);
                 if (useCount == 1 && !usesVariable(whileStmt.getBody(), varName)
-                        && !isVariableUsedAfter(stmts, i + 1, varName, whileStmt)) {
+                        && !isVariableUsedAfter(stmts, i + 1, varName, whileStmt))
+                {
                     Expression newCond = substituteVariable(cond, varName, initExpr);
                     whileStmt.setCondition(newCond);
                     stmts.remove(i);
@@ -2256,23 +2698,29 @@ public class ControlFlowSimplifier implements ASTTransform {
      * and the condition are side-effect free and {@code c} does not read {@code t} - so evaluating {@code c}
      * first changes nothing.
      */
-    private boolean collapseConditionalMaterialization(List<Statement> stmts) {
+    private boolean collapseConditionalMaterialization(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i + 1 < stmts.size(); i++) {
+        for (int i = 0; i + 1 < stmts.size(); i++)
+        {
             String var = assignedVar(stmts.get(i));
             Expression v0 = assignedValue(stmts.get(i));
-            if (var == null || v0 == null || isSideEffecting(v0) || countVariableUses(v0, var) > 0) {
+            if (var == null || v0 == null || isSideEffecting(v0) || countVariableUses(v0, var) > 0)
+            {
                 continue;
             }
-            if (!(stmts.get(i + 1) instanceof IfStmt)) {
+            if (!(stmts.get(i + 1) instanceof IfStmt))
+            {
                 continue;
             }
             IfStmt ifStmt = (IfStmt) stmts.get(i + 1);
-            if (ifStmt.hasElse()) {
+            if (ifStmt.hasElse())
+            {
                 continue;
             }
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
-            if (inner == null || !var.equals(simpleAssignVar(inner))) {
+            if (inner == null || !var.equals(simpleAssignVar(inner)))
+            {
                 continue;
             }
             Expression v1 = simpleAssignValue(inner);
@@ -2282,15 +2730,18 @@ public class ControlFlowSimplifier implements ASTTransform {
             // declaration and the guard are adjacent. It is the VALUES that must stay effect-free -
             // one of them is dropped by the fold - and the condition must not read the variable.
             if (v1 == null || isSideEffecting(v1)
-                    || countVariableUses(cond, var) > 0 || countVariableUses(v1, var) > 0) {
+                    || countVariableUses(cond, var) > 0 || countVariableUses(v1, var) > 0)
+            {
                 continue;
             }
             Expression folded = materializeBoolean(cond, v1, v0);
-            if (folded == null) {
+            if (folded == null)
+            {
                 continue;
             }
             Statement rebuilt = rebuildAssignment(stmts.get(i), folded);
-            if (rebuilt == null) {
+            if (rebuilt == null)
+            {
                 continue;
             }
             Locations.copy(stmts.get(i), rebuilt);
@@ -2314,39 +2765,48 @@ public class ControlFlowSimplifier implements ASTTransform {
      * conditional one, immediately followed by {@code return t}), and no other use - so the flag is exactly the
      * boolean value of its condition.
      */
-    private boolean collapseReturnedBooleanPhi(List<Statement> stmts) {
-        if (methodRoot == null) {
+    private boolean collapseReturnedBooleanPhi(List<Statement> stmts)
+    {
+        if (methodRoot == null)
+        {
             return false;
         }
         boolean changed = false;
-        for (int i = 0; i + 1 < stmts.size(); i++) {
-            if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof ReturnStmt)) {
+        for (int i = 0; i + 1 < stmts.size(); i++)
+        {
+            if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof ReturnStmt))
+            {
                 continue;
             }
             IfStmt ifStmt = (IfStmt) stmts.get(i);
             ReturnStmt ret = (ReturnStmt) stmts.get(i + 1);
-            if (ifStmt.hasElse() || !(ret.getValue() instanceof VarRefExpr)) {
+            if (ifStmt.hasElse() || !(ret.getValue() instanceof VarRefExpr))
+            {
                 continue;
             }
             String var = ((VarRefExpr) ret.getValue()).getName();
             Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
-            if (inner == null || !var.equals(simpleAssignVar(inner))) {
+            if (inner == null || !var.equals(simpleAssignVar(inner)))
+            {
                 continue;
             }
             Expression v1 = simpleAssignValue(inner);
             Expression cond = ifStmt.getCondition();
             // The condition may have side effects (e.g. a call): the `if` evaluates it exactly once, and the
             // folded `return cond` (or `!cond`) at the same position evaluates it exactly once too.
-            if (v1 == null || isSideEffecting(v1) || countVariableUses(cond, var) > 0) {
+            if (v1 == null || isSideEffecting(v1) || countVariableUses(cond, var) > 0)
+            {
                 continue;
             }
             VarDeclStmt decl = findDeclaration(methodRoot, var);
             if (decl == null || decl.getInitializer() == null || !isBooleanType(decl.getType())
-                    || countUsesInTree(methodRoot, var) != 2) {
+                    || countUsesInTree(methodRoot, var) != 2)
+            {
                 continue; // exactly the `var = v1` write and the `return var` read
             }
             Expression folded = materializeBoolean(cond, v1, decl.getInitializer());
-            if (folded == null) {
+            if (folded == null)
+            {
                 continue;
             }
             ReturnStmt newRet = new ReturnStmt(folded);
@@ -2362,15 +2822,22 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    /** The first {@code VarDeclStmt} declaring {@code var} anywhere in the tree, else null. */
-    private VarDeclStmt findDeclaration(Statement s, String var) {
-        for (List<Statement> lst : childStatementLists(s)) {
-            for (Statement st : lst) {
-                if (st instanceof VarDeclStmt && var.equals(((VarDeclStmt) st).getName())) {
+    /**
+     * The first {@code VarDeclStmt} declaring {@code var} anywhere in the tree, else null.
+     */
+    private VarDeclStmt findDeclaration(Statement s, String var)
+    {
+        for (List<Statement> lst : childStatementLists(s))
+        {
+            for (Statement st : lst)
+            {
+                if (st instanceof VarDeclStmt && var.equals(((VarDeclStmt) st).getName()))
+                {
                     return (VarDeclStmt) st;
                 }
                 VarDeclStmt inner = findDeclaration(st, var);
-                if (inner != null) {
+                if (inner != null)
+                {
                     return inner;
                 }
             }
@@ -2378,12 +2845,15 @@ public class ControlFlowSimplifier implements ASTTransform {
         return null;
     }
 
-    private int countUsesInTree(Statement s, String var) {
+    private int countUsesInTree(Statement s, String var)
+    {
         AtomicInteger count = new AtomicInteger(0);
         s.accept(new AbstractSourceVisitor<Void>() {
             @Override
-            public Void visitVarRef(VarRefExpr e) {
-                if (e.getName().equals(var)) {
+            public Void visitVarRef(VarRefExpr e)
+            {
+                if (e.getName().equals(var))
+                {
                     count.incrementAndGet();
                 }
                 return super.visitVarRef(e);
@@ -2392,36 +2862,58 @@ public class ControlFlowSimplifier implements ASTTransform {
         return count.get();
     }
 
-    private List<List<Statement>> childStatementLists(Statement s) {
+    private List<List<Statement>> childStatementLists(Statement s)
+    {
         List<List<Statement>> lists = new ArrayList<>();
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             lists.add(((BlockStmt) s).getStatements());
-        } else if (s instanceof IfStmt) {
+        }
+        else if (s instanceof IfStmt)
+        {
             IfStmt i = (IfStmt) s;
             addStatementBody(lists, i.getThenBranch());
-            if (i.hasElse()) {
+            if (i.hasElse())
+            {
                 addStatementBody(lists, i.getElseBranch());
             }
-        } else if (s instanceof ForStmt) {
+        }
+        else if (s instanceof ForStmt)
+        {
             addStatementBody(lists, ((ForStmt) s).getBody());
-        } else if (s instanceof WhileStmt) {
+        }
+        else if (s instanceof WhileStmt)
+        {
             addStatementBody(lists, ((WhileStmt) s).getBody());
-        } else if (s instanceof DoWhileStmt) {
+        }
+        else if (s instanceof DoWhileStmt)
+        {
             addStatementBody(lists, ((DoWhileStmt) s).getBody());
-        } else if (s instanceof ForEachStmt) {
+        }
+        else if (s instanceof ForEachStmt)
+        {
             addStatementBody(lists, ((ForEachStmt) s).getBody());
-        } else if (s instanceof SynchronizedStmt) {
+        }
+        else if (s instanceof SynchronizedStmt)
+        {
             addStatementBody(lists, ((SynchronizedStmt) s).getBody());
-        } else if (s instanceof TryCatchStmt) {
+        }
+        else if (s instanceof TryCatchStmt)
+        {
             TryCatchStmt t = (TryCatchStmt) s;
             addStatementBody(lists, t.getTryBlock());
-            for (CatchClause c : t.getCatches()) {
+            for (CatchClause c : t.getCatches())
+            {
                 addStatementBody(lists, c.body());
             }
             addStatementBody(lists, t.getFinallyBlock());
-        } else if (s instanceof SwitchStmt) {
-            for (SwitchCase c : ((SwitchStmt) s).getCases()) {
-                if (c.statements() != null) {
+        }
+        else if (s instanceof SwitchStmt)
+        {
+            for (SwitchCase c : ((SwitchStmt) s).getCases())
+            {
+                if (c.statements() != null)
+                {
                     lists.add(c.statements());
                 }
             }
@@ -2429,8 +2921,10 @@ public class ControlFlowSimplifier implements ASTTransform {
         return lists;
     }
 
-    private void addStatementBody(List<List<Statement>> lists, Statement body) {
-        if (body instanceof BlockStmt) {
+    private void addStatementBody(List<List<Statement>> lists, Statement body)
+    {
+        if (body instanceof BlockStmt)
+        {
             lists.add(((BlockStmt) body).getStatements());
         }
     }
@@ -2442,104 +2936,142 @@ public class ControlFlowSimplifier implements ASTTransform {
      * {@code x || true}) are left alone since they would discard the other operand. Returns null when neither
      * operand is the matching constant, or the operator is not a short-circuit {@code &&}/{@code ||}.
      */
-    private Expression foldBooleanIdentity(BinaryOperator op, Expression left, Expression right) {
-        if (op == BinaryOperator.AND) {
-            if (isBoolLiteral(right, true)) {
+    private Expression foldBooleanIdentity(BinaryOperator op, Expression left, Expression right)
+    {
+        if (op == BinaryOperator.AND)
+        {
+            if (isBoolLiteral(right, true))
+            {
                 return left;
             }
-            if (isBoolLiteral(left, true)) {
+            if (isBoolLiteral(left, true))
+            {
                 return right;
             }
-        } else if (op == BinaryOperator.OR) {
-            if (isBoolLiteral(right, false)) {
+        }
+        else if (op == BinaryOperator.OR)
+        {
+            if (isBoolLiteral(right, false))
+            {
                 return left;
             }
-            if (isBoolLiteral(left, false)) {
+            if (isBoolLiteral(left, false))
+            {
                 return right;
             }
         }
         return null;
     }
 
-    /** {@code c} for {@code true/false}, {@code !c} for {@code false/true}; null when the arms are not that pair. */
-    private Expression materializeBoolean(Expression cond, Expression whenTrue, Expression whenFalse) {
-        if (isBoolLiteral(whenTrue, true) && isBoolLiteral(whenFalse, false)) {
+    /**
+     * {@code c} for {@code true/false}, {@code !c} for {@code false/true}; null when the arms are not that pair.
+     */
+    private Expression materializeBoolean(Expression cond, Expression whenTrue, Expression whenFalse)
+    {
+        if (isBoolLiteral(whenTrue, true) && isBoolLiteral(whenFalse, false))
+        {
             return cond;
         }
-        if (isBoolLiteral(whenTrue, false) && isBoolLiteral(whenFalse, true)) {
+        if (isBoolLiteral(whenTrue, false) && isBoolLiteral(whenFalse, true))
+        {
             return negate(cond);
         }
         return null;
     }
 
-    private boolean isBoolLiteral(Expression e, boolean value) {
-        if (!(e instanceof LiteralExpr)) {
+    private boolean isBoolLiteral(Expression e, boolean value)
+    {
+        if (!(e instanceof LiteralExpr))
+        {
             return false;
         }
         Object v = ((LiteralExpr) e).getValue();
-        if (v instanceof Boolean) {
+        if (v instanceof Boolean)
+        {
             return ((Boolean) v) == value;
         }
-        if (v instanceof Integer) {
+        if (v instanceof Integer)
+        {
             return ((Integer) v) == (value ? 1 : 0); // JVM materializes boolean as int 1/0
         }
         return false;
     }
 
-    private boolean isSideEffecting(Expression e) {
+    private boolean isSideEffecting(Expression e)
+    {
         return Boolean.TRUE.equals(e.accept(SideEffectDetector.INSTANCE));
     }
 
-    /** The variable written by a declaration-with-init or a plain {@code v = ...} assignment, else null. */
-    private String assignedVar(Statement s) {
-        if (s instanceof VarDeclStmt && ((VarDeclStmt) s).getInitializer() != null) {
+    /**
+     * The variable written by a declaration-with-init or a plain {@code v = ...} assignment, else null.
+     */
+    private String assignedVar(Statement s)
+    {
+        if (s instanceof VarDeclStmt && ((VarDeclStmt) s).getInitializer() != null)
+        {
             return ((VarDeclStmt) s).getName();
         }
         return simpleAssignVar(s);
     }
 
-    private Expression assignedValue(Statement s) {
-        if (s instanceof VarDeclStmt) {
+    private Expression assignedValue(Statement s)
+    {
+        if (s instanceof VarDeclStmt)
+        {
             return ((VarDeclStmt) s).getInitializer();
         }
         return simpleAssignValue(s);
     }
 
-    /** The variable written by a plain {@code v = ...} expression statement, else null. */
-    private String simpleAssignVar(Statement s) {
-        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+    /**
+     * The variable written by a plain {@code v = ...} expression statement, else null.
+     */
+    private String simpleAssignVar(Statement s)
+    {
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr)
+        {
             BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
-            if (b.getOperator() == BinaryOperator.ASSIGN && b.getLeft() instanceof VarRefExpr) {
+            if (b.getOperator() == BinaryOperator.ASSIGN && b.getLeft() instanceof VarRefExpr)
+            {
                 return ((VarRefExpr) b.getLeft()).getName();
             }
         }
         return null;
     }
 
-    private Expression simpleAssignValue(Statement s) {
-        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+    private Expression simpleAssignValue(Statement s)
+    {
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr)
+        {
             BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
-            if (b.getOperator() == BinaryOperator.ASSIGN) {
+            if (b.getOperator() == BinaryOperator.ASSIGN)
+            {
                 return b.getRight();
             }
         }
         return null;
     }
 
-    /** Rebuilds statement {@code s} (declaration or assignment) with a new right-hand side. */
-    private Statement rebuildAssignment(Statement s, Expression value) {
-        if (s instanceof VarDeclStmt) {
+    /**
+     * Rebuilds statement {@code s} (declaration or assignment) with a new right-hand side.
+     */
+    private Statement rebuildAssignment(Statement s, Expression value)
+    {
+        if (s instanceof VarDeclStmt)
+        {
             VarDeclStmt d = (VarDeclStmt) s;
             return new VarDeclStmt(d.getType(), d.getName(), value);
         }
-        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+        if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr)
+        {
             BinaryExpr b = (BinaryExpr) ((ExprStmt) s).getExpression();
             return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, b.getLeft(), value, b.getType()));
         }
         return null;
     }
 
-    private boolean isBooleanType(SourceType type) {
+    private boolean isBooleanType(SourceType type)
+    {
         if (type == null) return false;
         String typeName = type.toJavaSource();
         return "boolean".equals(typeName) || "Boolean".equals(typeName) ||
@@ -2549,12 +3081,15 @@ public class ControlFlowSimplifier implements ASTTransform {
     /**
      * Counts how many times a variable is referenced in an expression.
      */
-    private int countVariableUses(Expression expr, String varName) {
+    private int countVariableUses(Expression expr, String varName)
+    {
         AtomicInteger count = new AtomicInteger(0);
         expr.accept(new AbstractSourceVisitor<Void>() {
             @Override
-            public Void visitVarRef(VarRefExpr e) {
-                if (e.getName().equals(varName)) {
+            public Void visitVarRef(VarRefExpr e)
+            {
+                if (e.getName().equals(varName))
+                {
                     count.incrementAndGet();
                 }
                 return super.visitVarRef(e);
@@ -2563,8 +3098,10 @@ public class ControlFlowSimplifier implements ASTTransform {
         return count.get();
     }
 
-    private boolean isVariableUsedAfter(List<Statement> stmts, int startIdx, String varName, Statement excluding) {
-        for (int i = startIdx; i < stmts.size(); i++) {
+    private boolean isVariableUsedAfter(List<Statement> stmts, int startIdx, String varName, Statement excluding)
+    {
+        for (int i = startIdx; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
             if (s == excluding) continue;
             if (usesVariable(s, varName)) return true;
@@ -2572,47 +3109,57 @@ public class ControlFlowSimplifier implements ASTTransform {
         return false;
     }
 
-    private Expression substituteVariable(Expression expr, String varName, Expression replacement) {
+    private Expression substituteVariable(Expression expr, String varName, Expression replacement)
+    {
         if (expr == null) return null;
 
-        if (expr instanceof VarRefExpr) {
+        if (expr instanceof VarRefExpr)
+        {
             VarRefExpr ref = (VarRefExpr) expr;
-            if (ref.getName().equals(varName)) {
+            if (ref.getName().equals(varName))
+            {
                 return replacement;
             }
             return expr;
         }
 
-        if (expr instanceof UnaryExpr) {
+        if (expr instanceof UnaryExpr)
+        {
             UnaryExpr unary = (UnaryExpr) expr;
             Expression newOperand = substituteVariable(unary.getOperand(), varName, replacement);
-            if (newOperand != unary.getOperand()) {
+            if (newOperand != unary.getOperand())
+            {
                 return new UnaryExpr(unary.getOperator(), newOperand, unary.getType());
             }
             return expr;
         }
 
-        if (expr instanceof BinaryExpr) {
+        if (expr instanceof BinaryExpr)
+        {
             BinaryExpr binary = (BinaryExpr) expr;
             Expression newLeft = substituteVariable(binary.getLeft(), varName, replacement);
             Expression newRight = substituteVariable(binary.getRight(), varName, replacement);
-            if (newLeft != binary.getLeft() || newRight != binary.getRight()) {
+            if (newLeft != binary.getLeft() || newRight != binary.getRight())
+            {
                 return new BinaryExpr(binary.getOperator(), newLeft, newRight, binary.getType());
             }
             return expr;
         }
 
-        if (expr instanceof MethodCallExpr) {
+        if (expr instanceof MethodCallExpr)
+        {
             MethodCallExpr mc = (MethodCallExpr) expr;
             Expression newReceiver = substituteVariable(mc.getReceiver(), varName, replacement);
             List<Expression> newArgs = new ArrayList<>();
             boolean argsChanged = false;
-            for (Expression arg : mc.getArguments()) {
+            for (Expression arg : mc.getArguments())
+            {
                 Expression newArg = substituteVariable(arg, varName, replacement);
                 newArgs.add(newArg);
                 if (newArg != arg) argsChanged = true;
             }
-            if (newReceiver != mc.getReceiver() || argsChanged) {
+            if (newReceiver != mc.getReceiver() || argsChanged)
+            {
                 return new MethodCallExpr(newReceiver, mc.getMethodName(), mc.getOwnerClass(),
                     newArgs, mc.isStatic(), mc.getType()).withDescriptor(mc.getDescriptor())
                     .withSuperCall(mc.isSuperCall());
@@ -2632,32 +3179,40 @@ public class ControlFlowSimplifier implements ASTTransform {
      * per-test copies recovers as the disjunction directly - folding here makes both layouts agree.
      * Evaluation order is unchanged: A first, C only when A failed.
      */
-    private boolean mergeGuardChainIntoSharedExit(List<Statement> stmts) {
+    private boolean mergeGuardChainIntoSharedExit(List<Statement> stmts)
+    {
         boolean changed = false;
         boolean again = true;
-        while (again) {
+        while (again)
+        {
             again = false;
-            for (int i = 0; i + 2 < stmts.size(); i++) {
-                if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof IfStmt)) {
+            for (int i = 0; i + 2 < stmts.size(); i++)
+            {
+                if (!(stmts.get(i) instanceof IfStmt) || !(stmts.get(i + 1) instanceof IfStmt))
+                {
                     continue;
                 }
                 IfStmt exitGuard = (IfStmt) stmts.get(i);
                 IfStmt bodyGuard = (IfStmt) stmts.get(i + 1);
-                if (exitGuard.hasElse() || bodyGuard.hasElse()) {
+                if (exitGuard.hasElse() || bodyGuard.hasElse())
+                {
                     continue;
                 }
                 Statement exit = unwrapSingleStatement(exitGuard.getThenBranch());
                 // Returns only: two textually-equal `throw new AssertionError()` exits are separate
                 // assert diamonds, and folding across them restructures assert chains differently
                 // per bytecode layout instead of converging them.
-                if (!(exit instanceof ReturnStmt)) {
+                if (!(exit instanceof ReturnStmt))
+                {
                     continue;
                 }
                 Statement tail = stmts.get(i + 2);
-                if (i + 2 != stmts.size() - 1 || !earlyExitsEqual(exit, tail)) {
+                if (i + 2 != stmts.size() - 1 || !earlyExitsEqual(exit, tail))
+                {
                     continue;
                 }
-                if (!isTerminal(bodyGuard.getThenBranch())) {
+                if (!isTerminal(bodyGuard.getThenBranch()))
+                {
                     continue;
                 }
                 Expression merged = new BinaryExpr(BinaryOperator.OR,
@@ -2669,7 +3224,8 @@ public class ControlFlowSimplifier implements ASTTransform {
                 stmts.remove(i + 2);
                 stmts.remove(i + 1);
                 List<Statement> body = getStatements(bodyGuard.getThenBranch());
-                for (int k = 0; k < body.size(); k++) {
+                for (int k = 0; k < body.size(); k++)
+                {
                     stmts.add(i + 1 + k, body.get(k));
                 }
                 changed = true;
@@ -2680,32 +3236,40 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private boolean collapseGuardWithSharedEarlyExit(List<Statement> stmts) {
+    private boolean collapseGuardWithSharedEarlyExit(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i + 1 < stmts.size(); i++) {
-            if (!(stmts.get(i) instanceof IfStmt)) {
+        for (int i = 0; i + 1 < stmts.size(); i++)
+        {
+            if (!(stmts.get(i) instanceof IfStmt))
+            {
                 continue;
             }
             IfStmt outer = (IfStmt) stmts.get(i);
-            if (outer.hasElse()) {
+            if (outer.hasElse())
+            {
                 continue;
             }
             Statement afterExit = stmts.get(i + 1);
-            if (!isEarlyExit(afterExit)) {
+            if (!isEarlyExit(afterExit))
+            {
                 continue;
             }
             List<Statement> body = getStatements(outer.getThenBranch());
-            if (body.isEmpty() || !(body.get(0) instanceof IfStmt)) {
+            if (body.isEmpty() || !(body.get(0) instanceof IfStmt))
+            {
                 continue;
             }
             IfStmt guard = (IfStmt) body.get(0);
-            if (guard.hasElse()) {
+            if (guard.hasElse())
+            {
                 continue;
             }
             Statement guardExit = unwrapSingleStatement(guard.getThenBranch());
             if (!(guardExit instanceof ReturnStmt || guardExit instanceof ThrowStmt
                     || guardExit instanceof ContinueStmt || guardExit instanceof BreakStmt)
-                    || !earlyExitsEqual(guardExit, afterExit)) {
+                    || !earlyExitsEqual(guardExit, afterExit))
+            {
                 continue;
             }
             Expression collapsed = new BinaryExpr(BinaryOperator.OR,
@@ -2717,7 +3281,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             stmts.set(i, newIf);
             stmts.remove(i + 1);
             List<Statement> rest = new ArrayList<>(body.subList(1, body.size()));
-            for (int k = 0; k < rest.size(); k++) {
+            for (int k = 0; k < rest.size(); k++)
+            {
                 stmts.add(i + 1 + k, rest.get(k));
             }
             changed = true;
@@ -2725,10 +3290,12 @@ public class ControlFlowSimplifier implements ASTTransform {
         return changed;
     }
 
-    private boolean flattenNestedNegatedGuards(List<Statement> stmts) {
+    private boolean flattenNestedNegatedGuards(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             if (!(stmts.get(i) instanceof IfStmt)) continue;
             IfStmt outerIf = (IfStmt) stmts.get(i);
 
@@ -2744,7 +3311,8 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (!isEarlyExit(afterIf)) continue;
 
             Expression orCondition = positiveConditions.get(0);
-            for (int k = 1; k < positiveConditions.size(); k++) {
+            for (int k = 1; k < positiveConditions.size(); k++)
+            {
                 orCondition = new BinaryExpr(
                     BinaryOperator.OR,
                     orCondition,
@@ -2758,13 +3326,17 @@ public class ControlFlowSimplifier implements ASTTransform {
 
             stmts.set(i, newIf);
 
-            if (innermostBody != null) {
+            if (innermostBody != null)
+            {
                 List<Statement> bodyStmts = getStatements(innermostBody);
                 stmts.remove(i + 1);
-                for (int k = 0; k < bodyStmts.size(); k++) {
+                for (int k = 0; k < bodyStmts.size(); k++)
+                {
                     stmts.add(i + 1 + k, bodyStmts.get(k));
                 }
-            } else {
+            }
+            else
+            {
                 stmts.remove(i + 1);
             }
 
@@ -2778,11 +3350,13 @@ public class ControlFlowSimplifier implements ASTTransform {
      * Collects positive conditions from nested negated if statements.
      * Returns the innermost body statement.
      */
-    private Statement collectNestedNegatedConditions(IfStmt ifStmt, List<Expression> positiveConditions) {
+    private Statement collectNestedNegatedConditions(IfStmt ifStmt, List<Expression> positiveConditions)
+    {
         Expression cond = ifStmt.getCondition();
 
         Expression positiveCond = getPositiveCondition(cond);
-        if (positiveCond == null) {
+        if (positiveCond == null)
+        {
             return null;
         }
 
@@ -2790,9 +3364,11 @@ public class ControlFlowSimplifier implements ASTTransform {
 
         Statement inner = unwrapSingleStatement(ifStmt.getThenBranch());
 
-        if (inner instanceof IfStmt) {
+        if (inner instanceof IfStmt)
+        {
             IfStmt innerIf = (IfStmt) inner;
-            if (!innerIf.hasElse()) {
+            if (!innerIf.hasElse())
+            {
                 return collectNestedNegatedConditions(innerIf, positiveConditions);
             }
         }
@@ -2804,29 +3380,39 @@ public class ControlFlowSimplifier implements ASTTransform {
      * Extracts the positive form of a negated condition.
      * Returns null if the condition is not a negation.
      */
-    private Expression getPositiveCondition(Expression expr) {
-        if (expr instanceof UnaryExpr) {
+    private Expression getPositiveCondition(Expression expr)
+    {
+        if (expr instanceof UnaryExpr)
+        {
             UnaryExpr unary = (UnaryExpr) expr;
-            if (unary.getOperator() == UnaryOperator.NOT) {
+            if (unary.getOperator() == UnaryOperator.NOT)
+            {
                 return unary.getOperand();
             }
         }
 
-        if (expr instanceof BinaryExpr) {
+        if (expr instanceof BinaryExpr)
+        {
             BinaryExpr binary = (BinaryExpr) expr;
-            if (binary.getOperator() == BinaryOperator.EQ) {
-                if (isFalseLiteral(binary.getRight())) {
+            if (binary.getOperator() == BinaryOperator.EQ)
+            {
+                if (isFalseLiteral(binary.getRight()))
+                {
                     return binary.getLeft();
                 }
-                if (isFalseLiteral(binary.getLeft())) {
+                if (isFalseLiteral(binary.getLeft()))
+                {
                     return binary.getRight();
                 }
             }
-            if (binary.getOperator() == BinaryOperator.NE) {
-                if (isTrueLiteral(binary.getRight())) {
+            if (binary.getOperator() == BinaryOperator.NE)
+            {
+                if (isTrueLiteral(binary.getRight()))
+                {
                     return binary.getLeft();
                 }
-                if (isTrueLiteral(binary.getLeft())) {
+                if (isTrueLiteral(binary.getLeft()))
+                {
                     return binary.getRight();
                 }
             }
@@ -2835,16 +3421,20 @@ public class ControlFlowSimplifier implements ASTTransform {
         return null;
     }
 
-    private boolean isFalseLiteral(Expression expr) {
-        if (expr instanceof LiteralExpr) {
+    private boolean isFalseLiteral(Expression expr)
+    {
+        if (expr instanceof LiteralExpr)
+        {
             Object val = ((LiteralExpr) expr).getValue();
             return Boolean.FALSE.equals(val) || Integer.valueOf(0).equals(val);
         }
         return false;
     }
 
-    private boolean isTrueLiteral(Expression expr) {
-        if (expr instanceof LiteralExpr) {
+    private boolean isTrueLiteral(Expression expr)
+    {
+        if (expr instanceof LiteralExpr)
+        {
             Object val = ((LiteralExpr) expr).getValue();
             return Boolean.TRUE.equals(val) || Integer.valueOf(1).equals(val);
         }

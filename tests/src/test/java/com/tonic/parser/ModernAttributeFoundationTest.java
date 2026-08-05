@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * opaque), expose their structured data, and survive a read -> (constant-pool growth) -> write ->
  * re-read round-trip with correct references. Fixtures are compiled with a real JDK 17 javac.
  */
-public class ModernAttributeFoundationTest {
+public class ModernAttributeFoundationTest
+{
 
     private static final String SHAPE =
         "public sealed interface Shape permits Circle, Square { double area(); }";
@@ -28,33 +29,38 @@ public class ModernAttributeFoundationTest {
     private static final String SQUARE =
         "public record Square(double side) implements Shape { public double area() { return side * side; } }";
 
-    private Map<String, ClassFile> compileShapes() throws Exception {
+    private Map<String, ClassFile> compileShapes() throws Exception
+    {
         Map<String, String> src = new LinkedHashMap<>();
         src.put("Shape", SHAPE);
         src.put("Circle", CIRCLE);
         src.put("Square", SQUARE);
         Map<String, byte[]> compiled = ModernJdk.compile(17, src);
         Map<String, ClassFile> out = new LinkedHashMap<>();
-        for (Map.Entry<String, byte[]> e : compiled.entrySet()) {
+        for (Map.Entry<String, byte[]> e : compiled.entrySet())
+        {
             out.put(e.getKey(), new ClassFile(new ByteArrayInputStream(e.getValue())));
         }
         return out;
     }
 
-    private static RecordAttribute recordAttr(ClassFile cf) {
+    private static RecordAttribute recordAttr(ClassFile cf)
+    {
         return cf.getClassAttributes().stream()
                 .filter(a -> a instanceof RecordAttribute).map(a -> (RecordAttribute) a)
                 .findFirst().orElse(null);
     }
 
-    private static PermittedSubclassesAttribute permitsAttr(ClassFile cf) {
+    private static PermittedSubclassesAttribute permitsAttr(ClassFile cf)
+    {
         return cf.getClassAttributes().stream()
                 .filter(a -> a instanceof PermittedSubclassesAttribute).map(a -> (PermittedSubclassesAttribute) a)
                 .findFirst().orElse(null);
     }
 
     @Test
-    public void recordAndPermittedSubclassesAreModeled() throws Exception {
+    public void recordAndPermittedSubclassesAreModeled() throws Exception
+    {
         assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
         Map<String, ClassFile> classes = compileShapes();
 
@@ -69,10 +75,12 @@ public class ModernAttributeFoundationTest {
     }
 
     @Test
-    public void byteStableRoundTrip() throws Exception {
+    public void byteStableRoundTrip() throws Exception
+    {
         assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
         Map<String, ClassFile> classes = compileShapes();
-        for (String name : new String[]{"Shape", "Circle", "Square"}) {
+        for (String name : new String[]{"Shape", "Circle", "Square"})
+        {
             ClassFile cf = classes.get(name);
             byte[] out1 = cf.write();
             byte[] out2 = new ClassFile(new ByteArrayInputStream(out1)).write();
@@ -81,7 +89,8 @@ public class ModernAttributeFoundationTest {
     }
 
     @Test
-    public void attributesSurviveConstantPoolGrowth() throws Exception {
+    public void attributesSurviveConstantPoolGrowth() throws Exception
+    {
         assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
         Map<String, ClassFile> classes = compileShapes();
 
@@ -103,7 +112,8 @@ public class ModernAttributeFoundationTest {
     }
 
     @Test
-    public void decompileDoesNotCrashOnModernClasses() throws Exception {
+    public void decompileDoesNotCrashOnModernClasses() throws Exception
+    {
         assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
         Map<String, ClassFile> classes = compileShapes();
         // Records/sealed are not reconstructed yet (later slices); decompilation must not crash.

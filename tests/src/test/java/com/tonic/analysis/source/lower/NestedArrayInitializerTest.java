@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * not verify. The type has to travel from the parser, and the allocation has to take the component type
  * (one index down) rather than the base element type.
  */
-class NestedArrayInitializerTest {
+class NestedArrayInitializerTest
+{
 
     private static final String[] LINES = {
             "public class NestedInit {",
@@ -45,14 +46,14 @@ class NestedArrayInitializerTest {
     };
 
     @Test
-    void anInitializerOfArraysAllocatesAnArrayOfArrays() throws Exception {
+    void anInitializerOfArraysAllocatesAnArrayOfArrays() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("nested-init");
         Path src = dir.resolve("NestedInit.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("NestedInit.class")));

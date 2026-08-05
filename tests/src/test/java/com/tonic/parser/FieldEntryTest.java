@@ -17,122 +17,139 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for FieldEntry functionality.
  * Covers field creation, access modifiers, name modification, and round-trip verification.
  */
-class FieldEntryTest {
+class FieldEntryTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/TestClass", access);
     }
 
-    // ========== Basic Properties Tests ==========
+    // Basic Properties Tests
 
     @Test
-    void fieldHasCorrectName() {
+    void fieldHasCorrectName()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "testField", "I", new ArrayList<>());
         assertEquals("testField", field.getName());
     }
 
     @Test
-    void fieldHasCorrectDescriptor() {
+    void fieldHasCorrectDescriptor()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "stringField", "Ljava/lang/String;", new ArrayList<>());
         assertEquals("Ljava/lang/String;", field.getDesc());
     }
 
     @Test
-    void fieldHasCorrectOwner() {
+    void fieldHasCorrectOwner()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "owned", "I", new ArrayList<>());
         assertEquals("com/test/TestClass", field.getOwnerName());
     }
 
     @Test
-    void fieldHasCorrectKey() {
+    void fieldHasCorrectKey()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "keyedField", "J", new ArrayList<>());
         assertEquals("keyedFieldJ", field.getKey());
     }
 
     @Test
-    void fieldHasCorrectAccessFlags() {
+    void fieldHasCorrectAccessFlags()
+    {
         int access = new AccessBuilder().setPrivate().setStatic().setFinal().build();
         FieldEntry field = classFile.createNewField(access, "constant", "I", new ArrayList<>());
         assertEquals(access, field.getAccess());
     }
 
-    // ========== Field Type Tests ==========
+    // Field Type Tests
 
     @Test
-    void createIntField() {
+    void createIntField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "intField", "I", new ArrayList<>());
         assertEquals("I", field.getDesc());
     }
 
     @Test
-    void createLongField() {
+    void createLongField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "longField", "J", new ArrayList<>());
         assertEquals("J", field.getDesc());
     }
 
     @Test
-    void createFloatField() {
+    void createFloatField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "floatField", "F", new ArrayList<>());
         assertEquals("F", field.getDesc());
     }
 
     @Test
-    void createDoubleField() {
+    void createDoubleField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "doubleField", "D", new ArrayList<>());
         assertEquals("D", field.getDesc());
     }
 
     @Test
-    void createBooleanField() {
+    void createBooleanField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "boolField", "Z", new ArrayList<>());
         assertEquals("Z", field.getDesc());
     }
 
     @Test
-    void createByteField() {
+    void createByteField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "byteField", "B", new ArrayList<>());
         assertEquals("B", field.getDesc());
     }
 
     @Test
-    void createCharField() {
+    void createCharField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "charField", "C", new ArrayList<>());
         assertEquals("C", field.getDesc());
     }
 
     @Test
-    void createShortField() {
+    void createShortField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "shortField", "S", new ArrayList<>());
         assertEquals("S", field.getDesc());
     }
 
     @Test
-    void createObjectField() {
+    void createObjectField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "objectField", "Ljava/lang/Object;", new ArrayList<>());
         assertEquals("Ljava/lang/Object;", field.getDesc());
     }
 
     @Test
-    void createArrayField() {
+    void createArrayField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "arrayField", "[I", new ArrayList<>());
         // Library appends semicolon to array descriptors
@@ -140,7 +157,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void createMultiDimensionalArrayField() {
+    void createMultiDimensionalArrayField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "matrix", "[[D", new ArrayList<>());
         // Library appends semicolon to array descriptors
@@ -148,67 +166,76 @@ class FieldEntryTest {
     }
 
     @Test
-    void createObjectArrayField() {
+    void createObjectArrayField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "strings", "[Ljava/lang/String;", new ArrayList<>());
         assertTrue(field.getDesc().startsWith("[Ljava/lang/String;"));
     }
 
-    // ========== Access Modifier Tests ==========
+    // Access Modifier Tests
 
     @Test
-    void publicFieldHasPublicAccess() {
+    void publicFieldHasPublicAccess()
+    {
         int access = new AccessBuilder().setPublic().build();
         FieldEntry field = classFile.createNewField(access, "publicField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0001) != 0, "Field should be public");
     }
 
     @Test
-    void privateFieldHasPrivateAccess() {
+    void privateFieldHasPrivateAccess()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "privateField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0002) != 0, "Field should be private");
     }
 
     @Test
-    void protectedFieldHasProtectedAccess() {
+    void protectedFieldHasProtectedAccess()
+    {
         int access = new AccessBuilder().setProtected().build();
         FieldEntry field = classFile.createNewField(access, "protectedField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0004) != 0, "Field should be protected");
     }
 
     @Test
-    void staticFieldHasStaticAccess() {
+    void staticFieldHasStaticAccess()
+    {
         int access = new AccessBuilder().setPrivate().setStatic().build();
         FieldEntry field = classFile.createNewField(access, "staticField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0008) != 0, "Field should be static");
     }
 
     @Test
-    void finalFieldHasFinalAccess() {
+    void finalFieldHasFinalAccess()
+    {
         int access = new AccessBuilder().setPrivate().setFinal().build();
         FieldEntry field = classFile.createNewField(access, "finalField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0010) != 0, "Field should be final");
     }
 
     @Test
-    void volatileFieldHasVolatileAccess() {
+    void volatileFieldHasVolatileAccess()
+    {
         int access = new AccessBuilder().setPrivate().setVolatile().build();
         FieldEntry field = classFile.createNewField(access, "volatileField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0040) != 0, "Field should be volatile");
     }
 
     @Test
-    void transientFieldHasTransientAccess() {
+    void transientFieldHasTransientAccess()
+    {
         int access = new AccessBuilder().setPrivate().setTransient().build();
         FieldEntry field = classFile.createNewField(access, "transientField", "I", new ArrayList<>());
         assertTrue((field.getAccess() & 0x0080) != 0, "Field should be transient");
     }
 
-    // ========== Name Modification Tests ==========
+    // Name Modification Tests
 
     @Test
-    void setNameChangesFieldName() {
+    void setNameChangesFieldName()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "original", "I", new ArrayList<>());
         field.setName("renamed");
@@ -216,17 +243,19 @@ class FieldEntryTest {
     }
 
     @Test
-    void setNameUpdatesKey() {
+    void setNameUpdatesKey()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "original", "I", new ArrayList<>());
         field.setName("renamed");
         assertEquals("renamedI", field.getKey());
     }
 
-    // ========== Multiple Fields Tests ==========
+    // Multiple Fields Tests
 
     @Test
-    void classCanHaveMultipleFields() {
+    void classCanHaveMultipleFields()
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "field1", "I", new ArrayList<>());
         classFile.createNewField(access, "field2", "J", new ArrayList<>());
@@ -236,7 +265,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void fieldsHaveDistinctNames() {
+    void fieldsHaveDistinctNames()
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "first", "I", new ArrayList<>());
         classFile.createNewField(access, "second", "I", new ArrayList<>());
@@ -245,10 +275,11 @@ class FieldEntryTest {
         assertEquals("second", classFile.getFields().get(1).getName());
     }
 
-    // ========== Remove Field Tests ==========
+    // Remove Field Tests
 
     @Test
-    void removeFieldRemovesIt() {
+    void removeFieldRemovesIt()
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "toRemove", "I", new ArrayList<>());
         assertEquals(1, classFile.getFields().size());
@@ -259,13 +290,15 @@ class FieldEntryTest {
     }
 
     @Test
-    void removeNonexistentFieldReturnsFalse() {
+    void removeNonexistentFieldReturnsFalse()
+    {
         boolean removed = classFile.removeField("nonexistent", "I");
         assertFalse(removed);
     }
 
     @Test
-    void removeFieldByNameOnly() {
+    void removeFieldByNameOnly()
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "specific", "Ljava/lang/String;", new ArrayList<>());
 
@@ -274,39 +307,42 @@ class FieldEntryTest {
         assertFalse(wrongDesc);
         assertEquals(1, classFile.getFields().size());
 
-        // Should remove with correct descriptor
         boolean rightDesc = classFile.removeField("specific", "Ljava/lang/String;");
         assertTrue(rightDesc);
         assertEquals(0, classFile.getFields().size());
     }
 
-    // ========== toString Tests ==========
+    // toString Tests
 
     @Test
-    void toStringContainsFieldName() {
+    void toStringContainsFieldName()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "displayField", "I", new ArrayList<>());
         assertTrue(field.toString().contains("displayField"));
     }
 
     @Test
-    void toStringContainsOwnerName() {
+    void toStringContainsOwnerName()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "owned", "I", new ArrayList<>());
         assertTrue(field.toString().contains("com/test/TestClass"));
     }
 
     @Test
-    void toStringContainsDescriptor() {
+    void toStringContainsDescriptor()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "typed", "Ljava/util/List;", new ArrayList<>());
         assertTrue(field.toString().contains("Ljava/util/List;"));
     }
 
-    // ========== Round-Trip Tests ==========
+    // Round-Trip Tests
 
     @Test
-    void roundTripPreservesFieldName() throws IOException {
+    void roundTripPreservesFieldName() throws IOException
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "preservedField", "I", new ArrayList<>());
 
@@ -317,7 +353,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void roundTripPreservesFieldDescriptor() throws IOException {
+    void roundTripPreservesFieldDescriptor() throws IOException
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "complexField", "Ljava/util/Map;", new ArrayList<>());
 
@@ -332,7 +369,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void roundTripPreservesFieldAccess() throws IOException {
+    void roundTripPreservesFieldAccess() throws IOException
+    {
         int access = new AccessBuilder().setPrivate().setStatic().setFinal().build();
         classFile.createNewField(access, "constantField", "I", new ArrayList<>());
 
@@ -347,7 +385,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void roundTripPreservesMultipleFields() throws IOException {
+    void roundTripPreservesMultipleFields() throws IOException
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "field1", "I", new ArrayList<>());
         classFile.createNewField(access, "field2", "J", new ArrayList<>());
@@ -357,10 +396,11 @@ class FieldEntryTest {
         assertEquals(3, reloaded.getFields().size());
     }
 
-    // ========== JVM Verification Tests ==========
+    // JVM Verification Tests
 
     @Test
-    void generatedFieldIsAccessibleViaReflection() throws Exception {
+    void generatedFieldIsAccessibleViaReflection() throws Exception
+    {
         int access = new AccessBuilder().setPublic().build();
         classFile.createNewField(access, "reflectField", "I", new ArrayList<>());
 
@@ -375,7 +415,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void generatedStaticFieldIsStatic() throws Exception {
+    void generatedStaticFieldIsStatic() throws Exception
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         classFile.createNewField(access, "staticReflect", "I", new ArrayList<>());
 
@@ -388,7 +429,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void generatedFinalFieldIsFinal() throws Exception {
+    void generatedFinalFieldIsFinal() throws Exception
+    {
         int access = new AccessBuilder().setPublic().setFinal().build();
         classFile.createNewField(access, "finalReflect", "I", new ArrayList<>());
 
@@ -401,7 +443,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void generatedObjectFieldHasCorrectType() throws Exception {
+    void generatedObjectFieldHasCorrectType() throws Exception
+    {
         int access = new AccessBuilder().setPublic().build();
         classFile.createNewField(access, "stringField", "Ljava/lang/String;", new ArrayList<>());
 
@@ -414,7 +457,8 @@ class FieldEntryTest {
     }
 
     @Test
-    void generatedPrimitiveFieldsAreValid() throws Exception {
+    void generatedPrimitiveFieldsAreValid() throws Exception
+    {
         // Test that the generated class with fields is valid and loadable
         int access = new AccessBuilder().setPublic().build();
         classFile.createNewField(access, "intField", "I", new ArrayList<>());

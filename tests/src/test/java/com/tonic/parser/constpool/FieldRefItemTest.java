@@ -15,13 +15,15 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FieldRefItemTest {
+class FieldRefItemTest
+{
 
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         int publicStatic = new AccessBuilder().setPublic().setStatic().build();
         classFile = BytecodeBuilder.forClass("com/test/FieldRefTest")
             .field(publicStatic, "counter", "I")
@@ -33,17 +35,20 @@ class FieldRefItemTest {
     }
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void defaultConstructor() {
+        void defaultConstructor()
+        {
             FieldRefItem item = new FieldRefItem();
             assertNotNull(item);
             assertEquals(Item.ITEM_FIELD_REF, item.getType());
         }
 
         @Test
-        void setValueWithFieldRef() {
+        void setValueWithFieldRef()
+        {
             FieldRefItem item = new FieldRefItem();
             FieldRef ref = new FieldRef(3, 8);
             item.setValue(ref);
@@ -54,7 +59,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void setClassFile() {
+        void setClassFile()
+        {
             FieldRefItem item = new FieldRefItem();
             item.setClassFile(classFile);
 
@@ -66,10 +72,12 @@ class FieldRefItemTest {
     }
 
     @Nested
-    class ResolutionTests {
+    class ResolutionTests
+    {
 
         @Test
-        void getClassNameReturnsNullWhenClassFileNotSet() {
+        void getClassNameReturnsNullWhenClassFileNotSet()
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(1, 2));
 
@@ -77,7 +85,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getNameReturnsNullWhenClassFileNotSet() {
+        void getNameReturnsNullWhenClassFileNotSet()
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(1, 2));
 
@@ -85,7 +94,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getDescriptorReturnsNullWhenClassFileNotSet() {
+        void getDescriptorReturnsNullWhenClassFileNotSet()
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(1, 2));
 
@@ -93,7 +103,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getOwnerReturnsNullWhenClassFileNotSet() {
+        void getOwnerReturnsNullWhenClassFileNotSet()
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(1, 2));
 
@@ -101,7 +112,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getClassNameWithClassFile() throws IOException {
+        void getClassNameWithClassFile() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "value", "I")
@@ -111,7 +123,8 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String className = fieldRef.getClassName();
                 assertNotNull(className);
                 assertFalse(className.isEmpty());
@@ -120,7 +133,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getNameWithClassFile() throws IOException {
+        void getNameWithClassFile() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "value", "I")
@@ -130,7 +144,8 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String name = fieldRef.getName();
                 assertNotNull(name);
                 assertFalse(name.isEmpty());
@@ -138,7 +153,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getDescriptorWithClassFile() throws IOException {
+        void getDescriptorWithClassFile() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "value", "I")
@@ -148,7 +164,8 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String descriptor = fieldRef.getDescriptor();
                 assertNotNull(descriptor);
                 assertFalse(descriptor.isEmpty());
@@ -156,7 +173,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void getOwnerReturnsInternalName() throws IOException {
+        void getOwnerReturnsInternalName() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "value", "I")
@@ -166,7 +184,8 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String owner = fieldRef.getOwner();
                 assertNotNull(owner);
                 assertFalse(owner.contains("."));
@@ -174,7 +193,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void classNameConvertsSlashesToDots() throws IOException {
+        void classNameConvertsSlashesToDots() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "value", "I")
@@ -184,7 +204,8 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String className = fieldRef.getClassName();
                 String owner = fieldRef.getOwner();
 
@@ -197,10 +218,12 @@ class FieldRefItemTest {
     }
 
     @Nested
-    class SerializationTests {
+    class SerializationTests
+    {
 
         @Test
-        void writeFieldRef() throws IOException {
+        void writeFieldRef() throws IOException
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(0x0007, 0x000B));
 
@@ -217,7 +240,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void writeFieldRefWithZeroIndices() throws IOException {
+        void writeFieldRefWithZeroIndices() throws IOException
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(0, 0));
 
@@ -234,7 +258,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void writeFieldRefWithMaxIndices() throws IOException {
+        void writeFieldRefWithMaxIndices() throws IOException
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(0xFFFF, 0xFFFF));
 
@@ -252,10 +277,12 @@ class FieldRefItemTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringWithoutClassFile() {
+        void toStringWithoutClassFile()
+        {
             FieldRefItem item = new FieldRefItem();
             item.setValue(new FieldRef(1, 2));
 
@@ -265,7 +292,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void toStringWithClassFile() throws IOException {
+        void toStringWithClassFile() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "value", "I")
@@ -275,7 +303,8 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String result = fieldRef.toString();
                 assertNotNull(result);
                 assertTrue(result.contains("FieldRefItem"));
@@ -285,7 +314,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void toStringIncludesDescriptorClassAndName() throws IOException {
+        void toStringIncludesDescriptorClassAndName() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .publicStaticMethod("test", "()V")
                     .getstatic("com/test/FieldTest", "myField", "Ljava/lang/String;")
@@ -295,13 +325,15 @@ class FieldRefItemTest {
 
             FieldRefItem fieldRef = findFieldRefInConstPool(cf);
 
-            if (fieldRef != null) {
+            if (fieldRef != null)
+            {
                 String result = fieldRef.toString();
                 String descriptor = fieldRef.getDescriptor();
                 String className = fieldRef.getClassName();
                 String name = fieldRef.getName();
 
-                if (descriptor != null && className != null && name != null) {
+                if (descriptor != null && className != null && name != null)
+                {
                     assertTrue(result.contains(descriptor));
                     assertTrue(result.contains("."));
                 }
@@ -310,10 +342,12 @@ class FieldRefItemTest {
     }
 
     @Nested
-    class TypeTests {
+    class TypeTests
+    {
 
         @Test
-        void getTypeReturnsFieldRefConstant() {
+        void getTypeReturnsFieldRefConstant()
+        {
             FieldRefItem item = new FieldRefItem();
             assertEquals(Item.ITEM_FIELD_REF, item.getType());
             assertEquals(0x9, item.getType());
@@ -321,10 +355,12 @@ class FieldRefItemTest {
     }
 
     @Nested
-    class ValueTests {
+    class ValueTests
+    {
 
         @Test
-        void getValueReturnsFieldRef() {
+        void getValueReturnsFieldRef()
+        {
             FieldRefItem item = new FieldRefItem();
             FieldRef ref = new FieldRef(5, 10);
             item.setValue(ref);
@@ -335,7 +371,8 @@ class FieldRefItemTest {
         }
 
         @Test
-        void fieldRefIndicesAreAccessible() {
+        void fieldRefIndicesAreAccessible()
+        {
             FieldRefItem item = new FieldRefItem();
             FieldRef ref = new FieldRef(100, 200);
             item.setValue(ref);
@@ -345,10 +382,13 @@ class FieldRefItemTest {
         }
     }
 
-    private FieldRefItem findFieldRefInConstPool(ClassFile cf) {
-        for (int i = 1; i < cf.getConstPool().getItems().size(); i++) {
+    private FieldRefItem findFieldRefInConstPool(ClassFile cf)
+    {
+        for (int i = 1; i < cf.getConstPool().getItems().size(); i++)
+        {
             Item<?> item = cf.getConstPool().getItems().get(i);
-            if (item instanceof FieldRefItem) {
+            if (item instanceof FieldRefItem)
+            {
                 return (FieldRefItem) item;
             }
         }

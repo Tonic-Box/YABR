@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * and structures the region natively. Asserts the shape is preserved, is a round-trip fixed point, and drains
  * the queue then exits via the exception.
  */
-class TryWrappingInfiniteLoopFidelityTest {
+class TryWrappingInfiniteLoopFidelityTest
+{
 
     private static final String SOURCE =
             "import java.util.Queue;\n"
@@ -50,14 +51,14 @@ class TryWrappingInfiniteLoopFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("inf-loop");
         Path src = dir.resolve("InfLoop.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("InfLoop.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -69,14 +70,16 @@ class TryWrappingInfiniteLoopFidelityTest {
     }
 
     @Test
-    void infiniteLoopInTryIsPreservedAndRoundTripsFixed() {
+    void infiniteLoopInTryIsPreservedAndRoundTripsFixed()
+    {
         assertTrue(d1.contains("while (true)"), "the infinite loop must be preserved:\n" + d1);
         assertTrue(d1.contains("try") && d1.contains("catch"), "the try/catch must be preserved:\n" + d1);
         assertEquals(d1, d2, "a try wrapping an infinite loop must be a round-trip fixed point");
     }
 
     @Test
-    void drainsThenExitsViaException() throws Exception {
+    void drainsThenExitsViaException() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         Deque<Integer> q = new ArrayDeque<>();
         q.add(1);

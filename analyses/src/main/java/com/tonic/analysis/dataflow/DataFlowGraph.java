@@ -13,7 +13,8 @@ import java.util.*;
  * A data flow graph for a single method.
  * Built from SSA form using def-use chains.
  */
-public class DataFlowGraph {
+public class DataFlowGraph
+{
 
     private final IRMethod method;
     private final String methodName;
@@ -27,15 +28,21 @@ public class DataFlowGraph {
 
     private int nextNodeId = 0;
 
-    public DataFlowGraph(IRMethod method) {
+    /**
+     * Creates an empty graph for a method; call build() to populate it.
+     * @param method the IR method to graph
+     */
+    public DataFlowGraph(IRMethod method)
+    {
         this.method = method;
         this.methodName = method.getName();
     }
 
     /**
-     * Build the data flow graph from the IR method using def-use chains.
+     * Builds the graph from the method's def-use chains, discarding any previous contents.
      */
-    public void build() {
+    public void build()
+    {
         // Clear previous state for idempotent rebuilds
         nodes.clear();
         edges.clear();
@@ -48,31 +55,37 @@ public class DataFlowGraph {
         defUse.compute();
 
         // First pass: create nodes for all definitions
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             int instrIndex = 0;
 
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 createNodeForInstruction(phi, block.getId(), instrIndex);
                 instrIndex++;
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 createNodeForInstruction(instr, block.getId(), instrIndex);
                 instrIndex++;
             }
         }
 
         // Second pass: create edges for def-use relationships
-        for (Map.Entry<SSAValue, Set<IRInstruction>> entry : defUse.getUses().entrySet()) {
+        for (Map.Entry<SSAValue, Set<IRInstruction>> entry : defUse.getUses().entrySet())
+        {
             SSAValue defValue = entry.getKey();
             Set<IRInstruction> uses = entry.getValue();
 
             DataFlowNode sourceNode = valueToNode.get(defValue);
             if (sourceNode == null) continue;
 
-            for (IRInstruction useInstr : uses) {
+            for (IRInstruction useInstr : uses)
+            {
                 DataFlowNode targetNode = findNodeForInstruction(useInstr);
-                if (targetNode != null && !sourceNode.equals(targetNode)) {
+                if (targetNode != null && !sourceNode.equals(targetNode))
+                {
                     DataFlowEdgeType edgeType = determineEdgeType(useInstr);
                     addEdge(sourceNode, targetNode, edgeType);
                 }
@@ -80,18 +93,25 @@ public class DataFlowGraph {
         }
     }
 
-    private void createNodeForInstruction(IRInstruction instr, int blockId, int instrIndex) {
+    private void createNodeForInstruction(IRInstruction instr, int blockId, int instrIndex)
+    {
         SSAValue result = instr.getResult();
-        if (result == null) {
+        if (result == null)
+        {
             // Instructions without results (stores, returns) - create sink nodes
-            if (instr instanceof FieldAccessInstruction) {
+            if (instr instanceof FieldAccessInstruction)
+            {
                 FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-                if (fieldAccess.isStore()) {
+                if (fieldAccess.isStore())
+                {
                     createSinkNode(instr, DataFlowNodeType.FIELD_STORE, blockId, instrIndex);
                 }
-            } else if (instr instanceof ReturnInstruction) {
+            }
+            else if (instr instanceof ReturnInstruction)
+            {
                 ReturnInstruction ret = (ReturnInstruction) instr;
-                if (!ret.isVoidReturn()) {
+                if (!ret.isVoidReturn())
+                {
                     createSinkNode(instr, DataFlowNodeType.RETURN, blockId, instrIndex);
                 }
             }
@@ -118,14 +138,19 @@ public class DataFlowGraph {
         incomingEdges.put(node, new ArrayList<>());
     }
 
-    private void createSinkNode(IRInstruction instr, DataFlowNodeType type, int blockId, int instrIndex) {
+    private void createSinkNode(IRInstruction instr, DataFlowNodeType type, int blockId, int instrIndex)
+    {
         String name = type.getDisplayName();
-        if (instr instanceof FieldAccessInstruction) {
+        if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isStore()) {
+            if (fieldAccess.isStore())
+            {
                 name = "store→" + fieldAccess.getName();
             }
-        } else if (instr instanceof ReturnInstruction) {
+        }
+        else if (instr instanceof ReturnInstruction)
+        {
             name = "return";
         }
 
@@ -142,10 +167,13 @@ public class DataFlowGraph {
         outgoingEdges.put(node, new ArrayList<>());
         incomingEdges.put(node, new ArrayList<>());
 
-        for (Value operand : instr.getOperands()) {
-            if (operand instanceof SSAValue) {
+        for (Value operand : instr.getOperands())
+        {
+            if (operand instanceof SSAValue)
+            {
                 DataFlowNode sourceNode = valueToNode.get(operand);
-                if (sourceNode != null) {
+                if (sourceNode != null)
+                {
                     DataFlowEdgeType edgeType = (type == DataFlowNodeType.FIELD_STORE) ?
                         DataFlowEdgeType.FIELD_STORE : DataFlowEdgeType.DEF_USE;
                     addEdge(sourceNode, node, edgeType);
@@ -154,102 +182,168 @@ public class DataFlowGraph {
         }
     }
 
-    private DataFlowNodeType determineNodeType(IRInstruction instr) {
-        if (instr instanceof PhiInstruction) {
+    private DataFlowNodeType determineNodeType(IRInstruction instr)
+    {
+        if (instr instanceof PhiInstruction)
+        {
             return DataFlowNodeType.PHI;
-        } else if (instr instanceof ConstantInstruction) {
+        }
+        else if (instr instanceof ConstantInstruction)
+        {
             return DataFlowNodeType.CONSTANT;
-        } else if (instr instanceof LoadLocalInstruction) {
+        }
+        else if (instr instanceof LoadLocalInstruction)
+        {
             return DataFlowNodeType.PARAM;
-        } else if (instr instanceof InvokeInstruction) {
+        }
+        else if (instr instanceof InvokeInstruction)
+        {
             return DataFlowNodeType.INVOKE_RESULT;
-        } else if (instr instanceof FieldAccessInstruction) {
+        }
+        else if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
             return fieldAccess.isLoad() ? DataFlowNodeType.FIELD_LOAD : DataFlowNodeType.LOCAL;
-        } else if (instr instanceof ArrayAccessInstruction) {
+        }
+        else if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
             return arrayAccess.isLoad() ? DataFlowNodeType.ARRAY_LOAD : DataFlowNodeType.LOCAL;
-        } else if (instr instanceof BinaryOpInstruction) {
+        }
+        else if (instr instanceof BinaryOpInstruction)
+        {
             return DataFlowNodeType.BINARY_OP;
-        } else if (instr instanceof UnaryOpInstruction) {
+        }
+        else if (instr instanceof UnaryOpInstruction)
+        {
             return DataFlowNodeType.UNARY_OP;
-        } else if (instr instanceof TypeCheckInstruction) {
+        }
+        else if (instr instanceof TypeCheckInstruction)
+        {
             return DataFlowNodeType.CAST;
-        } else if (instr instanceof NewInstruction) {
+        }
+        else if (instr instanceof NewInstruction)
+        {
             return DataFlowNodeType.NEW_OBJECT;
-        } else {
+        }
+        else
+        {
             return DataFlowNodeType.LOCAL;
         }
     }
 
-    private DataFlowEdgeType determineEdgeType(IRInstruction useInstr) {
-        if (useInstr instanceof PhiInstruction) {
+    private DataFlowEdgeType determineEdgeType(IRInstruction useInstr)
+    {
+        if (useInstr instanceof PhiInstruction)
+        {
             return DataFlowEdgeType.PHI_INPUT;
-        } else if (useInstr instanceof InvokeInstruction) {
+        }
+        else if (useInstr instanceof InvokeInstruction)
+        {
             return DataFlowEdgeType.CALL_ARG;
-        } else if (useInstr instanceof FieldAccessInstruction) {
+        }
+        else if (useInstr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) useInstr;
             return fieldAccess.isStore() ? DataFlowEdgeType.FIELD_STORE : DataFlowEdgeType.DEF_USE;
-        } else if (useInstr instanceof ArrayAccessInstruction) {
+        }
+        else if (useInstr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) useInstr;
             return arrayAccess.isStore() ? DataFlowEdgeType.ARRAY_STORE : DataFlowEdgeType.DEF_USE;
-        } else if (useInstr instanceof BinaryOpInstruction ||
-                   useInstr instanceof UnaryOpInstruction) {
+        }
+        else if (useInstr instanceof BinaryOpInstruction || useInstr instanceof UnaryOpInstruction)
+        {
             return DataFlowEdgeType.OPERAND;
         }
         return DataFlowEdgeType.DEF_USE;
     }
 
-    private DataFlowNode findNodeForInstruction(IRInstruction instr) {
+    private DataFlowNode findNodeForInstruction(IRInstruction instr)
+    {
         SSAValue result = instr.getResult();
-        if (result != null) {
+        if (result != null)
+        {
             return valueToNode.get(result);
         }
         // For sink instructions, find by instruction reference
-        for (DataFlowNode node : nodes) {
-            if (node.getInstruction() == instr) {
+        for (DataFlowNode node : nodes)
+        {
+            if (node.getInstruction() == instr)
+            {
                 return node;
             }
         }
         return null;
     }
 
-    private void addEdge(DataFlowNode source, DataFlowNode target, DataFlowEdgeType type) {
+    private void addEdge(DataFlowNode source, DataFlowNode target, DataFlowEdgeType type)
+    {
         DataFlowEdge edge = new DataFlowEdge(source, target, type);
         edges.add(edge);
         outgoingEdges.get(source).add(edge);
         incomingEdges.get(target).add(edge);
     }
 
-    // ==================== Query Methods ====================
+    // Query Methods
 
-    public List<DataFlowNode> getNodes() {
+    /**
+     * @return an unmodifiable view of the graph nodes
+     */
+    public List<DataFlowNode> getNodes()
+    {
         return Collections.unmodifiableList(nodes);
     }
 
-    public List<DataFlowEdge> getEdges() {
+    /**
+     * @return an unmodifiable view of the graph edges
+     */
+    public List<DataFlowEdge> getEdges()
+    {
         return Collections.unmodifiableList(edges);
     }
 
-    public DataFlowNode getNodeForValue(SSAValue value) {
+    /**
+     * Looks up the node that defines an SSA value.
+     * @param value the defined SSA value
+     * @return the defining node, or null if the value has no node
+     */
+    public DataFlowNode getNodeForValue(SSAValue value)
+    {
         return valueToNode.get(value);
     }
 
-    public List<DataFlowEdge> getOutgoingEdges(DataFlowNode node) {
+    /**
+     * Lists the edges leaving a node.
+     * @param node the source node
+     * @return the outgoing edges, empty if the node is not in the graph
+     */
+    public List<DataFlowEdge> getOutgoingEdges(DataFlowNode node)
+    {
         return outgoingEdges.getOrDefault(node, Collections.emptyList());
     }
 
-    public List<DataFlowEdge> getIncomingEdges(DataFlowNode node) {
+    /**
+     * Lists the edges entering a node.
+     * @param node the target node
+     * @return the incoming edges, empty if the node is not in the graph
+     */
+    public List<DataFlowEdge> getIncomingEdges(DataFlowNode node)
+    {
         return incomingEdges.getOrDefault(node, Collections.emptyList());
     }
 
     /**
-     * Get all nodes that can be taint sources.
+     * Collects the nodes whose type can act as a taint source.
+     * @return the potential source nodes
      */
-    public List<DataFlowNode> getPotentialSources() {
+    public List<DataFlowNode> getPotentialSources()
+    {
         List<DataFlowNode> sources = new ArrayList<>();
-        for (DataFlowNode node : nodes) {
-            if (node.getType().canBeTaintSource()) {
+        for (DataFlowNode node : nodes)
+        {
+            if (node.getType().canBeTaintSource())
+            {
                 sources.add(node);
             }
         }
@@ -257,12 +351,16 @@ public class DataFlowGraph {
     }
 
     /**
-     * Get all nodes that can be taint sinks.
+     * Collects the nodes whose type can act as a taint sink.
+     * @return the potential sink nodes
      */
-    public List<DataFlowNode> getPotentialSinks() {
+    public List<DataFlowNode> getPotentialSinks()
+    {
         List<DataFlowNode> sinks = new ArrayList<>();
-        for (DataFlowNode node : nodes) {
-            if (node.getType().canBeTaintSink()) {
+        for (DataFlowNode node : nodes)
+        {
+            if (node.getType().canBeTaintSink())
+            {
                 sinks.add(node);
             }
         }
@@ -270,12 +368,17 @@ public class DataFlowGraph {
     }
 
     /**
-     * Get all nodes of a specific type.
+     * Collects the nodes of one node type.
+     * @param type the node type to match
+     * @return the matching nodes
      */
-    public List<DataFlowNode> getNodesByType(DataFlowNodeType type) {
+    public List<DataFlowNode> getNodesByType(DataFlowNodeType type)
+    {
         List<DataFlowNode> result = new ArrayList<>();
-        for (DataFlowNode node : nodes) {
-            if (node.getType() == type) {
+        for (DataFlowNode node : nodes)
+        {
+            if (node.getType() == type)
+            {
                 result.add(node);
             }
         }
@@ -283,18 +386,23 @@ public class DataFlowGraph {
     }
 
     /**
-     * Find all nodes reachable from a starting node (forward flow).
+     * Walks outgoing edges to find everything the start node flows into.
+     * @param start the node to walk from
+     * @return the reachable nodes, including the start node
      */
-    public Set<DataFlowNode> getReachableNodes(DataFlowNode start) {
+    public Set<DataFlowNode> getReachableNodes(DataFlowNode start)
+    {
         Set<DataFlowNode> reachable = new LinkedHashSet<>();
         Queue<DataFlowNode> worklist = new LinkedList<>();
         worklist.add(start);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             DataFlowNode current = worklist.poll();
             if (!reachable.add(current)) continue;
 
-            for (DataFlowEdge edge : getOutgoingEdges(current)) {
+            for (DataFlowEdge edge : getOutgoingEdges(current))
+            {
                 worklist.add(edge.getTarget());
             }
         }
@@ -303,18 +411,23 @@ public class DataFlowGraph {
     }
 
     /**
-     * Find all nodes that flow into a target node (backward flow).
+     * Walks incoming edges to find everything that flows into the target node.
+     * @param target the node to walk back from
+     * @return the contributing nodes, including the target node
      */
-    public Set<DataFlowNode> getFlowingIntoNodes(DataFlowNode target) {
+    public Set<DataFlowNode> getFlowingIntoNodes(DataFlowNode target)
+    {
         Set<DataFlowNode> flowing = new LinkedHashSet<>();
         Queue<DataFlowNode> worklist = new LinkedList<>();
         worklist.add(target);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             DataFlowNode current = worklist.poll();
             if (!flowing.add(current)) continue;
 
-            for (DataFlowEdge edge : getIncomingEdges(current)) {
+            for (DataFlowEdge edge : getIncomingEdges(current))
+            {
                 worklist.add(edge.getSource());
             }
         }
@@ -322,24 +435,41 @@ public class DataFlowGraph {
         return flowing;
     }
 
-    public String getMethodName() {
+    /**
+     * @return the method name
+     */
+    public String getMethodName()
+    {
         return methodName;
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public int getNodeCount() {
+    /**
+     * @return the number of nodes in the graph
+     */
+    public int getNodeCount()
+    {
         return nodes.size();
     }
 
-    public int getEdgeCount() {
+    /**
+     * @return the number of edges in the graph
+     */
+    public int getEdgeCount()
+    {
         return edges.size();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "DataFlowGraph[" + methodName + ": " + nodes.size() + " nodes, " + edges.size() + " edges]";
     }
 }

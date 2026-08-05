@@ -4,76 +4,131 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class ObjectInstance {
+/**
+ * A simulated heap object identified by id, holding fields keyed by owner, name, and descriptor.
+ */
+public class ObjectInstance
+{
 
     private final int id;
     private final String className;
     private final Map<FieldKey, Object> fields;
     private Object classResolver;
 
-    public ObjectInstance(int id, String className) {
+    /**
+     * Creates an object with no fields set.
+     * @param id the heap object id
+     * @param className internal name of the object's class
+     */
+    public ObjectInstance(int id, String className)
+    {
         this.id = id;
         this.className = className;
         this.fields = new HashMap<>();
     }
 
-    public int getId() {
+    /**
+     * @return the id
+     */
+    public int getId()
+    {
         return id;
     }
 
-    public String getClassName() {
+    /**
+     * @return the class name
+     */
+    public String getClassName()
+    {
         return className;
     }
 
-    public Object getField(String owner, String name, String descriptor) {
+    /**
+     * Reads a field value.
+     * @param owner internal name of the declaring class
+     * @param name the field's name
+     * @param descriptor the field's type descriptor
+     * @return the stored value, or null if the field was never set
+     */
+    public Object getField(String owner, String name, String descriptor)
+    {
         FieldKey key = new FieldKey(owner, name, descriptor);
         return fields.get(key);
     }
 
-    public void setField(String owner, String name, String descriptor, Object value) {
+    /**
+     * Writes a field value.
+     * @param owner internal name of the declaring class
+     * @param name the field's name
+     * @param descriptor the field's type descriptor
+     * @param value the value to store
+     */
+    public void setField(String owner, String name, String descriptor, Object value)
+    {
         FieldKey key = new FieldKey(owner, name, descriptor);
         fields.put(key, value);
     }
 
-    public void setClassResolver(Object classResolver) {
+    /**
+     * Attaches the resolver used for type hierarchy queries.
+     * @param classResolver the resolver to attach
+     */
+    public void setClassResolver(Object classResolver)
+    {
         this.classResolver = classResolver;
     }
 
-    public boolean isInstanceOf(String className) {
-        if (this.className.equals(className)) {
+    /**
+     * Checks assignability by exact class match, treating java/lang/Object as a universal supertype.
+     * @param className internal name of the candidate type
+     * @return true if the class names match exactly or the candidate is java/lang/Object
+     */
+    public boolean isInstanceOf(String className)
+    {
+        if (this.className.equals(className))
+        {
             return true;
         }
 
         return className.equals("java/lang/Object");
     }
 
-    public int getIdentityHashCode() {
+    /**
+     * @return the identity hash code
+     */
+    public int getIdentityHashCode()
+    {
         return id;
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return id;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return className + "@" + Integer.toHexString(id);
     }
 
-    private static class FieldKey {
+    private static class FieldKey
+    {
         private final String ownerClass;
         private final String fieldName;
         private final String descriptor;
 
-        public FieldKey(String ownerClass, String fieldName, String descriptor) {
+        public FieldKey(String ownerClass, String fieldName, String descriptor)
+        {
             this.ownerClass = ownerClass;
             this.fieldName = fieldName;
             this.descriptor = descriptor;
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(Object obj)
+        {
             if (this == obj) return true;
             if (!(obj instanceof FieldKey)) return false;
             FieldKey other = (FieldKey) obj;
@@ -83,7 +138,8 @@ public class ObjectInstance {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(ownerClass, fieldName, descriptor);
         }
     }

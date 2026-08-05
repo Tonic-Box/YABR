@@ -9,28 +9,38 @@ import java.util.List;
  * reorders by variable and loses that shape). {@link NnfFactory} interns every node, so structurally
  * equal formulas are the same object and operand de-duplication is an identity check.
  *
- * <p>This is the same algebra as {@code CompoundConditionBuilder.Node}, generalized from an
+ *This is the same algebra as {@code CompoundConditionBuilder.Node}, generalized from an
  * {@code IRBlock} leaf to an integer atom so it can carry any predicate.
  */
-final class Nnf {
+final class Nnf
+{
 
     enum Kind { TRUE, FALSE, LEAF, AND, OR }
 
     final Kind kind;
 
-    /** LEAF: the atom index. */
+    /**
+     * LEAF: the atom index.
+     */
     final int atom;
 
-    /** LEAF: whether the atom is negated. */
+    /**
+     * LEAF: whether the atom is negated.
+     */
     final boolean negate;
 
-    /** AND/OR: operands, held in ascending {@link #id} order so the node is a canonical set. */
+    /**
+     * AND/OR: operands, held in ascending {@link #id} order so the node is a canonical set.
+     */
     final List<Nnf> ops;
 
-    /** Dense identifier assigned by the owning factory. */
+    /**
+     * Dense identifier assigned by the owning factory.
+     */
     final int id;
 
-    Nnf(Kind kind, int atom, boolean negate, List<Nnf> ops, int id) {
+    Nnf(Kind kind, int atom, boolean negate, List<Nnf> ops, int id)
+    {
         this.kind = kind;
         this.atom = atom;
         this.negate = negate;
@@ -38,7 +48,8 @@ final class Nnf {
         this.id = id;
     }
 
-    boolean isConstant() {
+    boolean isConstant()
+    {
         return kind == Kind.TRUE || kind == Kind.FALSE;
     }
 }

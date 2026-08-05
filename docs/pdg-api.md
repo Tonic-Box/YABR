@@ -115,7 +115,8 @@ PDGNode criterion = pdg.getInstructionNode(returnInstr);
 SliceResult backward = slicer.backwardSlice(criterion);
 
 System.out.println("Backward slice contains " + backward.getSize() + " nodes");
-for (PDGNode n : backward.getNodes()) {
+for (PDGNode n : backward.getNodes())
+{
     System.out.println("  " + n);
 }
 
@@ -140,7 +141,8 @@ PDGNode paramNode = pdg.getNodesOfType(PDGNodeType.INSTRUCTION).get(0);
 paramNode.setTainted(true);
 
 // Check if node is tainted
-if (node.isTainted()) {
+if (node.isTainted())
+{
     System.out.println("Node is tainted");
 }
 
@@ -148,7 +150,8 @@ if (node.isTainted()) {
 PDGSlicer slicer = new PDGSlicer(pdg);
 SliceResult affected = slicer.forwardSlice(paramNode);
 
-for (PDGNode n : affected.getNodes()) {
+for (PDGNode n : affected.getNodes())
+{
     n.setTainted(true);
 }
 ```

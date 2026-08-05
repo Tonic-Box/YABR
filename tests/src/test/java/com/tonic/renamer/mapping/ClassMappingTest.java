@@ -5,13 +5,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassMappingTest {
+class ClassMappingTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void validMappingCreatedSuccessfully() {
+        void validMappingCreatedSuccessfully()
+        {
             ClassMapping mapping = new ClassMapping("com/old/MyClass", "com/new/RenamedClass");
 
             assertEquals("com/old/MyClass", mapping.getOldName());
@@ -19,46 +22,43 @@ class ClassMappingTest {
         }
 
         @Test
-        void rejectsNullOldName() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new ClassMapping(null, "com/new/Class")
-            );
+        void rejectsNullOldName()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new ClassMapping(null, "com/new/Class"));
         }
 
         @Test
-        void rejectsNullNewName() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new ClassMapping("com/old/Class", null)
-            );
+        void rejectsNullNewName()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new ClassMapping("com/old/Class", null));
         }
 
         @Test
-        void rejectsEmptyOldName() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new ClassMapping("", "com/new/Class")
-            );
+        void rejectsEmptyOldName()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new ClassMapping("", "com/new/Class"));
         }
 
         @Test
-        void rejectsEmptyNewName() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new ClassMapping("com/old/Class", "")
-            );
+        void rejectsEmptyNewName()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new ClassMapping("com/old/Class", ""));
         }
 
         @Test
-        void rejectsSameOldAndNewName() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new ClassMapping("com/same/Class", "com/same/Class")
-            );
+        void rejectsSameOldAndNewName()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new ClassMapping("com/same/Class", "com/same/Class"));
         }
     }
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalMappingsAreEqual() {
+        void equalMappingsAreEqual()
+        {
             ClassMapping mapping1 = new ClassMapping("com/old/Class", "com/new/Class");
             ClassMapping mapping2 = new ClassMapping("com/old/Class", "com/new/Class");
 
@@ -67,7 +67,8 @@ class ClassMappingTest {
         }
 
         @Test
-        void differentOldNamesNotEqual() {
+        void differentOldNamesNotEqual()
+        {
             ClassMapping mapping1 = new ClassMapping("com/old/ClassA", "com/new/Class");
             ClassMapping mapping2 = new ClassMapping("com/old/ClassB", "com/new/Class");
 
@@ -75,7 +76,8 @@ class ClassMappingTest {
         }
 
         @Test
-        void differentNewNamesNotEqual() {
+        void differentNewNamesNotEqual()
+        {
             ClassMapping mapping1 = new ClassMapping("com/old/Class", "com/new/ClassA");
             ClassMapping mapping2 = new ClassMapping("com/old/Class", "com/new/ClassB");
 
@@ -83,29 +85,34 @@ class ClassMappingTest {
         }
 
         @Test
-        void equalToSelf() {
+        void equalToSelf()
+        {
             ClassMapping mapping = new ClassMapping("com/old/Class", "com/new/Class");
             assertEquals(mapping, mapping);
         }
 
         @Test
-        void notEqualToNull() {
+        void notEqualToNull()
+        {
             ClassMapping mapping = new ClassMapping("com/old/Class", "com/new/Class");
             assertNotEquals(mapping, null);
         }
 
         @Test
-        void notEqualToDifferentType() {
+        void notEqualToDifferentType()
+        {
             ClassMapping mapping = new ClassMapping("com/old/Class", "com/new/Class");
             assertNotEquals(mapping, "not a ClassMapping");
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsOldAndNewNames() {
+        void toStringContainsOldAndNewNames()
+        {
             ClassMapping mapping = new ClassMapping("com/old/Class", "com/new/Class");
             String str = mapping.toString();
 

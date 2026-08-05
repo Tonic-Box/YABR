@@ -3,37 +3,70 @@ package com.tonic.analysis.ssa.ir;
 /**
  * Binary operation types.
  */
-public enum BinaryOp {
-    /** Addition. */
+public enum BinaryOp
+{
+    /**
+     * Addition.
+     */
     ADD,
-    /** Subtraction. */
+    /**
+     * Subtraction.
+     */
     SUB,
-    /** Multiplication. */
+    /**
+     * Multiplication.
+     */
     MUL,
-    /** Division. */
+    /**
+     * Division.
+     */
     DIV,
-    /** Remainder (modulo). */
+    /**
+     * Remainder (modulo).
+     */
     REM,
-    /** Shift left. */
+    /**
+     * Shift left.
+     */
     SHL,
-    /** Arithmetic shift right. */
+    /**
+     * Arithmetic shift right.
+     */
     SHR,
-    /** Logical shift right (unsigned). */
+    /**
+     * Logical shift right (unsigned).
+     */
     USHR,
-    /** Bitwise AND. */
+    /**
+     * Bitwise AND.
+     */
     AND,
-    /** Bitwise OR. */
+    /**
+     * Bitwise OR.
+     */
     OR,
-    /** Bitwise XOR. */
+    /**
+     * Bitwise XOR.
+     */
     XOR,
-    /** Long comparison. */
+    /**
+     * Long comparison.
+     */
     LCMP,
-    /** Float comparison (less on NaN). */
+    /**
+     * Float comparison (less on NaN).
+     */
     FCMPL,
-    /** Float comparison (greater on NaN). */
+    /**
+     * Float comparison (greater on NaN).
+     */
     FCMPG,
-    /** Double comparison (less on NaN). */
+    /**
+     * Double comparison (less on NaN).
+     */
     DCMPL,
-    /** Double comparison (greater on NaN). */
+    /**
+     * Double comparison (greater on NaN).
+     */
     DCMPG
 }

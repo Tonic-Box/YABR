@@ -3,7 +3,8 @@ package com.tonic.analysis.simulation.core;
 /**
  * Defines the granularity of simulation state tracking.
  */
-public enum SimulationMode {
+public enum SimulationMode
+{
 
     /**
      * Track state at every instruction.

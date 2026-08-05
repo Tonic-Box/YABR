@@ -17,22 +17,26 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class TracingListenerTest {
+class TracingListenerTest
+{
 
     private TracingListener listener;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new TracingListener();
     }
 
     @Test
-    void initiallyEmpty() {
+    void initiallyEmpty()
+    {
         assertTrue(listener.getEvents().isEmpty());
     }
 
     @Test
-    void onExecutionStartRecordsEvent() {
+    void onExecutionStartRecordsEvent()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("Test");
         when(method.getName()).thenReturn("method");
@@ -45,7 +49,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void onExecutionEndRecordsEvent() {
+    void onExecutionEndRecordsEvent()
+    {
         BytecodeResult result = BytecodeResult.success(null);
 
         listener.onExecutionEnd(result);
@@ -55,7 +60,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void onFramePushRecordsEvent() {
+    void onFramePushRecordsEvent()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         when(frame.getMethod()).thenReturn(method);
@@ -68,7 +74,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void beforeInstructionRecordsEvent() {
+    void beforeInstructionRecordsEvent()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
         when(frame.getPC()).thenReturn(10);
@@ -82,7 +89,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void onStackPushRecordsEvent() {
+    void onStackPushRecordsEvent()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getPC()).thenReturn(5);
         ConcreteValue value = ConcreteValue.intValue(42);
@@ -94,7 +102,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void onObjectAllocationRecordsEvent() {
+    void onObjectAllocationRecordsEvent()
+    {
         ObjectInstance obj = new ObjectInstance(1, "java/lang/String");
 
         listener.onObjectAllocation(obj);
@@ -104,7 +113,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void onArrayAllocationRecordsEvent() {
+    void onArrayAllocationRecordsEvent()
+    {
         ArrayInstance arr = new ArrayInstance(2, "I", 10);
 
         listener.onArrayAllocation(arr);
@@ -114,7 +124,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void onBranchRecordsEvent() {
+    void onBranchRecordsEvent()
+    {
         StackFrame frame = mock(StackFrame.class);
 
         listener.onBranch(frame, 10, 20, true);
@@ -124,7 +135,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void includeStackStateFalseByDefault() {
+    void includeStackStateFalseByDefault()
+    {
         TracingListener listener = new TracingListener();
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
@@ -138,7 +150,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void includeStackStateWhenEnabled() {
+    void includeStackStateWhenEnabled()
+    {
         TracingListener listener = new TracingListener(true);
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
@@ -156,7 +169,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void maxEventsLimitRespected() {
+    void maxEventsLimitRespected()
+    {
         TracingListener listener = new TracingListener(false, 3);
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
@@ -164,7 +178,8 @@ class TracingListenerTest {
         when(instr.getOpcode()).thenReturn(0x01);
         when(frame.getStack()).thenReturn(new ConcreteStack(10));
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++)
+        {
             listener.beforeInstruction(frame, instr);
         }
 
@@ -172,7 +187,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void clearEventsWorks() {
+    void clearEventsWorks()
+    {
         ObjectInstance obj = new ObjectInstance(1, "Test");
         listener.onObjectAllocation(obj);
 
@@ -184,7 +200,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void getEventsIsUnmodifiable() {
+    void getEventsIsUnmodifiable()
+    {
         List<TraceEvent> events = listener.getEvents();
 
         assertThrows(UnsupportedOperationException.class, () -> {
@@ -193,7 +210,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void formatTraceProducesReadableOutput() {
+    void formatTraceProducesReadableOutput()
+    {
         ObjectInstance obj = new ObjectInstance(1, "Test");
         listener.onObjectAllocation(obj);
         listener.onObjectAllocation(obj);
@@ -206,9 +224,11 @@ class TracingListenerTest {
     }
 
     @Test
-    void formatTraceWithMaxLines() {
+    void formatTraceWithMaxLines()
+    {
         ObjectInstance obj = new ObjectInstance(1, "Test");
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++)
+        {
             listener.onObjectAllocation(obj);
         }
 
@@ -218,7 +238,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void resetClearsEvents() {
+    void resetClearsEvents()
+    {
         ObjectInstance obj = new ObjectInstance(1, "Test");
         listener.onObjectAllocation(obj);
 
@@ -230,7 +251,8 @@ class TracingListenerTest {
     }
 
     @Test
-    void allEventTypesRecorded() {
+    void allEventTypesRecorded()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         Instruction instr = mock(Instruction.class);
@@ -275,19 +297,22 @@ class TracingListenerTest {
     }
 
     @Test
-    void constructorWithIncludeStackState() {
+    void constructorWithIncludeStackState()
+    {
         TracingListener listener = new TracingListener(true);
         assertNotNull(listener);
     }
 
     @Test
-    void constructorWithBothParameters() {
+    void constructorWithBothParameters()
+    {
         TracingListener listener = new TracingListener(true, 100);
         assertNotNull(listener);
     }
 
     @Test
-    void formatTraceUnlimited() {
+    void formatTraceUnlimited()
+    {
         ObjectInstance obj = new ObjectInstance(1, "Test");
         listener.onObjectAllocation(obj);
 

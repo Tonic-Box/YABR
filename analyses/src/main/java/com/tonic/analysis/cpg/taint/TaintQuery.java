@@ -8,7 +8,11 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class TaintQuery {
+/**
+ * A source-to-sink taint search over a code property graph, configured with source, sink, and sanitizer definitions.
+ */
+public class TaintQuery
+{
 
     private final CodePropertyGraph cpg;
     private final List<TaintSource> sources;
@@ -17,7 +21,12 @@ public class TaintQuery {
     private int maxPathLength;
     private boolean interprocedural;
 
-    public TaintQuery(CodePropertyGraph cpg) {
+    /**
+     * Creates an empty query over a graph, defaulting to a 50 node path cap and interprocedural traversal.
+     * @param cpg the graph to search
+     */
+    public TaintQuery(CodePropertyGraph cpg)
+    {
         this.cpg = cpg;
         this.sources = new ArrayList<>();
         this.sinks = new ArrayList<>();
@@ -26,71 +35,150 @@ public class TaintQuery {
         this.interprocedural = true;
     }
 
-    public CodePropertyGraph getCpg() {
+    /**
+     * @return the cpg
+     */
+    public CodePropertyGraph getCpg()
+    {
         return cpg;
     }
 
-    public List<TaintSource> getSources() {
+    /**
+     * @return the sources
+     */
+    public List<TaintSource> getSources()
+    {
         return sources;
     }
 
-    public List<TaintSink> getSinks() {
+    /**
+     * @return the sinks
+     */
+    public List<TaintSink> getSinks()
+    {
         return sinks;
     }
 
-    public Set<Sanitizer> getSanitizers() {
+    /**
+     * @return the sanitizers
+     */
+    public Set<Sanitizer> getSanitizers()
+    {
         return sanitizers;
     }
 
-    public int getMaxPathLength() {
+    /**
+     * @return the max path length
+     */
+    public int getMaxPathLength()
+    {
         return maxPathLength;
     }
 
-    public boolean isInterprocedural() {
+    /**
+     * @return whether interprocedural
+     */
+    public boolean isInterprocedural()
+    {
         return interprocedural;
     }
 
-    public TaintQuery addSource(TaintSource source) {
+    /**
+     * Registers one source definition.
+     * @param source the source to match call sites against
+     * @return this query
+     */
+    public TaintQuery addSource(TaintSource source)
+    {
         sources.add(source);
         return this;
     }
 
-    public TaintQuery addSources(TaintSource... sources) {
+    /**
+     * Registers several source definitions.
+     * @param sources the sources to match call sites against
+     * @return this query
+     */
+    public TaintQuery addSources(TaintSource... sources)
+    {
         Collections.addAll(this.sources, sources);
         return this;
     }
 
-    public TaintQuery addSink(TaintSink sink) {
+    /**
+     * Registers one sink definition.
+     * @param sink the sink to match call sites against
+     * @return this query
+     */
+    public TaintQuery addSink(TaintSink sink)
+    {
         sinks.add(sink);
         return this;
     }
 
-    public TaintQuery addSinks(TaintSink... sinks) {
+    /**
+     * Registers several sink definitions.
+     * @param sinks the sinks to match call sites against
+     * @return this query
+     */
+    public TaintQuery addSinks(TaintSink... sinks)
+    {
         Collections.addAll(this.sinks, sinks);
         return this;
     }
 
-    public TaintQuery addSanitizer(Sanitizer sanitizer) {
+    /**
+     * Registers one sanitizer.
+     * @param sanitizer the sanitizer to match path hops against
+     * @return this query
+     */
+    public TaintQuery addSanitizer(Sanitizer sanitizer)
+    {
         sanitizers.add(sanitizer);
         return this;
     }
 
-    public TaintQuery addSanitizer(String ownerPattern, String methodPattern) {
+    /**
+     * Registers a sanitizer built from a pair of regexes.
+     * @param ownerPattern regex for the declaring class internal name
+     * @param methodPattern regex for the method name
+     * @return this query
+     * @throws java.util.regex.PatternSyntaxException if either pattern is not valid regex
+     */
+    public TaintQuery addSanitizer(String ownerPattern, String methodPattern)
+    {
         sanitizers.add(new Sanitizer(ownerPattern, methodPattern));
         return this;
     }
 
-    public TaintQuery maxPathLength(int length) {
+    /**
+     * Caps how many nodes a reported path may contain.
+     * @param length the maximum hop count
+     * @return this query
+     */
+    public TaintQuery maxPathLength(int length)
+    {
         this.maxPathLength = length;
         return this;
     }
 
-    public TaintQuery interprocedural(boolean enabled) {
+    /**
+     * Controls whether traversal follows call, parameter, and return edges across methods.
+     * @param enabled true to cross method boundaries
+     * @return this query
+     */
+    public TaintQuery interprocedural(boolean enabled)
+    {
         this.interprocedural = enabled;
         return this;
     }
 
-    public TaintQuery withDefaultSources() {
+    /**
+     * Adds the built-in sources for HTTP input, console input, file reads, environment, and database reads.
+     * @return this query
+     */
+    public TaintQuery withDefaultSources()
+    {
         addSource(TaintSource.httpParameter());
         addSource(TaintSource.httpHeader());
         addSource(TaintSource.httpCookie());
@@ -101,7 +189,12 @@ public class TaintQuery {
         return this;
     }
 
-    public TaintQuery withDefaultSinks() {
+    /**
+     * Adds the built-in injection, traversal, SSRF, deserialization, and reflection sinks.
+     * @return this query
+     */
+    public TaintQuery withDefaultSinks()
+    {
         addSink(TaintSink.sqlInjection());
         addSink(TaintSink.commandInjection());
         addSink(TaintSink.pathTraversal());
@@ -115,7 +208,12 @@ public class TaintQuery {
         return this;
     }
 
-    public TaintQuery withDefaultSanitizers() {
+    /**
+     * Adds the built-in sanitizers for URL encoding, OWASP and commons-text escaping, and prepared statements.
+     * @return this query
+     */
+    public TaintQuery withDefaultSanitizers()
+    {
         addSanitizer("java/net/URLEncoder", "encode");
         addSanitizer("org/owasp/encoder/Encode", ".*");
         addSanitizer("org/apache/commons/text/StringEscapeUtils", "escape.*");
@@ -123,14 +221,22 @@ public class TaintQuery {
         return this;
     }
 
-    public List<CPGNode> findSourceNodes() {
+    /**
+     * Scans every call site in the graph for one matching a registered source.
+     * @return the matching call site nodes
+     */
+    public List<CPGNode> findSourceNodes()
+    {
         List<CPGNode> result = new ArrayList<>();
 
-        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList())) {
-            for (TaintSource source : sources) {
+        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList()))
+        {
+            for (TaintSource source : sources)
+            {
                 if (source.matches(callSite.getTargetOwner(),
                                    callSite.getTargetName(),
-                                   callSite.getTargetDescriptor())) {
+                                   callSite.getTargetDescriptor()))
+                                   {
                     result.add(callSite);
                     break;
                 }
@@ -140,14 +246,20 @@ public class TaintQuery {
         return result;
     }
 
-    public List<CPGNode> findSinkNodes() {
+    /**
+     * Scans every call site in the graph for one matching a registered sink.
+     * @return the matching call site nodes
+     */
+    public List<CPGNode> findSinkNodes()
+    {
         List<CPGNode> result = new ArrayList<>();
 
-        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList())) {
-            for (TaintSink sink : sinks) {
-                if (sink.matches(callSite.getTargetOwner(),
-                                 callSite.getTargetName(),
-                                 callSite.getTargetDescriptor())) {
+        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList()))
+        {
+            for (TaintSink sink : sinks)
+            {
+                if (sink.matches(callSite.getTargetOwner(), callSite.getTargetName(), callSite.getTargetDescriptor()))
+                {
                     result.add(callSite);
                     break;
                 }
@@ -157,25 +269,33 @@ public class TaintQuery {
         return result;
     }
 
-    public TaintAnalysisResult analyze() {
+    /**
+     * Walks data flow edges from every source node to every reachable sink, capped at ten paths per pair.
+     * @return the collected paths, each already checked for sanitizers
+     */
+    public TaintAnalysisResult analyze()
+    {
         List<CPGNode> sourceNodes = findSourceNodes();
         List<CPGNode> sinkNodes = findSinkNodes();
 
         TaintAnalysisResult result = new TaintAnalysisResult();
 
-        for (CPGNode sourceNode : sourceNodes) {
+        for (CPGNode sourceNode : sourceNodes)
+        {
             TaintSource matchedSource = findMatchingSource(sourceNode);
             if (matchedSource == null) continue;
 
             Set<CPGNode> reachableSinks = findReachableSinks(sourceNode, sinkNodes);
 
-            for (CPGNode sinkNode : reachableSinks) {
+            for (CPGNode sinkNode : reachableSinks)
+            {
                 TaintSink matchedSink = findMatchingSink(sinkNode);
                 if (matchedSink == null) continue;
 
                 List<List<CPGNode>> paths = findPaths(sourceNode, sinkNode);
 
-                for (List<CPGNode> path : paths) {
+                for (List<CPGNode> path : paths)
+                {
                     TaintPath taintPath = TaintPath.builder()
                         .source(matchedSource)
                         .sink(matchedSink)
@@ -193,35 +313,38 @@ public class TaintQuery {
         return result;
     }
 
-    private TaintSource findMatchingSource(CPGNode node) {
+    private TaintSource findMatchingSource(CPGNode node)
+    {
         if (!(node instanceof CallSiteNode)) return null;
         CallSiteNode callSite = (CallSiteNode) node;
 
-        for (TaintSource source : sources) {
-            if (source.matches(callSite.getTargetOwner(),
-                               callSite.getTargetName(),
-                               callSite.getTargetDescriptor())) {
+        for (TaintSource source : sources)
+        {
+            if (source.matches(callSite.getTargetOwner(), callSite.getTargetName(), callSite.getTargetDescriptor()))
+            {
                 return source;
             }
         }
         return null;
     }
 
-    private TaintSink findMatchingSink(CPGNode node) {
+    private TaintSink findMatchingSink(CPGNode node)
+    {
         if (!(node instanceof CallSiteNode)) return null;
         CallSiteNode callSite = (CallSiteNode) node;
 
-        for (TaintSink sink : sinks) {
-            if (sink.matches(callSite.getTargetOwner(),
-                             callSite.getTargetName(),
-                             callSite.getTargetDescriptor())) {
+        for (TaintSink sink : sinks)
+        {
+            if (sink.matches(callSite.getTargetOwner(), callSite.getTargetName(), callSite.getTargetDescriptor()))
+            {
                 return sink;
             }
         }
         return null;
     }
 
-    private Set<CPGNode> findReachableSinks(CPGNode source, List<CPGNode> sinks) {
+    private Set<CPGNode> findReachableSinks(CPGNode source, List<CPGNode> sinks)
+    {
         Set<CPGNode> reachable = new LinkedHashSet<>();
         Set<CPGNode> visited = new HashSet<>();
         Deque<CPGNode> worklist = new ArrayDeque<>();
@@ -229,18 +352,22 @@ public class TaintQuery {
 
         Set<CPGNode> sinkSet = new HashSet<>(sinks);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             CPGNode current = worklist.poll();
             if (!visited.add(current)) continue;
             if (visited.size() > maxPathLength * 100) break;
 
-            if (sinkSet.contains(current) && !current.equals(source)) {
+            if (sinkSet.contains(current) && !current.equals(source))
+            {
                 reachable.add(current);
             }
 
-            for (CPGEdge edge : current.getOutgoingEdges()) {
+            for (CPGEdge edge : current.getOutgoingEdges())
+            {
                 CPGEdgeType type = edge.getType();
-                if (isDataFlowEdge(type) || (interprocedural && isCallEdge(type))) {
+                if (isDataFlowEdge(type) || (interprocedural && isCallEdge(type)))
+                {
                     worklist.add(edge.getTarget());
                 }
             }
@@ -249,7 +376,8 @@ public class TaintQuery {
         return reachable;
     }
 
-    private List<List<CPGNode>> findPaths(CPGNode source, CPGNode sink) {
+    private List<List<CPGNode>> findPaths(CPGNode source, CPGNode sink)
+    {
         List<List<CPGNode>> paths = new ArrayList<>();
         Deque<List<CPGNode>> worklist = new ArrayDeque<>();
 
@@ -257,21 +385,25 @@ public class TaintQuery {
         initial.add(source);
         worklist.add(initial);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             List<CPGNode> currentPath = worklist.poll();
             CPGNode current = currentPath.get(currentPath.size() - 1);
 
             if (currentPath.size() > maxPathLength) continue;
 
-            if (current.equals(sink)) {
+            if (current.equals(sink))
+            {
                 paths.add(currentPath);
                 if (paths.size() >= 10) break;
                 continue;
             }
 
-            for (CPGEdge edge : current.getOutgoingEdges()) {
+            for (CPGEdge edge : current.getOutgoingEdges())
+            {
                 CPGEdgeType type = edge.getType();
-                if (!isDataFlowEdge(type) && !(interprocedural && isCallEdge(type))) {
+                if (!isDataFlowEdge(type) && !(interprocedural && isCallEdge(type)))
+                {
                     continue;
                 }
 
@@ -287,63 +419,97 @@ public class TaintQuery {
         return paths;
     }
 
-    private boolean isDataFlowEdge(CPGEdgeType type) {
+    private boolean isDataFlowEdge(CPGEdgeType type)
+    {
         return type == CPGEdgeType.DATA_DEF ||
                type == CPGEdgeType.DATA_USE ||
                type == CPGEdgeType.REACHING_DEF ||
                type == CPGEdgeType.TAINT;
     }
 
-    private boolean isCallEdge(CPGEdgeType type) {
+    private boolean isCallEdge(CPGEdgeType type)
+    {
         return type == CPGEdgeType.CALL ||
                type == CPGEdgeType.PARAM_IN ||
                type == CPGEdgeType.PARAM_OUT ||
                type == CPGEdgeType.RETURN_VALUE;
     }
 
-    private void checkSanitization(TaintPath path) {
-        for (CPGNode node : path.getPath()) {
+    private void checkSanitization(TaintPath path)
+    {
+        for (CPGNode node : path.getPath())
+        {
             if (!(node instanceof CallSiteNode)) continue;
             CallSiteNode callSite = (CallSiteNode) node;
 
-            for (Sanitizer sanitizer : sanitizers) {
-                if (sanitizer.matches(callSite.getTargetOwner(), callSite.getTargetName())) {
+            for (Sanitizer sanitizer : sanitizers)
+            {
+                if (sanitizer.matches(callSite.getTargetOwner(), callSite.getTargetName()))
+                {
                     path.addSanitizer(callSite.getTargetOwner() + "." + callSite.getTargetName());
                 }
             }
         }
     }
 
-    public static class Sanitizer {
+    /**
+     * A regex pair matching call targets that neutralize taint on a path.
+     */
+    public static class Sanitizer
+    {
         private final String ownerPattern;
         private final String methodPattern;
         private final Pattern compiledOwner;
         private final Pattern compiledMethod;
 
-        public Sanitizer(String ownerPattern, String methodPattern) {
+        public Sanitizer(String ownerPattern, String methodPattern)
+        {
             this.ownerPattern = ownerPattern;
             this.methodPattern = methodPattern;
             this.compiledOwner = Pattern.compile(ownerPattern);
             this.compiledMethod = Pattern.compile(methodPattern);
         }
 
-        public String getOwnerPattern() {
+        /**
+         * @return the owner pattern
+         */
+        public String getOwnerPattern()
+        {
             return ownerPattern;
         }
 
-        public String getMethodPattern() {
+        /**
+         * @return the method pattern
+         */
+        public String getMethodPattern()
+        {
             return methodPattern;
         }
 
-        public Pattern getCompiledOwner() {
+        /**
+         * @return the compiled owner
+         */
+        public Pattern getCompiledOwner()
+        {
             return compiledOwner;
         }
 
-        public Pattern getCompiledMethod() {
+        /**
+         * @return the compiled method
+         */
+        public Pattern getCompiledMethod()
+        {
             return compiledMethod;
         }
 
-        public boolean matches(String owner, String method) {
+        /**
+         * Tests both patterns against a call target.
+         * @param owner internal name of the declaring class
+         * @param method method name
+         * @return true when both patterns match in full
+         */
+        public boolean matches(String owner, String method)
+        {
             return compiledOwner.matcher(owner).matches() &&
                    compiledMethod.matcher(method).matches();
         }

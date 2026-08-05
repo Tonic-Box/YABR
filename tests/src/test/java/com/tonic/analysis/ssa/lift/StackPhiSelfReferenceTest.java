@@ -21,15 +21,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * incoming values. The lift fixup pass used to walk the cyclic CFG back to the phi's own
  * predecessors and rewrite its incoming edges to the phi result itself.
  */
-class StackPhiSelfReferenceTest {
+class StackPhiSelfReferenceTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void stackPhiInLoopKeepsRealIncomings() throws Exception {
+    void stackPhiInLoopKeepsRealIncomings() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("StackPhiLoop");
         MethodEntry method = cf.getMethods().stream()
                 .filter(m -> m.getName().equals("alternatingSum"))
@@ -39,13 +42,17 @@ class StackPhiSelfReferenceTest {
         IRMethod ir = new SSA(cf.getConstPool()).lift(method);
 
         boolean sawStackPhi = false;
-        for (IRBlock block : ir.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 if (phi.getResult() != null && phi.getResult().getName() != null
-                        && phi.getResult().getName().startsWith("stack_phi")) {
+                        && phi.getResult().getName().startsWith("stack_phi"))
+                {
                     sawStackPhi = true;
                 }
-                for (Map.Entry<IRBlock, Value> incoming : phi.getIncomingValues().entrySet()) {
+                for (Map.Entry<IRBlock, Value> incoming : phi.getIncomingValues().entrySet())
+                {
                     assertNotEquals(phi.getResult(), incoming.getValue(),
                             "phi in B" + block.getId() + " references itself as incoming from B"
                                     + incoming.getKey().getId());

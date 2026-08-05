@@ -14,15 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * a phi over a temp local and branched on, decompiling to {@code if (cond ? local : local)}. They must now lower as
  * direct branches.
  */
-class ConditionRoundTripTest {
+class ConditionRoundTripTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void negatedAndShortCircuitConditionsRoundTrip() throws Exception {
+    void negatedAndShortCircuitConditionsRoundTrip() throws Exception
+    {
         String src = "package test; public class CondT {"
             + " public static int f(boolean a, boolean b){"
             + "   if (!a) { return 1; }"

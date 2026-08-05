@@ -13,30 +13,112 @@ import com.tonic.util.Opcode;
 
 import static com.tonic.util.Opcode.*;
 
-public final class OpcodeDispatcher {
+/**
+ * Interpreter core that executes one bytecode instruction per call against a frame,
+ * deferring invokes, field access, and allocation to the dispatch context.
+ */
+public final class OpcodeDispatcher
+{
 
-    public enum DispatchResult {
+    /**
+     * Outcome of a dispatch step, directing the interpreter's next action.
+     */
+    public enum DispatchResult
+    {
+        /**
+         * The instruction finished in place and the program counter already
+         * advanced; nothing more is owed by the interpreter.
+         */
         CONTINUE,
+        /**
+         * Control transfers to the branch target the dispatcher left on the
+         * context.
+         */
         BRANCH,
+        /**
+         * A call was reached; the interpreter must resolve the target and push a
+         * new frame.
+         */
         INVOKE,
+        /**
+         * An invokedynamic call site was reached; the interpreter must link it
+         * through its bootstrap method before the call can proceed.
+         */
         INVOKE_DYNAMIC,
+        /**
+         * A dynamic constant was loaded and the interpreter must run its
+         * bootstrap method to produce the value.
+         */
         CONSTANT_DYNAMIC,
+        /**
+         * A method handle constant was loaded and the interpreter must
+         * materialize it from the handle info left on the context.
+         */
         METHOD_HANDLE,
+        /**
+         * A {@code MethodType} constant was loaded and the interpreter must
+         * materialize it from the descriptor left on the context.
+         */
         METHOD_TYPE,
+        /**
+         * The current frame completes and hands its return value, if any, to the
+         * caller.
+         */
         RETURN,
+        /**
+         * The interpreter must raise an exception it detected itself, such as a
+         * division by zero, rather than one the code threw explicitly.
+         */
         THROW,
+        /**
+         * An {@code athrow} was executed; the thrown reference is on the stack
+         * and needs handler lookup.
+         */
         ATHROW,
+        /**
+         * A field read is pending and must be serviced against the heap before
+         * execution resumes.
+         */
         FIELD_GET,
+        /**
+         * A field write is pending and must be serviced against the heap before
+         * execution resumes.
+         */
         FIELD_PUT,
+        /**
+         * An instance must be allocated for the pending {@code new}, before its
+         * constructor runs.
+         */
         NEW_OBJECT,
+        /**
+         * An array must be allocated, covering the primitive, reference, and
+         * multi-dimensional forms; the dimension counts are left on the context.
+         */
         NEW_ARRAY,
+        /**
+         * A cast check was performed; the dispatcher already applied it, so no
+         * follow-up is needed.
+         */
         CHECKCAST,
+        /**
+         * A type test was performed; the dispatcher already pushed its result.
+         */
         INSTANCEOF
     }
 
-    public DispatchResult dispatch(StackFrame frame, DispatchContext context) {
+    /**
+     * Executes the frame's current instruction, mutating its stack, locals, and PC.
+     * @param frame the frame whose current instruction is executed
+     * @param context services for constant resolution and pending-operation handoff
+     * @return how the interpreter should proceed
+     * @throws IllegalStateException if no instruction exists at the frame's PC
+     * @throws UnsupportedOperationException for jsr/ret or unimplemented opcodes
+     */
+    public DispatchResult dispatch(StackFrame frame, DispatchContext context)
+    {
         Instruction instruction = frame.getCurrentInstruction();
-        if (instruction == null) {
+        if (instruction == null)
+        {
             throw new IllegalStateException("No instruction at PC " + frame.getPC());
         }
 
@@ -44,7 +126,8 @@ public final class OpcodeDispatcher {
         ConcreteStack stack = frame.getStack();
         ConcreteLocals locals = frame.getLocals();
 
-        switch (opcode) {
+        switch (opcode)
+        {
             case 0x00:
                 return dispatchNop(frame, instruction);
 
@@ -362,62 +445,72 @@ public final class OpcodeDispatcher {
         }
     }
 
-    private DispatchResult dispatchNop(StackFrame frame, Instruction instruction) {
+    private DispatchResult dispatchNop(StackFrame frame, Instruction instruction)
+    {
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAConstNull(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchAConstNull(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.pushNull();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
+    private DispatchResult dispatchIConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode)
+    {
         int value = opcode - ICONST_0.getCode();
         stack.pushInt(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
+    private DispatchResult dispatchLConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode)
+    {
         long value = opcode - LCONST_0.getCode();
         stack.pushLong(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
+    private DispatchResult dispatchFConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode)
+    {
         float value = opcode - FCONST_0.getCode();
         stack.pushFloat(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode) {
+    private DispatchResult dispatchDConst(StackFrame frame, ConcreteStack stack, Instruction instruction, int opcode)
+    {
         double value = opcode - DCONST_0.getCode();
         stack.pushDouble(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchBipush(StackFrame frame, ConcreteStack stack, BipushInstruction instruction) {
+    private DispatchResult dispatchBipush(StackFrame frame, ConcreteStack stack, BipushInstruction instruction)
+    {
         stack.pushInt(instruction.getValue());
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchSipush(StackFrame frame, ConcreteStack stack, SipushInstruction instruction) {
+    private DispatchResult dispatchSipush(StackFrame frame, ConcreteStack stack, SipushInstruction instruction)
+    {
         stack.pushInt(instruction.getValue());
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLdc(StackFrame frame, ConcreteStack stack, DispatchContext context, LdcInstruction instruction) {
+    private DispatchResult dispatchLdc(StackFrame frame, ConcreteStack stack, DispatchContext context, LdcInstruction instruction)
+    {
         int index = instruction.getCpIndex();
         LdcInstruction.ConstantType type = instruction.getConstantType();
 
-        switch (type) {
+        switch (type)
+        {
             case INTEGER:
                 stack.pushInt(context.resolveIntConstant(index));
                 break;
@@ -451,11 +544,13 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLdcW(StackFrame frame, ConcreteStack stack, DispatchContext context, LdcWInstruction instruction) {
+    private DispatchResult dispatchLdcW(StackFrame frame, ConcreteStack stack, DispatchContext context, LdcWInstruction instruction)
+    {
         int index = instruction.getCpIndex();
         LdcInstruction.ConstantType type = instruction.getConstantType();
 
-        switch (type) {
+        switch (type)
+        {
             case INTEGER:
                 stack.pushInt(context.resolveIntConstant(index));
                 break;
@@ -495,11 +590,13 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLdc2W(StackFrame frame, ConcreteStack stack, DispatchContext context, Ldc2WInstruction instruction) {
+    private DispatchResult dispatchLdc2W(StackFrame frame, ConcreteStack stack, DispatchContext context, Ldc2WInstruction instruction)
+    {
         int index = instruction.getCpIndex();
         LdcInstruction.ConstantType type = instruction.getConstantType();
 
-        switch (type) {
+        switch (type)
+        {
             case LONG:
                 stack.pushLong(context.resolveLongConstant(index));
                 break;
@@ -519,46 +616,55 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchILoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, ILoadInstruction instruction) {
+    private DispatchResult dispatchILoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, ILoadInstruction instruction)
+    {
         int value = locals.getInt(instruction.getVarIndex());
         stack.pushInt(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLLoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, LLoadInstruction instruction) {
+    private DispatchResult dispatchLLoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, LLoadInstruction instruction)
+    {
         long value = locals.getLong(instruction.getVarIndex());
         stack.pushLong(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFLoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, FLoadInstruction instruction) {
+    private DispatchResult dispatchFLoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, FLoadInstruction instruction)
+    {
         float value = locals.getFloat(instruction.getVarIndex());
         stack.pushFloat(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDLoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, DLoadInstruction instruction) {
+    private DispatchResult dispatchDLoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, DLoadInstruction instruction)
+    {
         double value = locals.getDouble(instruction.getVarIndex());
         stack.pushDouble(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchALoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, ALoadInstruction instruction) {
+    private DispatchResult dispatchALoad(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, ALoadInstruction instruction)
+    {
         ObjectInstance value = locals.getReference(instruction.getVarIndex());
-        if (value == null) {
+        if (value == null)
+        {
             stack.pushNull();
-        } else {
+        }
+        else
+        {
             stack.pushReference(value);
         }
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchILoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchILoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - ILOAD_0.getCode();
         int value = locals.getInt(index);
         stack.pushInt(value);
@@ -566,7 +672,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchLLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - LLOAD_0.getCode();
         long value = locals.getLong(index);
         stack.pushLong(value);
@@ -574,7 +681,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchFLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - FLOAD_0.getCode();
         float value = locals.getFloat(index);
         stack.pushFloat(value);
@@ -582,7 +690,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchDLoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - DLOAD_0.getCode();
         double value = locals.getDouble(index);
         stack.pushDouble(value);
@@ -590,19 +699,24 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchALoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchALoadN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - ALOAD_0.getCode();
         ObjectInstance value = locals.getReference(index);
-        if (value == null) {
+        if (value == null)
+        {
             stack.pushNull();
-        } else {
+        }
+        else
+        {
             stack.pushReference(value);
         }
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchIALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "iaload");
@@ -614,7 +728,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchLALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "laload");
@@ -626,7 +741,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchFALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "faload");
@@ -638,7 +754,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchDALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "daload");
@@ -650,23 +767,28 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchAALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "aaload");
         ArrayInstance array = context.getArray(arrayRef);
         context.checkArrayBounds(array, index);
         Object value = array.get(index);
-        if (value == null) {
+        if (value == null)
+        {
             stack.pushNull();
-        } else {
+        }
+        else
+        {
             stack.pushReference((ObjectInstance) value);
         }
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchBALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchBALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "baload");
@@ -678,7 +800,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchCALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchCALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "caload");
@@ -690,7 +813,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchSALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchSALoad(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
         context.checkNullReference(arrayRef, "saload");
@@ -702,46 +826,55 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, IStoreInstruction instruction) {
+    private DispatchResult dispatchIStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, IStoreInstruction instruction)
+    {
         int value = stack.popInt();
         locals.setInt(instruction.getVarIndex(), value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, LStoreInstruction instruction) {
+    private DispatchResult dispatchLStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, LStoreInstruction instruction)
+    {
         long value = stack.popLong();
         locals.setLong(instruction.getVarIndex(), value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, FStoreInstruction instruction) {
+    private DispatchResult dispatchFStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, FStoreInstruction instruction)
+    {
         float value = stack.popFloat();
         locals.setFloat(instruction.getVarIndex(), value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, DStoreInstruction instruction) {
+    private DispatchResult dispatchDStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, DStoreInstruction instruction)
+    {
         double value = stack.popDouble();
         locals.setDouble(instruction.getVarIndex(), value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, AStoreInstruction instruction) {
+    private DispatchResult dispatchAStore(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, AStoreInstruction instruction)
+    {
         ObjectInstance value = stack.popReference();
-        if (value == null) {
+        if (value == null)
+        {
             locals.setNull(instruction.getVarIndex());
-        } else {
+        }
+        else
+        {
             locals.setReference(instruction.getVarIndex(), value);
         }
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchIStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - ISTORE_0.getCode();
         int value = stack.popInt();
         locals.setInt(index, value);
@@ -749,7 +882,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchLStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - LSTORE_0.getCode();
         long value = stack.popLong();
         locals.setLong(index, value);
@@ -757,7 +891,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchFStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - FSTORE_0.getCode();
         float value = stack.popFloat();
         locals.setFloat(index, value);
@@ -765,7 +900,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchDStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - DSTORE_0.getCode();
         double value = stack.popDouble();
         locals.setDouble(index, value);
@@ -773,19 +909,24 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode) {
+    private DispatchResult dispatchAStoreN(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, Instruction instruction, int opcode)
+    {
         int index = opcode - ASTORE_0.getCode();
         ObjectInstance value = stack.popReference();
-        if (value == null) {
+        if (value == null)
+        {
             locals.setNull(index);
-        } else {
+        }
+        else
+        {
             locals.setReference(index, value);
         }
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchIAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int value = stack.popInt();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -797,7 +938,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchLAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         long value = stack.popLong();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -809,7 +951,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchFAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         float value = stack.popFloat();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -821,7 +964,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchDAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         double value = stack.popDouble();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -833,7 +977,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchAAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         ObjectInstance value = stack.popReference();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -845,7 +990,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchBAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchBAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int value = stack.popInt();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -857,7 +1003,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchCAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchCAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int value = stack.popInt();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -869,7 +1016,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchSAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction) {
+    private DispatchResult dispatchSAStore(StackFrame frame, ConcreteStack stack, DispatchContext context, Instruction instruction)
+    {
         int value = stack.popInt();
         int index = stack.popInt();
         ObjectInstance arrayRef = stack.popReference();
@@ -881,17 +1029,22 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchPop(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchPop(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.pop();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchPop2(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchPop2(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         ConcreteValue value1 = stack.peek();
-        if (value1.isWide()) {
+        if (value1.isWide())
+        {
             stack.pop();
-        } else {
+        }
+        else
+        {
             stack.pop();
             stack.pop();
         }
@@ -899,167 +1052,196 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDup(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDup(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.dup();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDupX1(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDupX1(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.dupX1();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDupX2(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDupX2(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.dupX2();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDup2(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDup2(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.dup2();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDup2X1(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDup2X1(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.dup2X1();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDup2X2(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDup2X2(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.dup2X2();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchSwap(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchSwap(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.swap();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchArithmetic(StackFrame frame, ConcreteStack stack, ArithmeticInstruction instruction) {
+    private DispatchResult dispatchArithmetic(StackFrame frame, ConcreteStack stack, ArithmeticInstruction instruction)
+    {
         ArithmeticInstruction.ArithmeticType type = instruction.getType();
 
-        switch (type) {
-            case IADD: {
+        switch (type)
+        {
+            case IADD:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 + v2);
                 break;
             }
-            case LADD: {
+            case LADD:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 + v2);
                 break;
             }
-            case FADD: {
+            case FADD:
+            {
                 float v2 = stack.popFloat();
                 float v1 = stack.popFloat();
                 stack.pushFloat(v1 + v2);
                 break;
             }
-            case DADD: {
+            case DADD:
+            {
                 double v2 = stack.popDouble();
                 double v1 = stack.popDouble();
                 stack.pushDouble(v1 + v2);
                 break;
             }
-            case ISUB: {
+            case ISUB:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 - v2);
                 break;
             }
-            case LSUB: {
+            case LSUB:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 - v2);
                 break;
             }
-            case FSUB: {
+            case FSUB:
+            {
                 float v2 = stack.popFloat();
                 float v1 = stack.popFloat();
                 stack.pushFloat(v1 - v2);
                 break;
             }
-            case DSUB: {
+            case DSUB:
+            {
                 double v2 = stack.popDouble();
                 double v1 = stack.popDouble();
                 stack.pushDouble(v1 - v2);
                 break;
             }
-            case IMUL: {
+            case IMUL:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 * v2);
                 break;
             }
-            case LMUL: {
+            case LMUL:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 * v2);
                 break;
             }
-            case FMUL: {
+            case FMUL:
+            {
                 float v2 = stack.popFloat();
                 float v1 = stack.popFloat();
                 stack.pushFloat(v1 * v2);
                 break;
             }
-            case DMUL: {
+            case DMUL:
+            {
                 double v2 = stack.popDouble();
                 double v1 = stack.popDouble();
                 stack.pushDouble(v1 * v2);
                 break;
             }
-            case IDIV: {
+            case IDIV:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 / v2);
                 break;
             }
-            case LDIV: {
+            case LDIV:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 / v2);
                 break;
             }
-            case FDIV: {
+            case FDIV:
+            {
                 float v2 = stack.popFloat();
                 float v1 = stack.popFloat();
                 stack.pushFloat(v1 / v2);
                 break;
             }
-            case DDIV: {
+            case DDIV:
+            {
                 double v2 = stack.popDouble();
                 double v1 = stack.popDouble();
                 stack.pushDouble(v1 / v2);
                 break;
             }
-            case IREM: {
+            case IREM:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 % v2);
                 break;
             }
-            case LREM: {
+            case LREM:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 % v2);
                 break;
             }
-            case FREM: {
+            case FREM:
+            {
                 float v2 = stack.popFloat();
                 float v1 = stack.popFloat();
                 stack.pushFloat(v1 % v2);
                 break;
             }
-            case DREM: {
+            case DREM:
+            {
                 double v2 = stack.popDouble();
                 double v1 = stack.popDouble();
                 stack.pushDouble(v1 % v2);
@@ -1071,69 +1253,81 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchINeg(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchINeg(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         int value = stack.popInt();
         stack.pushInt(-value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLNeg(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchLNeg(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         long value = stack.popLong();
         stack.pushLong(-value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchFNeg(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchFNeg(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         float value = stack.popFloat();
         stack.pushFloat(-value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchDNeg(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchDNeg(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         double value = stack.popDouble();
         stack.pushDouble(-value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchShift(StackFrame frame, ConcreteStack stack, ArithmeticShiftInstruction instruction) {
+    private DispatchResult dispatchShift(StackFrame frame, ConcreteStack stack, ArithmeticShiftInstruction instruction)
+    {
         ArithmeticShiftInstruction.ShiftType type = instruction.getType();
 
-        switch (type) {
-            case ISHL: {
+        switch (type)
+        {
+            case ISHL:
+            {
                 int shiftAmount = stack.popInt();
                 int value = stack.popInt();
                 stack.pushInt(value << shiftAmount);
                 break;
             }
-            case LSHL: {
+            case LSHL:
+            {
                 int shiftAmount = stack.popInt();
                 long value = stack.popLong();
                 stack.pushLong(value << shiftAmount);
                 break;
             }
-            case ISHR: {
+            case ISHR:
+            {
                 int shiftAmount = stack.popInt();
                 int value = stack.popInt();
                 stack.pushInt(value >> shiftAmount);
                 break;
             }
-            case LSHR: {
+            case LSHR:
+            {
                 int shiftAmount = stack.popInt();
                 long value = stack.popLong();
                 stack.pushLong(value >> shiftAmount);
                 break;
             }
-            case IUSHR: {
+            case IUSHR:
+            {
                 int shiftAmount = stack.popInt();
                 int value = stack.popInt();
                 stack.pushInt(value >>> shiftAmount);
                 break;
             }
-            case LUSHR: {
+            case LUSHR:
+            {
                 int shiftAmount = stack.popInt();
                 long value = stack.popLong();
                 stack.pushLong(value >>> shiftAmount);
@@ -1145,7 +1339,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIAnd(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchIAnd(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         int v2 = stack.popInt();
         int v1 = stack.popInt();
         stack.pushInt(v1 & v2);
@@ -1153,7 +1348,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLAnd(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchLAnd(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         long v2 = stack.popLong();
         long v1 = stack.popLong();
         stack.pushLong(v1 & v2);
@@ -1161,7 +1357,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIOr(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchIOr(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         int v2 = stack.popInt();
         int v1 = stack.popInt();
         stack.pushInt(v1 | v2);
@@ -1169,7 +1366,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLOr(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchLOr(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         long v2 = stack.popLong();
         long v1 = stack.popLong();
         stack.pushLong(v1 | v2);
@@ -1177,7 +1375,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIXor(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchIXor(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         int v2 = stack.popInt();
         int v1 = stack.popInt();
         stack.pushInt(v1 ^ v2);
@@ -1185,7 +1384,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchLXor(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchLXor(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         long v2 = stack.popLong();
         long v1 = stack.popLong();
         stack.pushLong(v1 ^ v2);
@@ -1193,75 +1393,90 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchIInc(StackFrame frame, ConcreteLocals locals, IIncInstruction instruction) {
+    private DispatchResult dispatchIInc(StackFrame frame, ConcreteLocals locals, IIncInstruction instruction)
+    {
         int currentValue = locals.getInt(instruction.getVarIndex());
         locals.setInt(instruction.getVarIndex(), currentValue + instruction.getConstValue());
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchI2L(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchI2L(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         int value = stack.popInt();
         stack.pushLong(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchConversion(StackFrame frame, ConcreteStack stack, ConversionInstruction instruction) {
+    private DispatchResult dispatchConversion(StackFrame frame, ConcreteStack stack, ConversionInstruction instruction)
+    {
         ConversionInstruction.ConversionType type = instruction.getType();
 
-        switch (type) {
-            case I2F: {
+        switch (type)
+        {
+            case I2F:
+            {
                 int value = stack.popInt();
                 stack.pushFloat((float) value);
                 break;
             }
-            case I2D: {
+            case I2D:
+            {
                 int value = stack.popInt();
                 stack.pushDouble(value);
                 break;
             }
-            case L2I: {
+            case L2I:
+            {
                 long value = stack.popLong();
                 stack.pushInt((int) value);
                 break;
             }
-            case L2F: {
+            case L2F:
+            {
                 long value = stack.popLong();
                 stack.pushFloat((float) value);
                 break;
             }
-            case L2D: {
+            case L2D:
+            {
                 long value = stack.popLong();
                 stack.pushDouble((double) value);
                 break;
             }
-            case F2I: {
+            case F2I:
+            {
                 float value = stack.popFloat();
                 stack.pushInt((int) value);
                 break;
             }
-            case F2L: {
+            case F2L:
+            {
                 float value = stack.popFloat();
                 stack.pushLong((long) value);
                 break;
             }
-            case F2D: {
+            case F2D:
+            {
                 float value = stack.popFloat();
                 stack.pushDouble(value);
                 break;
             }
-            case D2I: {
+            case D2I:
+            {
                 double value = stack.popDouble();
                 stack.pushInt((int) value);
                 break;
             }
-            case D2L: {
+            case D2L:
+            {
                 double value = stack.popDouble();
                 stack.pushLong((long) value);
                 break;
             }
-            case D2F: {
+            case D2F:
+            {
                 double value = stack.popDouble();
                 stack.pushFloat((float) value);
                 break;
@@ -1272,21 +1487,26 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchNarrowingConversion(StackFrame frame, ConcreteStack stack, NarrowingConversionInstruction instruction) {
+    private DispatchResult dispatchNarrowingConversion(StackFrame frame, ConcreteStack stack, NarrowingConversionInstruction instruction)
+    {
         NarrowingConversionInstruction.NarrowingType type = instruction.getType();
 
-        switch (type) {
-            case I2B: {
+        switch (type)
+        {
+            case I2B:
+            {
                 int value = stack.popInt();
                 stack.pushInt((byte) value);
                 break;
             }
-            case I2C: {
+            case I2C:
+            {
                 int value = stack.popInt();
                 stack.pushInt((char) value);
                 break;
             }
-            case I2S: {
+            case I2S:
+            {
                 int value = stack.popInt();
                 stack.pushInt((short) value);
                 break;
@@ -1297,52 +1517,71 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchCompare(StackFrame frame, ConcreteStack stack, CompareInstruction instruction) {
+    private DispatchResult dispatchCompare(StackFrame frame, ConcreteStack stack, CompareInstruction instruction)
+    {
         CompareInstruction.CompareType type = instruction.getType();
 
-        switch (type) {
-            case LCMP: {
+        switch (type)
+        {
+            case LCMP:
+            {
                 long value2 = stack.popLong();
                 long value1 = stack.popLong();
                 stack.pushInt(Long.compare(value1, value2));
                 break;
             }
-            case FCMPL: {
+            case FCMPL:
+            {
                 float value2 = stack.popFloat();
                 float value1 = stack.popFloat();
-                if (Float.isNaN(value1) || Float.isNaN(value2)) {
+                if (Float.isNaN(value1) || Float.isNaN(value2))
+                {
                     stack.pushInt(-1);
-                } else {
+                }
+                else
+                {
                     stack.pushInt(Float.compare(value1, value2));
                 }
                 break;
             }
-            case FCMPG: {
+            case FCMPG:
+            {
                 float value2 = stack.popFloat();
                 float value1 = stack.popFloat();
-                if (Float.isNaN(value1) || Float.isNaN(value2)) {
+                if (Float.isNaN(value1) || Float.isNaN(value2))
+                {
                     stack.pushInt(1);
-                } else {
+                }
+                else
+                {
                     stack.pushInt(Float.compare(value1, value2));
                 }
                 break;
             }
-            case DCMPL: {
+            case DCMPL:
+            {
                 double value2 = stack.popDouble();
                 double value1 = stack.popDouble();
-                if (Double.isNaN(value1) || Double.isNaN(value2)) {
+                if (Double.isNaN(value1) || Double.isNaN(value2))
+                {
                     stack.pushInt(-1);
-                } else {
+                }
+                else
+                {
                     stack.pushInt(Double.compare(value1, value2));
                 }
                 break;
             }
-            case DCMPG: {
+            case DCMPG:
+            {
                 double value2 = stack.popDouble();
                 double value1 = stack.popDouble();
-                if (Double.isNaN(value1) || Double.isNaN(value2)) {
+                if (Double.isNaN(value1) || Double.isNaN(value2))
+                {
                     stack.pushInt(1);
-                } else {
+                }
+                else
+                {
                     stack.pushInt(Double.compare(value1, value2));
                 }
                 break;
@@ -1353,135 +1592,165 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchConditionalBranch(StackFrame frame, ConcreteStack stack, DispatchContext context, ConditionalBranchInstruction instruction) {
+    private DispatchResult dispatchConditionalBranch(StackFrame frame, ConcreteStack stack, DispatchContext context, ConditionalBranchInstruction instruction)
+    {
         ConditionalBranchInstruction.BranchType type = instruction.getType();
         boolean takeBranch = false;
 
-        switch (type) {
-            case IFEQ: {
+        switch (type)
+        {
+            case IFEQ:
+            {
                 int value = stack.popInt();
                 takeBranch = (value == 0);
                 break;
             }
-            case IFNE: {
+            case IFNE:
+            {
                 int value = stack.popInt();
                 takeBranch = (value != 0);
                 break;
             }
-            case IFLT: {
+            case IFLT:
+            {
                 int value = stack.popInt();
                 takeBranch = (value < 0);
                 break;
             }
-            case IFGE: {
+            case IFGE:
+            {
                 int value = stack.popInt();
                 takeBranch = (value >= 0);
                 break;
             }
-            case IFGT: {
+            case IFGT:
+            {
                 int value = stack.popInt();
                 takeBranch = (value > 0);
                 break;
             }
-            case IFLE: {
+            case IFLE:
+            {
                 int value = stack.popInt();
                 takeBranch = (value <= 0);
                 break;
             }
-            case IF_ICMPEQ: {
+            case IF_ICMPEQ:
+            {
                 int value2 = stack.popInt();
                 int value1 = stack.popInt();
                 takeBranch = (value1 == value2);
                 break;
             }
-            case IF_ICMPNE: {
+            case IF_ICMPNE:
+            {
                 int value2 = stack.popInt();
                 int value1 = stack.popInt();
                 takeBranch = (value1 != value2);
                 break;
             }
-            case IF_ICMPLT: {
+            case IF_ICMPLT:
+            {
                 int value2 = stack.popInt();
                 int value1 = stack.popInt();
                 takeBranch = (value1 < value2);
                 break;
             }
-            case IF_ICMPGE: {
+            case IF_ICMPGE:
+            {
                 int value2 = stack.popInt();
                 int value1 = stack.popInt();
                 takeBranch = (value1 >= value2);
                 break;
             }
-            case IF_ICMPGT: {
+            case IF_ICMPGT:
+            {
                 int value2 = stack.popInt();
                 int value1 = stack.popInt();
                 takeBranch = (value1 > value2);
                 break;
             }
-            case IF_ICMPLE: {
+            case IF_ICMPLE:
+            {
                 int value2 = stack.popInt();
                 int value1 = stack.popInt();
                 takeBranch = (value1 <= value2);
                 break;
             }
-            case IF_ACMPEQ: {
+            case IF_ACMPEQ:
+            {
                 ObjectInstance value2 = stack.popReference();
                 ObjectInstance value1 = stack.popReference();
                 takeBranch = (value1 == value2);
                 break;
             }
-            case IF_ACMPNE: {
+            case IF_ACMPNE:
+            {
                 ObjectInstance value2 = stack.popReference();
                 ObjectInstance value1 = stack.popReference();
                 takeBranch = (value1 != value2);
                 break;
             }
-            case IFNULL: {
+            case IFNULL:
+            {
                 ConcreteValue value = stack.pop();
                 takeBranch = value.isNull();
                 break;
             }
-            case IFNONNULL: {
+            case IFNONNULL:
+            {
                 ConcreteValue value = stack.pop();
                 takeBranch = !value.isNull();
                 break;
             }
         }
 
-        if (takeBranch) {
+        if (takeBranch)
+        {
             int target = instruction.getOffset() + instruction.getBranchOffset();
             context.setBranchTarget(target);
             return DispatchResult.BRANCH;
-        } else {
+        }
+        else
+        {
             frame.advancePC(instruction.getLength());
             return DispatchResult.CONTINUE;
         }
     }
 
-    private DispatchResult dispatchGoto(DispatchContext context, GotoInstruction instruction) {
+    private DispatchResult dispatchGoto(DispatchContext context, GotoInstruction instruction)
+    {
         int target = instruction.getOffset() + instruction.getBranchOffset();
         context.setBranchTarget(target);
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchGotoW(DispatchContext context, GotoInstruction instruction) {
+    private DispatchResult dispatchGotoW(DispatchContext context, GotoInstruction instruction)
+    {
         int target = instruction.getOffset() + instruction.getBranchOffsetWide();
         context.setBranchTarget(target);
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchTableSwitch(ConcreteStack stack, DispatchContext context, TableSwitchInstruction instruction) {
+    private DispatchResult dispatchTableSwitch(ConcreteStack stack, DispatchContext context, TableSwitchInstruction instruction)
+    {
         int index = stack.popInt();
         int target;
 
-        if (index >= instruction.getLow() && index <= instruction.getHigh()) {
+        if (index >= instruction.getLow() && index <= instruction.getHigh())
+        {
             Integer offset = instruction.getJumpOffsets().get(index);
-            if (offset != null) {
+            if (offset != null)
+            {
                 target = instruction.getOffset() + offset;
-            } else {
+            }
+            else
+            {
                 target = instruction.getOffset() + instruction.getDefaultOffset();
             }
-        } else {
+        }
+        else
+        {
             target = instruction.getOffset() + instruction.getDefaultOffset();
         }
 
@@ -1489,14 +1758,18 @@ public final class OpcodeDispatcher {
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchLookupSwitch(ConcreteStack stack, DispatchContext context, LookupSwitchInstruction instruction) {
+    private DispatchResult dispatchLookupSwitch(ConcreteStack stack, DispatchContext context, LookupSwitchInstruction instruction)
+    {
         int key = stack.popInt();
         int target;
 
         Integer offset = instruction.getMatchOffsets().get(key);
-        if (offset != null) {
+        if (offset != null)
+        {
             target = instruction.getOffset() + offset;
-        } else {
+        }
+        else
+        {
             target = instruction.getOffset() + instruction.getDefaultOffset();
         }
 
@@ -1504,11 +1777,13 @@ public final class OpcodeDispatcher {
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchReturn() {
+    private DispatchResult dispatchReturn()
+    {
         return DispatchResult.RETURN;
     }
 
-    private DispatchResult dispatchGetField(DispatchContext context, GetFieldInstruction instruction) {
+    private DispatchResult dispatchGetField(DispatchContext context, GetFieldInstruction instruction)
+    {
         FieldInfo fieldInfo = new FieldInfo(
             instruction.getOwnerClass(),
             instruction.getFieldName(),
@@ -1519,7 +1794,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.FIELD_GET;
     }
 
-    private DispatchResult dispatchPutField(DispatchContext context, PutFieldInstruction instruction) {
+    private DispatchResult dispatchPutField(DispatchContext context, PutFieldInstruction instruction)
+    {
         FieldInfo fieldInfo = new FieldInfo(
             instruction.getOwnerClass(),
             instruction.getFieldName(),
@@ -1530,7 +1806,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.FIELD_PUT;
     }
 
-    private DispatchResult dispatchInvokeVirtual(DispatchContext context, InvokeVirtualInstruction instruction) {
+    private DispatchResult dispatchInvokeVirtual(DispatchContext context, InvokeVirtualInstruction instruction)
+    {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1542,7 +1819,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchInvokeSpecial(DispatchContext context, InvokeSpecialInstruction instruction) {
+    private DispatchResult dispatchInvokeSpecial(DispatchContext context, InvokeSpecialInstruction instruction)
+    {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1555,7 +1833,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchInvokeStatic(DispatchContext context, InvokeStaticInstruction instruction) {
+    private DispatchResult dispatchInvokeStatic(DispatchContext context, InvokeStaticInstruction instruction)
+    {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1567,7 +1846,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchInvokeInterface(DispatchContext context, InvokeInterfaceInstruction instruction) {
+    private DispatchResult dispatchInvokeInterface(DispatchContext context, InvokeInterfaceInstruction instruction)
+    {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1579,19 +1859,22 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchNew(DispatchContext context, NewObjectInstruction instruction) {
+    private DispatchResult dispatchNew(DispatchContext context, NewObjectInstruction instruction)
+    {
         String className = instruction.resolveClass();
         context.setPendingNewClass(className);
         return DispatchResult.NEW_OBJECT;
     }
 
-    private DispatchResult dispatchNewArray(ConcreteStack stack, DispatchContext context, NewPrimitiveArrayInstruction instruction) {
+    private DispatchResult dispatchNewArray(ConcreteStack stack, DispatchContext context, NewPrimitiveArrayInstruction instruction)
+    {
         int count = stack.popInt();
         context.setPendingArrayDimensions(new int[]{count});
 
         String componentType;
         int typeCode = instruction.getArrayType().getCode();
-        switch (typeCode) {
+        switch (typeCode)
+        {
             case 4: componentType = "Z"; break;
             case 5: componentType = "C"; break;
             case 6: componentType = "F"; break;
@@ -1606,7 +1889,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.NEW_ARRAY;
     }
 
-    private DispatchResult dispatchANewArray(ConcreteStack stack, DispatchContext context, ANewArrayInstruction instruction) {
+    private DispatchResult dispatchANewArray(ConcreteStack stack, DispatchContext context, ANewArrayInstruction instruction)
+    {
         int count = stack.popInt();
         context.setPendingArrayDimensions(new int[]{count});
         String className = instruction.resolveClass();
@@ -1614,13 +1898,16 @@ public final class OpcodeDispatcher {
         return DispatchResult.NEW_ARRAY;
     }
 
-    private DispatchResult dispatchArrayLength(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchArrayLength(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         ConcreteValue arrayRef = stack.pop();
-        if (arrayRef.isNull()) {
+        if (arrayRef.isNull())
+        {
             throw new NullPointerException("Cannot get length of null array");
         }
         ObjectInstance obj = arrayRef.asReference();
-        if (!(obj instanceof ArrayInstance)) {
+        if (!(obj instanceof ArrayInstance))
+        {
             throw new IllegalStateException("Object is not an array");
         }
         ArrayInstance array = (ArrayInstance) obj;
@@ -1629,13 +1916,16 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAThrow() {
+    private DispatchResult dispatchAThrow()
+    {
         return DispatchResult.ATHROW;
     }
 
-    private DispatchResult dispatchCheckCast(StackFrame frame, ConcreteStack stack, DispatchContext context, CheckCastInstruction instruction) {
+    private DispatchResult dispatchCheckCast(StackFrame frame, ConcreteStack stack, DispatchContext context, CheckCastInstruction instruction)
+    {
         ConcreteValue ref = stack.peek();
-        if (!ref.isNull()) {
+        if (!ref.isNull())
+        {
             ObjectInstance obj = ref.asReference();
             context.checkCast(obj, instruction.resolveClass());
         }
@@ -1643,13 +1933,16 @@ public final class OpcodeDispatcher {
         return DispatchResult.CHECKCAST;
     }
 
-    private DispatchResult dispatchInstanceOf(StackFrame frame, ConcreteStack stack, DispatchContext context, InstanceOfInstruction instruction) {
+    private DispatchResult dispatchInstanceOf(StackFrame frame, ConcreteStack stack, DispatchContext context, InstanceOfInstruction instruction)
+    {
         ConcreteValue ref = stack.pop();
 
         int result = 0;
-        if (!ref.isNull()) {
+        if (!ref.isNull())
+        {
             ObjectInstance obj = ref.asReference();
-            if (context.isInstanceOf(obj, instruction.resolveClass())) {
+            if (context.isInstanceOf(obj, instruction.resolveClass()))
+            {
                 result = 1;
             }
         }
@@ -1658,23 +1951,27 @@ public final class OpcodeDispatcher {
         return DispatchResult.INSTANCEOF;
     }
 
-    private DispatchResult dispatchMonitorEnter(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchMonitorEnter(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.pop();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchMonitorExit(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchMonitorExit(StackFrame frame, ConcreteStack stack, Instruction instruction)
+    {
         stack.pop();
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchWide(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, WideInstruction instruction) {
+    private DispatchResult dispatchWide(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, WideInstruction instruction)
+    {
         Opcode op = instruction.getModifiedOpcode();
         int varIndex = instruction.getVarIndex();
 
-        switch (op) {
+        switch (op)
+        {
             case ILOAD:
                 stack.pushInt(locals.getInt(varIndex));
                 break;
@@ -1689,9 +1986,12 @@ public final class OpcodeDispatcher {
                 break;
             case ALOAD:
                 ObjectInstance ref = locals.getReference(varIndex);
-                if (ref == null) {
+                if (ref == null)
+                {
                     stack.pushNull();
-                } else {
+                }
+                else
+                {
                     stack.pushReference(ref);
                 }
                 break;
@@ -1709,9 +2009,12 @@ public final class OpcodeDispatcher {
                 break;
             case ASTORE:
                 ObjectInstance val = stack.popReference();
-                if (val == null) {
+                if (val == null)
+                {
                     locals.setNull(varIndex);
-                } else {
+                }
+                else
+                {
                     locals.setReference(varIndex, val);
                 }
                 break;
@@ -1729,11 +2032,13 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchMultiANewArray(ConcreteStack stack, DispatchContext context, MultiANewArrayInstruction instruction) {
+    private DispatchResult dispatchMultiANewArray(ConcreteStack stack, DispatchContext context, MultiANewArrayInstruction instruction)
+    {
         int dimensions = instruction.getDimensions();
         int[] counts = new int[dimensions];
 
-        for (int i = dimensions - 1; i >= 0; i--) {
+        for (int i = dimensions - 1; i >= 0; i--)
+        {
             counts[i] = stack.popInt();
         }
 
@@ -1742,7 +2047,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.NEW_ARRAY;
     }
 
-    private DispatchResult dispatchInvokeDynamic(DispatchContext context, InvokeDynamicInstruction instruction) {
+    private DispatchResult dispatchInvokeDynamic(DispatchContext context, InvokeDynamicInstruction instruction)
+    {
         int bootstrapMethodIndex = instruction.getBootstrapMethodAttrIndex();
         int cpIndex = instruction.getCpIndex();
 
@@ -1751,20 +2057,17 @@ public final class OpcodeDispatcher {
         String methodName = slashIndex > 0 ? methodSignature.substring(0, slashIndex) : methodSignature;
         String descriptor = slashIndex > 0 ? methodSignature.substring(slashIndex) : "()V";
 
-        InvokeDynamicInfo info = new InvokeDynamicInfo(
-            bootstrapMethodIndex,
-            methodName,
-            descriptor,
-            cpIndex
-        );
+        InvokeDynamicInfo info = new InvokeDynamicInfo(bootstrapMethodIndex, methodName, descriptor, cpIndex);
         context.setPendingInvokeDynamic(info);
 
         return DispatchResult.INVOKE_DYNAMIC;
     }
 
-    private MethodHandleInfo resolveMethodHandle(ConstPool constPool, int cpIndex) {
+    private MethodHandleInfo resolveMethodHandle(ConstPool constPool, int cpIndex)
+    {
         Item<?> item = constPool.getItem(cpIndex);
-        if (!(item instanceof MethodHandleItem)) {
+        if (!(item instanceof MethodHandleItem))
+        {
             return new MethodHandleInfo(0, "Unknown", "unknown", "()V");
         }
         MethodHandleItem mhItem = (MethodHandleItem) item;
@@ -1776,17 +2079,22 @@ public final class OpcodeDispatcher {
         String name = "unknown";
         String descriptor = "()V";
 
-        if (refItem instanceof MethodRefItem) {
+        if (refItem instanceof MethodRefItem)
+        {
             MethodRefItem methodRef = (MethodRefItem) refItem;
             owner = methodRef.getClassName();
             name = methodRef.getName();
             descriptor = methodRef.getDescriptor();
-        } else if (refItem instanceof InterfaceRefItem) {
+        }
+        else if (refItem instanceof InterfaceRefItem)
+        {
             InterfaceRefItem methodRef = (InterfaceRefItem) refItem;
             owner = methodRef.getOwner();
             name = methodRef.getName();
             descriptor = methodRef.getDescriptor();
-        } else if (refItem instanceof FieldRefItem) {
+        }
+        else if (refItem instanceof FieldRefItem)
+        {
             FieldRefItem fieldRef = (FieldRefItem) refItem;
             owner = fieldRef.getClassName();
             name = fieldRef.getName();
@@ -1796,23 +2104,28 @@ public final class OpcodeDispatcher {
         return new MethodHandleInfo(refKind, owner, name, descriptor);
     }
 
-    private MethodTypeInfo resolveMethodType(ConstPool constPool, int cpIndex) {
+    private MethodTypeInfo resolveMethodType(ConstPool constPool, int cpIndex)
+    {
         Item<?> item = constPool.getItem(cpIndex);
-        if (!(item instanceof MethodTypeItem)) {
+        if (!(item instanceof MethodTypeItem))
+        {
             return new MethodTypeInfo("()V");
         }
         MethodTypeItem mtItem = (MethodTypeItem) item;
         int descIndex = mtItem.getValue();
         Item<?> descItem = constPool.getItem(descIndex);
-        if (descItem instanceof Utf8Item) {
+        if (descItem instanceof Utf8Item)
+        {
             return new MethodTypeInfo(((Utf8Item) descItem).getValue());
         }
         return new MethodTypeInfo("()V");
     }
 
-    private ConstantDynamicInfo resolveConstantDynamic(ConstPool constPool, int cpIndex) {
+    private ConstantDynamicInfo resolveConstantDynamic(ConstPool constPool, int cpIndex)
+    {
         Item<?> item = constPool.getItem(cpIndex);
-        if (!(item instanceof ConstantDynamicItem)) {
+        if (!(item instanceof ConstantDynamicItem))
+        {
             return new ConstantDynamicInfo(0, "unknown", "Ljava/lang/Object;", cpIndex);
         }
         ConstantDynamicItem cdItem = (ConstantDynamicItem) item;

@@ -20,13 +20,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * on how the branch was laid out - so a round trip that normalizes only the already-negated form flips the
  * whole constructor inside out on its second generation, burying the body one level deeper and moving the
  * rejection to the end.
- * <p>
+ *
  * The conditions are float comparisons on purpose: their negation cannot be written by flipping the
  * operator (that would change the answer for NaN), so each guard has to be recovered as {@code !(d > 0)}.
  * Two of them, because the second only becomes a guard clause once the first has been flattened - which
  * needs the simplifier to run again after the eliminators, as it does for a method body.
  */
-class ValidationGuardOrientationTest {
+class ValidationGuardOrientationTest
+{
 
     private static final String[] LINES = {
             "public class ValidateGuard {",
@@ -56,14 +57,14 @@ class ValidationGuardOrientationTest {
     };
 
     @Test
-    void aValidationGuardStaysAGuardClause() throws Exception {
+    void aValidationGuardStaysAGuardClause() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("validate-guard");
         Path src = dir.resolve("ValidateGuard.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("ValidateGuard.class")));
@@ -75,8 +76,7 @@ class ValidationGuardOrientationTest {
         assertTrue(d1.replaceAll("\\s+", " ").contains("if (!(duration > 0.0f)) { throw"),
                 "the guard must lead, with the body flat after it:\n" + d1);
 
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "ValidateGuard"),
-                "the decompiled source must recompile");
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "ValidateGuard"), "the decompiled source must recompile");
         assertEquals(d1, ClassDecompiler.decompile(cf),
                 "the guard's shape must survive relowering, keeping the decompile a fixed point");
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),

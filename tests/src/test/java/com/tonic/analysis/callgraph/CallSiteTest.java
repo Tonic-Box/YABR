@@ -11,35 +11,39 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for the CallSite class.
  * Tests cover construction, property access, call type classification, equality, and edge cases.
  */
-class CallSiteTest {
+class CallSiteTest
+{
 
-    // ========== Test Data Factory Methods ==========
+    // Test Data Factory Methods
 
-    private MethodReference createMethodRef(String owner, String name, String descriptor) {
+    private MethodReference createMethodRef(String owner, String name, String descriptor)
+    {
         return new MethodReference(owner, name, descriptor);
     }
 
-    private CallSite createCallSite(String callerOwner, String callerName, String targetOwner,
-                                   String targetName, InvokeType invokeType) {
+    private CallSite createCallSite(String callerOwner, String callerName, String targetOwner, String targetName, InvokeType invokeType)
+    {
         MethodReference caller = createMethodRef(callerOwner, callerName, "()V");
         MethodReference target = createMethodRef(targetOwner, targetName, "()V");
         return new CallSite(caller, target, invokeType);
     }
 
-    private CallSite createCallSiteWithOffset(String callerOwner, String callerName, String targetOwner,
-                                             String targetName, InvokeType invokeType, int offset) {
+    private CallSite createCallSiteWithOffset(String callerOwner, String callerName, String targetOwner, String targetName, InvokeType invokeType, int offset)
+    {
         MethodReference caller = createMethodRef(callerOwner, callerName, "()V");
         MethodReference target = createMethodRef(targetOwner, targetName, "()V");
         return new CallSite(caller, target, invokeType, offset);
     }
 
-    // ========== Construction Tests ==========
+    // Construction Tests
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void constructWithThreeParameters() {
+        void constructWithThreeParameters()
+        {
             MethodReference caller = createMethodRef("com/test/Caller", "method1", "()V");
             MethodReference target = createMethodRef("com/test/Target", "method2", "()V");
             InvokeType invokeType = InvokeType.VIRTUAL;
@@ -54,7 +58,8 @@ class CallSiteTest {
         }
 
         @Test
-        void constructWithFourParameters() {
+        void constructWithFourParameters()
+        {
             MethodReference caller = createMethodRef("com/test/Caller", "method1", "()V");
             MethodReference target = createMethodRef("com/test/Target", "method2", "()V");
             InvokeType invokeType = InvokeType.STATIC;
@@ -70,7 +75,8 @@ class CallSiteTest {
         }
 
         @Test
-        void constructWithZeroOffset() {
+        void constructWithZeroOffset()
+        {
             MethodReference caller = createMethodRef("com/test/A", "a", "()V");
             MethodReference target = createMethodRef("com/test/B", "b", "()V");
 
@@ -80,7 +86,8 @@ class CallSiteTest {
         }
 
         @Test
-        void constructWithNegativeOffset() {
+        void constructWithNegativeOffset()
+        {
             MethodReference caller = createMethodRef("com/test/A", "a", "()V");
             MethodReference target = createMethodRef("com/test/B", "b", "()V");
 
@@ -90,7 +97,8 @@ class CallSiteTest {
         }
 
         @Test
-        void constructWithLargeOffset() {
+        void constructWithLargeOffset()
+        {
             MethodReference caller = createMethodRef("com/test/A", "a", "()V");
             MethodReference target = createMethodRef("com/test/B", "b", "()V");
 
@@ -100,13 +108,15 @@ class CallSiteTest {
         }
     }
 
-    // ========== Property Access Tests ==========
+    // Property Access Tests
 
     @Nested
-    class PropertyAccessTests {
+    class PropertyAccessTests
+    {
 
         @Test
-        void getCallerReturnsCorrectReference() {
+        void getCallerReturnsCorrectReference()
+        {
             MethodReference caller = createMethodRef("com/example/MyClass", "myMethod", "(I)V");
             MethodReference target = createMethodRef("com/example/Other", "otherMethod", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.VIRTUAL);
@@ -119,7 +129,8 @@ class CallSiteTest {
         }
 
         @Test
-        void getTargetReturnsCorrectReference() {
+        void getTargetReturnsCorrectReference()
+        {
             MethodReference caller = createMethodRef("com/example/MyClass", "myMethod", "()V");
             MethodReference target = createMethodRef("com/example/Other", "otherMethod", "(Ljava/lang/String;)I");
             CallSite site = new CallSite(caller, target, InvokeType.INTERFACE);
@@ -132,7 +143,8 @@ class CallSiteTest {
         }
 
         @Test
-        void getInvokeTypeReturnsCorrectType() {
+        void getInvokeTypeReturnsCorrectType()
+        {
             MethodReference caller = createMethodRef("com/test/A", "a", "()V");
             MethodReference target = createMethodRef("com/test/B", "b", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.DYNAMIC);
@@ -141,7 +153,8 @@ class CallSiteTest {
         }
 
         @Test
-        void getBytecodeOffsetReturnsCorrectValue() {
+        void getBytecodeOffsetReturnsCorrectValue()
+        {
             MethodReference caller = createMethodRef("com/test/A", "a", "()V");
             MethodReference target = createMethodRef("com/test/B", "b", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.VIRTUAL, 123);
@@ -150,13 +163,15 @@ class CallSiteTest {
         }
     }
 
-    // ========== Call Type Classification Tests ==========
+    // Call Type Classification Tests
 
     @Nested
-    class CallTypeClassificationTests {
+    class CallTypeClassificationTests
+    {
 
         @Test
-        void isPolymorphicTrueForVirtualCall() {
+        void isPolymorphicTrueForVirtualCall()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.VIRTUAL);
 
             assertTrue(site.isPolymorphic());
@@ -166,7 +181,8 @@ class CallSiteTest {
         }
 
         @Test
-        void isPolymorphicTrueForInterfaceCall() {
+        void isPolymorphicTrueForInterfaceCall()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.INTERFACE);
 
             assertTrue(site.isPolymorphic());
@@ -176,7 +192,8 @@ class CallSiteTest {
         }
 
         @Test
-        void isStaticTrueForStaticCall() {
+        void isStaticTrueForStaticCall()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.STATIC);
 
             assertTrue(site.isStatic());
@@ -186,7 +203,8 @@ class CallSiteTest {
         }
 
         @Test
-        void isSpecialTrueForSpecialCall() {
+        void isSpecialTrueForSpecialCall()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.SPECIAL);
 
             assertTrue(site.isSpecial());
@@ -196,7 +214,8 @@ class CallSiteTest {
         }
 
         @Test
-        void isDynamicTrueForDynamicCall() {
+        void isDynamicTrueForDynamicCall()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.DYNAMIC);
 
             assertTrue(site.isDynamic());
@@ -206,7 +225,8 @@ class CallSiteTest {
         }
 
         @Test
-        void allTypeChecksFalseForNonMatchingType() {
+        void allTypeChecksFalseForNonMatchingType()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.STATIC);
 
             assertFalse(site.isPolymorphic());
@@ -215,13 +235,15 @@ class CallSiteTest {
         }
     }
 
-    // ========== Specific Invoke Type Tests ==========
+    // Specific Invoke Type Tests
 
     @Nested
-    class InvokeTypeSpecificTests {
+    class InvokeTypeSpecificTests
+    {
 
         @Test
-        void virtualCallToVirtualMethod() {
+        void virtualCallToVirtualMethod()
+        {
             CallSite site = createCallSite("com/test/Caller", "caller", "com/test/Base", "virtualMethod", InvokeType.VIRTUAL);
 
             assertEquals(InvokeType.VIRTUAL, site.getInvokeType());
@@ -229,7 +251,8 @@ class CallSiteTest {
         }
 
         @Test
-        void interfaceCallToInterfaceMethod() {
+        void interfaceCallToInterfaceMethod()
+        {
             CallSite site = createCallSite("com/test/Impl", "impl", "com/test/Interface", "interfaceMethod", InvokeType.INTERFACE);
 
             assertEquals(InvokeType.INTERFACE, site.getInvokeType());
@@ -237,7 +260,8 @@ class CallSiteTest {
         }
 
         @Test
-        void staticCallToStaticMethod() {
+        void staticCallToStaticMethod()
+        {
             CallSite site = createCallSite("com/test/Caller", "caller", "com/test/Util", "staticHelper", InvokeType.STATIC);
 
             assertEquals(InvokeType.STATIC, site.getInvokeType());
@@ -245,7 +269,8 @@ class CallSiteTest {
         }
 
         @Test
-        void specialCallToConstructor() {
+        void specialCallToConstructor()
+        {
             MethodReference caller = createMethodRef("com/test/Caller", "caller", "()V");
             MethodReference target = createMethodRef("com/test/Target", "<init>", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.SPECIAL);
@@ -256,7 +281,8 @@ class CallSiteTest {
         }
 
         @Test
-        void specialCallToSuperMethod() {
+        void specialCallToSuperMethod()
+        {
             CallSite site = createCallSite("com/test/Subclass", "method", "com/test/Superclass", "method", InvokeType.SPECIAL);
 
             assertEquals(InvokeType.SPECIAL, site.getInvokeType());
@@ -264,7 +290,8 @@ class CallSiteTest {
         }
 
         @Test
-        void specialCallToPrivateMethod() {
+        void specialCallToPrivateMethod()
+        {
             CallSite site = createCallSite("com/test/MyClass", "public", "com/test/MyClass", "private", InvokeType.SPECIAL);
 
             assertEquals(InvokeType.SPECIAL, site.getInvokeType());
@@ -272,7 +299,8 @@ class CallSiteTest {
         }
 
         @Test
-        void dynamicCallForLambda() {
+        void dynamicCallForLambda()
+        {
             CallSite site = createCallSite("com/test/Lambda", "method", "com/test/Interface", "lambda$method$0", InvokeType.DYNAMIC);
 
             assertEquals(InvokeType.DYNAMIC, site.getInvokeType());
@@ -280,20 +308,23 @@ class CallSiteTest {
         }
     }
 
-    // ========== Equality and HashCode Tests ==========
+    // Equality and HashCode Tests
 
     @Nested
-    class EqualityAndHashCodeTests {
+    class EqualityAndHashCodeTests
+    {
 
         @Test
-        void equalsSameInstance() {
+        void equalsSameInstance()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.VIRTUAL);
 
             assertEquals(site, site);
         }
 
         @Test
-        void equalsIdenticalCallSites() {
+        void equalsIdenticalCallSites()
+        {
             MethodReference caller = createMethodRef("com/test/A", "method", "()V");
             MethodReference target = createMethodRef("com/test/B", "target", "()V");
             CallSite site1 = new CallSite(caller, target, InvokeType.STATIC, 10);
@@ -304,7 +335,8 @@ class CallSiteTest {
         }
 
         @Test
-        void equalsWithDefaultOffset() {
+        void equalsWithDefaultOffset()
+        {
             MethodReference caller = createMethodRef("com/test/A", "method", "()V");
             MethodReference target = createMethodRef("com/test/B", "target", "()V");
             CallSite site1 = new CallSite(caller, target, InvokeType.VIRTUAL);
@@ -315,7 +347,8 @@ class CallSiteTest {
         }
 
         @Test
-        void notEqualsDifferentCaller() {
+        void notEqualsDifferentCaller()
+        {
             MethodReference caller1 = createMethodRef("com/test/A", "method", "()V");
             MethodReference caller2 = createMethodRef("com/test/B", "method", "()V");
             MethodReference target = createMethodRef("com/test/Target", "target", "()V");
@@ -326,7 +359,8 @@ class CallSiteTest {
         }
 
         @Test
-        void notEqualsDifferentTarget() {
+        void notEqualsDifferentTarget()
+        {
             MethodReference caller = createMethodRef("com/test/Caller", "method", "()V");
             MethodReference target1 = createMethodRef("com/test/A", "target", "()V");
             MethodReference target2 = createMethodRef("com/test/B", "target", "()V");
@@ -337,7 +371,8 @@ class CallSiteTest {
         }
 
         @Test
-        void notEqualsDifferentInvokeType() {
+        void notEqualsDifferentInvokeType()
+        {
             MethodReference caller = createMethodRef("com/test/A", "method", "()V");
             MethodReference target = createMethodRef("com/test/B", "target", "()V");
             CallSite site1 = new CallSite(caller, target, InvokeType.VIRTUAL);
@@ -347,7 +382,8 @@ class CallSiteTest {
         }
 
         @Test
-        void notEqualsDifferentOffset() {
+        void notEqualsDifferentOffset()
+        {
             MethodReference caller = createMethodRef("com/test/A", "method", "()V");
             MethodReference target = createMethodRef("com/test/B", "target", "()V");
             CallSite site1 = new CallSite(caller, target, InvokeType.STATIC, 10);
@@ -357,14 +393,16 @@ class CallSiteTest {
         }
 
         @Test
-        void notEqualsNull() {
+        void notEqualsNull()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.VIRTUAL);
 
             assertNotEquals(null, site);
         }
 
         @Test
-        void notEqualsDifferentType() {
+        void notEqualsDifferentType()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.VIRTUAL);
             String notACallSite = "Not a CallSite";
 
@@ -372,7 +410,8 @@ class CallSiteTest {
         }
 
         @Test
-        void hashCodeConsistentWithEquals() {
+        void hashCodeConsistentWithEquals()
+        {
             MethodReference caller = createMethodRef("com/test/A", "method", "()V");
             MethodReference target = createMethodRef("com/test/B", "target", "()V");
             CallSite site1 = new CallSite(caller, target, InvokeType.VIRTUAL, 42);
@@ -383,7 +422,8 @@ class CallSiteTest {
         }
 
         @Test
-        void hashCodeStableAcrossMultipleCalls() {
+        void hashCodeStableAcrossMultipleCalls()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.STATIC);
 
             int hash1 = site.hashCode();
@@ -393,13 +433,15 @@ class CallSiteTest {
         }
     }
 
-    // ========== ToString Tests ==========
+    // ToString Tests
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsCaller() {
+        void toStringContainsCaller()
+        {
             CallSite site = createCallSite("com/test/Caller", "callerMethod", "com/test/Target", "targetMethod", InvokeType.VIRTUAL);
 
             String str = site.toString();
@@ -409,7 +451,8 @@ class CallSiteTest {
         }
 
         @Test
-        void toStringContainsTarget() {
+        void toStringContainsTarget()
+        {
             CallSite site = createCallSite("com/test/Caller", "callerMethod", "com/test/Target", "targetMethod", InvokeType.VIRTUAL);
 
             String str = site.toString();
@@ -419,7 +462,8 @@ class CallSiteTest {
         }
 
         @Test
-        void toStringContainsInvokeType() {
+        void toStringContainsInvokeType()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.STATIC);
 
             String str = site.toString();
@@ -429,7 +473,8 @@ class CallSiteTest {
         }
 
         @Test
-        void toStringContainsArrow() {
+        void toStringContainsArrow()
+        {
             CallSite site = createCallSite("com/test/A", "a", "com/test/B", "b", InvokeType.INTERFACE);
 
             String str = site.toString();
@@ -439,7 +484,8 @@ class CallSiteTest {
         }
 
         @Test
-        void toStringForVirtualCall() {
+        void toStringForVirtualCall()
+        {
             CallSite site = createCallSite("com/test/A", "method", "com/test/B", "virtualMethod", InvokeType.VIRTUAL);
 
             String str = site.toString();
@@ -449,7 +495,8 @@ class CallSiteTest {
         }
 
         @Test
-        void toStringForDynamicCall() {
+        void toStringForDynamicCall()
+        {
             CallSite site = createCallSite("com/test/Lambda", "method", "com/test/Target", "lambda", InvokeType.DYNAMIC);
 
             String str = site.toString();
@@ -459,13 +506,15 @@ class CallSiteTest {
         }
     }
 
-    // ========== Edge Cases and Complex Scenarios ==========
+    // Edge Cases and Complex Scenarios
 
     @Nested
-    class EdgeCasesAndComplexScenarios {
+    class EdgeCasesAndComplexScenarios
+    {
 
         @Test
-        void recursiveCallSameCallerAndTarget() {
+        void recursiveCallSameCallerAndTarget()
+        {
             MethodReference method = createMethodRef("com/test/Recursive", "factorial", "(I)I");
             CallSite site = new CallSite(method, method, InvokeType.VIRTUAL);
 
@@ -474,7 +523,8 @@ class CallSiteTest {
         }
 
         @Test
-        void multipleCallSitesToSameTarget() {
+        void multipleCallSitesToSameTarget()
+        {
             MethodReference caller = createMethodRef("com/test/Caller", "method", "()V");
             MethodReference target = createMethodRef("com/test/Target", "helper", "()V");
 
@@ -490,7 +540,8 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteWithComplexDescriptor() {
+        void callSiteWithComplexDescriptor()
+        {
             MethodReference caller = createMethodRef("com/test/A", "complex", "(ILjava/lang/String;[I)Ljava/util/List;");
             MethodReference target = createMethodRef("com/test/B", "process", "([[Ljava/lang/Object;)V");
             CallSite site = new CallSite(caller, target, InvokeType.INTERFACE, 100);
@@ -500,7 +551,8 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteWithInnerClass() {
+        void callSiteWithInnerClass()
+        {
             MethodReference caller = createMethodRef("com/test/Outer$Inner", "innerMethod", "()V");
             MethodReference target = createMethodRef("com/test/Outer", "outerMethod", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.VIRTUAL);
@@ -510,7 +562,8 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteWithAnonymousClass() {
+        void callSiteWithAnonymousClass()
+        {
             MethodReference caller = createMethodRef("com/test/MyClass$1", "run", "()V");
             MethodReference target = createMethodRef("java/lang/System", "println", "(Ljava/lang/String;)V");
             CallSite site = new CallSite(caller, target, InvokeType.VIRTUAL);
@@ -520,7 +573,8 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteToJavaStandardLibrary() {
+        void callSiteToJavaStandardLibrary()
+        {
             MethodReference caller = createMethodRef("com/test/MyApp", "main", "([Ljava/lang/String;)V");
             MethodReference target = createMethodRef("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;");
             CallSite site = new CallSite(caller, target, InvokeType.VIRTUAL);
@@ -530,7 +584,8 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteWithConstructorCall() {
+        void callSiteWithConstructorCall()
+        {
             MethodReference caller = createMethodRef("com/test/Factory", "create", "()Lcom/test/Product;");
             MethodReference target = createMethodRef("com/test/Product", "<init>", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.SPECIAL);
@@ -540,7 +595,8 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteWithStaticInitializer() {
+        void callSiteWithStaticInitializer()
+        {
             MethodReference caller = createMethodRef("com/test/MyClass", "<clinit>", "()V");
             MethodReference target = createMethodRef("com/test/Config", "load", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.STATIC);
@@ -550,7 +606,8 @@ class CallSiteTest {
         }
 
         @Test
-        void multipleInvokeTypesForSameMethodPair() {
+        void multipleInvokeTypesForSameMethodPair()
+        {
             MethodReference caller = createMethodRef("com/test/Caller", "method", "()V");
             MethodReference target = createMethodRef("com/test/Target", "target", "()V");
 
@@ -563,12 +620,12 @@ class CallSiteTest {
         }
 
         @Test
-        void callSiteIntegrityAfterConstruction() {
+        void callSiteIntegrityAfterConstruction()
+        {
             MethodReference caller = createMethodRef("com/test/A", "a", "()V");
             MethodReference target = createMethodRef("com/test/B", "b", "()V");
             CallSite site = new CallSite(caller, target, InvokeType.INTERFACE, 50);
 
-            // Verify all properties remain consistent
             assertEquals(caller, site.getCaller());
             assertEquals(target, site.getTarget());
             assertEquals(InvokeType.INTERFACE, site.getInvokeType());

@@ -223,8 +223,10 @@ These are documented gaps where raw LLVM differs from JVM semantics, each with a
 
 ```java
 List<IRMethod> methods = new ArrayList<>();
-for (MethodEntry m : classFile.getMethods()) {
-    if (/* computational */) {
+for (MethodEntry m : classFile.getMethods())
+{
+    if (/* computational */)
+    {
         methods.add(ssa.lift(m));
     }
 }

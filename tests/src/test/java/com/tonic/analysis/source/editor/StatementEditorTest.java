@@ -18,28 +18,32 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for StatementEditor.
  * Covers statement insertion, removal, block manipulation, and control flow statement editing.
  */
-class StatementEditorTest {
+class StatementEditorTest
+{
 
     private ASTFactory factory;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         factory = new ASTFactory();
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void createStatementEditor() {
+    void createStatementEditor()
+    {
         BlockStmt body = factory.block();
         StatementEditor editor = new StatementEditor(body, "testMethod", "()V", "com/example/Test");
         assertNotNull(editor);
     }
 
-    // ========== Statement Insertion Tests ==========
+    // Statement Insertion Tests
 
     @Test
-    void insertBeforeReturn() {
+    void insertBeforeReturn()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(42));
         BlockStmt body = factory.block(returnStmt);
 
@@ -55,7 +59,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void insertBeforeAllReturns() {
+    void insertBeforeAllReturns()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnStmt(factory.intLiteral(2));
         BlockStmt body = factory.block(ret1, ret2);
@@ -71,7 +76,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void insertBeforeValueReturns() {
+    void insertBeforeValueReturns()
+    {
         ReturnStmt valueReturn = factory.returnStmt(factory.intLiteral(42));
         ReturnStmt voidReturn = factory.returnVoid();
         BlockStmt body = factory.block(valueReturn, voidReturn);
@@ -90,7 +96,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void insertBeforeVoidReturns() {
+    void insertBeforeVoidReturns()
+    {
         ReturnStmt valueReturn = factory.returnStmt(factory.intLiteral(42));
         ReturnStmt voidReturn = factory.returnVoid();
         BlockStmt body = factory.block(valueReturn, voidReturn);
@@ -109,7 +116,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void insertBeforeThrows() {
+    void insertBeforeThrows()
+    {
         ThrowStmt throwStmt = factory.throwStmt(factory.variable("ex"));
         BlockStmt body = factory.block(throwStmt);
 
@@ -124,10 +132,11 @@ class StatementEditorTest {
         assertTrue(body.getStatements().get(1) instanceof ThrowStmt);
     }
 
-    // ========== Statement Removal Tests ==========
+    // Statement Removal Tests
 
     @Test
-    void removeStatement() {
+    void removeStatement()
+    {
         Statement stmt1 = factory.exprStmt(factory.intLiteral(1));
         Statement stmt2 = factory.exprStmt(factory.intLiteral(2));
         Statement stmt3 = factory.exprStmt(factory.intLiteral(3));
@@ -135,10 +144,11 @@ class StatementEditorTest {
 
         StatementEditor editor = new StatementEditor(body, "test", "()V", "com/example/Test");
         editor.onStmt(StmtMatcher.any(), (ctx, stmt) -> {
-            // Remove statement with literal value 2
-            if (stmt instanceof ExprStmt) {
+            if (stmt instanceof ExprStmt)
+            {
                 Expression expr = ((ExprStmt) stmt).getExpression();
-                if (expr instanceof LiteralExpr && Integer.valueOf(2).equals(((LiteralExpr) expr).getValue())) {
+                if (expr instanceof LiteralExpr && Integer.valueOf(2).equals(((LiteralExpr) expr).getValue()))
+                {
                     return Replacement.remove();
                 }
             }
@@ -155,7 +165,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void removeStatementsByType() {
+    void removeStatementsByType()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ExprStmt expr = factory.exprStmt(factory.intLiteral(2));
         ReturnStmt ret2 = factory.returnStmt(factory.intLiteral(3));
@@ -170,7 +181,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void removeStatementsByMatcher() {
+    void removeStatementsByMatcher()
+    {
         ReturnStmt valueReturn = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt voidReturn = factory.returnVoid();
         BlockStmt body = factory.block(valueReturn, voidReturn);
@@ -183,10 +195,11 @@ class StatementEditorTest {
         assertSame(valueReturn, body.getStatements().get(0));
     }
 
-    // ========== Block Manipulation Tests ==========
+    // Block Manipulation Tests
 
     @Test
-    void replaceStatementWithBlock() {
+    void replaceStatementWithBlock()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(42));
         BlockStmt body = factory.block(returnStmt);
 
@@ -203,7 +216,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void wrapLoops() {
+    void wrapLoops()
+    {
         WhileStmt whileLoop = new WhileStmt(factory.boolLiteral(true), factory.block());
         BlockStmt body = factory.block(whileLoop);
 
@@ -221,7 +235,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void addStatementsToEmptyBlock() {
+    void addStatementsToEmptyBlock()
+    {
         BlockStmt body = factory.block();
 
         StatementEditor editor = new StatementEditor(body, "test", "()V", "com/example/Test");
@@ -233,7 +248,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void modifyNestedBlock() {
+    void modifyNestedBlock()
+    {
         // Create: if (true) { return 1; }
         ReturnStmt innerReturn = factory.returnStmt(factory.intLiteral(1));
         IfStmt ifStmt = factory.ifStmt(factory.boolLiteral(true), factory.block(innerReturn));
@@ -251,10 +267,11 @@ class StatementEditorTest {
         assertEquals(2, thenBlock.getStatements().size());
     }
 
-    // ========== Control Flow Statement Editing Tests ==========
+    // Control Flow Statement Editing Tests
 
     @Test
-    void modifyIfStatement() {
+    void modifyIfStatement()
+    {
         IfStmt ifStmt = factory.ifStmt(factory.boolLiteral(true), factory.block());
         BlockStmt body = factory.block(ifStmt);
 
@@ -270,7 +287,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void modifyLoopStatement() {
+    void modifyLoopStatement()
+    {
         WhileStmt whileLoop = new WhileStmt(factory.boolLiteral(true), factory.block());
         ForStmt forLoop = new ForStmt(null, null, null, factory.block());
         BlockStmt body = factory.block(whileLoop, forLoop);
@@ -287,7 +305,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void modifyTryCatchStatement() {
+    void modifyTryCatchStatement()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(
             factory.block(),
             Arrays.asList(CatchClause.of(new ReferenceSourceType("java/lang/Exception"), "e", factory.block())),
@@ -307,12 +326,9 @@ class StatementEditorTest {
     }
 
     @Test
-    void modifyAssignment() {
-        BinaryExpr assignment = factory.assign(
-            factory.variable("x"),
-            factory.intLiteral(5),
-            PrimitiveSourceType.INT
-        );
+    void modifyAssignment()
+    {
+        BinaryExpr assignment = factory.assign(factory.variable("x"), factory.intLiteral(5), PrimitiveSourceType.INT);
         ExprStmt stmt = factory.exprStmt(assignment);
         BlockStmt body = factory.block(stmt);
 
@@ -328,16 +344,15 @@ class StatementEditorTest {
     }
 
     @Test
-    void replaceIfStatement() {
+    void replaceIfStatement()
+    {
         IfStmt ifStmt = factory.ifStmt(factory.boolLiteral(true), factory.block());
         BlockStmt body = factory.block(ifStmt);
 
         StatementEditor editor = new StatementEditor(body, "test", "()V", "com/example/Test");
         editor.onIf((ctx, i) -> {
             // Replace with different if statement
-            return Replacement.with(
-                factory.ifStmt(factory.boolLiteral(false), factory.block())
-            );
+            return Replacement.with(factory.ifStmt(factory.boolLiteral(false), factory.block()));
         });
         editor.apply();
 
@@ -348,7 +363,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void replaceLoopStatement() {
+    void replaceLoopStatement()
+    {
         WhileStmt whileLoop = new WhileStmt(factory.boolLiteral(true), factory.block());
         BlockStmt body = factory.block(whileLoop);
 
@@ -362,10 +378,11 @@ class StatementEditorTest {
         assertTrue(body.getStatements().get(0) instanceof ReturnStmt);
     }
 
-    // ========== Find Operations Tests ==========
+    // Find Operations Tests
 
     @Test
-    void findReturns() {
+    void findReturns()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnStmt(factory.intLiteral(2));
         ExprStmt expr = factory.exprStmt(factory.intLiteral(3));
@@ -380,7 +397,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findValueReturns() {
+    void findValueReturns()
+    {
         ReturnStmt valueReturn = factory.returnStmt(factory.intLiteral(42));
         ReturnStmt voidReturn = factory.returnVoid();
         BlockStmt body = factory.block(valueReturn, voidReturn);
@@ -393,7 +411,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findVoidReturns() {
+    void findVoidReturns()
+    {
         ReturnStmt valueReturn = factory.returnStmt(factory.intLiteral(42));
         ReturnStmt voidReturn = factory.returnVoid();
         BlockStmt body = factory.block(valueReturn, voidReturn);
@@ -406,7 +425,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findThrows() {
+    void findThrows()
+    {
         ThrowStmt throw1 = factory.throwStmt(factory.variable("ex1"));
         ThrowStmt throw2 = factory.throwStmt(factory.variable("ex2"));
         BlockStmt body = factory.block(throw1, throw2);
@@ -418,7 +438,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findLoops() {
+    void findLoops()
+    {
         WhileStmt whileLoop = new WhileStmt(factory.boolLiteral(true), factory.block());
         ForStmt forLoop = new ForStmt(null, null, null, factory.block());
         DoWhileStmt doWhileLoop = new DoWhileStmt(factory.block(), factory.boolLiteral(false));
@@ -431,7 +452,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findIfs() {
+    void findIfs()
+    {
         IfStmt if1 = factory.ifStmt(factory.boolLiteral(true), factory.block());
         IfStmt if2 = factory.ifElseStmt(factory.boolLiteral(false), factory.block(), factory.block());
         BlockStmt body = factory.block(if1, if2);
@@ -443,7 +465,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findIfElses() {
+    void findIfElses()
+    {
         IfStmt ifOnly = factory.ifStmt(factory.boolLiteral(true), factory.block());
         IfStmt ifElse = factory.ifElseStmt(factory.boolLiteral(false), factory.block(), factory.block());
         BlockStmt body = factory.block(ifOnly, ifElse);
@@ -456,7 +479,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findTryCatches() {
+    void findTryCatches()
+    {
         TryCatchStmt tryCatch = new TryCatchStmt(
             factory.block(),
             Arrays.asList(CatchClause.of(new ReferenceSourceType("java/lang/Exception"), "e", factory.block())),
@@ -471,7 +495,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findSwitches() {
+    void findSwitches()
+    {
         SwitchStmt switchStmt = new SwitchStmt(
             factory.intLiteral(1),
             Arrays.asList(SwitchCase.of(1, Arrays.asList(factory.returnVoid())))
@@ -485,7 +510,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findVarDecls() {
+    void findVarDecls()
+    {
         VarDeclStmt varDecl1 = factory.varDecl("int", "x", factory.intLiteral(5));
         VarDeclStmt varDecl2 = factory.varDecl("String", "s", factory.stringLiteral("test"));
         BlockStmt body = factory.block(varDecl1, varDecl2);
@@ -497,7 +523,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void findStatementsWithMatcher() {
+    void findStatementsWithMatcher()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnVoid();
         BlockStmt body = factory.block(ret1, ret2);
@@ -508,10 +535,11 @@ class StatementEditorTest {
         assertEquals(1, valueReturns.size());
     }
 
-    // ========== Handler Registration Tests ==========
+    // Handler Registration Tests
 
     @Test
-    void onReturnHandler() {
+    void onReturnHandler()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
@@ -527,7 +555,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void onThrowHandler() {
+    void onThrowHandler()
+    {
         ThrowStmt throwStmt = factory.throwStmt(factory.variable("ex"));
         BlockStmt body = factory.block(throwStmt);
 
@@ -543,7 +572,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void onAnyStmtHandler() {
+    void onAnyStmtHandler()
+    {
         ReturnStmt ret = factory.returnStmt(factory.intLiteral(1));
         ThrowStmt thr = factory.throwStmt(factory.variable("ex"));
         BlockStmt body = factory.block(ret, thr);
@@ -560,7 +590,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void onStmtWithMatcher() {
+    void onStmtWithMatcher()
+    {
         ReturnStmt valueReturn = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt voidReturn = factory.returnVoid();
         BlockStmt body = factory.block(valueReturn, voidReturn);
@@ -576,10 +607,11 @@ class StatementEditorTest {
         assertEquals(1, count[0]);
     }
 
-    // ========== Complex Scenarios Tests ==========
+    // Complex Scenarios Tests
 
     @Test
-    void modifyNestedControlFlow() {
+    void modifyNestedControlFlow()
+    {
         // Create: if (true) { while (false) { return 1; } }
         ReturnStmt innerReturn = factory.returnStmt(factory.intLiteral(1));
         WhileStmt whileLoop = new WhileStmt(factory.boolLiteral(false), factory.block(innerReturn));
@@ -604,7 +636,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void multipleHandlersOnSameStatement() {
+    void multipleHandlersOnSameStatement()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
@@ -627,7 +660,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void insertAndRemoveInSamePass() {
+    void insertAndRemoveInSamePass()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnStmt(factory.intLiteral(2));
         BlockStmt body = factory.block(ret1, ret2);
@@ -636,12 +670,12 @@ class StatementEditorTest {
 
         StatementEditor editor = new StatementEditor(body, "test", "()V", "com/example/Test");
 
-        // First handler: insert before
         editor.onReturn((ctx, ret) -> Replacement.insertBefore(logStmt));
 
         // Second handler: remove the return itself
         editor.onReturn((ctx, ret) -> {
-            if (((Integer) ((LiteralExpr) ret.getValue()).getValue()) == 1) {
+            if (((Integer) ((LiteralExpr) ret.getValue()).getValue()) == 1)
+            {
                 return Replacement.remove();
             }
             return Replacement.keep();
@@ -654,10 +688,11 @@ class StatementEditorTest {
         assertTrue(body.getStatements().size() < 4);
     }
 
-    // ========== Fluent API Tests ==========
+    // Fluent API Tests
 
     @Test
-    void fluentMethodChaining() {
+    void fluentMethodChaining()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(1));
         ThrowStmt throwStmt = factory.throwStmt(factory.variable("ex"));
         BlockStmt body = factory.block(returnStmt, throwStmt);
@@ -682,7 +717,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void getDelegateEditor() {
+    void getDelegateEditor()
+    {
         BlockStmt body = factory.block();
         StatementEditor editor = new StatementEditor(body, "test", "()V", "com/example/Test");
         ASTEditor delegate = editor.getDelegate();
@@ -690,10 +726,11 @@ class StatementEditorTest {
         assertNotNull(delegate);
     }
 
-    // ========== Edge Cases Tests ==========
+    // Edge Cases Tests
 
     @Test
-    void emptyBlock() {
+    void emptyBlock()
+    {
         BlockStmt body = factory.block();
 
         StatementEditor editor = new StatementEditor(body, "test", "()V", "com/example/Test");
@@ -705,7 +742,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void noMatchingStatements() {
+    void noMatchingStatements()
+    {
         ExprStmt exprStmt = factory.exprStmt(factory.intLiteral(1));
         BlockStmt body = factory.block(exprStmt);
 
@@ -717,7 +755,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void keepReplacement() {
+    void keepReplacement()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
@@ -730,7 +769,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void replaceWithSameStatement() {
+    void replaceWithSameStatement()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
@@ -747,7 +787,8 @@ class StatementEditorTest {
     }
 
     @Test
-    void traverseIfElseBranches() {
+    void traverseIfElseBranches()
+    {
         ReturnStmt thenReturn = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt elseReturn = factory.returnStmt(factory.intLiteral(2));
         IfStmt ifElse = factory.ifElseStmt(

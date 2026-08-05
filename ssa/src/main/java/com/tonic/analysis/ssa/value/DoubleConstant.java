@@ -6,7 +6,8 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 /**
  * Represents a double constant.
  */
-public final class DoubleConstant extends Constant {
+public final class DoubleConstant extends Constant
+{
 
     public static final DoubleConstant ZERO = new DoubleConstant(0.0);
     public static final DoubleConstant ONE = new DoubleConstant(1.0);
@@ -15,42 +16,46 @@ public final class DoubleConstant extends Constant {
 
     /**
      * Creates a double constant with the given value.
-     *
      * @param value the double value
      */
-    public DoubleConstant(double value) {
+    public DoubleConstant(double value)
+    {
         this.value = value;
     }
 
     /**
      * Creates a double constant, using cached instances for common values.
-     *
      * @param value the double value
      * @return a DoubleConstant instance
      */
-    public static DoubleConstant of(double value) {
+    public static DoubleConstant of(double value)
+    {
         if (Double.doubleToRawLongBits(value) == 0L) return ZERO;
         if (value == 1.0) return ONE;
         return new DoubleConstant(value);
     }
 
     @Override
-    public IRType getType() {
+    public IRType getType()
+    {
         return PrimitiveType.DOUBLE;
     }
 
     @Override
-    public Double getValue() {
+    public Double getValue()
+    {
         return value;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.valueOf(value);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof DoubleConstant)) return false;
         DoubleConstant that = (DoubleConstant) o;
@@ -58,7 +63,8 @@ public final class DoubleConstant extends Constant {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Double.hashCode(value);
     }
 }

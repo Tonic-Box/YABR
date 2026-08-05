@@ -1,11 +1,14 @@
 package com.tonic.fixtures;
 
-public class UninitThisRepro {
+public class UninitThisRepro
+{
     int x;
 
-    public UninitThisRepro(boolean b) {
+    public UninitThisRepro(boolean b)
+    {
         super();
-        if (b) {
+        if (b)
+        {
         }
         this.x = 1;
     }

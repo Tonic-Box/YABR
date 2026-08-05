@@ -18,15 +18,18 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PDGBuilderTest {
+class PDGBuilderTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void buildEmptyMethodReturnsValidPDG() {
+    void buildEmptyMethodReturnsValidPDG()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -36,7 +39,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void buildMethodWithSingleInstruction() {
+    void buildMethodWithSingleInstruction()
+    {
         IRMethod method = createMethodWithConstant();
         PDG pdg = PDGBuilder.build(method);
 
@@ -45,7 +49,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void buildCreatesEntryNode() {
+    void buildCreatesEntryNode()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -55,7 +60,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void buildCreatesExitNode() {
+    void buildCreatesExitNode()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -65,7 +71,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void buildPreservesMethodName() {
+    void buildPreservesMethodName()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -73,7 +80,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void buildCreatesControlDependencies() {
+    void buildCreatesControlDependencies()
+    {
         IRMethod method = createMethodWithBranch();
         PDG pdg = PDGBuilder.build(method);
 
@@ -85,7 +93,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void buildCreatesDataDependencies() {
+    void buildCreatesDataDependencies()
+    {
         IRMethod method = createMethodWithDataFlow();
         PDG pdg = PDGBuilder.build(method);
 
@@ -97,7 +106,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void getNodeByIdReturnsCorrectNode() {
+    void getNodeByIdReturnsCorrectNode()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -108,7 +118,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void getNodeByIdReturnsNullForInvalid() {
+    void getNodeByIdReturnsNullForInvalid()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -116,7 +127,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void getNodesOfTypeReturnsCorrectNodes() {
+    void getNodesOfTypeReturnsCorrectNodes()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -126,7 +138,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void getInstructionNodeReturnsNode() {
+    void getInstructionNodeReturnsNode()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -137,7 +150,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void getInstructionNodeReturnsNullForUnknown() {
+    void getInstructionNodeReturnsNullForUnknown()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -148,7 +162,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void edgeCountMatchesEdgesList() {
+    void edgeCountMatchesEdgesList()
+    {
         IRMethod method = createMethodWithBranch();
         PDG pdg = PDGBuilder.build(method);
 
@@ -156,7 +171,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void nodeCountMatchesNodesList() {
+    void nodeCountMatchesNodesList()
+    {
         IRMethod method = createMethodWithBranch();
         PDG pdg = PDGBuilder.build(method);
 
@@ -164,7 +180,8 @@ class PDGBuilderTest {
     }
 
     @Test
-    void toStringContainsBasicInfo() {
+    void toStringContainsBasicInfo()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
 
@@ -174,7 +191,8 @@ class PDGBuilderTest {
         assertTrue(str.contains("PDG"));
     }
 
-    private IRMethod createMethodWithConstant() {
+    private IRMethod createMethodWithConstant()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -190,7 +208,8 @@ class PDGBuilderTest {
         return method;
     }
 
-    private IRMethod createMethodWithBranch() {
+    private IRMethod createMethodWithBranch()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -231,7 +250,8 @@ class PDGBuilderTest {
         return method;
     }
 
-    private IRMethod createMethodWithDataFlow() {
+    private IRMethod createMethodWithDataFlow()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 

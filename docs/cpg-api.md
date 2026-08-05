@@ -241,7 +241,8 @@ System.out.println(result.getSummary());
 //   HIGH: 2
 
 // Get detailed findings
-for (TaintPath path : result.getCriticalPaths()) {
+for (TaintPath path : result.getCriticalPaths())
+{
     System.out.println(path.formatPath());
 }
 ```
@@ -328,7 +329,8 @@ int methodCount = cpg.getMethodCount();
 
 // Edge type breakdown
 Map<CPGEdgeType, Integer> edgeCounts = cpg.getEdgeTypeCounts();
-for (var entry : edgeCounts.entrySet()) {
+for (var entry : edgeCounts.entrySet())
+{
     System.out.println(entry.getKey() + ": " + entry.getValue());
 }
 

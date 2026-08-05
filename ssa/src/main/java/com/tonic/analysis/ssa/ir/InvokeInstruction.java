@@ -8,9 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Method invocation instruction.
+ * A method invocation of any dispatch kind, including invokedynamic with bootstrap info.
  */
-public class InvokeInstruction extends IRInstruction {
+public class InvokeInstruction extends IRInstruction
+{
 
     private final InvokeType invokeType;
     private final String owner;
@@ -20,15 +21,48 @@ public class InvokeInstruction extends IRInstruction {
     private final int originalCpIndex;
     private final BootstrapMethodInfo bootstrapInfo;
 
-    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments) {
+    /**
+     * Creates a value-producing invocation with no constant pool index or bootstrap method.
+     * @param result the SSA value receiving the return value
+     * @param invokeType the dispatch kind
+     * @param owner the internal name of the declaring class
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, including the receiver for instance calls
+     */
+    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments)
+    {
         this(result, invokeType, owner, name, descriptor, arguments, 0, null);
     }
 
-    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex) {
+    /**
+     * Creates a value-producing invocation with no bootstrap method.
+     * @param result the SSA value receiving the return value
+     * @param invokeType the dispatch kind
+     * @param owner the internal name of the declaring class
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, including the receiver for instance calls
+     * @param originalCpIndex the constant pool index of the original call site, or 0
+     */
+    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex)
+    {
         this(result, invokeType, owner, name, descriptor, arguments, originalCpIndex, null);
     }
 
-    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex, BootstrapMethodInfo bootstrapInfo) {
+    /**
+     * Creates a value-producing invocation and registers uses of its SSA arguments.
+     * @param result the SSA value receiving the return value
+     * @param invokeType the dispatch kind
+     * @param owner the internal name of the declaring class
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, including the receiver for instance calls
+     * @param originalCpIndex the constant pool index of the original call site, or 0
+     * @param bootstrapInfo the bootstrap method for invokedynamic, or null
+     */
+    public InvokeInstruction(SSAValue result, InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex, BootstrapMethodInfo bootstrapInfo)
+    {
         super(result);
         this.invokeType = invokeType;
         this.owner = owner;
@@ -40,15 +74,45 @@ public class InvokeInstruction extends IRInstruction {
         registerUses();
     }
 
-    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments) {
+    /**
+     * Creates a void invocation with no constant pool index or bootstrap method.
+     * @param invokeType the dispatch kind
+     * @param owner the internal name of the declaring class
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, including the receiver for instance calls
+     */
+    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments)
+    {
         this(invokeType, owner, name, descriptor, arguments, 0, null);
     }
 
-    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex) {
+    /**
+     * Creates a void invocation with no bootstrap method.
+     * @param invokeType the dispatch kind
+     * @param owner the internal name of the declaring class
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, including the receiver for instance calls
+     * @param originalCpIndex the constant pool index of the original call site, or 0
+     */
+    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex)
+    {
         this(invokeType, owner, name, descriptor, arguments, originalCpIndex, null);
     }
 
-    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex, BootstrapMethodInfo bootstrapInfo) {
+    /**
+     * Creates a void invocation and registers uses of its SSA arguments.
+     * @param invokeType the dispatch kind
+     * @param owner the internal name of the declaring class
+     * @param name the method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, including the receiver for instance calls
+     * @param originalCpIndex the constant pool index of the original call site, or 0
+     * @param bootstrapInfo the bootstrap method for invokedynamic, or null
+     */
+    public InvokeInstruction(InvokeType invokeType, String owner, String name, String descriptor, List<Value> arguments, int originalCpIndex, BootstrapMethodInfo bootstrapInfo)
+    {
         super();
         this.invokeType = invokeType;
         this.owner = owner;
@@ -60,96 +124,133 @@ public class InvokeInstruction extends IRInstruction {
         registerUses();
     }
 
-    private void registerUses() {
-        for (Value arg : arguments) {
-            if (arg instanceof SSAValue) {
+    private void registerUses()
+    {
+        for (Value arg : arguments)
+        {
+            if (arg instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) arg;
                 ssa.addUse(this);
             }
         }
     }
 
-    public InvokeType getInvokeType() {
+    /**
+     * @return the invoke type
+     */
+    public InvokeType getInvokeType()
+    {
         return invokeType;
     }
 
-    public String getOwner() {
+    /**
+     * @return the owner
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public List<Value> getArguments() {
+    /**
+     * @return the arguments
+     */
+    public List<Value> getArguments()
+    {
         return arguments;
     }
 
-    public int getOriginalCpIndex() {
+    /**
+     * @return the original cp index
+     */
+    public int getOriginalCpIndex()
+    {
         return originalCpIndex;
     }
 
-    public BootstrapMethodInfo getBootstrapInfo() {
+    /**
+     * @return the bootstrap info
+     */
+    public BootstrapMethodInfo getBootstrapInfo()
+    {
         return bootstrapInfo;
     }
 
     /**
      * Gets the receiver object for instance method calls.
-     *
      * @return the receiver value, or null for static calls
      */
-    public Value getReceiver() {
+    public Value getReceiver()
+    {
         if (invokeType == InvokeType.STATIC || invokeType == InvokeType.DYNAMIC) return null;
         return arguments.isEmpty() ? null : arguments.get(0);
     }
 
     /**
      * Gets the method arguments excluding the receiver.
-     *
      * @return list of method arguments
      */
-    public List<Value> getMethodArguments() {
+    public List<Value> getMethodArguments()
+    {
         if (invokeType == InvokeType.STATIC || invokeType == InvokeType.DYNAMIC) return arguments;
         return arguments.size() > 1 ? arguments.subList(1, arguments.size()) : List.of();
     }
 
     /**
      * Checks if this is an invokedynamic instruction.
-     *
      * @return true if this is a dynamic invocation
      */
-    public boolean isDynamic() {
+    public boolean isDynamic()
+    {
         return invokeType == InvokeType.DYNAMIC;
     }
 
     /**
      * Checks if this invocation has bootstrap method info available.
-     *
      * @return true if bootstrap info is available
      */
-    public boolean hasBootstrapInfo() {
+    public boolean hasBootstrapInfo()
+    {
         return bootstrapInfo != null;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return new ArrayList<>(arguments);
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        for (int i = 0; i < arguments.size(); i++) {
-            if (arguments.get(i).equals(oldValue)) {
-                if (arguments.get(i) instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        for (int i = 0; i < arguments.size(); i++)
+        {
+            if (arguments.get(i).equals(oldValue))
+            {
+                if (arguments.get(i) instanceof SSAValue)
+                {
                     SSAValue ssa = (SSAValue) arguments.get(i);
                     ssa.removeUse(this);
                 }
                 arguments.set(i, newValue);
-                if (newValue instanceof SSAValue) {
+                if (newValue instanceof SSAValue)
+                {
                     SSAValue ssa = (SSAValue) newValue;
                     ssa.addUse(this);
                 }
@@ -158,25 +259,30 @@ public class InvokeInstruction extends IRInstruction {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitInvoke(this);
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
         return new InvokeInstruction(newResult, invokeType, owner, name, descriptor, newOperands, originalCpIndex, bootstrapInfo);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        if (result != null) {
+        if (result != null)
+        {
             sb.append(result).append(" = ");
         }
         sb.append("invoke").append(invokeType.name().toLowerCase()).append(" ");
         sb.append(owner).append(".").append(name).append(descriptor);
         sb.append("(");
-        for (int i = 0; i < arguments.size(); i++) {
+        for (int i = 0; i < arguments.size(); i++)
+        {
             if (i > 0) sb.append(", ");
             sb.append(arguments.get(i));
         }

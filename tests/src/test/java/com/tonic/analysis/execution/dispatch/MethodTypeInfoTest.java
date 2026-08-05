@@ -5,145 +5,172 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodTypeInfoTest {
+class MethodTypeInfoTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
         @Test
-        void shouldCreateWithDescriptor() {
+        void shouldCreateWithDescriptor()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(II)V");
             assertEquals("(II)V", info.getDescriptor());
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             MethodTypeInfo info = new MethodTypeInfo(null);
             assertNull(info.getDescriptor());
         }
     }
 
     @Nested
-    class ReturnTypeTests {
+    class ReturnTypeTests
+    {
         @Test
-        void shouldExtractVoidReturnType() {
+        void shouldExtractVoidReturnType()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()V");
             assertEquals("V", info.getReturnType());
         }
 
         @Test
-        void shouldExtractIntReturnType() {
+        void shouldExtractIntReturnType()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()I");
             assertEquals("I", info.getReturnType());
         }
 
         @Test
-        void shouldExtractLongReturnType() {
+        void shouldExtractLongReturnType()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()J");
             assertEquals("J", info.getReturnType());
         }
 
         @Test
-        void shouldExtractObjectReturnType() {
+        void shouldExtractObjectReturnType()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()Ljava/lang/String;");
             assertEquals("Ljava/lang/String;", info.getReturnType());
         }
 
         @Test
-        void shouldExtractArrayReturnType() {
+        void shouldExtractArrayReturnType()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()[I");
             assertEquals("[I", info.getReturnType());
         }
 
         @Test
-        void shouldHandleNullDescriptorForReturnType() {
+        void shouldHandleNullDescriptorForReturnType()
+        {
             MethodTypeInfo info = new MethodTypeInfo(null);
             assertEquals("V", info.getReturnType());
         }
 
         @Test
-        void shouldHandleMalformedDescriptor() {
+        void shouldHandleMalformedDescriptor()
+        {
             MethodTypeInfo info = new MethodTypeInfo("invalid");
             assertEquals("V", info.getReturnType());
         }
     }
 
     @Nested
-    class VoidReturnTests {
+    class VoidReturnTests
+    {
         @Test
-        void shouldReturnTrueForVoidReturn() {
+        void shouldReturnTrueForVoidReturn()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()V");
             assertTrue(info.isVoidReturn());
         }
 
         @Test
-        void shouldReturnFalseForNonVoidReturn() {
+        void shouldReturnFalseForNonVoidReturn()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()I");
             assertFalse(info.isVoidReturn());
         }
 
         @Test
-        void shouldReturnTrueForNullDescriptor() {
+        void shouldReturnTrueForNullDescriptor()
+        {
             MethodTypeInfo info = new MethodTypeInfo(null);
             assertTrue(info.isVoidReturn());
         }
     }
 
     @Nested
-    class ParameterCountTests {
+    class ParameterCountTests
+    {
         @Test
-        void shouldCountZeroParameters() {
+        void shouldCountZeroParameters()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()V");
             assertEquals(0, info.getParameterCount());
         }
 
         @Test
-        void shouldCountOneIntParameter() {
+        void shouldCountOneIntParameter()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(I)V");
             assertEquals(1, info.getParameterCount());
         }
 
         @Test
-        void shouldCountMultiplePrimitiveParameters() {
+        void shouldCountMultiplePrimitiveParameters()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(IJFD)V");
             assertEquals(4, info.getParameterCount());
         }
 
         @Test
-        void shouldCountObjectParameter() {
+        void shouldCountObjectParameter()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(Ljava/lang/String;)V");
             assertEquals(1, info.getParameterCount());
         }
 
         @Test
-        void shouldCountMixedParameters() {
+        void shouldCountMixedParameters()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(ILjava/lang/String;J)V");
             assertEquals(3, info.getParameterCount());
         }
 
         @Test
-        void shouldCountArrayParameters() {
+        void shouldCountArrayParameters()
+        {
             MethodTypeInfo info = new MethodTypeInfo("([I[Ljava/lang/Object;)V");
             assertEquals(2, info.getParameterCount());
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             MethodTypeInfo info = new MethodTypeInfo(null);
             assertEquals(0, info.getParameterCount());
         }
     }
 
     @Nested
-    class ParameterTypesTests {
+    class ParameterTypesTests
+    {
         @Test
-        void shouldReturnEmptyForNoParameters() {
+        void shouldReturnEmptyForNoParameters()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()V");
             String[] types = info.getParameterTypes();
             assertEquals(0, types.length);
         }
 
         @Test
-        void shouldReturnPrimitiveTypes() {
+        void shouldReturnPrimitiveTypes()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(IJFD)V");
             String[] types = info.getParameterTypes();
 
@@ -155,7 +182,8 @@ class MethodTypeInfoTest {
         }
 
         @Test
-        void shouldReturnObjectTypes() {
+        void shouldReturnObjectTypes()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(Ljava/lang/String;Ljava/util/List;)V");
             String[] types = info.getParameterTypes();
 
@@ -165,7 +193,8 @@ class MethodTypeInfoTest {
         }
 
         @Test
-        void shouldReturnArrayTypes() {
+        void shouldReturnArrayTypes()
+        {
             MethodTypeInfo info = new MethodTypeInfo("([I[[Ljava/lang/Object;)V");
             String[] types = info.getParameterTypes();
 
@@ -175,7 +204,8 @@ class MethodTypeInfoTest {
         }
 
         @Test
-        void shouldReturnMixedTypes() {
+        void shouldReturnMixedTypes()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(ILjava/lang/String;[D)Ljava/lang/Object;");
             String[] types = info.getParameterTypes();
 
@@ -187,66 +217,78 @@ class MethodTypeInfoTest {
     }
 
     @Nested
-    class ParameterSlotsTests {
+    class ParameterSlotsTests
+    {
         @Test
-        void shouldReturnZeroForNoParameters() {
+        void shouldReturnZeroForNoParameters()
+        {
             MethodTypeInfo info = new MethodTypeInfo("()V");
             assertEquals(0, info.getParameterSlots());
         }
 
         @Test
-        void shouldReturnOneSlotForInt() {
+        void shouldReturnOneSlotForInt()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(I)V");
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void shouldReturnTwoSlotsForLong() {
+        void shouldReturnTwoSlotsForLong()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(J)V");
             assertEquals(2, info.getParameterSlots());
         }
 
         @Test
-        void shouldReturnTwoSlotsForDouble() {
+        void shouldReturnTwoSlotsForDouble()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(D)V");
             assertEquals(2, info.getParameterSlots());
         }
 
         @Test
-        void shouldReturnOneSlotForFloat() {
+        void shouldReturnOneSlotForFloat()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(F)V");
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void shouldReturnOneSlotForObject() {
+        void shouldReturnOneSlotForObject()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(Ljava/lang/String;)V");
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void shouldReturnOneSlotForArray() {
+        void shouldReturnOneSlotForArray()
+        {
             MethodTypeInfo info = new MethodTypeInfo("([I)V");
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void shouldCalculateMixedSlots() {
+        void shouldCalculateMixedSlots()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(IJDFLjava/lang/Object;)V");
             assertEquals(7, info.getParameterSlots());
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             MethodTypeInfo info = new MethodTypeInfo(null);
             assertEquals(0, info.getParameterSlots());
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
         @Test
-        void shouldFormatToString() {
+        void shouldFormatToString()
+        {
             MethodTypeInfo info = new MethodTypeInfo("(IJ)Ljava/lang/String;");
             String result = info.toString();
 

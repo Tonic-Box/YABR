@@ -14,13 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for DescriptorRemapper.
  * Tests remapping of class names in method descriptors, field descriptors, and type descriptors.
  */
-class DescriptorRemapperTest {
+class DescriptorRemapperTest
+{
 
     private DescriptorRemapper remapper;
     private Map<String, String> classMappings;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         classMappings = new HashMap<>();
         classMappings.put("com/old/Type", "com/new/Type");
         classMappings.put("com/old/Result", "com/new/Result");
@@ -30,92 +32,104 @@ class DescriptorRemapperTest {
         remapper = new DescriptorRemapper(classMappings);
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
     @DisplayName("Constructor with Map creates remapper")
-    void constructorWithMapCreatesRemapper() {
+    void constructorWithMapCreatesRemapper()
+    {
         assertNotNull(remapper);
     }
 
     @Test
     @DisplayName("Constructor with Function creates remapper")
-    void constructorWithFunctionCreatesRemapper() {
+    void constructorWithFunctionCreatesRemapper()
+    {
         Function<String, String> mapper = name -> name.replace("old", "new");
         DescriptorRemapper functionRemapper = new DescriptorRemapper(mapper);
         assertNotNull(functionRemapper);
     }
 
-    // ========== Primitive Type Tests ==========
+    // Primitive Type Tests
 
     @Test
     @DisplayName("Primitives are not remapped - byte")
-    void primitiveByteNotRemapped() {
+    void primitiveByteNotRemapped()
+    {
         String descriptor = "B";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - char")
-    void primitiveCharNotRemapped() {
+    void primitiveCharNotRemapped()
+    {
         String descriptor = "C";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - double")
-    void primitiveDoubleNotRemapped() {
+    void primitiveDoubleNotRemapped()
+    {
         String descriptor = "D";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - float")
-    void primitiveFloatNotRemapped() {
+    void primitiveFloatNotRemapped()
+    {
         String descriptor = "F";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - int")
-    void primitiveIntNotRemapped() {
+    void primitiveIntNotRemapped()
+    {
         String descriptor = "I";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - long")
-    void primitiveLongNotRemapped() {
+    void primitiveLongNotRemapped()
+    {
         String descriptor = "J";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - short")
-    void primitiveShortNotRemapped() {
+    void primitiveShortNotRemapped()
+    {
         String descriptor = "S";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - boolean")
-    void primitiveBooleanNotRemapped() {
+    void primitiveBooleanNotRemapped()
+    {
         String descriptor = "Z";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Primitives are not remapped - void")
-    void primitiveVoidNotRemapped() {
+    void primitiveVoidNotRemapped()
+    {
         String descriptor = "V";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Reference Type Tests ==========
+    // Reference Type Tests
 
     @Test
     @DisplayName("Single reference type is remapped")
-    void singleReferenceTypeRemapped() {
+    void singleReferenceTypeRemapped()
+    {
         String descriptor = "Lcom/old/Type;";
         String expected = "Lcom/new/Type;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -123,38 +137,43 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Reference type without mapping is unchanged")
-    void referenceTypeWithoutMappingUnchanged() {
+    void referenceTypeWithoutMappingUnchanged()
+    {
         String descriptor = "Ljava/lang/String;";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Multiple different reference types are remapped")
-    void multipleDifferentReferenceTypesRemapped() {
+    void multipleDifferentReferenceTypesRemapped()
+    {
         String descriptor = "Lcom/old/Type;Lcom/old/Result;";
         String expected = "Lcom/new/Type;Lcom/new/Result;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Array Type Tests ==========
+    // Array Type Tests
 
     @Test
     @DisplayName("Single dimension primitive array is not remapped")
-    void singleDimensionPrimitiveArrayNotRemapped() {
+    void singleDimensionPrimitiveArrayNotRemapped()
+    {
         String descriptor = "[I";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Multi dimension primitive array is not remapped")
-    void multiDimensionPrimitiveArrayNotRemapped() {
+    void multiDimensionPrimitiveArrayNotRemapped()
+    {
         String descriptor = "[[I";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Single dimension reference array is remapped")
-    void singleDimensionReferenceArrayRemapped() {
+    void singleDimensionReferenceArrayRemapped()
+    {
         String descriptor = "[Lcom/old/Type;";
         String expected = "[Lcom/new/Type;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -162,7 +181,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Multi dimension reference array is remapped")
-    void multiDimensionReferenceArrayRemapped() {
+    void multiDimensionReferenceArrayRemapped()
+    {
         String descriptor = "[[Lcom/old/Type;";
         String expected = "[[Lcom/new/Type;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -170,7 +190,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Three dimension reference array is remapped")
-    void threeDimensionReferenceArrayRemapped() {
+    void threeDimensionReferenceArrayRemapped()
+    {
         String descriptor = "[[[Lcom/old/Result;";
         String expected = "[[[Lcom/new/Result;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -178,30 +199,34 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Mixed array of unmapped reference type is unchanged")
-    void mixedArrayOfUnmappedReferenceTypeUnchanged() {
+    void mixedArrayOfUnmappedReferenceTypeUnchanged()
+    {
         String descriptor = "[[Ljava/lang/Object;";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Method Descriptor Tests ==========
+    // Method Descriptor Tests
 
     @Test
     @DisplayName("Method descriptor with no parameters or return value")
-    void methodDescriptorNoParamsNoReturn() {
+    void methodDescriptorNoParamsNoReturn()
+    {
         String descriptor = "()V";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Method descriptor with primitive parameters")
-    void methodDescriptorWithPrimitiveParams() {
+    void methodDescriptorWithPrimitiveParams()
+    {
         String descriptor = "(IJ)V";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Method descriptor with single reference parameter is remapped")
-    void methodDescriptorWithSingleReferenceParamRemapped() {
+    void methodDescriptorWithSingleReferenceParamRemapped()
+    {
         String descriptor = "(Lcom/old/Type;)V";
         String expected = "(Lcom/new/Type;)V";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -209,7 +234,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Method descriptor with multiple parameters is remapped")
-    void methodDescriptorWithMultipleParamsRemapped() {
+    void methodDescriptorWithMultipleParamsRemapped()
+    {
         String descriptor = "(ILcom/old/Type;J)V";
         String expected = "(ILcom/new/Type;J)V";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -217,7 +243,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Method descriptor with reference return type is remapped")
-    void methodDescriptorWithReferenceReturnRemapped() {
+    void methodDescriptorWithReferenceReturnRemapped()
+    {
         String descriptor = "()Lcom/old/Result;";
         String expected = "()Lcom/new/Result;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -225,7 +252,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Method descriptor with params and return is remapped")
-    void methodDescriptorWithParamsAndReturnRemapped() {
+    void methodDescriptorWithParamsAndReturnRemapped()
+    {
         String descriptor = "(Lcom/old/Type;I)Lcom/old/Result;";
         String expected = "(Lcom/new/Type;I)Lcom/new/Result;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -233,7 +261,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Method descriptor with array parameters is remapped")
-    void methodDescriptorWithArrayParamsRemapped() {
+    void methodDescriptorWithArrayParamsRemapped()
+    {
         String descriptor = "([Lcom/old/Type;[I)V";
         String expected = "([Lcom/new/Type;[I)V";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -241,7 +270,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Method descriptor with array return type is remapped")
-    void methodDescriptorWithArrayReturnRemapped() {
+    void methodDescriptorWithArrayReturnRemapped()
+    {
         String descriptor = "(I)[Lcom/old/Result;";
         String expected = "(I)[Lcom/new/Result;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -249,7 +279,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Complex method descriptor is fully remapped")
-    void complexMethodDescriptorFullyRemapped() {
+    void complexMethodDescriptorFullyRemapped()
+    {
         String descriptor = "([Lcom/old/Type;ILjava/lang/String;[[Lcom/old/Result;)Lcom/example/OldClass;";
         String expected = "([Lcom/new/Type;ILjava/lang/String;[[Lcom/new/Result;)Lcom/example/NewClass;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
@@ -257,23 +288,26 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Method descriptor with unmapped types is unchanged")
-    void methodDescriptorWithUnmappedTypesUnchanged() {
+    void methodDescriptorWithUnmappedTypesUnchanged()
+    {
         String descriptor = "(Ljava/lang/String;I)Ljava/lang/Object;";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Field Descriptor Tests ==========
+    // Field Descriptor Tests
 
     @Test
     @DisplayName("Field descriptor for primitive type is unchanged")
-    void fieldDescriptorPrimitiveUnchanged() {
+    void fieldDescriptorPrimitiveUnchanged()
+    {
         String descriptor = "I";
         assertEquals(descriptor, remapper.remapFieldDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Field descriptor for reference type is remapped")
-    void fieldDescriptorReferenceRemapped() {
+    void fieldDescriptorReferenceRemapped()
+    {
         String descriptor = "Lcom/old/Type;";
         String expected = "Lcom/new/Type;";
         assertEquals(expected, remapper.remapFieldDescriptor(descriptor));
@@ -281,7 +315,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Field descriptor for array type is remapped")
-    void fieldDescriptorArrayRemapped() {
+    void fieldDescriptorArrayRemapped()
+    {
         String descriptor = "[Lcom/old/Type;";
         String expected = "[Lcom/new/Type;";
         assertEquals(expected, remapper.remapFieldDescriptor(descriptor));
@@ -289,23 +324,26 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Field descriptor for unmapped type is unchanged")
-    void fieldDescriptorUnmappedUnchanged() {
+    void fieldDescriptorUnmappedUnchanged()
+    {
         String descriptor = "Ljava/lang/String;";
         assertEquals(descriptor, remapper.remapFieldDescriptor(descriptor));
     }
 
-    // ========== RemapType Tests ==========
+    // RemapType Tests
 
     @Test
     @DisplayName("RemapType handles primitive")
-    void remapTypeHandlesPrimitive() {
+    void remapTypeHandlesPrimitive()
+    {
         String descriptor = "I";
         assertEquals(descriptor, remapper.remapType(descriptor));
     }
 
     @Test
     @DisplayName("RemapType handles reference type")
-    void remapTypeHandlesReferenceType() {
+    void remapTypeHandlesReferenceType()
+    {
         String descriptor = "Lcom/old/Type;";
         String expected = "Lcom/new/Type;";
         assertEquals(expected, remapper.remapType(descriptor));
@@ -313,17 +351,19 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("RemapType handles array type")
-    void remapTypeHandlesArrayType() {
+    void remapTypeHandlesArrayType()
+    {
         String descriptor = "[[Lcom/old/Result;";
         String expected = "[[Lcom/new/Result;";
         assertEquals(expected, remapper.remapType(descriptor));
     }
 
-    // ========== RemapClassName Tests ==========
+    // RemapClassName Tests
 
     @Test
     @DisplayName("RemapClassName remaps class name")
-    void remapClassNameRemapsClassName() {
+    void remapClassNameRemapsClassName()
+    {
         String className = "com/old/Type";
         String expected = "com/new/Type";
         assertEquals(expected, remapper.remapClassName(className));
@@ -331,76 +371,87 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("RemapClassName returns original for unmapped class")
-    void remapClassNameReturnsOriginalForUnmapped() {
+    void remapClassNameReturnsOriginalForUnmapped()
+    {
         String className = "com/unmapped/Class";
         assertEquals(className, remapper.remapClassName(className));
     }
 
     @Test
     @DisplayName("RemapClassName returns null for null input")
-    void remapClassNameReturnsNullForNull() {
+    void remapClassNameReturnsNullForNull()
+    {
         assertNull(remapper.remapClassName(null));
     }
 
-    // ========== NeedsRemapping Tests ==========
+    // NeedsRemapping Tests
 
     @Test
     @DisplayName("NeedsRemapping returns true for remappable descriptor")
-    void needsRemappingReturnsTrueForRemappable() {
+    void needsRemappingReturnsTrueForRemappable()
+    {
         String descriptor = "(Lcom/old/Type;)V";
         assertTrue(remapper.needsRemapping(descriptor));
     }
 
     @Test
     @DisplayName("NeedsRemapping returns false for primitive descriptor")
-    void needsRemappingReturnsFalseForPrimitive() {
+    void needsRemappingReturnsFalseForPrimitive()
+    {
         String descriptor = "(IJ)V";
         assertFalse(remapper.needsRemapping(descriptor));
     }
 
     @Test
     @DisplayName("NeedsRemapping returns false for unmapped reference")
-    void needsRemappingReturnsFalseForUnmapped() {
+    void needsRemappingReturnsFalseForUnmapped()
+    {
         String descriptor = "(Ljava/lang/String;)V";
         assertFalse(remapper.needsRemapping(descriptor));
     }
 
     @Test
     @DisplayName("NeedsRemapping returns true for array of remappable type")
-    void needsRemappingReturnsTrueForRemappableArray() {
+    void needsRemappingReturnsTrueForRemappableArray()
+    {
         String descriptor = "[Lcom/old/Type;";
         assertTrue(remapper.needsRemapping(descriptor));
     }
 
     @Test
     @DisplayName("NeedsRemapping returns false for null")
-    void needsRemappingReturnsFalseForNull() {
+    void needsRemappingReturnsFalseForNull()
+    {
         assertFalse(remapper.needsRemapping(null));
     }
 
     @Test
     @DisplayName("NeedsRemapping returns false for empty string")
-    void needsRemappingReturnsFalseForEmpty() {
+    void needsRemappingReturnsFalseForEmpty()
+    {
         assertFalse(remapper.needsRemapping(""));
     }
 
-    // ========== Edge Cases Tests ==========
+    // Edge Cases Tests
 
     @Test
     @DisplayName("Empty descriptor returns empty")
-    void emptyDescriptorReturnsEmpty() {
+    void emptyDescriptorReturnsEmpty()
+    {
         assertEquals("", remapper.remapMethodDescriptor(""));
     }
 
     @Test
     @DisplayName("Null descriptor returns null")
-    void nullDescriptorReturnsNull() {
+    void nullDescriptorReturnsNull()
+    {
         assertNull(remapper.remapMethodDescriptor(null));
     }
 
     @Test
     @DisplayName("Malformed descriptor without semicolon is handled")
-    void malformedDescriptorWithoutSemicolon() {
+    void malformedDescriptorWithoutSemicolon()
+    {
         String descriptor = "(Lcom/old/Type)V";
         // Should copy rest of descriptor as-is when malformed
         String result = remapper.remapMethodDescriptor(descriptor);
@@ -409,26 +460,30 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Descriptor with only opening parenthesis is handled")
-    void descriptorWithOnlyOpenParen() {
+    void descriptorWithOnlyOpenParen()
+    {
         String descriptor = "(";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Multiple consecutive reference types are remapped")
-    void multipleConsecutiveReferenceTypesRemapped() {
+    void multipleConsecutiveReferenceTypesRemapped()
+    {
         String descriptor = "(Lcom/old/Type;Lcom/old/Result;Lcom/example/OldClass;)V";
         String expected = "(Lcom/new/Type;Lcom/new/Result;Lcom/example/NewClass;)V";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Function-based Constructor Tests ==========
+    // Function-based Constructor Tests
 
     @Test
     @DisplayName("Function-based remapper with custom logic")
-    void functionBasedRemapperWithCustomLogic() {
+    void functionBasedRemapperWithCustomLogic()
+    {
         Function<String, String> customMapper = className -> {
-            if (className.startsWith("com/old/")) {
+            if (className.startsWith("com/old/"))
+            {
                 return className.replace("com/old/", "com/new/");
             }
             return null; // No mapping
@@ -442,7 +497,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Function-based remapper returning same value")
-    void functionBasedRemapperReturningSameValue() {
+    void functionBasedRemapperReturningSameValue()
+    {
         Function<String, String> identityMapper = className -> className;
         DescriptorRemapper identityRemapper = new DescriptorRemapper(identityMapper);
 
@@ -453,7 +509,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Function-based remapper with null return")
-    void functionBasedRemapperWithNullReturn() {
+    void functionBasedRemapperWithNullReturn()
+    {
         Function<String, String> nullMapper = className -> null;
         DescriptorRemapper nullRemapper = new DescriptorRemapper(nullMapper);
 
@@ -461,18 +518,20 @@ class DescriptorRemapperTest {
         assertEquals(descriptor, nullRemapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Real-world Scenario Tests ==========
+    // Real-world Scenario Tests
 
     @Test
     @DisplayName("Real-world: Object.equals signature")
-    void realWorldObjectEqualsSignature() {
+    void realWorldObjectEqualsSignature()
+    {
         String descriptor = "(Ljava/lang/Object;)Z";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Real-world: Map.put signature with remapping")
-    void realWorldMapPutSignatureWithRemapping() {
+    void realWorldMapPutSignatureWithRemapping()
+    {
         Map<String, String> mappings = new HashMap<>();
         mappings.put("java/lang/Object", "custom/Object");
         DescriptorRemapper customRemapper = new DescriptorRemapper(mappings);
@@ -484,24 +543,27 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Real-world: Collection.toArray signature")
-    void realWorldCollectionToArraySignature() {
+    void realWorldCollectionToArraySignature()
+    {
         String descriptor = "([Ljava/lang/Object;)[Ljava/lang/Object;";
         assertEquals(descriptor, remapper.remapMethodDescriptor(descriptor));
     }
 
     @Test
     @DisplayName("Real-world: Generic bridge method descriptor")
-    void realWorldGenericBridgeMethodDescriptor() {
+    void realWorldGenericBridgeMethodDescriptor()
+    {
         String descriptor = "(Lcom/old/Type;Ljava/util/List;)Lcom/old/Result;";
         String expected = "(Lcom/new/Type;Ljava/util/List;)Lcom/new/Result;";
         assertEquals(expected, remapper.remapMethodDescriptor(descriptor));
     }
 
-    // ========== Performance and Consistency Tests ==========
+    // Performance and Consistency Tests
 
     @Test
     @DisplayName("Remapping is idempotent")
-    void remappingIsIdempotent() {
+    void remappingIsIdempotent()
+    {
         String descriptor = "(Lcom/old/Type;)Lcom/old/Result;";
         String firstRemap = remapper.remapMethodDescriptor(descriptor);
         String secondRemap = remapper.remapMethodDescriptor(firstRemap);
@@ -511,7 +573,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("Field and type remapping are consistent")
-    void fieldAndTypeRemappingAreConsistent() {
+    void fieldAndTypeRemappingAreConsistent()
+    {
         String descriptor = "Lcom/old/Type;";
         String fieldResult = remapper.remapFieldDescriptor(descriptor);
         String typeResult = remapper.remapType(descriptor);
@@ -521,7 +584,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("NeedsRemapping is consistent with actual remapping")
-    void needsRemappingIsConsistentWithRemapping() {
+    void needsRemappingIsConsistentWithRemapping()
+    {
         String descriptor = "(Lcom/old/Type;)V";
         boolean needsRemap = remapper.needsRemapping(descriptor);
         String remapped = remapper.remapMethodDescriptor(descriptor);
@@ -532,7 +596,8 @@ class DescriptorRemapperTest {
 
     @Test
     @DisplayName("NeedsRemapping correctly identifies no remapping needed")
-    void needsRemappingCorrectlyIdentifiesNoRemapping() {
+    void needsRemappingCorrectlyIdentifiesNoRemapping()
+    {
         String descriptor = "(I)V";
         boolean needsRemap = remapper.needsRemapping(descriptor);
         String remapped = remapper.remapMethodDescriptor(descriptor);

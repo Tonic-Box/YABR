@@ -6,44 +6,76 @@ import java.util.Objects;
  * Identifies a specific field for field-sensitive tracking.
  * Composed of owner class, field name, and field descriptor.
  */
-public final class FieldKey {
+public final class FieldKey
+{
 
     private final String owner;
     private final String name;
     private final String descriptor;
 
-    private FieldKey(String owner, String name, String descriptor) {
+    private FieldKey(String owner, String name, String descriptor)
+    {
         this.owner = Objects.requireNonNull(owner);
         this.name = Objects.requireNonNull(name);
         this.descriptor = Objects.requireNonNull(descriptor);
     }
 
-    public static FieldKey of(String owner, String name, String descriptor) {
+    /**
+     * Creates a key for one field.
+     * @param owner the internal name of the declaring class
+     * @param name the field name
+     * @param descriptor the field descriptor
+     * @return the key
+     * @throws NullPointerException if any argument is null
+     */
+    public static FieldKey of(String owner, String name, String descriptor)
+    {
         return new FieldKey(owner, name, descriptor);
     }
 
-    public String getOwner() {
+    /**
+     * @return the owner
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public boolean isReferenceType() {
+    /**
+     * @return true if the descriptor names an object or array type
+     */
+    public boolean isReferenceType()
+    {
         return descriptor.startsWith("L") || descriptor.startsWith("[");
     }
 
-    public boolean isPrimitiveType() {
+    /**
+     * @return true if the descriptor names a primitive type
+     */
+    public boolean isPrimitiveType()
+    {
         return !isReferenceType();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof FieldKey)) return false;
         FieldKey that = (FieldKey) o;
@@ -53,12 +85,14 @@ public final class FieldKey {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(owner, name, descriptor);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return owner + "." + name + ":" + descriptor;
     }
 }

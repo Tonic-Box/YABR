@@ -5,11 +5,11 @@ import com.tonic.parser.attribute.stack.VerificationTypeInfo;
 import java.util.Objects;
 
 /**
- * Represents a verification type used in StackMapTable frames.
- * This is a sealed hierarchy allowing for both primitive types (as enum constants)
- * and reference types (as subclasses with additional data).
+ * A verification type in a StackMapTable frame, as a sealed hierarchy: primitive types are enum
+ * constants, reference types are subclasses carrying their extra data.
  */
-public abstract class VerificationType {
+public abstract class VerificationType
+{
 
     public static final int TAG_TOP = 0;
     public static final int TAG_INTEGER = 1;
@@ -34,7 +34,8 @@ public abstract class VerificationType {
      * {@code VerificationType}'s own static initializer, keeps the superclass initializer free of subclass
      * references and so avoids the class-loading deadlock that pattern can introduce.
      */
-    private static final class Primitives {
+    private static final class Primitives
+    {
         static final VerificationType TOP = new PrimitiveType(TAG_TOP, "top");
         static final VerificationType INTEGER = new PrimitiveType(TAG_INTEGER, "int");
         static final VerificationType FLOAT = new PrimitiveType(TAG_FLOAT, "float");
@@ -48,72 +49,76 @@ public abstract class VerificationType {
 
     /**
      * Constructs a VerificationType with the given tag.
-     *
      * @param tag the JVM verification type tag
      */
-    protected VerificationType(int tag) {
+    protected VerificationType(int tag)
+    {
         this.tag = tag;
     }
 
-    public int getTag() {
+    /**
+     * @return the tag
+     */
+    public int getTag()
+    {
         return tag;
     }
 
     /**
      * Creates an Object verification type with the given constant pool index.
-     *
      * @param classIndex the constant pool index
      * @return Object verification type
      */
-    public static VerificationType object(int classIndex) {
+    public static VerificationType object(int classIndex)
+    {
         return new ObjectType(classIndex);
     }
 
     /**
      * Creates an Object verification type for a class name.
-     *
      * @param className the class name
      * @param classIndex the constant pool index
      * @return Object verification type
      */
-    public static VerificationType object(String className, int classIndex) {
+    public static VerificationType object(String className, int classIndex)
+    {
         return new ObjectType(classIndex, className);
     }
 
     /**
      * Creates an Uninitialized verification type for a NEW instruction.
-     *
      * @param newInstructionOffset the bytecode offset of the NEW instruction
      * @return Uninitialized verification type
      */
-    public static VerificationType uninitialized(int newInstructionOffset) {
+    public static VerificationType uninitialized(int newInstructionOffset)
+    {
         return new UninitializedType(newInstructionOffset);
     }
 
     /**
      * Converts this VerificationType to a VerificationTypeInfo for writing to class files.
-     *
      * @return VerificationTypeInfo instance
      */
     public abstract VerificationTypeInfo toVerificationTypeInfo();
 
     /**
      * Returns true if this type takes two slots.
-     *
      * @return true for long or double
      */
-    public boolean isTwoSlot() {
+    public boolean isTwoSlot()
+    {
         return tag == TAG_LONG || tag == TAG_DOUBLE;
     }
 
     /**
      * Gets a verification type from a type descriptor character.
-     *
      * @param c the descriptor character
      * @return corresponding VerificationType
      */
-    public static VerificationType fromDescriptor(char c) {
-        switch (c) {
+    public static VerificationType fromDescriptor(char c)
+    {
+        switch (c)
+        {
             case 'B':
             case 'C':
             case 'I':
@@ -133,17 +138,19 @@ public abstract class VerificationType {
 
     /**
      * Gets a verification type from a full type descriptor.
-     *
      * @param descriptor the type descriptor
      * @param classIndex the constant pool index for object types
      * @return corresponding VerificationType
      */
-    public static VerificationType fromDescriptor(String descriptor, int classIndex) {
-        if (descriptor.isEmpty()) {
+    public static VerificationType fromDescriptor(String descriptor, int classIndex)
+    {
+        if (descriptor.isEmpty())
+        {
             throw new IllegalArgumentException("Empty descriptor");
         }
         char first = descriptor.charAt(0);
-        switch (first) {
+        switch (first)
+        {
             case 'B':
             case 'C':
             case 'I':
@@ -167,30 +174,39 @@ public abstract class VerificationType {
     /**
      * Primitive verification type implementation.
      */
-    public static final class PrimitiveType extends VerificationType {
+    public static final class PrimitiveType extends VerificationType
+    {
         private final String name;
 
-        private PrimitiveType(int tag, String name) {
+        private PrimitiveType(int tag, String name)
+        {
             super(tag);
             this.name = name;
         }
 
-        public String getName() {
+        /**
+         * @return the name
+         */
+        public String getName()
+        {
             return name;
         }
 
         @Override
-        public VerificationTypeInfo toVerificationTypeInfo() {
+        public VerificationTypeInfo toVerificationTypeInfo()
+        {
             return new VerificationTypeInfo(tag, null);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return name;
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(Object o)
+        {
             if (this == o) return true;
             if (!(o instanceof PrimitiveType)) return false;
             PrimitiveType that = (PrimitiveType) o;
@@ -198,7 +214,8 @@ public abstract class VerificationType {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return tag;
         }
     }
@@ -206,42 +223,56 @@ public abstract class VerificationType {
     /**
      * Object verification type implementation.
      */
-    public static final class ObjectType extends VerificationType {
+    public static final class ObjectType extends VerificationType
+    {
         private final int classIndex;
         private final String className;
 
-        public ObjectType(int classIndex) {
+        public ObjectType(int classIndex)
+        {
             super(TAG_OBJECT);
             this.classIndex = classIndex;
             this.className = null;
         }
 
-        public ObjectType(int classIndex, String className) {
+        public ObjectType(int classIndex, String className)
+        {
             super(TAG_OBJECT);
             this.classIndex = classIndex;
             this.className = className;
         }
 
-        public int getClassIndex() {
+        /**
+         * @return the class index
+         */
+        public int getClassIndex()
+        {
             return classIndex;
         }
 
-        public String getClassName() {
+        /**
+         * @return the class name
+         */
+        public String getClassName()
+        {
             return className;
         }
 
         @Override
-        public VerificationTypeInfo toVerificationTypeInfo() {
+        public VerificationTypeInfo toVerificationTypeInfo()
+        {
             return new VerificationTypeInfo(TAG_OBJECT, classIndex);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return className != null ? "Object(" + className + ")" : "Object(#" + classIndex + ")";
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(Object o)
+        {
             if (this == o) return true;
             if (!(o instanceof ObjectType)) return false;
             ObjectType that = (ObjectType) o;
@@ -249,7 +280,8 @@ public abstract class VerificationType {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(TAG_OBJECT, classIndex);
         }
     }
@@ -257,30 +289,39 @@ public abstract class VerificationType {
     /**
      * Uninitialized verification type implementation.
      */
-    public static final class UninitializedType extends VerificationType {
+    public static final class UninitializedType extends VerificationType
+    {
         private final int newInstructionOffset;
 
-        public UninitializedType(int newInstructionOffset) {
+        public UninitializedType(int newInstructionOffset)
+        {
             super(TAG_UNINITIALIZED);
             this.newInstructionOffset = newInstructionOffset;
         }
 
-        public int getNewInstructionOffset() {
+        /**
+         * @return the new instruction offset
+         */
+        public int getNewInstructionOffset()
+        {
             return newInstructionOffset;
         }
 
         @Override
-        public VerificationTypeInfo toVerificationTypeInfo() {
+        public VerificationTypeInfo toVerificationTypeInfo()
+        {
             return new VerificationTypeInfo(TAG_UNINITIALIZED, newInstructionOffset);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return "Uninitialized(@" + newInstructionOffset + ")";
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(Object o)
+        {
             if (this == o) return true;
             if (!(o instanceof UninitializedType)) return false;
             UninitializedType that = (UninitializedType) o;
@@ -288,7 +329,8 @@ public abstract class VerificationType {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(TAG_UNINITIALIZED, newInstructionOffset);
         }
     }

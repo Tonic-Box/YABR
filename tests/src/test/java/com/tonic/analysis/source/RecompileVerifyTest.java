@@ -14,20 +14,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * through the full source pipeline and forces JVM bytecode verification ({@link TestUtils#linkAndVerify}).
  * Every construct here previously produced bytecode that failed verification.
  */
-class RecompileVerifyTest {
+class RecompileVerifyTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    private void verify(String internalName, String source) {
+    private void verify(String internalName, String source)
+    {
         assertDoesNotThrow(() -> TestUtils.linkAndVerify(TestUtils.compileSource(source, internalName)),
                 "recompiled class must pass JVM verification");
     }
 
     @Test
-    void exhaustiveTableSwitchReturningEveryCase() {
+    void exhaustiveTableSwitchReturningEveryCase()
+    {
         // Was: a stray unreachable trailing `return` after the switch's fall-through join.
         verify("test/SwitchT",
                 "package test; public class SwitchT { public static String f(int x){"
@@ -35,14 +39,16 @@ class RecompileVerifyTest {
     }
 
     @Test
-    void sparseLookupSwitchReturningEveryCase() {
+    void sparseLookupSwitchReturningEveryCase()
+    {
         verify("test/SwitchL",
                 "package test; public class SwitchL { public static int f(int x){"
                         + " switch(x){ case 1: return 10; case 100: return 20; case 1000: return 30; default: return 0; } } }");
     }
 
     @Test
-    void tryCatchRegistersExceptionHandler() {
+    void tryCatchRegistersExceptionHandler()
+    {
         // Was: the exception table was never emitted, leaving the handler as dead, frame-less code.
         verify("test/TryCatch",
                 "package test; public class TryCatch { public static int f(String s){"
@@ -50,14 +56,16 @@ class RecompileVerifyTest {
     }
 
     @Test
-    void multiCatchEmitsOneEntryPerType() {
+    void multiCatchEmitsOneEntryPerType()
+    {
         verify("test/MultiCatch",
                 "package test; public class MultiCatch { public static int f(String s){"
                         + " try { return Integer.parseInt(s); } catch(NumberFormatException | NullPointerException e){ return -1; } } }");
     }
 
     @Test
-    void longLoopCounterIncrement() {
+    void longLoopCounterIncrement()
+    {
         // Was: `long i++` emitted iconst_1 (one slot) into an ladd, underflowing the operand stack.
         verify("test/LongLoop",
                 "package test; public class LongLoop { public static long f(long n){"
@@ -65,28 +73,32 @@ class RecompileVerifyTest {
     }
 
     @Test
-    void doubleLoopCounterIncrement() {
+    void doubleLoopCounterIncrement()
+    {
         verify("test/DoubleLoop",
                 "package test; public class DoubleLoop { public static double f(double x){"
                         + " double d=0.0; for(double i=0.0;i<x;i++){ d += i; } return d; } }");
     }
 
     @Test
-    void longArithmeticInLoop() {
+    void longArithmeticInLoop()
+    {
         verify("test/LongArr",
                 "package test; public class LongArr { public static long f(int n){"
                         + " long s=0L; for(int i=0;i<n;i++){ s += (long)i * i; } return s; } }");
     }
 
     @Test
-    void nestedIntLoops() {
+    void nestedIntLoops()
+    {
         verify("test/Nested",
                 "package test; public class Nested { public static int f(int n){"
                         + " int s=0; for(int i=0;i<n;i++) for(int j=0;j<i;j++) s += i*j; return s; } }");
     }
 
     @Test
-    void tryCatchValueFlowsPastCatchToContinuation() {
+    void tryCatchValueFlowsPastCatchToContinuation()
+    {
         // Was: try/catch wasn't treated as a branch, so no SSA form was built; the try result was dropped and
         // the continuation always saw the catch value. Verify both that it links and that values are correct.
         String src = "package test; public class TryFlow { public static int f(String s){"
@@ -100,7 +112,8 @@ class RecompileVerifyTest {
     }
 
     @Test
-    void catchBlockUsesExceptionVariable() {
+    void catchBlockUsesExceptionVariable()
+    {
         // Was: the caught-exception local had an unqualified/Object type, so e.getMessage() resolved on Object
         // (wrong return type) and the chained .length() too, failing verification.
         verify("test/UsedEx",
@@ -109,7 +122,8 @@ class RecompileVerifyTest {
     }
 
     @Test
-    void nestedTryCatchProtectsInnerHandler() {
+    void nestedTryCatchProtectsInnerHandler()
+    {
         // Was: the outer try's region (split by the interleaved inner handler) collapsed to a degenerate range
         // and its table entry was dropped, leaving the outer handler frame-less.
         verify("test/NestedTry",
@@ -119,7 +133,8 @@ class RecompileVerifyTest {
     }
 
     @Test
-    void tryCatchFinallyWithContinuation() {
+    void tryCatchFinallyWithContinuation()
+    {
         verify("test/TryFinally",
                 "package test; public class TryFinally { public static int f(int x){ int r;"
                         + " try { r = 100/x; } catch(ArithmeticException e){ r = -1; } finally { x++; } return r + x; } }");

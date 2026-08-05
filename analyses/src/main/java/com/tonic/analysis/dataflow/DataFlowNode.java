@@ -6,9 +6,10 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import java.util.Objects;
 
 /**
- * A node in the data flow graph representing a value or operation.
+ * A node in the data flow graph standing for a value or operation, with mutable taint state.
  */
-public class DataFlowNode {
+public class DataFlowNode
+{
 
     private final int id;
     private final DataFlowNodeType type;
@@ -25,7 +26,8 @@ public class DataFlowNode {
     private boolean isTainted;
     private String taintSource;
 
-    private DataFlowNode(Builder builder) {
+    private DataFlowNode(Builder builder)
+    {
         this.id = builder.id;
         this.type = builder.type;
         this.name = builder.name;
@@ -38,97 +40,157 @@ public class DataFlowNode {
         this.taintSource = null;
     }
 
-    // ==================== Getters ====================
+    // Getters
 
-    public int getId() {
+    /**
+     * @return the id
+     */
+    public int getId()
+    {
         return id;
     }
 
-    public DataFlowNodeType getType() {
+    /**
+     * @return the type
+     */
+    public DataFlowNodeType getType()
+    {
         return type;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescription() {
+    /**
+     * @return the description
+     */
+    public String getDescription()
+    {
         return description;
     }
 
-    public SSAValue getSsaValue() {
+    /**
+     * @return the ssa value
+     */
+    public SSAValue getSsaValue()
+    {
         return ssaValue;
     }
 
-    public IRInstruction getInstruction() {
+    /**
+     * @return the instruction
+     */
+    public IRInstruction getInstruction()
+    {
         return instruction;
     }
 
-    public int getBlockId() {
+    /**
+     * @return the block id
+     */
+    public int getBlockId()
+    {
         return blockId;
     }
 
-    public int getInstructionIndex() {
+    /**
+     * @return the instruction index
+     */
+    public int getInstructionIndex()
+    {
         return instructionIndex;
     }
 
-    public boolean isTainted() {
+    /**
+     * @return whether tainted
+     */
+    public boolean isTainted()
+    {
         return isTainted;
     }
 
-    public String getTaintSource() {
+    /**
+     * @return the taint source
+     */
+    public String getTaintSource()
+    {
         return taintSource;
     }
 
-    // ==================== Setters ====================
+    // Setters
 
-    public void setTainted(boolean tainted) {
+    /**
+     * Sets the taint flag without touching the recorded source.
+     * @param tainted new taint state
+     */
+    public void setTainted(boolean tainted)
+    {
         this.isTainted = tainted;
     }
 
-    public void setTaintSource(String source) {
+    /**
+     * Records where the taint came from, setting the tainted flag to match.
+     * @param source origin description, or null to clear the taint
+     */
+    public void setTaintSource(String source)
+    {
         this.taintSource = source;
         this.isTainted = source != null;
     }
 
-    // ==================== Display ====================
+    // Display
 
     /**
-     * Get a short label for display in the graph.
+     * @return the name, else the SSA value's name, else the type display name with the id appended
      */
-    public String getLabel() {
-        if (name != null && !name.isEmpty()) {
+    public String getLabel()
+    {
+        if (name != null && !name.isEmpty())
+        {
             return name;
         }
-        if (ssaValue != null) {
+        if (ssaValue != null)
+        {
             return ssaValue.getName();
         }
         return type.getDisplayName() + "_" + id;
     }
 
     /**
-     * Get location string for display.
+     * @return the position formatted as "blockN:index"
      */
-    public String getLocation() {
+    public String getLocation()
+    {
         return "block" + blockId + ":" + instructionIndex;
     }
 
     /**
-     * Get detailed tooltip text.
+     * Builds multi-line hover text with the type, location, SSA type and taint state.
+     * @return the tooltip text
      */
-    public String getTooltip() {
+    public String getTooltip()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append(type.getDisplayName());
-        if (name != null) {
+        if (name != null)
+        {
             sb.append(": ").append(name);
         }
         sb.append("\nLocation: ").append(getLocation());
-        if (ssaValue != null && ssaValue.getType() != null) {
+        if (ssaValue != null && ssaValue.getType() != null)
+        {
             sb.append("\nType: ").append(ssaValue.getType());
         }
-        if (isTainted) {
+        if (isTainted)
+        {
             sb.append("\n⚠ TAINTED");
-            if (taintSource != null) {
+            if (taintSource != null)
+            {
                 sb.append(" (from ").append(taintSource).append(")");
             }
         }
@@ -136,7 +198,8 @@ public class DataFlowNode {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DataFlowNode that = (DataFlowNode) o;
@@ -144,22 +207,32 @@ public class DataFlowNode {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(id);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return getLabel() + " [" + type.name() + "]";
     }
 
-    // ==================== Builder ====================
+    // Builder
 
-    public static Builder builder() {
+    /**
+     * @return a new builder with type defaulted to LOCAL
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Mutable accumulator for the immutable fields of a {@link DataFlowNode}.
+     */
+    public static class Builder
+    {
         private int id;
         private DataFlowNodeType type = DataFlowNodeType.LOCAL;
         private String name;
@@ -169,46 +242,91 @@ public class DataFlowNode {
         private int blockId;
         private int instructionIndex;
 
-        public Builder id(int id) {
+        /**
+         * @param id identity used for equality and hashing
+         * @return this builder
+         */
+        public Builder id(int id)
+        {
             this.id = id;
             return this;
         }
 
-        public Builder type(DataFlowNodeType type) {
+        /**
+         * @param type node kind, defaulting to LOCAL
+         * @return this builder
+         */
+        public Builder type(DataFlowNodeType type)
+        {
             this.type = type;
             return this;
         }
 
-        public Builder name(String name) {
+        /**
+         * @param name display name, overriding the one derived from an SSA value
+         * @return this builder
+         */
+        public Builder name(String name)
+        {
             this.name = name;
             return this;
         }
 
-        public Builder description(String description) {
+        /**
+         * @param description free-form detail text
+         * @return this builder
+         */
+        public Builder description(String description)
+        {
             this.description = description;
             return this;
         }
 
-        public Builder ssaValue(SSAValue value) {
+        /**
+         * Sets the SSA value this node stands for, defaulting the name to the value's name.
+         * @param value backing SSA value, may be null
+         * @return this builder
+         */
+        public Builder ssaValue(SSAValue value)
+        {
             this.ssaValue = value;
-            if (value != null && this.name == null) {
+            if (value != null && this.name == null)
+            {
                 this.name = value.getName();
             }
             return this;
         }
 
-        public Builder instruction(IRInstruction instruction) {
+        /**
+         * Sets the IR instruction this node stands for.
+         * @param instruction backing instruction, may be null
+         * @return this builder
+         */
+        public Builder instruction(IRInstruction instruction)
+        {
             this.instruction = instruction;
             return this;
         }
 
-        public Builder location(int blockId, int instructionIndex) {
+        /**
+         * Sets the block and instruction position the node came from.
+         * @param blockId owning basic block id
+         * @param instructionIndex index within that block
+         * @return this builder
+         */
+        public Builder location(int blockId, int instructionIndex)
+        {
             this.blockId = blockId;
             this.instructionIndex = instructionIndex;
             return this;
         }
 
-        public DataFlowNode build() {
+        /**
+         * Creates the node from the values collected so far.
+         * @return the built node
+         */
+        public DataFlowNode build()
+        {
             return new DataFlowNode(this);
         }
     }

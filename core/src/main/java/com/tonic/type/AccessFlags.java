@@ -1,6 +1,11 @@
 package com.tonic.type;
 
-public interface AccessFlags {
+/**
+ * Class file constants: access flag bits, newarray primitive type codes, major version
+ * numbers and the load, store and return opcodes.
+ */
+public interface AccessFlags
+{
 
     int ACC_PUBLIC = 0x0001;
     int ACC_PRIVATE = 0x0002;

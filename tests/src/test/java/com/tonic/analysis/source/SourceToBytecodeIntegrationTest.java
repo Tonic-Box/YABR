@@ -28,38 +28,42 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class SourceToBytecodeIntegrationTest {
+public class SourceToBytecodeIntegrationTest
+{
 
     private JavaParser parser;
     private ClassPool pool;
     private int classCounter = 0;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         parser = JavaParser.create();
         pool = TestUtils.emptyPool();
         TestUtils.resetSSACounters();
     }
 
-    private String uniqueClassName() {
+    private String uniqueClassName()
+    {
         return "com/test/Gen" + (classCounter++);
     }
 
-    private ClassFile createClassWithMethod(String className, String methodName, String descriptor,
-                                            boolean isStatic) throws IOException {
+    private ClassFile createClassWithMethod(String className, String methodName, String descriptor, boolean isStatic) throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass(className, classAccess);
         int methodAccess = new AccessBuilder().setPublic().setStatic().build();
-        if (!isStatic) {
+        if (!isStatic)
+        {
             methodAccess = new AccessBuilder().setPublic().build();
         }
         cf.createNewMethodWithDescriptor(methodAccess, methodName, descriptor);
         return cf;
     }
 
-    private Class<?> compileAndLoad(BlockStmt body, String methodName, String ownerClass,
-                                    boolean isStatic, List<SourceType> params, SourceType returnType)
-            throws Exception {
+    private Class<?> compileAndLoad(BlockStmt body, String methodName, String ownerClass, boolean isStatic, List<SourceType> params, SourceType returnType)
+            throws Exception
+            {
 
         String descriptor = buildDescriptor(params, returnType);
         ClassFile cf = createClassWithMethod(ownerClass, methodName, descriptor, isStatic);
@@ -74,9 +78,11 @@ public class SourceToBytecodeIntegrationTest {
         return TestUtils.loadAndVerify(cf);
     }
 
-    private Class<?> compileAndLoad(MethodDecl methodDecl, String ownerClass) throws Exception {
+    private Class<?> compileAndLoad(MethodDecl methodDecl, String ownerClass) throws Exception
+    {
         List<SourceType> params = new ArrayList<>();
-        for (ParameterDecl p : methodDecl.getParameters()) {
+        for (ParameterDecl p : methodDecl.getParameters())
+        {
             params.add(p.getType());
         }
         SourceType returnType = methodDecl.getReturnType();
@@ -102,14 +108,16 @@ public class SourceToBytecodeIntegrationTest {
      * field resolution) and loads the result. Used to exercise unqualified own-class field
      * references, which the decompiler emits as bare names.
      */
-    private Class<?> compileClassWithFields(String source, String ownerClass) throws Exception {
+    private Class<?> compileClassWithFields(String source, String ownerClass) throws Exception
+    {
         CompilationUnit cu = parser.parse(source);
         ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
 
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass(ownerClass, classAccess);
 
-        for (FieldDecl field : cls.getFields()) {
+        for (FieldDecl field : cls.getFields())
+        {
             int fieldAccess = field.isStatic()
                     ? new AccessBuilder().setPublic().setStatic().build()
                     : new AccessBuilder().setPublic().build();
@@ -122,12 +130,15 @@ public class SourceToBytecodeIntegrationTest {
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(cf.getConstPool());
 
-        for (MethodDecl method : cls.getMethods()) {
-            if (method.getBody() == null) {
+        for (MethodDecl method : cls.getMethods())
+        {
+            if (method.getBody() == null)
+            {
                 continue;
             }
             List<SourceType> params = new ArrayList<>();
-            for (ParameterDecl p : method.getParameters()) {
+            for (ParameterDecl p : method.getParameters())
+            {
                 params.add(p.getType());
             }
             int methodAccess = method.isStatic()
@@ -143,9 +154,11 @@ public class SourceToBytecodeIntegrationTest {
         return TestUtils.loadAndVerify(cf);
     }
 
-    private String buildDescriptor(List<SourceType> params, SourceType returnType) {
+    private String buildDescriptor(List<SourceType> params, SourceType returnType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SourceType p : params) {
+        for (SourceType p : params)
+        {
             sb.append(p.toIRType().getDescriptor());
         }
         sb.append(")");
@@ -153,9 +166,12 @@ public class SourceToBytecodeIntegrationTest {
         return sb.toString();
     }
 
-    private static MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -163,10 +179,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class BasicExpressionTests {
+    class BasicExpressionTests
+    {
 
         @Test
-        void returnsIntegerLiteral() throws Exception {
+        void returnsIntegerLiteral() throws Exception
+        {
             String source = "class Test { static int test() { return 42; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -181,7 +199,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnsLongLiteral() throws Exception {
+        void returnsLongLiteral() throws Exception
+        {
             String source = "class Test { static long test() { return 123456789012345L; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -196,7 +215,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnsDoubleLiteral() throws Exception {
+        void returnsDoubleLiteral() throws Exception
+        {
             String source = "class Test { static double test() { return 3.14159; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -211,7 +231,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnsBooleanTrue() throws Exception {
+        void returnsBooleanTrue() throws Exception
+        {
             String source = "class Test { static boolean test() { return true; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -226,7 +247,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnsBooleanFalse() throws Exception {
+        void returnsBooleanFalse() throws Exception
+        {
             String source = "class Test { static boolean test() { return false; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -242,10 +264,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class ArithmeticTests {
+    class ArithmeticTests
+    {
 
         @Test
-        void addsIntegers() throws Exception {
+        void addsIntegers() throws Exception
+        {
             String source = "class Test { static int add(int a, int b) { return a + b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -261,7 +285,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void subtractsIntegers() throws Exception {
+        void subtractsIntegers() throws Exception
+        {
             String source = "class Test { static int sub(int a, int b) { return a - b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -276,7 +301,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void multipliesIntegers() throws Exception {
+        void multipliesIntegers() throws Exception
+        {
             String source = "class Test { static int mul(int a, int b) { return a * b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -292,7 +318,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void dividesIntegers() throws Exception {
+        void dividesIntegers() throws Exception
+        {
             String source = "class Test { static int div(int a, int b) { return a / b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -307,7 +334,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void moduloIntegers() throws Exception {
+        void moduloIntegers() throws Exception
+        {
             String source = "class Test { static int mod(int a, int b) { return a % b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -322,7 +350,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void complexArithmeticExpression() throws Exception {
+        void complexArithmeticExpression() throws Exception
+        {
             String source = "class Test { static int calc(int a, int b, int c) { return a + b * c; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -336,7 +365,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void negatesInteger() throws Exception {
+        void negatesInteger() throws Exception
+        {
             String source = "class Test { static int neg(int a) { return -a; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -352,10 +382,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class BitwiseOperationTests {
+    class BitwiseOperationTests
+    {
 
         @Test
-        void bitwiseAnd() throws Exception {
+        void bitwiseAnd() throws Exception
+        {
             String source = "class Test { static int and(int a, int b) { return a & b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -370,7 +402,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void bitwiseOr() throws Exception {
+        void bitwiseOr() throws Exception
+        {
             String source = "class Test { static int or(int a, int b) { return a | b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -384,7 +417,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void bitwiseXor() throws Exception {
+        void bitwiseXor() throws Exception
+        {
             String source = "class Test { static int xor(int a, int b) { return a ^ b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -399,7 +433,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void bitwiseComplement() throws Exception {
+        void bitwiseComplement() throws Exception
+        {
             String source = "class Test { static int not(int a) { return ~a; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -414,7 +449,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void leftShift() throws Exception {
+        void leftShift() throws Exception
+        {
             String source = "class Test { static int shl(int a, int b) { return a << b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -429,7 +465,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void rightShift() throws Exception {
+        void rightShift() throws Exception
+        {
             String source = "class Test { static int shr(int a, int b) { return a >> b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -444,7 +481,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void unsignedRightShift() throws Exception {
+        void unsignedRightShift() throws Exception
+        {
             String source = "class Test { static int ushr(int a, int b) { return a >>> b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -459,10 +497,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class ComparisonTests {
+    class ComparisonTests
+    {
 
         @Test
-        void lessThan() throws Exception {
+        void lessThan() throws Exception
+        {
             String source = "class Test { static boolean lt(int a, int b) { return a < b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -478,7 +518,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void lessThanOrEqual() throws Exception {
+        void lessThanOrEqual() throws Exception
+        {
             String source = "class Test { static boolean le(int a, int b) { return a <= b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -494,7 +535,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void greaterThan() throws Exception {
+        void greaterThan() throws Exception
+        {
             String source = "class Test { static boolean gt(int a, int b) { return a > b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -510,7 +552,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void greaterThanOrEqual() throws Exception {
+        void greaterThanOrEqual() throws Exception
+        {
             String source = "class Test { static boolean ge(int a, int b) { return a >= b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -526,7 +569,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void equalTo() throws Exception {
+        void equalTo() throws Exception
+        {
             String source = "class Test { static boolean eq(int a, int b) { return a == b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -541,7 +585,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void notEqualTo() throws Exception {
+        void notEqualTo() throws Exception
+        {
             String source = "class Test { static boolean ne(int a, int b) { return a != b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -557,10 +602,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class LogicalOperationTests {
+    class LogicalOperationTests
+    {
 
         @Test
-        void logicalNot() throws Exception {
+        void logicalNot() throws Exception
+        {
             String source = "class Test { static boolean not(boolean a) { return !a; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -576,10 +623,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class LocalVariableTests {
+    class LocalVariableTests
+    {
 
         @Test
-        void simpleVariableDeclaration() throws Exception {
+        void simpleVariableDeclaration() throws Exception
+        {
             String source = "class Test { static int test() { int x = 42; return x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -594,7 +643,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void multipleVariables() throws Exception {
+        void multipleVariables() throws Exception
+        {
             String source = "class Test { static int test() { int x = 10; int y = 20; return x + y; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -609,7 +659,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void variableReassignment() throws Exception {
+        void variableReassignment() throws Exception
+        {
             String source = "class Test { static int test() { int x = 10; x = 20; return x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -624,7 +675,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void multipleVariablesInOneDeclaration() throws Exception {
+        void multipleVariablesInOneDeclaration() throws Exception
+        {
             String source = "class Test { static int test() { int a = 3, b = 4, c = a + b; return c; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -638,7 +690,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void compoundAssignment() throws Exception {
+        void compoundAssignment() throws Exception
+        {
             String source = "class Test { static int test() { int x = 10; x += 5; return x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -654,10 +707,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class VoidMethodTests {
+    class VoidMethodTests
+    {
 
         @Test
-        void emptyVoidMethod() throws Exception {
+        void emptyVoidMethod() throws Exception
+        {
             String source = "class Test { static void test() { } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -672,7 +727,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void voidMethodWithExplicitReturn() throws Exception {
+        void voidMethodWithExplicitReturn() throws Exception
+        {
             String source = "class Test { static void test() { return; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -688,10 +744,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class ParameterTests {
+    class ParameterTests
+    {
 
         @Test
-        void singleParameter() throws Exception {
+        void singleParameter() throws Exception
+        {
             String source = "class Test { static int identity(int x) { return x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -706,7 +764,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void multipleParameters() throws Exception {
+        void multipleParameters() throws Exception
+        {
             String source = "class Test { static int sum3(int a, int b, int c) { return a + b + c; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -720,7 +779,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void longParameter() throws Exception {
+        void longParameter() throws Exception
+        {
             String source = "class Test { static long identity(long x) { return x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -734,7 +794,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void doubleParameter() throws Exception {
+        void doubleParameter() throws Exception
+        {
             String source = "class Test { static double identity(double x) { return x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -748,7 +809,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void mixedTypeParameters() throws Exception {
+        void mixedTypeParameters() throws Exception
+        {
             String source = "class Test { static long mixed(int a, long b) { return a + b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -763,10 +825,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void integerOverflow() throws Exception {
+        void integerOverflow() throws Exception
+        {
             String source = "class Test { static int overflow() { return 2147483647 + 1; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -780,7 +844,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void negativeZero() throws Exception {
+        void negativeZero() throws Exception
+        {
             String source = "class Test { static int negzero() { return -0; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -794,7 +859,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void deeplyNestedExpression() throws Exception {
+        void deeplyNestedExpression() throws Exception
+        {
             String source = "class Test { static int nested(int a) { return ((((a + 1) * 2) - 3) / 2); } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -808,7 +874,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void longConstant() throws Exception {
+        void longConstant() throws Exception
+        {
             String source = "class Test { static long test() { return 9223372036854775807L; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -823,10 +890,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class ControlFlowTests {
+    class ControlFlowTests
+    {
 
         @Test
-        void ifThenElseTrue() throws Exception {
+        void ifThenElseTrue() throws Exception
+        {
             String source = "class Test { static int test(int x) { if (x > 0) { return 1; } else { return -1; } } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -842,7 +911,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void ifWithoutElse() throws Exception {
+        void ifWithoutElse() throws Exception
+        {
             String source = "class Test { static int test(int x) { if (x > 0) { return 1; } return 0; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -857,7 +927,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void ifElseChain() throws Exception {
+        void ifElseChain() throws Exception
+        {
             String source = "class Test { static int test(int x) { if (x > 10) { return 2; } else if (x > 0) { return 1; } else { return 0; } } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -873,7 +944,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void multipleReturnsInBranches() throws Exception {
+        void multipleReturnsInBranches() throws Exception
+        {
             String source = "class Test { static int test(int x, int y) { if (x > y) { return x; } else { return y; } } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -888,7 +960,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void nestedIf() throws Exception {
+        void nestedIf() throws Exception
+        {
             String source = "class Test { static int test(int x, int y) { if (x > 0) { if (y > 0) { return 1; } else { return 2; } } else { return 3; } } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -905,10 +978,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class TernaryExpressionTests {
+    class TernaryExpressionTests
+    {
 
         @Test
-        void simpleTernary() throws Exception {
+        void simpleTernary() throws Exception
+        {
             String source = "class Test { static int test(int x) { return x > 0 ? 1 : -1; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -923,7 +998,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void ternaryWithExpressions() throws Exception {
+        void ternaryWithExpressions() throws Exception
+        {
             String source = "class Test { static int test(int a, int b) { return a > b ? a - b : b - a; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -938,7 +1014,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void nestedTernary() throws Exception {
+        void nestedTernary() throws Exception
+        {
             String source = "class Test { static int test(int x) { return x > 0 ? 1 : (x < 0 ? -1 : 0); } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -955,10 +1032,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class ShortCircuitTests {
+    class ShortCircuitTests
+    {
 
         @Test
-        void logicalAnd() throws Exception {
+        void logicalAnd() throws Exception
+        {
             String source = "class Test { static boolean test(boolean a, boolean b) { return a && b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -975,7 +1054,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void logicalOr() throws Exception {
+        void logicalOr() throws Exception
+        {
             String source = "class Test { static boolean test(boolean a, boolean b) { return a || b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -993,10 +1073,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class BooleanComparisonTests {
+    class BooleanComparisonTests
+    {
 
         @Test
-        void returnGreaterThan() throws Exception {
+        void returnGreaterThan() throws Exception
+        {
             String source = "class Test { static boolean test(int a, int b) { return a > b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1012,7 +1094,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnLessThan() throws Exception {
+        void returnLessThan() throws Exception
+        {
             String source = "class Test { static boolean test(int a, int b) { return a < b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1028,7 +1111,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnEquals() throws Exception {
+        void returnEquals() throws Exception
+        {
             String source = "class Test { static boolean test(int a, int b) { return a == b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1044,7 +1128,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void returnNotEquals() throws Exception {
+        void returnNotEquals() throws Exception
+        {
             String source = "class Test { static boolean test(int a, int b) { return a != b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1061,10 +1146,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class IncrementDecrementTests {
+    class IncrementDecrementTests
+    {
 
         @Test
-        void preIncrement() throws Exception {
+        void preIncrement() throws Exception
+        {
             String source = "class Test { static int test(int x) { return ++x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1078,7 +1165,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void postIncrement() throws Exception {
+        void postIncrement() throws Exception
+        {
             String source = "class Test { static int test() { int x = 5; int y = x++; return y; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1092,7 +1180,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void preDecrement() throws Exception {
+        void preDecrement() throws Exception
+        {
             String source = "class Test { static int test(int x) { return --x; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1106,7 +1195,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void postDecrement() throws Exception {
+        void postDecrement() throws Exception
+        {
             String source = "class Test { static int test() { int x = 5; int y = x--; return y; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1121,10 +1211,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class LoopTests {
+    class LoopTests
+    {
 
         @Test
-        void simpleWhileLoop() throws Exception {
+        void simpleWhileLoop() throws Exception
+        {
             String source = "class Test { static int test(int n) { int count = 0; while (count < n) { count = count + 1; } return count; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1139,7 +1231,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void whileLoopWithCounter() throws Exception {
+        void whileLoopWithCounter() throws Exception
+        {
             String source = "class Test { static int test(int n) { int sum = 0; int i = 0; while (i < n) { sum = sum + i; i = i + 1; } return sum; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1156,7 +1249,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void forLoopSum() throws Exception {
+        void forLoopSum() throws Exception
+        {
             String source = "class Test { static int test(int n) { int sum = 0; for (int i = 1; i <= n; i = i + 1) { sum = sum + i; } return sum; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1173,7 +1267,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void nestedLoops() throws Exception {
+        void nestedLoops() throws Exception
+        {
             String source = "class Test { static int test(int n, int m) { int count = 0; for (int i = 0; i < n; i = i + 1) { for (int j = 0; j < m; j = j + 1) { count = count + 1; } } return count; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1190,7 +1285,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void loopWithSwapDecompilesItsBody() throws Exception {
+        void loopWithSwapDecompilesItsBody() throws Exception
+        {
             // Regression: a loop whose body copies between locals (a = b; b = temp) must not have
             // its body dropped nor its variables conflated on the decompile round-trip. The phi for
             // the loop variable must be attributed to its own slot, not a slot that copies it.
@@ -1220,7 +1316,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void incrementDoesNotEmitDeadFieldLoad() throws Exception {
+        void incrementDoesNotEmitDeadFieldLoad() throws Exception
+        {
             // Regression: lowerUnary eagerly lowered the operand for every unary, then inc/dec
             // lowered it again in lowerIncDec, leaving a dead getstatic/load. `counter++` as a
             // statement must read the field exactly once.
@@ -1231,27 +1328,27 @@ public class SourceToBytecodeIntegrationTest {
 
             int classAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass(ownerClass, classAccess);
-            for (FieldDecl field : cls.getFields()) {
+            for (FieldDecl field : cls.getFields())
+            {
                 cf.createNewField(new AccessBuilder().setPublic().setStatic().build(), field.getName(),
                         field.getType().toIRType().getDescriptor(), new ArrayList<>());
             }
             ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
             lowerer.setCurrentClassDecl(cls);
             lowerer.setImports(cu.getImports());
-            cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(),
-                    "tick", "()V");
+            cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(), "tick", "()V");
             MethodEntry entry = findMethod(cf, "tick");
             IRMethod ir = lowerer.lower(cls.getMethods().get(0), ownerClass);
             new SSA(cf.getConstPool()).lower(ir, entry);
 
-            String code = CodePrinter.prettyPrintCode(
-                entry.getCodeAttribute().getCode(), cf.getConstPool());
+            String code = CodePrinter.prettyPrintCode(entry.getCodeAttribute().getCode(), cf.getConstPool());
             int getstatics = code.split("getstatic", -1).length - 1;
             assertEquals(1, getstatics, "counter++ must read the field exactly once: " + code);
         }
 
         @Test
-        void loopConditionWithComputedValueIsNotSpilledToSlot() throws Exception {
+        void loopConditionWithComputedValueIsNotSpilledToSlot() throws Exception
+        {
             // Regression: a single-use computed value feeding a comparison (i * i <= n, where the
             // second operand is the parameter n) must stay on the operand stack, not be spilled to a
             // scratch local. When spilled, the slot was reused for the body's n % i, and the
@@ -1283,7 +1380,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void loopWithVariableSwap() throws Exception {
+        void loopWithVariableSwap() throws Exception
+        {
             // Iterative fibonacci: the loop swap (a = b; b = temp) makes the two loop-carried phis
             // simultaneously live, so they must not be coalesced into one register.
             String source = "class Test { static int fib(int n) { "
@@ -1304,7 +1402,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void doWhileLoop() throws Exception {
+        void doWhileLoop() throws Exception
+        {
             String source = "class Test { static int test(int n) { int count = 0; do { count = count + 1; } while (count < n); return count; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1321,10 +1420,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class FloatDoubleTests {
+    class FloatDoubleTests
+    {
 
         @Test
-        void floatArithmetic() throws Exception {
+        void floatArithmetic() throws Exception
+        {
             String source = "class Test { static float test(float a, float b) { return a + b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1338,7 +1439,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void doubleArithmetic() throws Exception {
+        void doubleArithmetic() throws Exception
+        {
             String source = "class Test { static double test(double a, double b) { return a * b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1352,7 +1454,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void floatToDoubleWidening() throws Exception {
+        void floatToDoubleWidening() throws Exception
+        {
             String source = "class Test { static double test(float a, double b) { return a + b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1366,7 +1469,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void intToDoubleWidening() throws Exception {
+        void intToDoubleWidening() throws Exception
+        {
             String source = "class Test { static double test(int a, double b) { return a + b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1381,10 +1485,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class LongArithmeticTests {
+    class LongArithmeticTests
+    {
 
         @Test
-        void longAddition() throws Exception {
+        void longAddition() throws Exception
+        {
             String source = "class Test { static long test(long a, long b) { return a + b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1398,7 +1504,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void longMultiplication() throws Exception {
+        void longMultiplication() throws Exception
+        {
             String source = "class Test { static long test(long a, long b) { return a * b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1412,7 +1519,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void longDivision() throws Exception {
+        void longDivision() throws Exception
+        {
             String source = "class Test { static long test(long a, long b) { return a / b; } }";
             CompilationUnit cu = parser.parse(source);
             ClassDecl cls = (ClassDecl) cu.getTypes().get(0);
@@ -1427,10 +1535,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class FieldAccessTests {
+    class FieldAccessTests
+    {
 
         @Test
-        void staticFieldReadWrite() throws Exception {
+        void staticFieldReadWrite() throws Exception
+        {
             String source = "class T { static int counter; "
                     + "static int test() { counter = 41; counter = counter + 1; return counter; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1438,7 +1548,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void staticFieldCompoundAssignment() throws Exception {
+        void staticFieldCompoundAssignment() throws Exception
+        {
             String source = "class T { static int counter; "
                     + "static int test() { counter = 10; counter += 5; return counter; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1446,7 +1557,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void staticFieldIncrement() throws Exception {
+        void staticFieldIncrement() throws Exception
+        {
             String source = "class T { static int counter; "
                     + "static int test() { counter = 5; counter++; return counter; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1454,7 +1566,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void staticArrayFieldAccess() throws Exception {
+        void staticArrayFieldAccess() throws Exception
+        {
             String source = "class T { static int[] arr; "
                     + "static int test() { arr = new int[3]; arr[1] = 99; return arr[1]; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1462,7 +1575,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void staticFieldDecrement() throws Exception {
+        void staticFieldDecrement() throws Exception
+        {
             String source = "class T { static int counter; "
                     + "static int test() { counter = 5; counter--; return counter; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1471,10 +1585,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class UnqualifiedSelfCallTests {
+    class UnqualifiedSelfCallTests
+    {
 
         @Test
-        void recursiveStaticCall() throws Exception {
+        void recursiveStaticCall() throws Exception
+        {
             String source = "class T { static int fib(int n) { "
                     + "if (n < 2) { return n; } return fib(n - 1) + fib(n - 2); } }";
             CompilationUnit cu = parser.parse(source);
@@ -1488,7 +1604,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void unqualifiedStaticHelperCall() throws Exception {
+        void unqualifiedStaticHelperCall() throws Exception
+        {
             String source = "class T { static int dbl(int x) { return x * 2; } "
                     + "static int use(int x) { return dbl(x) + 1; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1497,10 +1614,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class TextBlockTests {
+    class TextBlockTests
+    {
 
         @Test
-        void textBlockLowersToNormalizedStringConstant() throws Exception {
+        void textBlockLowersToNormalizedStringConstant() throws Exception
+        {
             // The front-end lexer normalizes the text block (incidental whitespace stripped, LF line
             // terminators). YABR emits a plain String constant in a v55 class, so it loads in-process.
             String source = "class T { static String tb() { return \"\"\"\n"
@@ -1512,7 +1631,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void textBlockEscapesAndSpaceEscape() throws Exception {
+        void textBlockEscapesAndSpaceEscape() throws Exception
+        {
             // \s preserves a trailing space; \" stays literal; line-continuation backslash joins lines.
             String source = "class T { static String tb() { return \"\"\"\n"
                     + "        a\\sb\n"
@@ -1524,7 +1644,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void textBlockRoundTripMatchesJavac() throws Exception {
+        void textBlockRoundTripMatchesJavac() throws Exception
+        {
             // javac's text block and YABR's must produce the same String value: compile the same
             // source with corretto javac, run it, and compare to YABR's in-process result.
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
@@ -1542,10 +1663,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class PatternInstanceOfTests {
+    class PatternInstanceOfTests
+    {
 
         @Test
-        void recompilePositivePatternBinding() throws Exception {
+        void recompilePositivePatternBinding() throws Exception
+        {
             String source = "class T { static String describe(Object o) { "
                     + "if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1554,7 +1677,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void recompileNegatedGuardPatternBinding() throws Exception {
+        void recompileNegatedGuardPatternBinding() throws Exception
+        {
             String source = "class T { static int len(Object o) { "
                     + "if (!(o instanceof String s)) { return -1; } return s.length(); } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1563,7 +1687,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void decompileReconstructsPatternBinding() throws Exception {
+        void decompileReconstructsPatternBinding() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Pat { public static String describe(Object o) {"
                     + " if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
@@ -1575,7 +1700,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void roundTripJavacToYabrAndBack() throws Exception {
+        void roundTripJavacToYabrAndBack() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             // javac source -> bytecode -> YABR decompile -> re-parse with YABR front-end -> run.
             String javac = "public class Pat { public static String describe(Object o) {"
@@ -1595,10 +1721,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class SealedClassTests {
+    class SealedClassTests
+    {
 
         @Test
-        void decompileRendersSealedAndPermits() throws Exception {
+        void decompileRendersSealedAndPermits() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             java.util.Map<String, String> src = new java.util.LinkedHashMap<>();
             src.put("Shape", "public sealed interface Shape permits Circle, Square { double area(); }");
@@ -1614,7 +1742,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void parserToleratesSealedAndPermitsAndNonSealed() {
+        void parserToleratesSealedAndPermitsAndNonSealed()
+        {
             // Re-parsing decompiled modern source must not error on the sealed header.
             parser.parse("public sealed interface Shape permits Circle, Square { double area(); }");
             parser.parse("public sealed class Base permits A, B { }");
@@ -1623,10 +1752,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class RecordTests {
+    class RecordTests
+    {
 
         @Test
-        void decompileReconstructsRecordHeaderAndSuppressesGenerated() throws Exception {
+        void decompileReconstructsRecordHeaderAndSuppressesGenerated() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public record Point(int x, int y) { public int sum() { return x + y; } }";
             java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Point", javac);
@@ -1643,7 +1774,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void parserReParsesDecompiledRecord() {
+        void parserReParsesDecompiledRecord()
+        {
             // Decompiled record source must re-parse without error, materializing component fields.
             CompilationUnit cu = parser.parse(
                     "public record Point(int x, int y) { public int sum() { return this.x + this.y; } }");
@@ -1654,10 +1786,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class SwitchExpressionTests {
+    class SwitchExpressionTests
+    {
 
         @Test
-        void decompileReconstructsReturnSwitchExpression() throws Exception {
+        void decompileReconstructsReturnSwitchExpression() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Sw { public static int classify(int n) {"
                     + " return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
@@ -1669,7 +1803,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void decompileReconstructsAssignmentSwitchExpression() throws Exception {
+        void decompileReconstructsAssignmentSwitchExpression() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Sw { public static String name(int d) {"
                     + " String s = switch (d) { case 1 -> \"one\"; case 2 -> \"two\"; default -> \"?\"; }; return s; } }";
@@ -1681,7 +1816,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void recompileReturnSwitchExpression() throws Exception {
+        void recompileReturnSwitchExpression() throws Exception
+        {
             String source = "class T { static int classify(int n) { "
                     + "return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
@@ -1691,7 +1827,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void recompileAssignmentSwitchExpression() throws Exception {
+        void recompileAssignmentSwitchExpression() throws Exception
+        {
             String source = "class T { static String name(int d) { "
                     + "String s = switch (d) { case 1 -> \"one\"; case 2 -> \"two\"; default -> \"?\"; }; "
                     + "return s; } }";
@@ -1702,7 +1839,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void fullRoundTripJavacToYabr() throws Exception {
+        void fullRoundTripJavacToYabr() throws Exception
+        {
             assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Sw { public static int classify(int n) {"
                     + " return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
@@ -1719,14 +1857,16 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class BranchMergeRecompileTests {
+    class BranchMergeRecompileTests
+    {
 
         // Regression: variables assigned across if/switch branches and read afterward must merge via
         // a phi on recompile. Previously SSA construction ran only for loops, so the post-branch read
         // wrongly took the last branch's value.
 
         @Test
-        void ifElseVariableMerge() throws Exception {
+        void ifElseVariableMerge() throws Exception
+        {
             String source = "class T { static int f(boolean c) { int r; if (c) { r = 1; } else { r = 2; } return r; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
             assertEquals(1, clazz.getMethod("f", boolean.class).invoke(null, true));
@@ -1734,7 +1874,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void switchStatementVariableMerge() throws Exception {
+        void switchStatementVariableMerge() throws Exception
+        {
             String source = "class T { static int f(int n) { int r = 0; "
                     + "switch (n) { case 1: r = 10; break; case 2: r = 20; break; default: r = 99; break; } "
                     + "return r; } }";
@@ -1745,7 +1886,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void ifWithoutElseMerge() throws Exception {
+        void ifWithoutElseMerge() throws Exception
+        {
             String source = "class T { static int f(boolean c) { int r = 7; if (c) { r = 1; } return r; } }";
             Class<?> clazz = compileClassWithFields(source, uniqueClassName());
             assertEquals(1, clazz.getMethod("f", boolean.class).invoke(null, true));
@@ -1754,10 +1896,12 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class PatternSwitchTests {
+    class PatternSwitchTests
+    {
 
         @Test
-        void decompileReconstructsTypePatternSwitch() throws Exception {
+        void decompileReconstructsTypePatternSwitch() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class Pat21 { static String describe(Object o) {"
                     + " return switch (o) {"
@@ -1778,7 +1922,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void decompileReconstructsAssignmentTypePatternSwitch() throws Exception {
+        void decompileReconstructsAssignmentTypePatternSwitch() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class PatA { static int describe(Object o) {"
                     + " String r = switch (o) {"
@@ -1798,7 +1943,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void decompileReconstructsRecordDeconstructionPattern() throws Exception {
+        void decompileReconstructsRecordDeconstructionPattern() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class PatRec {"
                     + " record Point(int x, int y) {}"
@@ -1822,7 +1968,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void decompileReconstructsGuardedPattern() throws Exception {
+        void decompileReconstructsGuardedPattern() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class PatGuard { static String guard(Object o) {"
                     + " return switch (o) {"
@@ -1846,25 +1993,29 @@ public class SourceToBytecodeIntegrationTest {
     }
 
     @Nested
-    class PatternSwitchRecompileTests {
+    class PatternSwitchRecompileTests
+    {
 
         /**
          * Lowers every method of a parsed class to bytecode and returns the class bytes. The given
          * platform classes are pre-loaded into the pool so library calls resolve.
          */
         private byte[] recompileToBytes(String source, String ownerClass, String... platformClasses)
-                throws Exception {
+                throws Exception
+                {
             return recompileToBytes(source, ownerClass, java.util.Collections.emptyMap(), platformClasses);
         }
 
-        private byte[] recompileToBytes(String source, String ownerClass,
-                                        java.util.Map<String, byte[]> preloaded, String... platformClasses)
-                throws Exception {
+        private byte[] recompileToBytes(String source, String ownerClass, java.util.Map<String, byte[]> preloaded, String... platformClasses)
+                throws Exception
+                {
             ClassPool localPool = TestUtils.emptyPool();
-            for (String cn : platformClasses) {
+            for (String cn : platformClasses)
+            {
                 localPool.loadPlatformClass(cn + ".class");
             }
-            for (byte[] classBytes : preloaded.values()) {
+            for (byte[] classBytes : preloaded.values())
+            {
                 localPool.loadClass(new java.io.ByteArrayInputStream(classBytes));
             }
             CompilationUnit cu = parser.parse(source);
@@ -1874,12 +2025,15 @@ public class SourceToBytecodeIntegrationTest {
             lowerer.setCurrentClassDecl(cls);
             lowerer.setImports(cu.getImports());
             SSA ssa = new SSA(cf.getConstPool());
-            for (MethodDecl method : cls.getMethods()) {
-                if (method.getBody() == null) {
+            for (MethodDecl method : cls.getMethods())
+            {
+                if (method.getBody() == null)
+                {
                     continue;
                 }
                 List<SourceType> params = new ArrayList<>();
-                for (ParameterDecl p : method.getParameters()) {
+                for (ParameterDecl p : method.getParameters())
+                {
                     params.add(p.getType());
                 }
                 cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(),
@@ -1891,7 +2045,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void recompilesTypePatternSwitchAndRunsOnJdk21() throws Exception {
+        void recompilesTypePatternSwitchAndRunsOnJdk21() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             // main throws (exit != 0) on any wrong arm; runVerified passes iff -Xverify:all and all
             // arms behave. Exercises a typeSwitch indy + integer dispatch + per-arm casts.
@@ -1913,7 +2068,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void recompilesGuardedPatternSwitchAndRunsOnJdk21() throws Exception {
+        void recompilesGuardedPatternSwitchAndRunsOnJdk21() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             // x1: guard passes -> 1; x2: guard fails -> restart re-dispatch -> unguarded Integer arm -> 2;
             // x3: String selector -> default -> 0. Exercises the typeSwitch restart loop.
@@ -1936,7 +2092,8 @@ public class SourceToBytecodeIntegrationTest {
         }
 
         @Test
-        void recompilesRecordDeconstructionSwitchAndRunsOnJdk21() throws Exception {
+        void recompilesRecordDeconstructionSwitchAndRunsOnJdk21() throws Exception
+        {
             assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             // The record Pt is compiled by javac so its RecordAttribute is available to resolve the
             // component accessors; YABR then recompiles a deconstruction switch against it.

@@ -19,18 +19,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ClassDecompiler functionality.
  * Covers decompiling classes with various structures: fields, methods, constructors, and static initializers.
  */
-class ClassDecompilerTest {
+class ClassDecompilerTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Class Decompilation Tests ==========
+    // Basic Class Decompilation Tests
 
     @Test
-    void decompileEmptyClass() throws IOException {
+    void decompileEmptyClass() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/EmptyClass", access);
@@ -44,7 +47,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithSimpleName() throws IOException {
+    void decompileClassWithSimpleName() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("SimpleClass", access);
@@ -58,7 +62,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompilePublicClass() throws IOException {
+    void decompilePublicClass() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/PublicClass", access);
@@ -70,7 +75,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileFinalClass() throws IOException {
+    void decompileFinalClass() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().setFinal().build();
         ClassFile cf = pool.createNewClass("com/test/FinalClass", access);
@@ -81,10 +87,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("public final class FinalClass"));
     }
 
-    // ========== Field Decompilation Tests ==========
+    // Field Decompilation Tests
 
     @Test
-    void decompileClassWithIntField() throws IOException {
+    void decompileClassWithIntField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithFields", classAccess);
@@ -99,7 +106,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithStaticField() throws IOException {
+    void decompileClassWithStaticField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithStatic", classAccess);
@@ -114,7 +122,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithFinalField() throws IOException {
+    void decompileClassWithFinalField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithFinal", classAccess);
@@ -129,7 +138,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithMultipleFields() throws IOException {
+    void decompileClassWithMultipleFields() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/MultiFields", classAccess);
@@ -147,10 +157,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("private boolean active;"));
     }
 
-    // ========== Method Decompilation Tests ==========
+    // Method Decompilation Tests
 
     @Test
-    void decompileClassWithVoidMethod() throws IOException {
+    void decompileClassWithVoidMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithMethod")
             .publicStaticMethod("doSomething", "()V")
                 .vreturn()
@@ -163,7 +174,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithIntReturnMethod() throws IOException {
+    void decompileClassWithIntReturnMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithReturn")
             .publicStaticMethod("getNumber", "()I")
                 .iconst(42)
@@ -178,7 +190,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithParameters() throws IOException {
+    void decompileClassWithParameters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithParams")
             .publicStaticMethod("add", "(II)I")
                 .iload(0)
@@ -194,7 +207,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithMultipleMethods() throws IOException {
+    void decompileClassWithMultipleMethods() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/MultiMethods")
             .publicStaticMethod("method1", "()V")
                 .vreturn()
@@ -211,10 +225,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("public static int method2()"));
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void decompileClassWithDefaultConstructor() throws IOException {
+    void decompileClassWithDefaultConstructor() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithConstructor")
             .publicMethod("<init>", "()V")
                 .aload(0)
@@ -229,7 +244,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithParameterizedConstructor() throws IOException {
+    void decompileClassWithParameterizedConstructor() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithParamCtor")
             .publicMethod("<init>", "(I)V")
                 .aload(0)
@@ -243,10 +259,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("public WithParamCtor(int arg0)"));
     }
 
-    // ========== Static Initializer Tests ==========
+    // Static Initializer Tests
 
     @Test
-    void decompileClassWithStaticInitializer() throws IOException {
+    void decompileClassWithStaticInitializer() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithClinit", classAccess);
@@ -264,10 +281,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("class WithClinit") || !result.contains("static {"));
     }
 
-    // ========== Builder Pattern Tests ==========
+    // Builder Pattern Tests
 
     @Test
-    void builderCreatesValidDecompiler() throws IOException {
+    void builderCreatesValidDecompiler() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/BuilderTest", access);
@@ -280,7 +298,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void staticDecompileMethod() throws IOException {
+    void staticDecompileMethod() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/StaticTest", access);
@@ -291,10 +310,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("class StaticTest"));
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void decompileAbstractMethod() throws IOException {
+    void decompileAbstractMethod() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().setAbstract().build();
         ClassFile cf = pool.createNewClass("com/test/AbstractClass", classAccess);
@@ -310,7 +330,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileMethodWithNoCode() throws IOException {
+    void decompileMethodWithNoCode() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/NoCodeClass", classAccess);
@@ -325,7 +346,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithArrayField() throws IOException {
+    void decompileClassWithArrayField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithArray", classAccess);
@@ -340,7 +362,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithObjectField() throws IOException {
+    void decompileClassWithObjectField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithObject", classAccess);
@@ -355,7 +378,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithComplexMethod() throws IOException {
+    void decompileClassWithComplexMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Complex")
             .publicStaticMethod("calculate", "(III)I")
                 .iload(0)
@@ -374,7 +398,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void getName() throws IOException {
+    void getName() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/TestClass", access);
@@ -383,7 +408,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void run() throws IOException {
+    void run() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Runnable")
             .publicStaticMethod("execute", "()V")
                 .vreturn()
@@ -396,10 +422,11 @@ class ClassDecompilerTest {
         assertFalse(result.isEmpty());
     }
 
-    // ========== Interface Tests ==========
+    // Interface Tests
 
     @Test
-    void decompileInterface() throws IOException {
+    void decompileInterface() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().setAbstract().setInterface().build();
         ClassFile cf = pool.createNewClass("com/test/MyInterface", access);
@@ -410,10 +437,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("public interface MyInterface"));
     }
 
-    // ========== Volatile and Transient Fields ==========
+    // Volatile and Transient Fields
 
     @Test
-    void decompileClassWithVolatileField() throws IOException {
+    void decompileClassWithVolatileField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithVolatile", classAccess);
@@ -428,7 +456,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileClassWithTransientField() throws IOException {
+    void decompileClassWithTransientField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithTransient", classAccess);
@@ -442,11 +471,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("private transient Object cache;"));
     }
 
-
-    // ========== Multi-dimensional Array Fields ==========
+    // Multi-dimensional Array Fields
 
     @Test
-    void decompileClassWith2DArrayField() throws IOException {
+    void decompileClassWith2DArrayField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/With2DArray", classAccess);
@@ -460,10 +489,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("private int[][] matrix;"));
     }
 
-    // ========== Various Primitive Field Types ==========
+    // Various Primitive Field Types
 
     @Test
-    void decompileAllPrimitiveFieldTypes() throws IOException {
+    void decompileAllPrimitiveFieldTypes() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/AllPrimitives", classAccess);
@@ -487,10 +517,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("private double doubleField;"));
     }
 
-    // ========== Method with Various Parameter Types ==========
+    // Method with Various Parameter Types
 
     @Test
-    void decompileMethodWithObjectParameter() throws IOException {
+    void decompileMethodWithObjectParameter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithObjectParam")
             .publicStaticMethod("process", "(Ljava/lang/String;)V")
                 .vreturn()
@@ -503,7 +534,8 @@ class ClassDecompilerTest {
     }
 
     @Test
-    void decompileMethodWithArrayParameter() throws IOException {
+    void decompileMethodWithArrayParameter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/WithArrayParam")
             .publicStaticMethod("processArray", "([I)V")
                 .vreturn()
@@ -515,11 +547,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("public static void processArray(int[] arg0)"));
     }
 
-
-    // ========== Static with Custom Emitter Config ==========
+    // Static with Custom Emitter Config
 
     @Test
-    void staticDecompileMethodWithConfig() throws IOException {
+    void staticDecompileMethodWithConfig() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/ConfigTest", access);
@@ -533,10 +565,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("class ConfigTest"));
     }
 
-    // ========== Builder with Preset ==========
+    // Builder with Preset
 
     @Test
-    void builderWithMinimalPreset() throws IOException {
+    void builderWithMinimalPreset() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/PresetTest", access);
@@ -549,10 +582,11 @@ class ClassDecompilerTest {
         assertTrue(result.contains("class PresetTest"));
     }
 
-    // ========== Final Static Field ==========
+    // Final Static Field
 
     @Test
-    void decompileFinalStaticField() throws IOException {
+    void decompileFinalStaticField() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithConstant", classAccess);

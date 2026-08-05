@@ -29,21 +29,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * body has no chain call. Re-lowering it must still produce a verifiable {@code <init>}: ASTLowerer
  * synthesizes the {@code super(...)} call (resolved to the real superclass).
  */
-class ConstructorLoweringTest {
+class ConstructorLoweringTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void emptyConstructorBodyLowersToVerifiableInit() throws Exception {
+    void emptyConstructorBodyLowersToVerifiableInit() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         int pub = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("test/CtorB", pub);
 
-        CompilationUnit cu = JavaParser.create().parse(
-            "package test; public class CtorB { public CtorB() { } }");
+        CompilationUnit cu = JavaParser.create().parse("package test; public class CtorB { public CtorB() { } }");
         ClassDecl decl = (ClassDecl) cu.getPrimaryType();
 
         ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
@@ -56,7 +58,8 @@ class ConstructorLoweringTest {
         assertFalse(constructors.isEmpty(), "parsed class should declare a constructor");
         ConstructorDecl ctor = constructors.get(0);
         MethodDecl init = new MethodDecl("<init>", VoidSourceType.INSTANCE).withModifiers(ctor.getModifiers());
-        for (ParameterDecl p : ctor.getParameters()) {
+        for (ParameterDecl p : ctor.getParameters())
+        {
             init.addParameter(p);
         }
         init.withBody(ctor.getBody());
@@ -82,31 +85,33 @@ class ConstructorLoweringTest {
      * and it must land after the leading synthetic-capture inits, not at index 0.
      */
     @Test
-    void syntheticOuterFieldInitPrecedesSuper() throws Exception {
+    void syntheticOuterFieldInitPrecedesSuper() throws Exception
+    {
         String asm = lowerCtorAndDisassemble(
                 "package test; public class Cap { java.lang.Object this$0;"
                         + " public Cap(java.lang.Object outer) { this.this$0 = outer; } }",
                 "test/Cap", "this$0", "Ljava/lang/Object;", "(Ljava/lang/Object;)V");
         int put = asm.indexOf("putfield");
         int sup = asm.indexOf("invokespecial");
-        assertTrue(put >= 0 && sup >= 0 && put < sup,
-                "synthetic this$0 init must precede super():\n" + asm);
+        assertTrue(put >= 0 && sup >= 0 && put < sup, "synthetic this$0 init must precede super():\n" + asm);
     }
 
-    /** Regression guard: an ORDINARY field assignment must still follow super() (super emitted first). */
+    /**
+     * Regression guard: an ORDINARY field assignment must still follow super() (super emitted first).
+     */
     @Test
-    void normalFieldInitFollowsSuper() throws Exception {
+    void normalFieldInitFollowsSuper() throws Exception
+    {
         String asm = lowerCtorAndDisassemble(
                 "package test; public class Norm { int x; public Norm(int x) { this.x = x; } }",
                 "test/Norm", "x", "I", "(I)V");
         int put = asm.indexOf("putfield");
         int sup = asm.indexOf("invokespecial");
-        assertTrue(put >= 0 && sup >= 0 && sup < put,
-                "a normal field init must follow super():\n" + asm);
+        assertTrue(put >= 0 && sup >= 0 && sup < put, "a normal field init must follow super():\n" + asm);
     }
 
-    private String lowerCtorAndDisassemble(String source, String internalName, String fieldName,
-                                           String fieldDesc, String ctorDesc) throws Exception {
+    private String lowerCtorAndDisassemble(String source, String internalName, String fieldName, String fieldDesc, String ctorDesc) throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         int pub = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass(internalName, pub);
@@ -120,7 +125,8 @@ class ConstructorLoweringTest {
 
         ConstructorDecl ctor = decl.getConstructors().get(0);
         MethodDecl init = new MethodDecl("<init>", VoidSourceType.INSTANCE).withModifiers(ctor.getModifiers());
-        for (ParameterDecl p : ctor.getParameters()) {
+        for (ParameterDecl p : ctor.getParameters())
+        {
             init.addParameter(p);
         }
         init.withBody(ctor.getBody());

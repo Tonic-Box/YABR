@@ -20,27 +20,33 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * returns become continuation exits bound to the splice successor) and out-of-range branch targets
  * (carried by identity rather than dangling), via {@code cloneRangeWithTargets} + the existing splice.
  */
-class ClonedRangeExitsTest {
+class ClonedRangeExitsTest
+{
 
     private static final int PUB_STATIC = AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC;
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException(name);
     }
 
-    private static List<Instruction> list(CodeWriter cw) {
+    private static List<Instruction> list(CodeWriter cw)
+    {
         List<Instruction> out = new ArrayList<>();
         cw.getInstructions().forEach(out::add);
         return out;
     }
 
     @Test
-    void redirectReturnsContinuesToHost() throws Exception {
+    void redirectReturnsContinuesToHost() throws Exception
+    {
         // A cloned void `return` spliced into an int method would fail the verifier if executed;
         // redirected into a continuation goto, control reaches the host's `iconst 42; ireturn`.
         ClassFile cf = ClassBuilder.create("RR")
@@ -64,8 +70,9 @@ class ClonedRangeExitsTest {
     }
 
     @Test
-    void redirectReturnsRepointsBranchToRewrittenReturn() throws Exception {
-        // `goto L; L: return` — the goto targets the return; after redirectReturns the goto must follow
+    void redirectReturnsRepointsBranchToRewrittenReturn() throws Exception
+    {
+        // `goto L; L: return` - the goto targets the return; after redirectReturns the goto must follow
         // the rewrite to the continuation, not a stale return object.
         ClassFile cf = ClassBuilder.create("RB")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -90,7 +97,8 @@ class ClonedRangeExitsTest {
     }
 
     @Test
-    void redirectReturnsThenReplaceBodyThrows() throws Exception {
+    void redirectReturnsThenReplaceBodyThrows() throws Exception
+    {
         ClassFile cf = ClassBuilder.create("RX")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(PUB_STATIC, "v", "()V").code().nop().vreturn().end().end()
@@ -108,9 +116,10 @@ class ClonedRangeExitsTest {
     }
 
     @Test
-    void outOfRangeBranchTargetCarriedByIdentity() throws Exception {
+    void outOfRangeBranchTargetCarriedByIdentity() throws Exception
+    {
         // f(n): if (n>=0) goto POS; return -1; POS: return n*2;
-        // Clone the partial range [iload_0, ifge POS] — whose ifge targets POS, outside the range —
+        // Clone the partial range [iload_0, ifge POS] - whose ifge targets POS, outside the range -
         // and splice it back into the same method. The cloned ifge must resolve to the original POS.
         ClassFile cf = ClassBuilder.create("OOR")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -136,7 +145,8 @@ class ClonedRangeExitsTest {
     }
 
     @Test
-    void outOfRangeBranchSplicedIntoAnotherMethodThrows() throws Exception {
+    void outOfRangeBranchSplicedIntoAnotherMethodThrows() throws Exception
+    {
         // Cloning a partial range with an out-of-range branch and splicing it into a *different* method
         // (where the carried target doesn't exist) must fail loud, not emit a class-load VerifyError.
         ClassFile cf = ClassBuilder.create("X")
@@ -159,7 +169,8 @@ class ClonedRangeExitsTest {
     }
 
     @Test
-    void insertChainBeforeFoldsBodiesInSequence() throws Exception {
+    void insertChainBeforeFoldsBodiesInSequence() throws Exception
+    {
         // Fold two `inc` bodies (each `iinc 0,1; return`, returns redirected) before run's `iload 0`.
         // Chained, both run (n -> n+2); the skip hazard of repeated insertBefore would run only one.
         ClassFile cf = ClassBuilder.create("Fold")

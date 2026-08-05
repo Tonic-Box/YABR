@@ -361,7 +361,8 @@ import com.tonic.analysis.ssa.IRPrinter;
 import com.tonic.analysis.ssa.cfg.*;
 import com.tonic.analysis.ssa.ir.*;
 
-public void analyzeMethod(MethodEntry method) {
+public void analyzeMethod(MethodEntry method)
+{
     ConstPool cp = method.getClassFile().getConstPool();
     SSA ssa = new SSA(cp);
 
@@ -369,24 +370,30 @@ public void analyzeMethod(MethodEntry method) {
 
     System.out.println("=== " + ir.getName() + ir.getDescriptor() + " ===");
 
-    for (IRBlock block : ir.getBlocksInOrder()) {
+    for (IRBlock block : ir.getBlocksInOrder())
+    {
         System.out.println("\n" + block.getName() + ":");
         System.out.println("  preds: " + block.getPredecessors().stream()
             .map(IRBlock::getName).toList());
 
         // Print phi instructions
-        for (PhiInstruction phi : block.getPhiInstructions()) {
+        for (PhiInstruction phi : block.getPhiInstructions())
+        {
             System.out.println("  [PHI] " + IRPrinter.format(phi));
         }
 
         // Print regular instructions
-        for (IRInstruction instr : block.getInstructions()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
             System.out.println("  " + IRPrinter.format(instr));
 
             // Count instruction types
-            if (instr instanceof InvokeInstruction) {
+            if (instr instanceof InvokeInstruction)
+            {
                 System.out.println("    ^ method call");
-            } else if (instr instanceof BranchInstruction) {
+            }
+            else if (instr instanceof BranchInstruction)
+            {
                 System.out.println("    ^ conditional");
             }
         }
@@ -397,7 +404,8 @@ public void analyzeMethod(MethodEntry method) {
 ## Example: Simple Optimization
 
 ```java
-public void optimizeMethod(MethodEntry method) {
+public void optimizeMethod(MethodEntry method)
+{
     ConstPool cp = method.getClassFile().getConstPool();
 
     // Configure optimizations
@@ -424,21 +432,27 @@ public void optimizeMethod(MethodEntry method) {
 ```java
 import com.tonic.analysis.ssa.visitor.AbstractBlockVisitor;
 
-public class IRAnalyzer extends AbstractBlockVisitor {
+public class IRAnalyzer extends AbstractBlockVisitor
+{
 
     private int invokeCount = 0;
     private int branchCount = 0;
 
     @Override
-    public void visitInstruction(IRInstruction instruction) {
-        if (instruction instanceof InvokeInstruction) {
+    public void visitInstruction(IRInstruction instruction)
+    {
+        if (instruction instanceof InvokeInstruction)
+        {
             invokeCount++;
-        } else if (instruction instanceof BranchInstruction) {
+        }
+        else if (instruction instanceof BranchInstruction)
+        {
             branchCount++;
         }
     }
 
-    public void printStats() {
+    public void printStats()
+    {
         System.out.println("Method calls: " + invokeCount);
         System.out.println("Branches: " + branchCount);
     }

@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * specific compiler's block layout that neither the host javac nor a hand-built class reproduce, so the
  * differential oracle remains the guard for that (see the recovery-oracle notes).
  */
-class TryReturnBoundaryDecompileTest {
+class TryReturnBoundaryDecompileTest
+{
 
     /**
      * {@code try { return foo(); }} - the returned value is computed inside the protected range but
@@ -32,7 +33,8 @@ class TryReturnBoundaryDecompileTest {
      * must not drop that return.
      */
     @Test
-    void tryReturningAValuePastTheProtectedRangeKeepsTheReturn() throws Exception {
+    void tryReturningAValuePastTheProtectedRangeKeepsTheReturn() throws Exception
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryRet")
             .publicStaticMethod("f", "(Ljava/lang/String;)Ljava/lang/Class;");
         Label tryStart = mb.newLabel();
@@ -64,11 +66,13 @@ class TryReturnBoundaryDecompileTest {
      * under a redundant tail guard (which would duplicate the effect).
      */
     @Test
-    void impureGuardClauseTailEvaluatesTheConditionOnce() throws Exception {
+    void impureGuardClauseTailEvaluatesTheConditionOnce() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         org.junit.jupiter.api.Assumptions.assumeTrue(compiler != null, "no JDK compiler in this runtime");
         Path dir = Files.createTempDirectory("yabr-guard");
-        try {
+        try
+        {
             Path srcFile = dir.resolve("Guard.java");
             Files.writeString(srcFile,
                 "public class Guard {\n" +
@@ -86,8 +90,11 @@ class TryReturnBoundaryDecompileTest {
             String out = new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
             assertEquals(1, count(out, "isEmpty()"),
                 "a side-effecting guard condition must be evaluated once, not repeated under a tail guard:\n" + out);
-        } finally {
-            try (var paths = Files.walk(dir)) {
+        }
+        finally
+        {
+            try (var paths = Files.walk(dir))
+            {
                 paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                     try { Files.deleteIfExists(p); } catch (Exception ignored) {}
                 });
@@ -95,7 +102,8 @@ class TryReturnBoundaryDecompileTest {
         }
     }
 
-    private static int count(String haystack, String needle) {
+    private static int count(String haystack, String needle)
+    {
         return haystack.split(java.util.regex.Pattern.quote(needle), -1).length - 1;
     }
 }

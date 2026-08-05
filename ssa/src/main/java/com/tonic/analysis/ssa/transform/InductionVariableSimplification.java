@@ -12,25 +12,27 @@ import java.util.*;
 
 /**
  * Induction Variable Simplification optimization transform.
- *
  * Identifies and simplifies induction variables in loops:
  * - Basic induction variable: i = i + c (constant stride)
  * - Derived induction variable: j = i * k (linear function of basic IV)
- *
  * Optimizations:
  * - Replace i * constant in loop with accumulator that increments by constant
  * - Strength reduction for derived induction variables
  */
-public class InductionVariableSimplification implements IRTransform {
+public class InductionVariableSimplification implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "InductionVariableSimplification";
     }
 
     @Override
-    public boolean run(IRMethod method) {
-        if (method.getEntryBlock() == null) {
+    public boolean run(IRMethod method)
+    {
+        if (method.getEntryBlock() == null)
+        {
             return false;
         }
 
@@ -40,29 +42,34 @@ public class InductionVariableSimplification implements IRTransform {
         LoopAnalysis loopAnalysis = new LoopAnalysis(method, domTree);
         loopAnalysis.compute();
 
-        if (loopAnalysis.getLoops().isEmpty()) {
+        if (loopAnalysis.getLoops().isEmpty())
+        {
             return false;
         }
 
         boolean changed = false;
 
-        for (Loop loop : loopAnalysis.getLoops()) {
+        for (Loop loop : loopAnalysis.getLoops())
+        {
             changed |= processLoop(loop, method);
         }
 
         return changed;
     }
 
-    private boolean processLoop(Loop loop, IRMethod method) {
+    private boolean processLoop(Loop loop, IRMethod method)
+    {
         List<BasicIV> basicIVs = findBasicInductionVariables(loop);
 
-        if (basicIVs.isEmpty()) {
+        if (basicIVs.isEmpty())
+        {
             return false;
         }
 
         boolean changed = false;
 
-        for (BasicIV biv : basicIVs) {
+        for (BasicIV biv : basicIVs)
+        {
             changed |= simplifyDerivedIVs(biv, loop);
         }
 
@@ -74,22 +81,30 @@ public class InductionVariableSimplification implements IRTransform {
      * i_1 = phi(i_0, i_2)  -- in loop header
      * i_2 = i_1 + c        -- in loop body
      */
-    private List<BasicIV> findBasicInductionVariables(Loop loop) {
+    private List<BasicIV> findBasicInductionVariables(Loop loop)
+    {
         List<BasicIV> basicIVs = new ArrayList<>();
         IRBlock header = loop.getHeader();
 
-        for (PhiInstruction phi : header.getPhiInstructions()) {
+        for (PhiInstruction phi : header.getPhiInstructions())
+        {
             SSAValue phiResult = phi.getResult();
             if (phiResult == null) continue;
 
-            for (IRBlock block : loop.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : loop.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                        if (binOp.getOp() == BinaryOp.ADD) {
+                        if (binOp.getOp() == BinaryOp.ADD)
+                        {
                             Integer stride = getStrideIfBasicIV(binOp, phiResult);
-                            if (stride != null) {
-                                if (isPhiBackedge(phi, binOp.getResult(), loop)) {
+                            if (stride != null)
+                            {
+                                if (isPhiBackedge(phi, binOp.getResult(), loop))
+                                {
                                     basicIVs.add(new BasicIV(phi, binOp, stride));
                                 }
                             }
@@ -102,20 +117,25 @@ public class InductionVariableSimplification implements IRTransform {
         return basicIVs;
     }
 
-    private Integer getStrideIfBasicIV(BinaryOpInstruction binOp, SSAValue inductionVar) {
+    private Integer getStrideIfBasicIV(BinaryOpInstruction binOp, SSAValue inductionVar)
+    {
         Value left = binOp.getLeft();
         Value right = binOp.getRight();
 
-        if (left instanceof SSAValue) {
+        if (left instanceof SSAValue)
+        {
             SSAValue ssaLeft = (SSAValue) left;
-            if (ssaLeft.getId() == inductionVar.getId()) {
+            if (ssaLeft.getId() == inductionVar.getId())
+            {
                 return getIntConstant(right);
             }
         }
 
-        if (right instanceof SSAValue) {
+        if (right instanceof SSAValue)
+        {
             SSAValue ssaRight = (SSAValue) right;
-            if (ssaRight.getId() == inductionVar.getId()) {
+            if (ssaRight.getId() == inductionVar.getId())
+            {
                 return getIntConstant(left);
             }
         }
@@ -123,14 +143,18 @@ public class InductionVariableSimplification implements IRTransform {
         return null;
     }
 
-    private boolean isPhiBackedge(PhiInstruction phi, SSAValue incrementResult, Loop loop) {
-        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+    private boolean isPhiBackedge(PhiInstruction phi, SSAValue incrementResult, Loop loop)
+    {
+        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+        {
             IRBlock fromBlock = entry.getKey();
             Value value = entry.getValue();
 
-            if (loop.contains(fromBlock) && value instanceof SSAValue) {
+            if (loop.contains(fromBlock) && value instanceof SSAValue)
+            {
                 SSAValue ssaValue = (SSAValue) value;
-                if (ssaValue.getId() == incrementResult.getId()) {
+                if (ssaValue.getId() == incrementResult.getId())
+                {
                     return true;
                 }
             }
@@ -143,19 +167,25 @@ public class InductionVariableSimplification implements IRTransform {
      * For example: j = i * 4 inside loop can be replaced with
      * an accumulator that adds 4 each iteration.
      */
-    private boolean simplifyDerivedIVs(BasicIV biv, Loop loop) {
+    private boolean simplifyDerivedIVs(BasicIV biv, Loop loop)
+    {
         boolean changed = false;
         SSAValue inductionVar = biv.phi.getResult();
 
-        for (IRBlock block : loop.getBlocks()) {
+        for (IRBlock block : loop.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (IRInstruction instr : instructions) {
-                if (instr instanceof BinaryOpInstruction) {
+            for (IRInstruction instr : instructions)
+            {
+                if (instr instanceof BinaryOpInstruction)
+                {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                    if (binOp.getOp() == BinaryOp.MUL && binOp != biv.increment) {
+                    if (binOp.getOp() == BinaryOp.MUL && binOp != biv.increment)
+                    {
                         Integer multiplier = getMultiplierIfDerivedIV(binOp, inductionVar);
-                        if (multiplier != null && multiplier != 0) {
+                        if (multiplier != null && multiplier != 0)
+                        {
                             int derivedStride = biv.stride * multiplier;
                             changed = true;
                         }
@@ -167,20 +197,25 @@ public class InductionVariableSimplification implements IRTransform {
         return changed;
     }
 
-    private Integer getMultiplierIfDerivedIV(BinaryOpInstruction binOp, SSAValue inductionVar) {
+    private Integer getMultiplierIfDerivedIV(BinaryOpInstruction binOp, SSAValue inductionVar)
+    {
         Value left = binOp.getLeft();
         Value right = binOp.getRight();
 
-        if (left instanceof SSAValue) {
+        if (left instanceof SSAValue)
+        {
             SSAValue ssaLeft = (SSAValue) left;
-            if (ssaLeft.getId() == inductionVar.getId()) {
+            if (ssaLeft.getId() == inductionVar.getId())
+            {
                 return getIntConstant(right);
             }
         }
 
-        if (right instanceof SSAValue) {
+        if (right instanceof SSAValue)
+        {
             SSAValue ssaRight = (SSAValue) right;
-            if (ssaRight.getId() == inductionVar.getId()) {
+            if (ssaRight.getId() == inductionVar.getId())
+            {
                 return getIntConstant(left);
             }
         }
@@ -188,18 +223,23 @@ public class InductionVariableSimplification implements IRTransform {
         return null;
     }
 
-    private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant) {
+    private Integer getIntConstant(Value value)
+    {
+        if (value instanceof IntConstant)
+        {
             IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }
@@ -211,12 +251,14 @@ public class InductionVariableSimplification implements IRTransform {
     /**
      * Represents a basic induction variable.
      */
-    private static class BasicIV {
+    private static class BasicIV
+    {
         final PhiInstruction phi;
         final BinaryOpInstruction increment;
         final int stride;
 
-        BasicIV(PhiInstruction phi, BinaryOpInstruction increment, int stride) {
+        BasicIV(PhiInstruction phi, BinaryOpInstruction increment, int stride)
+        {
             this.phi = phi;
             this.increment = increment;
             this.stride = stride;

@@ -9,7 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public final class CompilationUnit implements ASTNode {
+/**
+ * A Java source file: package declaration, imports, and top-level type declarations.
+ */
+public final class CompilationUnit implements ASTNode
+{
 
     private String packageName;
     private final NodeList<ImportDecl> imports;
@@ -17,149 +21,281 @@ public final class CompilationUnit implements ASTNode {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public CompilationUnit(SourceLocation location) {
+    /**
+     * Creates an empty compilation unit.
+     * @param location the source location, or null for unknown
+     */
+    public CompilationUnit(SourceLocation location)
+    {
         this.imports = new NodeList<>(this);
         this.types = new NodeList<>(this);
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public CompilationUnit() {
+    /**
+     * Creates an empty compilation unit at an unknown location.
+     */
+    public CompilationUnit()
+    {
         this(SourceLocation.UNKNOWN);
     }
 
-    public String getPackageName() {
+    /**
+     * @return the package name
+     */
+    public String getPackageName()
+    {
         return packageName;
     }
 
-    public void setPackageName(String packageName) {
+    /**
+     * Sets the package name.
+     * @param packageName the package name, or null/empty for the default package
+     */
+    public void setPackageName(String packageName)
+    {
         this.packageName = packageName;
     }
 
-    public NodeList<ImportDecl> getImports() {
+    /**
+     * @return the imports
+     */
+    public NodeList<ImportDecl> getImports()
+    {
         return imports;
     }
 
-    public NodeList<TypeDecl> getTypes() {
+    /**
+     * @return the types
+     */
+    public NodeList<TypeDecl> getTypes()
+    {
         return types;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the parent node.
+     * @param parent the new parent
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public CompilationUnit withPackageName(String packageName) {
+    /**
+     * Sets the package name.
+     * @param packageName the package name, or null/empty for the default package
+     * @return this unit
+     */
+    public CompilationUnit withPackageName(String packageName)
+    {
         this.packageName = packageName;
         return this;
     }
 
-    public CompilationUnit addImport(ImportDecl importDecl) {
+    /**
+     * Adds an import declaration.
+     * @param importDecl the import to add
+     * @return this unit
+     */
+    public CompilationUnit addImport(ImportDecl importDecl)
+    {
         imports.add(importDecl);
         return this;
     }
 
-    public CompilationUnit addImport(String className) {
+    /**
+     * Adds a regular import of a class.
+     * @param className the imported class name
+     * @return this unit
+     */
+    public CompilationUnit addImport(String className)
+    {
         imports.add(ImportDecl.regular(className));
         return this;
     }
 
-    public CompilationUnit addStaticImport(String memberName) {
+    /**
+     * Adds a static import of a member.
+     * @param memberName the imported member name
+     * @return this unit
+     */
+    public CompilationUnit addStaticImport(String memberName)
+    {
         imports.add(ImportDecl.staticImport(memberName));
         return this;
     }
 
-    public CompilationUnit addType(TypeDecl type) {
+    /**
+     * Adds a top-level type declaration.
+     * @param type the type to add
+     * @return this unit
+     */
+    public CompilationUnit addType(TypeDecl type)
+    {
         types.add(type);
         return this;
     }
 
-    public boolean hasPackage() {
+    /**
+     * @return true if a non-empty package name is set
+     */
+    public boolean hasPackage()
+    {
         return packageName != null && !packageName.isEmpty();
     }
 
-    public List<ClassDecl> getClasses() {
+    /**
+     * @return the top-level class declarations
+     */
+    public List<ClassDecl> getClasses()
+    {
         return types.stream()
                 .filter(t -> t instanceof ClassDecl)
                 .map(t -> (ClassDecl) t)
                 .collect(Collectors.toList());
     }
 
-    public List<InterfaceDecl> getInterfaces() {
+    /**
+     * @return the top-level interface declarations
+     */
+    public List<InterfaceDecl> getInterfaces()
+    {
         return types.stream()
                 .filter(t -> t instanceof InterfaceDecl)
                 .map(t -> (InterfaceDecl) t)
                 .collect(Collectors.toList());
     }
 
-    public List<EnumDecl> getEnums() {
+    /**
+     * @return the top-level enum declarations
+     */
+    public List<EnumDecl> getEnums()
+    {
         return types.stream()
                 .filter(t -> t instanceof EnumDecl)
                 .map(t -> (EnumDecl) t)
                 .collect(Collectors.toList());
     }
 
-    public TypeDecl getType(String name) {
-        for (TypeDecl type : types) {
-            if (name.equals(type.getName())) {
+    /**
+     * Finds a top-level type by simple name.
+     * @param name the simple type name
+     * @return the matching type, or null if none
+     */
+    public TypeDecl getType(String name)
+    {
+        for (TypeDecl type : types)
+        {
+            if (name.equals(type.getName()))
+            {
                 return type;
             }
         }
         return null;
     }
 
-    public ClassDecl getClass(String name) {
-        for (TypeDecl type : types) {
-            if (type instanceof ClassDecl && name.equals(type.getName())) {
+    /**
+     * Finds a top-level class by simple name.
+     * @param name the simple class name
+     * @return the matching class, or null if none
+     */
+    public ClassDecl getClass(String name)
+    {
+        for (TypeDecl type : types)
+        {
+            if (type instanceof ClassDecl && name.equals(type.getName()))
+            {
                 return (ClassDecl) type;
             }
         }
         return null;
     }
 
-    public InterfaceDecl getInterface(String name) {
-        for (TypeDecl type : types) {
-            if (type instanceof InterfaceDecl && name.equals(type.getName())) {
+    /**
+     * Finds a top-level interface by simple name.
+     * @param name the simple interface name
+     * @return the matching interface, or null if none
+     */
+    public InterfaceDecl getInterface(String name)
+    {
+        for (TypeDecl type : types)
+        {
+            if (type instanceof InterfaceDecl && name.equals(type.getName()))
+            {
                 return (InterfaceDecl) type;
             }
         }
         return null;
     }
 
-    public EnumDecl getEnum(String name) {
-        for (TypeDecl type : types) {
-            if (type instanceof EnumDecl && name.equals(type.getName())) {
+    /**
+     * Finds a top-level enum by simple name.
+     * @param name the simple enum name
+     * @return the matching enum, or null if none
+     */
+    public EnumDecl getEnum(String name)
+    {
+        for (TypeDecl type : types)
+        {
+            if (type instanceof EnumDecl && name.equals(type.getName()))
+            {
                 return (EnumDecl) type;
             }
         }
         return null;
     }
 
-    public TypeDecl getPrimaryType() {
+    /**
+     * Picks the unit's primary type: the first public type, else the first type.
+     * @return the primary type, or null if the unit has no types
+     */
+    public TypeDecl getPrimaryType()
+    {
         if (types.isEmpty()) return null;
-        for (TypeDecl type : types) {
-            if (type.isPublic()) {
+        for (TypeDecl type : types)
+        {
+            if (type.isPublic())
+            {
                 return type;
             }
         }
         return types.get(0);
     }
 
-    public String getFullyQualifiedName(String simpleName) {
-        if (packageName == null || packageName.isEmpty()) {
+    /**
+     * Qualifies a simple name with this unit's package.
+     * @param simpleName the simple type name
+     * @return the dotted qualified name, or the simple name in the default package
+     */
+    public String getFullyQualifiedName(String simpleName)
+    {
+        if (packageName == null || packageName.isEmpty())
+        {
             return simpleName;
         }
         return packageName + "." + simpleName;
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>();
         children.addAll(imports);
         children.addAll(types);
@@ -167,23 +303,29 @@ public final class CompilationUnit implements ASTNode {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        if (hasPackage()) {
+        if (hasPackage())
+        {
             sb.append("package ").append(packageName).append(";\n\n");
         }
-        for (ImportDecl imp : imports) {
+        for (ImportDecl imp : imports)
+        {
             sb.append(imp).append(";\n");
         }
-        if (!imports.isEmpty()) {
+        if (!imports.isEmpty())
+        {
             sb.append("\n");
         }
-        for (TypeDecl type : types) {
+        for (TypeDecl type : types)
+        {
             sb.append(type).append("\n");
         }
         return sb.toString();

@@ -8,352 +8,850 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Factory class for creating AST nodes with sensible defaults.
- * Provides convenient static methods for common node creation patterns.
+ * Static factory of AST nodes with sensible type defaults.
  */
-public final class ASTFactory {
+public final class ASTFactory
+{
 
     private ASTFactory() {}
 
-    // ========================
     // Literal Expressions
-    // ========================
 
-    public static LiteralExpr intLit(int value) {
+    /**
+     * Builds an int literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr intLit(int value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.INT);
     }
 
-    public static LiteralExpr longLit(long value) {
+    /**
+     * Builds a long literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr longLit(long value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.LONG);
     }
 
-    public static LiteralExpr floatLit(float value) {
+    /**
+     * Builds a float literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr floatLit(float value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.FLOAT);
     }
 
-    public static LiteralExpr doubleLit(double value) {
+    /**
+     * Builds a double literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr doubleLit(double value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.DOUBLE);
     }
 
-    public static LiteralExpr boolLit(boolean value) {
+    /**
+     * Builds a boolean literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr boolLit(boolean value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static LiteralExpr charLit(char value) {
+    /**
+     * Builds a char literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr charLit(char value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.CHAR);
     }
 
-    public static LiteralExpr stringLit(String value) {
+    /**
+     * Builds a String literal node.
+     * @param value the literal value
+     * @return the literal expression
+     */
+    public static LiteralExpr stringLit(String value)
+    {
         return new LiteralExpr(value, ReferenceSourceType.STRING);
     }
 
-    public static LiteralExpr nullLit() {
+    /**
+     * Builds a null literal node.
+     * @return the null literal expression
+     */
+    public static LiteralExpr nullLit()
+    {
         return LiteralExpr.ofNull();
     }
 
-    // ========================
     // Variable References
-    // ========================
 
-    public static VarRefExpr varRef(String name, SourceType type) {
+    /**
+     * Builds a variable reference node.
+     * @param name the variable name
+     * @param type the variable type
+     * @return the variable reference
+     */
+    public static VarRefExpr varRef(String name, SourceType type)
+    {
         return new VarRefExpr(name, type);
     }
 
-    public static VarRefExpr intVar(String name) {
+    /**
+     * Builds an int-typed variable reference node.
+     * @param name the variable name
+     * @return the variable reference
+     */
+    public static VarRefExpr intVar(String name)
+    {
         return new VarRefExpr(name, PrimitiveSourceType.INT);
     }
 
-    public static VarRefExpr boolVar(String name) {
+    /**
+     * Builds a boolean-typed variable reference node.
+     * @param name the variable name
+     * @return the variable reference
+     */
+    public static VarRefExpr boolVar(String name)
+    {
         return new VarRefExpr(name, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static VarRefExpr objectVar(String name, String className) {
+    /**
+     * Builds a reference-typed variable reference node.
+     * @param name the variable name
+     * @param className the class of the variable's type
+     * @return the variable reference
+     */
+    public static VarRefExpr objectVar(String name, String className)
+    {
         return new VarRefExpr(name, new ReferenceSourceType(className));
     }
 
-    // ========================
     // Binary Expressions
-    // ========================
 
-    public static BinaryExpr binary(BinaryOperator op, Expression left, Expression right, SourceType type) {
+    /**
+     * Builds a binary expression node.
+     * @param op the operator
+     * @param left the left operand
+     * @param right the right operand
+     * @param type the result type
+     * @return the binary expression
+     */
+    public static BinaryExpr binary(BinaryOperator op, Expression left, Expression right, SourceType type)
+    {
         return new BinaryExpr(op, left, right, type);
     }
 
-    public static BinaryExpr add(Expression left, Expression right) {
+    /**
+     * Builds an addition node typed from the left operand.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr add(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.ADD, left, right, left.getType());
     }
 
-    public static BinaryExpr sub(Expression left, Expression right) {
+    /**
+     * Builds a subtraction node typed from the left operand.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr sub(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.SUB, left, right, left.getType());
     }
 
-    public static BinaryExpr mul(Expression left, Expression right) {
+    /**
+     * Builds a multiplication node typed from the left operand.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr mul(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.MUL, left, right, left.getType());
     }
 
-    public static BinaryExpr div(Expression left, Expression right) {
+    /**
+     * Builds a division node typed from the left operand.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr div(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.DIV, left, right, left.getType());
     }
 
-    public static BinaryExpr mod(Expression left, Expression right) {
+    /**
+     * Builds a modulo node typed from the left operand.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr mod(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.MOD, left, right, left.getType());
     }
 
-    public static BinaryExpr eq(Expression left, Expression right) {
+    /**
+     * Builds a boolean equality comparison node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr eq(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.EQ, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr ne(Expression left, Expression right) {
+    /**
+     * Builds a boolean inequality comparison node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr ne(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.NE, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr lt(Expression left, Expression right) {
+    /**
+     * Builds a boolean less-than comparison node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr lt(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.LT, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr le(Expression left, Expression right) {
+    /**
+     * Builds a boolean less-or-equal comparison node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr le(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.LE, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr gt(Expression left, Expression right) {
+    /**
+     * Builds a boolean greater-than comparison node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr gt(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.GT, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr ge(Expression left, Expression right) {
+    /**
+     * Builds a boolean greater-or-equal comparison node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr ge(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.GE, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr and(Expression left, Expression right) {
+    /**
+     * Builds a logical AND node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr and(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.AND, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr or(Expression left, Expression right) {
+    /**
+     * Builds a logical OR node.
+     * @param left the left operand
+     * @param right the right operand
+     * @return the binary expression
+     */
+    public static BinaryExpr or(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.OR, left, right, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static BinaryExpr assign(Expression left, Expression right) {
+    /**
+     * Builds an assignment expression node typed from the target.
+     * @param left the assignment target
+     * @param right the assigned value
+     * @return the binary expression
+     */
+    public static BinaryExpr assign(Expression left, Expression right)
+    {
         return new BinaryExpr(BinaryOperator.ASSIGN, left, right, left.getType());
     }
 
-    // ========================
     // Unary Expressions
-    // ========================
 
-    public static UnaryExpr unary(UnaryOperator op, Expression operand, SourceType type) {
+    /**
+     * Builds a unary expression node.
+     * @param op the operator
+     * @param operand the operand
+     * @param type the result type
+     * @return the unary expression
+     */
+    public static UnaryExpr unary(UnaryOperator op, Expression operand, SourceType type)
+    {
         return new UnaryExpr(op, operand, type);
     }
 
-    public static UnaryExpr not(Expression operand) {
+    /**
+     * Builds a logical negation node.
+     * @param operand the operand
+     * @return the unary expression
+     */
+    public static UnaryExpr not(Expression operand)
+    {
         return new UnaryExpr(UnaryOperator.NOT, operand, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static UnaryExpr neg(Expression operand) {
+    /**
+     * Builds an arithmetic negation node typed from the operand.
+     * @param operand the operand
+     * @return the unary expression
+     */
+    public static UnaryExpr neg(Expression operand)
+    {
         return new UnaryExpr(UnaryOperator.NEG, operand, operand.getType());
     }
 
-    public static UnaryExpr preIncr(Expression operand) {
+    /**
+     * Builds a pre-increment node typed from the operand.
+     * @param operand the operand
+     * @return the unary expression
+     */
+    public static UnaryExpr preIncr(Expression operand)
+    {
         return new UnaryExpr(UnaryOperator.PRE_INC, operand, operand.getType());
     }
 
-    public static UnaryExpr preDecr(Expression operand) {
+    /**
+     * Builds a pre-decrement node typed from the operand.
+     * @param operand the operand
+     * @return the unary expression
+     */
+    public static UnaryExpr preDecr(Expression operand)
+    {
         return new UnaryExpr(UnaryOperator.PRE_DEC, operand, operand.getType());
     }
 
-    public static UnaryExpr postIncr(Expression operand) {
+    /**
+     * Builds a post-increment node typed from the operand.
+     * @param operand the operand
+     * @return the unary expression
+     */
+    public static UnaryExpr postIncr(Expression operand)
+    {
         return new UnaryExpr(UnaryOperator.POST_INC, operand, operand.getType());
     }
 
-    public static UnaryExpr postDecr(Expression operand) {
+    /**
+     * Builds a post-decrement node typed from the operand.
+     * @param operand the operand
+     * @return the unary expression
+     */
+    public static UnaryExpr postDecr(Expression operand)
+    {
         return new UnaryExpr(UnaryOperator.POST_DEC, operand, operand.getType());
     }
 
-    // ========================
     // Other Expressions
-    // ========================
 
-    public static TernaryExpr ternary(Expression condition, Expression thenExpr, Expression elseExpr) {
+    /**
+     * Builds a ternary conditional node typed from the then branch.
+     * @param condition the condition
+     * @param thenExpr the value when true
+     * @param elseExpr the value when false
+     * @return the ternary expression
+     */
+    public static TernaryExpr ternary(Expression condition, Expression thenExpr, Expression elseExpr)
+    {
         return new TernaryExpr(condition, thenExpr, elseExpr, thenExpr.getType());
     }
 
-    public static CastExpr cast(SourceType targetType, Expression expr) {
+    /**
+     * Builds a cast node.
+     * @param targetType the type cast to
+     * @param expr the expression being cast
+     * @return the cast expression
+     */
+    public static CastExpr cast(SourceType targetType, Expression expr)
+    {
         return new CastExpr(targetType, expr);
     }
 
-    public static InstanceOfExpr instanceOf(Expression expr, SourceType checkType) {
+    /**
+     * Builds an instanceof test node.
+     * @param expr the tested expression
+     * @param checkType the type tested against
+     * @return the instanceof expression
+     */
+    public static InstanceOfExpr instanceOf(Expression expr, SourceType checkType)
+    {
         return new InstanceOfExpr(expr, checkType);
     }
 
-    public static InstanceOfExpr instanceOf(Expression expr, SourceType checkType, String patternVar) {
+    /**
+     * Builds an instanceof test node with a pattern variable.
+     * @param expr the tested expression
+     * @param checkType the type tested against
+     * @param patternVar the binding variable name
+     * @return the instanceof expression
+     */
+    public static InstanceOfExpr instanceOf(Expression expr, SourceType checkType, String patternVar)
+    {
         return new InstanceOfExpr(expr, checkType, patternVar);
     }
 
-    public static ArrayAccessExpr arrayAccess(Expression array, Expression index, SourceType elementType) {
+    /**
+     * Builds an array element access node.
+     * @param array the array expression
+     * @param index the index expression
+     * @param elementType the element type
+     * @return the array access expression
+     */
+    public static ArrayAccessExpr arrayAccess(Expression array, Expression index, SourceType elementType)
+    {
         return new ArrayAccessExpr(array, index, elementType);
     }
 
-    public static NewExpr newObj(String className, Expression... args) {
+    /**
+     * Builds an object instantiation node.
+     * @param className the class being instantiated
+     * @param args the constructor arguments
+     * @return the new expression
+     */
+    public static NewExpr newObj(String className, Expression... args)
+    {
         return new NewExpr(className, Arrays.asList(args));
     }
 
-    public static NewArrayExpr newArray(SourceType elementType, Expression size) {
+    /**
+     * Builds a sized array allocation node.
+     * @param elementType the element type
+     * @param size the length expression
+     * @return the new-array expression
+     */
+    public static NewArrayExpr newArray(SourceType elementType, Expression size)
+    {
         return NewArrayExpr.withSize(elementType, size);
     }
 
-    public static ArrayInitExpr arrayInit(SourceType elementType, Expression... elements) {
+    /**
+     * Builds an array initializer node.
+     * @param elementType the element type
+     * @param elements the initial elements
+     * @return the array initializer expression
+     */
+    public static ArrayInitExpr arrayInit(SourceType elementType, Expression... elements)
+    {
         return ArrayInitExpr.of(elementType, Arrays.asList(elements));
     }
 
-    public static ThisExpr thisExpr(SourceType type) {
+    /**
+     * Builds a this reference node.
+     * @param type the enclosing class type
+     * @return the this expression
+     */
+    public static ThisExpr thisExpr(SourceType type)
+    {
         return new ThisExpr(type);
     }
 
-    public static ClassExpr classExpr(SourceType classType) {
+    /**
+     * Builds a class literal node.
+     * @param classType the type whose class is referenced
+     * @return the class expression
+     */
+    public static ClassExpr classExpr(SourceType classType)
+    {
         return new ClassExpr(classType);
     }
 
-    // ========================
     // Field Access
-    // ========================
 
-    public static FieldAccessExpr fieldAccess(Expression receiver, String fieldName, String ownerClass, SourceType type) {
+    /**
+     * Builds an instance field access node.
+     * @param receiver the receiver expression
+     * @param fieldName the field name
+     * @param ownerClass the class declaring the field
+     * @param type the field type
+     * @return the field access expression
+     */
+    public static FieldAccessExpr fieldAccess(Expression receiver, String fieldName, String ownerClass, SourceType type)
+    {
         return FieldAccessExpr.instanceField(receiver, fieldName, ownerClass, type);
     }
 
-    public static FieldAccessExpr staticField(String ownerClass, String fieldName, SourceType type) {
+    /**
+     * Builds a static field access node.
+     * @param ownerClass the class declaring the field
+     * @param fieldName the field name
+     * @param type the field type
+     * @return the field access expression
+     */
+    public static FieldAccessExpr staticField(String ownerClass, String fieldName, SourceType type)
+    {
         return FieldAccessExpr.staticField(ownerClass, fieldName, type);
     }
 
-    // ========================
     // Method Calls
-    // ========================
 
-    public static MethodCallExpr methodCall(Expression receiver, String methodName, String ownerClass,
-                                            SourceType returnType, Expression... args) {
+    /**
+     * Builds an instance method call node.
+     * @param receiver the receiver expression
+     * @param methodName the method name
+     * @param ownerClass the class declaring the method
+     * @param returnType the return type
+     * @param args the call arguments
+     * @return the method call expression
+     */
+    public static MethodCallExpr methodCall(Expression receiver, String methodName, String ownerClass, SourceType returnType, Expression... args)
+    {
         return MethodCallExpr.instanceCall(receiver, methodName, ownerClass, Arrays.asList(args), returnType);
     }
 
-    public static MethodCallExpr staticCall(String ownerClass, String methodName,
-                                            SourceType returnType, Expression... args) {
+    /**
+     * Builds a static method call node.
+     * @param ownerClass the class declaring the method
+     * @param methodName the method name
+     * @param returnType the return type
+     * @param args the call arguments
+     * @return the method call expression
+     */
+    public static MethodCallExpr staticCall(String ownerClass, String methodName, SourceType returnType, Expression... args)
+    {
         return MethodCallExpr.staticCall(ownerClass, methodName, Arrays.asList(args), returnType);
     }
 
-    // ========================
     // Statements
-    // ========================
 
-    public static BlockStmt block(Statement... statements) {
+    /**
+     * Builds a block statement node.
+     * @param statements the contained statements
+     * @return the block statement
+     */
+    public static BlockStmt block(Statement... statements)
+    {
         return new BlockStmt(Arrays.asList(statements));
     }
 
-    public static BlockStmt block(List<Statement> statements) {
+    /**
+     * Builds a block statement node.
+     * @param statements the contained statements
+     * @return the block statement
+     */
+    public static BlockStmt block(List<Statement> statements)
+    {
         return new BlockStmt(statements);
     }
 
-    public static IfStmt ifStmt(Expression condition, Statement thenBranch) {
+    /**
+     * Builds an if statement node without an else branch.
+     * @param condition the condition
+     * @param thenBranch the branch taken when true
+     * @return the if statement
+     */
+    public static IfStmt ifStmt(Expression condition, Statement thenBranch)
+    {
         return new IfStmt(condition, thenBranch);
     }
 
-    public static IfStmt ifElse(Expression condition, Statement thenBranch, Statement elseBranch) {
+    /**
+     * Builds an if-else statement node.
+     * @param condition the condition
+     * @param thenBranch the branch taken when true
+     * @param elseBranch the branch taken when false
+     * @return the if statement
+     */
+    public static IfStmt ifElse(Expression condition, Statement thenBranch, Statement elseBranch)
+    {
         return new IfStmt(condition, thenBranch, elseBranch);
     }
 
-    public static WhileStmt whileLoop(Expression condition, Statement body) {
+    /**
+     * Builds a while loop node.
+     * @param condition the loop condition
+     * @param body the loop body
+     * @return the while statement
+     */
+    public static WhileStmt whileLoop(Expression condition, Statement body)
+    {
         return new WhileStmt(condition, body);
     }
 
-    public static DoWhileStmt doWhile(Statement body, Expression condition) {
+    /**
+     * Builds a do-while loop node.
+     * @param body the loop body
+     * @param condition the loop condition
+     * @return the do-while statement
+     */
+    public static DoWhileStmt doWhile(Statement body, Expression condition)
+    {
         return new DoWhileStmt(body, condition);
     }
 
-    public static ForStmt forLoop(List<Statement> init, Expression condition, List<Expression> update, Statement body) {
+    /**
+     * Builds a for loop node.
+     * @param init the initializer statements
+     * @param condition the loop condition
+     * @param update the update expressions
+     * @param body the loop body
+     * @return the for statement
+     */
+    public static ForStmt forLoop(List<Statement> init, Expression condition, List<Expression> update, Statement body)
+    {
         return new ForStmt(init, condition, update, body);
     }
 
-    public static ForStmt infiniteLoop(Statement body) {
+    /**
+     * Builds an infinite for loop node.
+     * @param body the loop body
+     * @return the for statement
+     */
+    public static ForStmt infiniteLoop(Statement body)
+    {
         return ForStmt.infinite(body);
     }
 
-    public static ForEachStmt forEach(VarDeclStmt variable, Expression iterable, Statement body) {
+    /**
+     * Builds an enhanced-for loop node.
+     * @param variable the loop variable declaration
+     * @param iterable the iterated expression
+     * @param body the loop body
+     * @return the for-each statement
+     */
+    public static ForEachStmt forEach(VarDeclStmt variable, Expression iterable, Statement body)
+    {
         return new ForEachStmt(variable, iterable, body);
     }
 
-    public static ReturnStmt returnStmt(Expression value) {
+    /**
+     * Builds a value-returning return statement node.
+     * @param value the returned expression
+     * @return the return statement
+     */
+    public static ReturnStmt returnStmt(Expression value)
+    {
         return new ReturnStmt(value);
     }
 
-    public static ReturnStmt returnVoid() {
+    /**
+     * Builds a void return statement node.
+     * @return the return statement
+     */
+    public static ReturnStmt returnVoid()
+    {
         return new ReturnStmt();
     }
 
-    public static ThrowStmt throwStmt(Expression exception) {
+    /**
+     * Builds a throw statement node.
+     * @param exception the thrown expression
+     * @return the throw statement
+     */
+    public static ThrowStmt throwStmt(Expression exception)
+    {
         return new ThrowStmt(exception);
     }
 
-    public static BreakStmt breakStmt() {
+    /**
+     * Builds an unlabeled break statement node.
+     * @return the break statement
+     */
+    public static BreakStmt breakStmt()
+    {
         return new BreakStmt();
     }
 
-    public static BreakStmt breakStmt(String label) {
+    /**
+     * Builds a labeled break statement node.
+     * @param label the target label
+     * @return the break statement
+     */
+    public static BreakStmt breakStmt(String label)
+    {
         return new BreakStmt(label);
     }
 
-    public static ContinueStmt continueStmt() {
+    /**
+     * Builds an unlabeled continue statement node.
+     * @return the continue statement
+     */
+    public static ContinueStmt continueStmt()
+    {
         return new ContinueStmt();
     }
 
-    public static ContinueStmt continueStmt(String label) {
+    /**
+     * Builds a labeled continue statement node.
+     * @param label the target label
+     * @return the continue statement
+     */
+    public static ContinueStmt continueStmt(String label)
+    {
         return new ContinueStmt(label);
     }
 
-    public static ExprStmt exprStmt(Expression expr) {
+    /**
+     * Builds an expression statement node.
+     * @param expr the wrapped expression
+     * @return the expression statement
+     */
+    public static ExprStmt exprStmt(Expression expr)
+    {
         return new ExprStmt(expr);
     }
 
-    public static VarDeclStmt varDecl(SourceType type, String name) {
+    /**
+     * Builds an uninitialized local variable declaration node.
+     * @param type the variable type
+     * @param name the variable name
+     * @return the declaration statement
+     */
+    public static VarDeclStmt varDecl(SourceType type, String name)
+    {
         return new VarDeclStmt(type, name);
     }
 
-    public static VarDeclStmt varDecl(SourceType type, String name, Expression initializer) {
+    /**
+     * Builds an initialized local variable declaration node.
+     * @param type the variable type
+     * @param name the variable name
+     * @param initializer the initial value
+     * @return the declaration statement
+     */
+    public static VarDeclStmt varDecl(SourceType type, String name, Expression initializer)
+    {
         return new VarDeclStmt(type, name, initializer);
     }
 
-    public static VarDeclStmt finalVar(SourceType type, String name, Expression initializer) {
+    /**
+     * Builds a final local variable declaration node.
+     * @param type the variable type
+     * @param name the variable name
+     * @param initializer the initial value
+     * @return the declaration statement
+     */
+    public static VarDeclStmt finalVar(SourceType type, String name, Expression initializer)
+    {
         return new VarDeclStmt(type, name, initializer, false, true, SourceLocation.UNKNOWN);
     }
 
-    public static LabeledStmt labeled(String label, Statement statement) {
+    /**
+     * Builds a labeled statement node.
+     * @param label the label name
+     * @param statement the labeled statement
+     * @return the labeled statement
+     */
+    public static LabeledStmt labeled(String label, Statement statement)
+    {
         return new LabeledStmt(label, statement);
     }
 
-    public static SynchronizedStmt synchronizedStmt(Expression lock, Statement body) {
+    /**
+     * Builds a synchronized block node.
+     * @param lock the monitor expression
+     * @param body the guarded body
+     * @return the synchronized statement
+     */
+    public static SynchronizedStmt synchronizedStmt(Expression lock, Statement body)
+    {
         return new SynchronizedStmt(lock, body);
     }
 
-    public static TryCatchStmt tryCatch(Statement tryBlock, List<CatchClause> catches) {
+    /**
+     * Builds a try-catch statement node.
+     * @param tryBlock the guarded block
+     * @param catches the catch clauses
+     * @return the try-catch statement
+     */
+    public static TryCatchStmt tryCatch(Statement tryBlock, List<CatchClause> catches)
+    {
         return new TryCatchStmt(tryBlock, catches);
     }
 
-    public static TryCatchStmt tryCatchFinally(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock) {
+    /**
+     * Builds a try-catch-finally statement node.
+     * @param tryBlock the guarded block
+     * @param catches the catch clauses
+     * @param finallyBlock the finally block
+     * @return the try-catch statement
+     */
+    public static TryCatchStmt tryCatchFinally(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock)
+    {
         return new TryCatchStmt(tryBlock, catches, finallyBlock);
     }
 
-    public static SwitchStmt switchStmt(Expression selector, List<SwitchCase> cases) {
+    /**
+     * Builds a switch statement node.
+     * @param selector the switched expression
+     * @param cases the case groups
+     * @return the switch statement
+     */
+    public static SwitchStmt switchStmt(Expression selector, List<SwitchCase> cases)
+    {
         return new SwitchStmt(selector, cases);
     }
 
-    // ========================
     // Type Utilities
-    // ========================
 
-    public static ReferenceSourceType refType(String className) {
+    /**
+     * Builds a reference type node.
+     * @param className the referenced class
+     * @return the reference type
+     */
+    public static ReferenceSourceType refType(String className)
+    {
         return new ReferenceSourceType(className);
     }
 
-    public static ArraySourceType arrayType(SourceType elementType) {
+    /**
+     * Builds a one-dimensional array type node.
+     * @param elementType the element type
+     * @return the array type
+     */
+    public static ArraySourceType arrayType(SourceType elementType)
+    {
         return new ArraySourceType(elementType);
     }
 
-    public static ArraySourceType arrayType(SourceType elementType, int dimensions) {
+    /**
+     * Builds a multi-dimensional array type node.
+     * @param elementType the element type
+     * @param dimensions the number of dimensions
+     * @return the array type
+     */
+    public static ArraySourceType arrayType(SourceType elementType, int dimensions)
+    {
         return new ArraySourceType(elementType, dimensions);
     }
 }

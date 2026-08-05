@@ -9,13 +9,16 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FieldBuilderTest {
+class FieldBuilderTest
+{
 
     @Nested
-    class BasicFieldCreation {
+    class BasicFieldCreation
+    {
 
         @Test
-        void addFieldCreatesFieldEntry() {
+        void addFieldCreatesFieldEntry()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "value", "I")
                 .end()
@@ -27,7 +30,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void addFieldWithObjectType() {
+        void addFieldWithObjectType()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "name", "Ljava/lang/String;")
                 .end()
@@ -39,7 +43,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void addFieldWithArrayType() {
+        void addFieldWithArrayType()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "data", "[B")
                 .end()
@@ -52,10 +57,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class FieldAccessFlags {
+    class FieldAccessFlags
+    {
 
         @Test
-        void privateField() {
+        void privateField()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "privateField", "I")
                 .end()
@@ -66,7 +73,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void publicStaticField() {
+        void publicStaticField()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "staticField", "I")
                 .end()
@@ -78,7 +86,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void syntheticField() {
+        void syntheticField()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "syntheticField", "I")
                 .synthetic()
@@ -91,10 +100,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class MultipleFields {
+    class MultipleFields
+    {
 
         @Test
-        void addMultipleFields() {
+        void addMultipleFields()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "field1", "I")
                 .end()
@@ -111,10 +122,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class EndMethod {
+    class EndMethod
+    {
 
         @Test
-        void endReturnsClassBuilder() {
+        void endReturnsClassBuilder()
+        {
             ClassBuilder cb = ClassBuilder.create("com/test/FieldTest");
             FieldBuilder fb = cb.addField(AccessFlags.ACC_PRIVATE, "field", "I");
             ClassBuilder returned = fb.end();
@@ -124,10 +137,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class DeprecatedTests {
+    class DeprecatedTests
+    {
 
         @Test
-        void deprecatedAddsDeprecatedAttribute() {
+        void deprecatedAddsDeprecatedAttribute()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "oldField", "I")
                 .deprecated()
@@ -142,7 +157,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void deprecatedFieldHasCorrectAccess() {
+        void deprecatedFieldHasCorrectAccess()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PUBLIC, "deprecatedField", "I")
                 .deprecated()
@@ -155,10 +171,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class ConstantValueTests {
+    class ConstantValueTests
+    {
 
         @Test
-        void constantValueWithInteger() {
+        void constantValueWithInteger()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC | AccessFlags.ACC_FINAL, "MAX_VALUE", "I")
                 .constantValue(100)
@@ -170,7 +188,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void constantValueWithString() {
+        void constantValueWithString()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC | AccessFlags.ACC_FINAL, "NAME", "Ljava/lang/String;")
                 .constantValue("TestValue")
@@ -182,7 +201,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void constantValueWithLong() {
+        void constantValueWithLong()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC | AccessFlags.ACC_FINAL, "LONG_VALUE", "J")
                 .constantValue(999999999L)
@@ -195,10 +215,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class SyntheticTests {
+    class SyntheticTests
+    {
 
         @Test
-        void syntheticAddsSyntheticFlag() {
+        void syntheticAddsSyntheticFlag()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "syntheticField", "I")
                 .synthetic()
@@ -210,7 +232,8 @@ class FieldBuilderTest {
         }
 
         @Test
-        void getAccessReturnsSyntheticFlag() {
+        void getAccessReturnsSyntheticFlag()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PUBLIC, "syntheticPublic", "I")
                 .synthetic()
@@ -225,10 +248,12 @@ class FieldBuilderTest {
     }
 
     @Nested
-    class CombinedAttributesTests {
+    class CombinedAttributesTests
+    {
 
         @Test
-        void fieldCanBeBothSyntheticAndDeprecated() {
+        void fieldCanBeBothSyntheticAndDeprecated()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "syntheticDeprecated", "I")
                 .synthetic()
@@ -244,9 +269,12 @@ class FieldBuilderTest {
         }
     }
 
-    private FieldEntry findField(ClassFile cf, String name) {
-        for (FieldEntry field : cf.getFields()) {
-            if (field.getName().equals(name)) {
+    private FieldEntry findField(ClassFile cf, String name)
+    {
+        for (FieldEntry field : cf.getFields())
+        {
+            if (field.getName().equals(name))
+            {
                 return field;
             }
         }

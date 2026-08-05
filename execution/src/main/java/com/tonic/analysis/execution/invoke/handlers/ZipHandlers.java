@@ -9,20 +9,28 @@ import com.tonic.analysis.execution.state.ConcreteValue;
 import java.util.zip.CRC32;
 import java.util.zip.Adler32;
 
-public final class ZipHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for java.util.zip: CRC32 and Adler32 checksums computed with the real
+ * JDK implementations, plus Inflater and Deflater intrinsics.
+ */
+public final class ZipHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerCRC32Handlers(registry);
         registerAdler32Handlers(registry);
         registerInflaterHandlers(registry);
         registerDeflaterHandlers(registry);
     }
 
-    private void registerCRC32Handlers(NativeRegistry registry) {
+    private void registerCRC32Handlers(NativeRegistry registry)
+    {
         registry.register("java/util/zip/CRC32", "update", "(I)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "CRC32.update on null");
                 }
                 Object crcObj = receiver.getField("java/util/zip/CRC32", "crc", "J");
@@ -36,7 +44,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
         registry.register("java/util/zip/CRC32", "updateBytes", "(J[BII)I",
             (receiver, args, ctx) -> {
                 long crc = args[0].asLong();
-                if (args[1].isNull()) {
+                if (args[1].isNull())
+                {
                     throw new NativeException("java/lang/NullPointerException", "CRC32.updateBytes null array");
                 }
                 ArrayInstance arr = (ArrayInstance) args[1].asReference();
@@ -44,7 +53,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
                 int len = args[3].asInt();
                 CRC32 temp = new CRC32();
                 byte[] bytes = new byte[len];
-                for (int i = 0; i < len; i++) {
+                for (int i = 0; i < len; i++)
+                {
                     bytes[i] = arr.getByte(off + i);
                 }
                 temp.update(bytes);
@@ -58,7 +68,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
 
         registry.register("java/util/zip/CRC32", "getValue", "()J",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "CRC32.getValue on null");
                 }
                 Object crcObj = receiver.getField("java/util/zip/CRC32", "crc", "J");
@@ -67,7 +78,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
 
         registry.register("java/util/zip/CRC32", "reset", "()V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "CRC32.reset on null");
                 }
                 receiver.setField("java/util/zip/CRC32", "crc", "J", 0L);
@@ -75,10 +87,12 @@ public final class ZipHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerAdler32Handlers(NativeRegistry registry) {
+    private void registerAdler32Handlers(NativeRegistry registry)
+    {
         registry.register("java/util/zip/Adler32", "update", "(I)V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Adler32.update on null");
                 }
                 Object adlerObj = receiver.getField("java/util/zip/Adler32", "adler", "J");
@@ -90,7 +104,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
 
         registry.register("java/util/zip/Adler32", "updateBytes", "(J[BII)I",
             (receiver, args, ctx) -> {
-                if (args[1].isNull()) {
+                if (args[1].isNull())
+                {
                     throw new NativeException("java/lang/NullPointerException", "Adler32.updateBytes null array");
                 }
                 ArrayInstance arr = (ArrayInstance) args[1].asReference();
@@ -98,7 +113,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
                 int len = args[3].asInt();
                 Adler32 temp = new Adler32();
                 byte[] bytes = new byte[len];
-                for (int i = 0; i < len; i++) {
+                for (int i = 0; i < len; i++)
+                {
                     bytes[i] = arr.getByte(off + i);
                 }
                 temp.update(bytes);
@@ -112,7 +128,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
 
         registry.register("java/util/zip/Adler32", "getValue", "()J",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Adler32.getValue on null");
                 }
                 Object adlerObj = receiver.getField("java/util/zip/Adler32", "adler", "J");
@@ -121,7 +138,8 @@ public final class ZipHandlers implements NativeHandlerProvider {
 
         registry.register("java/util/zip/Adler32", "reset", "()V",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "Adler32.reset on null");
                 }
                 receiver.setField("java/util/zip/Adler32", "adler", "J", 1L);
@@ -129,14 +147,14 @@ public final class ZipHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerInflaterHandlers(NativeRegistry registry) {
+    private void registerInflaterHandlers(NativeRegistry registry)
+    {
         registry.register("java/util/zip/Inflater", "init", "(Z)J",
             (receiver, args, ctx) -> {
                 return ConcreteValue.longValue(System.nanoTime());
             });
 
-        registry.register("java/util/zip/Inflater", "initBytes", "(J[BII)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Inflater", "initBytes", "(J[BII)V", (receiver, args, ctx) -> null);
 
         registry.register("java/util/zip/Inflater", "inflateBytes", "(J[BII)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
@@ -153,21 +171,19 @@ public final class ZipHandlers implements NativeHandlerProvider {
         registry.register("java/util/zip/Inflater", "getBytesWritten", "(J)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
 
-        registry.register("java/util/zip/Inflater", "reset", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Inflater", "reset", "(J)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/util/zip/Inflater", "end", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Inflater", "end", "(J)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerDeflaterHandlers(NativeRegistry registry) {
+    private void registerDeflaterHandlers(NativeRegistry registry)
+    {
         registry.register("java/util/zip/Deflater", "init", "(IIZ)J",
             (receiver, args, ctx) -> {
                 return ConcreteValue.longValue(System.nanoTime());
             });
 
-        registry.register("java/util/zip/Deflater", "initBytes", "(J[BII)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Deflater", "initBytes", "(J[BII)V", (receiver, args, ctx) -> null);
 
         registry.register("java/util/zip/Deflater", "deflateBytes", "(J[BIII)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
@@ -184,16 +200,12 @@ public final class ZipHandlers implements NativeHandlerProvider {
         registry.register("java/util/zip/Deflater", "getBytesWritten", "(J)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
 
-        registry.register("java/util/zip/Deflater", "reset", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Deflater", "reset", "(J)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/util/zip/Deflater", "end", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Deflater", "end", "(J)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/util/zip/Deflater", "setDictionary", "(J[BII)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Deflater", "setDictionary", "(J[BII)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/util/zip/Deflater", "setDictionaryBuffer", "(JJI)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/util/zip/Deflater", "setDictionaryBuffer", "(JJI)V", (receiver, args, ctx) -> null);
     }
 }

@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@code NoSuchMethodError} at call time. No decompile-level gate catches this (the wrong descriptor re-decompiles
  * to the same source, and verification resolves invokes lazily), so this test EXECUTES the recompiled methods.
  */
-class SubtypeArgDescriptorFidelityTest {
+class SubtypeArgDescriptorFidelityTest
+{
 
     private static final String SOURCE =
             "public class SubtypeArgs {\n"
@@ -48,14 +49,14 @@ class SubtypeArgDescriptorFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("subtype-arg");
         Path src = dir.resolve("SubtypeArgs.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("SubtypeArgs.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -66,19 +67,22 @@ class SubtypeArgDescriptorFidelityTest {
     }
 
     @Test
-    void subtypeArgumentToObjectParameterResolves() throws Exception {
+    void subtypeArgumentToObjectParameterResolves() throws Exception
+    {
         assertEquals(1, recompiledClass.getDeclaredMethod("listAddObject").invoke(null),
                 "List.add(Object) called with a String must resolve, not throw NoSuchMethodError");
     }
 
     @Test
-    void subtypeArgumentToStaticObjectParameterResolves() throws Exception {
+    void subtypeArgumentToStaticObjectParameterResolves() throws Exception
+    {
         assertEquals("7", recompiledClass.getDeclaredMethod("requireNonNullSubtype").invoke(null),
                 "Objects.requireNonNull(Object) called with an Integer must resolve");
     }
 
     @Test
-    void subtypeArgumentToThrowableConstructorResolves() throws Exception {
+    void subtypeArgumentToThrowableConstructorResolves() throws Exception
+    {
         assertEquals("wrapped/IOException", recompiledClass.getDeclaredMethod("wrapSubtypeThrowable").invoke(null),
                 "RuntimeException(String, Throwable) called with an IOException must resolve");
     }

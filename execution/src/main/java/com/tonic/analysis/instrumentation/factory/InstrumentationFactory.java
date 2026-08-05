@@ -15,49 +15,50 @@ import java.util.*;
  * Generates the IR instruction sequences needed to call hook methods
  * with the appropriate parameters.
  */
-public class InstrumentationFactory {
+public class InstrumentationFactory
+{
 
     /**
      * Creates instructions to invoke a method entry hook.
-     *
      * @param hook the method entry hook configuration
      * @param irMethod the IR method being instrumented
      * @param sourceMethod the source method entry
      * @param className the class name (internal format)
      * @return list of IR instructions to insert
      */
-    public List<IRInstruction> createMethodEntryHook(
-            MethodEntryHook hook,
-            IRMethod irMethod,
-            MethodEntry sourceMethod,
-            String className) {
+    public List<IRInstruction> createMethodEntryHook(MethodEntryHook hook, IRMethod irMethod, MethodEntry sourceMethod, String className)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        // Build arguments based on configuration
-        if (hook.isPassThis() && !isStatic(sourceMethod)) {
+        if (hook.isPassThis() && !isStatic(sourceMethod))
+        {
             // 'this' is the first parameter for instance methods
             List<SSAValue> params = irMethod.getParameters();
-            if (!params.isEmpty()) {
+            if (!params.isEmpty())
+            {
                 arguments.add(params.get(0));
             }
         }
 
-        if (hook.isPassClassName()) {
+        if (hook.isPassClassName())
+        {
             SSAValue classNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(classNameValue, new StringConstant(className.replace('/', '.'))));
             arguments.add(classNameValue);
         }
 
-        if (hook.isPassMethodName()) {
+        if (hook.isPassMethodName())
+        {
             SSAValue methodNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(methodNameValue, new StringConstant(sourceMethod.getName())));
             arguments.add(methodNameValue);
         }
 
-        if (hook.isPassAllParameters()) {
+        if (hook.isPassAllParameters())
+        {
             // Create Object[] containing all parameters (boxed if primitive)
             List<SSAValue> params = irMethod.getParameters();
             int startIdx = isStatic(sourceMethod) ? 0 : 1;  // Skip 'this' for instance methods
@@ -69,7 +70,8 @@ public class InstrumentationFactory {
             SSAValue arrayRef = new SSAValue(new ArrayType(ReferenceType.OBJECT));
             instructions.add(new NewArrayInstruction(arrayRef, ReferenceType.OBJECT, arraySizeValue));
 
-            for (int i = startIdx; i < params.size(); i++) {
+            for (int i = startIdx; i < params.size(); i++)
+            {
                 SSAValue param = params.get(i);
                 int arrayIndex = i - startIdx;
 
@@ -85,13 +87,16 @@ public class InstrumentationFactory {
         }
 
         // Handle specific parameter indices
-        if (!hook.getParameterIndices().isEmpty()) {
+        if (!hook.getParameterIndices().isEmpty())
+        {
             List<SSAValue> params = irMethod.getParameters();
             int startIdx = isStatic(sourceMethod) ? 0 : 1;
 
-            for (Integer paramIndex : hook.getParameterIndices()) {
+            for (Integer paramIndex : hook.getParameterIndices())
+            {
                 int actualIndex = startIdx + paramIndex;
-                if (actualIndex < params.size()) {
+                if (actualIndex < params.size())
+                {
                     SSAValue param = params.get(actualIndex);
                     Value boxedValue = boxIfPrimitive(param, instructions);
                     arguments.add(boxedValue);
@@ -101,7 +106,8 @@ public class InstrumentationFactory {
 
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
-        if (!returnType.equals("V")) {
+        if (!returnType.equals("V"))
+        {
             result = new SSAValue(IRType.fromDescriptor(returnType));
         }
 
@@ -120,7 +126,6 @@ public class InstrumentationFactory {
 
     /**
      * Creates instructions to invoke a method exit hook.
-     *
      * @param hook the method exit hook configuration
      * @param irMethod the IR method being instrumented
      * @param returnInstr the return instruction being hooked
@@ -128,42 +133,46 @@ public class InstrumentationFactory {
      * @param className the class name (internal format)
      * @return list of IR instructions to insert
      */
-    public List<IRInstruction> createMethodExitHook(
-            MethodExitHook hook,
-            IRMethod irMethod,
-            ReturnInstruction returnInstr,
-            MethodEntry sourceMethod,
-            String className) {
+    public List<IRInstruction> createMethodExitHook(MethodExitHook hook, IRMethod irMethod, ReturnInstruction returnInstr, MethodEntry sourceMethod, String className)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassThis() && !isStatic(sourceMethod)) {
+        if (hook.isPassThis() && !isStatic(sourceMethod))
+        {
             List<SSAValue> params = irMethod.getParameters();
-            if (!params.isEmpty()) {
+            if (!params.isEmpty())
+            {
                 arguments.add(params.get(0));
             }
         }
 
-        if (hook.isPassClassName()) {
+        if (hook.isPassClassName())
+        {
             SSAValue classNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(classNameValue, new StringConstant(className.replace('/', '.'))));
             arguments.add(classNameValue);
         }
 
-        if (hook.isPassMethodName()) {
+        if (hook.isPassMethodName())
+        {
             SSAValue methodNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(methodNameValue, new StringConstant(sourceMethod.getName())));
             arguments.add(methodNameValue);
         }
 
-        if (hook.isPassReturnValue()) {
+        if (hook.isPassReturnValue())
+        {
             Value returnValue = returnInstr.getReturnValue();
-            if (returnValue != null) {
+            if (returnValue != null)
+            {
                 Value boxedValue = boxIfPrimitive(returnValue, instructions);
                 arguments.add(boxedValue);
-            } else {
+            }
+            else
+            {
                 // Void return - pass null
                 arguments.add(NullConstant.INSTANCE);
             }
@@ -171,7 +180,8 @@ public class InstrumentationFactory {
 
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
-        if (!returnType.equals("V")) {
+        if (!returnType.equals("V"))
+        {
             result = new SSAValue(IRType.fromDescriptor(returnType));
         }
 
@@ -188,42 +198,56 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-
-    public List<IRInstruction> createFieldWriteHook(
-            FieldWriteHook hook,
-            FieldAccessInstruction fieldAccess) {
+    /**
+     * Creates instructions to invoke a field write hook.
+     * @param hook the field write hook configuration
+     * @param fieldAccess the field store instruction being hooked
+     * @return list of IR instructions to insert
+     */
+    public List<IRInstruction> createFieldWriteHook(FieldWriteHook hook, FieldAccessInstruction fieldAccess)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassOwner()) {
-            if (fieldAccess.isStatic()) {
+        if (hook.isPassOwner())
+        {
+            if (fieldAccess.isStatic())
+            {
                 arguments.add(NullConstant.INSTANCE);
-            } else {
+            }
+            else
+            {
                 arguments.add(fieldAccess.getObjectRef());
             }
         }
 
-        if (hook.isPassFieldName()) {
+        if (hook.isPassFieldName())
+        {
             SSAValue fieldNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(fieldNameValue, new StringConstant(fieldAccess.getName())));
             arguments.add(fieldNameValue);
         }
 
-        if (hook.isPassNewValue()) {
+        if (hook.isPassNewValue())
+        {
             Value newValue = fieldAccess.getValue();
             Value boxedValue = boxIfPrimitive(newValue, instructions);
             arguments.add(boxedValue);
         }
 
-        if (hook.isPassOldValue()) {
+        if (hook.isPassOldValue())
+        {
             SSAValue oldValue = new SSAValue(IRType.fromDescriptor(fieldAccess.getDescriptor()));
             FieldAccessInstruction loadField;
-            if (fieldAccess.isStatic()) {
+            if (fieldAccess.isStatic())
+            {
                 loadField = FieldAccessInstruction.createStaticLoad(
                     oldValue, fieldAccess.getOwner(), fieldAccess.getName(), fieldAccess.getDescriptor());
-            } else {
+            }
+            else
+            {
                 loadField = FieldAccessInstruction.createLoad(
                     oldValue, fieldAccess.getOwner(), fieldAccess.getName(),
                     fieldAccess.getDescriptor(), fieldAccess.getObjectRef());
@@ -234,7 +258,8 @@ public class InstrumentationFactory {
         }
 
         SSAValue result = null;
-        if (hook.isCanModifyValue()) {
+        if (hook.isCanModifyValue())
+        {
             result = new SSAValue(ReferenceType.OBJECT);
         }
 
@@ -251,31 +276,39 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-
-    public List<IRInstruction> createArrayStoreHook(
-            ArrayStoreHook hook,
-            ArrayAccessInstruction arrayAccess) {
+    /**
+     * Creates instructions to invoke an array store hook.
+     * @param hook the array store hook configuration
+     * @param arrayAccess the array store instruction being hooked
+     * @return list of IR instructions to insert
+     */
+    public List<IRInstruction> createArrayStoreHook(ArrayStoreHook hook, ArrayAccessInstruction arrayAccess)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassArray()) {
+        if (hook.isPassArray())
+        {
             arguments.add(arrayAccess.getArray());
         }
 
-        if (hook.isPassIndex()) {
+        if (hook.isPassIndex())
+        {
             arguments.add(arrayAccess.getIndex());
         }
 
-        if (hook.isPassValue()) {
+        if (hook.isPassValue())
+        {
             Value value = arrayAccess.getValue();
             Value boxedValue = boxIfPrimitive(value, instructions);
             arguments.add(boxedValue);
         }
 
         SSAValue result = null;
-        if (hook.isCanModifyValue()) {
+        if (hook.isCanModifyValue())
+        {
             result = new SSAValue(ReferenceType.OBJECT);
         }
 
@@ -292,32 +325,43 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-
-    public List<IRInstruction> createFieldReadHook(
-            FieldReadHook hook,
-            FieldAccessInstruction fieldAccess) {
+    /**
+     * Creates instructions to invoke a field read hook.
+     * @param hook the field read hook configuration
+     * @param fieldAccess the field load instruction being hooked
+     * @return list of IR instructions to insert
+     */
+    public List<IRInstruction> createFieldReadHook(FieldReadHook hook, FieldAccessInstruction fieldAccess)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassOwner()) {
-            if (fieldAccess.isStatic()) {
+        if (hook.isPassOwner())
+        {
+            if (fieldAccess.isStatic())
+            {
                 arguments.add(NullConstant.INSTANCE);
-            } else {
+            }
+            else
+            {
                 arguments.add(fieldAccess.getObjectRef());
             }
         }
 
-        if (hook.isPassFieldName()) {
+        if (hook.isPassFieldName())
+        {
             SSAValue fieldNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(fieldNameValue, new StringConstant(fieldAccess.getName())));
             arguments.add(fieldNameValue);
         }
 
-        if (hook.isPassReadValue()) {
+        if (hook.isPassReadValue())
+        {
             SSAValue readValue = fieldAccess.getResult();
-            if (readValue != null) {
+            if (readValue != null)
+            {
                 Value boxedValue = boxIfPrimitive(readValue, instructions);
                 arguments.add(boxedValue);
             }
@@ -325,7 +369,8 @@ public class InstrumentationFactory {
 
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
-        if (!returnType.equals("V")) {
+        if (!returnType.equals("V"))
+        {
             result = new SSAValue(IRType.fromDescriptor(returnType));
         }
 
@@ -342,26 +387,34 @@ public class InstrumentationFactory {
         return instructions;
     }
 
-
-    public List<IRInstruction> createArrayLoadHook(
-            ArrayLoadHook hook,
-            ArrayAccessInstruction arrayAccess) {
+    /**
+     * Creates instructions to invoke an array load hook.
+     * @param hook the array load hook configuration
+     * @param arrayAccess the array load instruction being hooked
+     * @return list of IR instructions to insert
+     */
+    public List<IRInstruction> createArrayLoadHook(ArrayLoadHook hook, ArrayAccessInstruction arrayAccess)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassArray()) {
+        if (hook.isPassArray())
+        {
             arguments.add(arrayAccess.getArray());
         }
 
-        if (hook.isPassIndex()) {
+        if (hook.isPassIndex())
+        {
             arguments.add(arrayAccess.getIndex());
         }
 
-        if (hook.isPassValue()) {
+        if (hook.isPassValue())
+        {
             SSAValue loadedValue = arrayAccess.getResult();
-            if (loadedValue != null) {
+            if (loadedValue != null)
+            {
                 Value boxedValue = boxIfPrimitive(loadedValue, instructions);
                 arguments.add(boxedValue);
             }
@@ -369,7 +422,8 @@ public class InstrumentationFactory {
 
         SSAValue result = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
-        if (!returnType.equals("V")) {
+        if (!returnType.equals("V"))
+        {
             result = new SSAValue(IRType.fromDescriptor(returnType));
         }
 
@@ -388,39 +442,42 @@ public class InstrumentationFactory {
 
     /**
      * Creates instructions to invoke a method call hook.
-     *
      * @param hook the method call hook configuration
      * @param invoke the invoke instruction being hooked
      * @param isBefore true if this is a before-call hook
      * @return list of IR instructions to insert
      */
-    public List<IRInstruction> createMethodCallHook(
-            MethodCallHook hook,
-            InvokeInstruction invoke,
-            boolean isBefore) {
+    public List<IRInstruction> createMethodCallHook(MethodCallHook hook, InvokeInstruction invoke, boolean isBefore)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassReceiver()) {
+        if (hook.isPassReceiver())
+        {
             // For instance methods, the first argument is the receiver
             List<Value> invokeArgs = invoke.getArguments();
-            if (!invokeArgs.isEmpty() && invoke.getInvokeType() != InvokeType.STATIC) {
+            if (!invokeArgs.isEmpty() && invoke.getInvokeType() != InvokeType.STATIC)
+            {
                 arguments.add(invokeArgs.get(0));
-            } else {
+            }
+            else
+            {
                 arguments.add(NullConstant.INSTANCE);
             }
         }
 
-        if (hook.isPassMethodName()) {
+        if (hook.isPassMethodName())
+        {
             SSAValue methodNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(methodNameValue,
                     new StringConstant(invoke.getOwner() + "." + invoke.getName())));
             arguments.add(methodNameValue);
         }
 
-        if (hook.isPassArguments()) {
+        if (hook.isPassArguments())
+        {
             // Create Object[] containing all arguments (boxed if primitive)
             List<Value> invokeArgs = invoke.getArguments();
             int startIdx = invoke.getInvokeType() == InvokeType.STATIC ? 0 : 1;  // Skip receiver for instance methods
@@ -432,7 +489,8 @@ public class InstrumentationFactory {
             SSAValue arrayRef = new SSAValue(new ArrayType(ReferenceType.OBJECT));
             instructions.add(new NewArrayInstruction(arrayRef, ReferenceType.OBJECT, arraySizeValue));
 
-            for (int i = startIdx; i < invokeArgs.size(); i++) {
+            for (int i = startIdx; i < invokeArgs.size(); i++)
+            {
                 Value arg = invokeArgs.get(i);
                 int arrayIndex = i - startIdx;
 
@@ -447,20 +505,25 @@ public class InstrumentationFactory {
             arguments.add(arrayRef);
         }
 
-        if (hook.isPassResult() && !isBefore) {
+        if (hook.isPassResult() && !isBefore)
+        {
             // For after hooks, pass the result of the invoked method
             SSAValue invokeResult = invoke.getResult();
-            if (invokeResult != null) {
+            if (invokeResult != null)
+            {
                 Value boxedValue = boxIfPrimitive(invokeResult, instructions);
                 arguments.add(boxedValue);
-            } else {
+            }
+            else
+            {
                 arguments.add(NullConstant.INSTANCE);
             }
         }
 
         SSAValue hookResult = null;
         String returnType = extractReturnType(descriptor.getDescriptor());
-        if (!returnType.equals("V")) {
+        if (!returnType.equals("V"))
+        {
             hookResult = new SSAValue(IRType.fromDescriptor(returnType));
         }
 
@@ -479,41 +542,41 @@ public class InstrumentationFactory {
 
     /**
      * Creates instructions to invoke an exception hook.
-     *
      * @param hook the exception hook configuration
      * @param exceptionValue the exception value
      * @param className the class name
      * @param methodName the method name
      * @return list of IR instructions to insert
      */
-    public List<IRInstruction> createExceptionHook(
-            ExceptionHook hook,
-            SSAValue exceptionValue,
-            String className,
-            String methodName) {
+    public List<IRInstruction> createExceptionHook(ExceptionHook hook, SSAValue exceptionValue, String className, String methodName)
+    {
 
         List<IRInstruction> instructions = new ArrayList<>();
         List<Value> arguments = new ArrayList<>();
         HookDescriptor descriptor = hook.getHookDescriptor();
 
-        if (hook.isPassException()) {
+        if (hook.isPassException())
+        {
             arguments.add(exceptionValue);
         }
 
-        if (hook.isPassClassName()) {
+        if (hook.isPassClassName())
+        {
             SSAValue classNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(classNameValue, new StringConstant(className.replace('/', '.'))));
             arguments.add(classNameValue);
         }
 
-        if (hook.isPassMethodName()) {
+        if (hook.isPassMethodName())
+        {
             SSAValue methodNameValue = new SSAValue(ReferenceType.STRING);
             instructions.add(new ConstantInstruction(methodNameValue, new StringConstant(methodName)));
             arguments.add(methodNameValue);
         }
 
         SSAValue result = null;
-        if (hook.isCanSuppress()) {
+        if (hook.isCanSuppress())
+        {
             // Hook returns boolean - true to suppress
             result = new SSAValue(PrimitiveType.BOOLEAN);
         }
@@ -532,11 +595,16 @@ public class InstrumentationFactory {
     }
 
     /**
-     * Boxes a primitive value if needed.
+     * Boxes a primitive value via the wrapper's valueOf, appending the call to the instruction list.
+     * @param value the value to box
+     * @param instructions the instruction list to append boxing calls to
+     * @return the boxed value, or the original value if it is not primitive
      */
-    private Value boxIfPrimitive(Value value, List<IRInstruction> instructions) {
+    private Value boxIfPrimitive(Value value, List<IRInstruction> instructions)
+    {
         IRType type = value.getType();
-        if (type == null || !type.isPrimitive()) {
+        if (type == null || !type.isPrimitive())
+        {
             return value;
         }
 
@@ -557,8 +625,11 @@ public class InstrumentationFactory {
 
     /**
      * Gets the wrapper class for a primitive type.
+     * @param type the primitive type
+     * @return the wrapper class internal name
      */
-    private String getWrapperClass(IRType type) {
+    private String getWrapperClass(IRType type)
+    {
         if (type == PrimitiveType.INT) return "java/lang/Integer";
         if (type == PrimitiveType.LONG) return "java/lang/Long";
         if (type == PrimitiveType.FLOAT) return "java/lang/Float";
@@ -572,10 +643,14 @@ public class InstrumentationFactory {
 
     /**
      * Extracts the return type from a method descriptor.
+     * @param descriptor the method descriptor
+     * @return the return type descriptor, or "V" if none can be extracted
      */
-    private String extractReturnType(String descriptor) {
+    private String extractReturnType(String descriptor)
+    {
         int idx = descriptor.lastIndexOf(')');
-        if (idx >= 0 && idx < descriptor.length() - 1) {
+        if (idx >= 0 && idx < descriptor.length() - 1)
+        {
             return descriptor.substring(idx + 1);
         }
         return "V";
@@ -583,8 +658,11 @@ public class InstrumentationFactory {
 
     /**
      * Checks if a method is static.
+     * @param method the method to check
+     * @return true if the method has the ACC_STATIC flag
      */
-    private boolean isStatic(MethodEntry method) {
+    private boolean isStatic(MethodEntry method)
+    {
         return (method.getAccess() & 0x0008) != 0;  // ACC_STATIC
     }
 }

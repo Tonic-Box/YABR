@@ -14,13 +14,15 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodRefItemTest {
+class MethodRefItemTest
+{
 
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classFile = BytecodeBuilder.forClass("com/test/MethodRefTest")
             .publicStaticMethod("testMethod", "(II)I")
                 .iload(0)
@@ -32,17 +34,20 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void defaultConstructor() {
+        void defaultConstructor()
+        {
             MethodRefItem item = new MethodRefItem();
             assertNotNull(item);
             assertEquals(Item.ITEM_METHOD_REF, item.getType());
         }
 
         @Test
-        void setValueWithMethodRef() {
+        void setValueWithMethodRef()
+        {
             MethodRefItem item = new MethodRefItem();
             MethodRef ref = new MethodRef(5, 10);
             item.setValue(ref);
@@ -53,7 +58,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void setClassFile() {
+        void setClassFile()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setClassFile(classFile);
 
@@ -65,10 +71,12 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class IndexManipulationTests {
+    class IndexManipulationTests
+    {
 
         @Test
-        void setClassIndex() {
+        void setClassIndex()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(5, 10));
 
@@ -79,7 +87,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void setNameAndTypeIndex() {
+        void setNameAndTypeIndex()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(5, 10));
 
@@ -90,7 +99,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void setBothIndices() {
+        void setBothIndices()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(5, 10));
 
@@ -103,10 +113,12 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class ResolutionTests {
+    class ResolutionTests
+    {
 
         @Test
-        void getClassNameReturnsNullWhenClassFileNotSet() {
+        void getClassNameReturnsNullWhenClassFileNotSet()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -114,7 +126,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getNameReturnsNullWhenClassFileNotSet() {
+        void getNameReturnsNullWhenClassFileNotSet()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -122,7 +135,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getDescriptorReturnsNullWhenClassFileNotSet() {
+        void getDescriptorReturnsNullWhenClassFileNotSet()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -130,7 +144,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getOwnerReturnsNullWhenClassFileNotSet() {
+        void getOwnerReturnsNullWhenClassFileNotSet()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -138,10 +153,12 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getClassNameWithClassFile() {
+        void getClassNameWithClassFile()
+        {
             MethodRefItem methodRef = findMethodRefInConstPool();
 
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 String className = methodRef.getClassName();
                 assertNotNull(className);
                 assertFalse(className.isEmpty());
@@ -149,10 +166,12 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getNameWithClassFile() {
+        void getNameWithClassFile()
+        {
             MethodRefItem methodRef = findMethodRefInConstPool();
 
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 String name = methodRef.getName();
                 assertNotNull(name);
                 assertFalse(name.isEmpty());
@@ -160,10 +179,12 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getDescriptorWithClassFile() {
+        void getDescriptorWithClassFile()
+        {
             MethodRefItem methodRef = findMethodRefInConstPool();
 
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 String descriptor = methodRef.getDescriptor();
                 assertNotNull(descriptor);
                 assertTrue(descriptor.startsWith("("));
@@ -172,10 +193,12 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getOwnerReturnsInternalName() {
+        void getOwnerReturnsInternalName()
+        {
             MethodRefItem methodRef = findMethodRefInConstPool();
 
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 String owner = methodRef.getOwner();
                 assertNotNull(owner);
                 assertFalse(owner.contains("."));
@@ -183,10 +206,12 @@ class MethodRefItemTest {
         }
 
         @Test
-        void classNameConvertsSlashesToDots() {
+        void classNameConvertsSlashesToDots()
+        {
             MethodRefItem methodRef = findMethodRefInConstPool();
 
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 String className = methodRef.getClassName();
                 String owner = methodRef.getOwner();
 
@@ -199,10 +224,12 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class ParameterAnalysisTests {
+    class ParameterAnalysisTests
+    {
 
         @Test
-        void getParameterCountThrowsWhenClassFileNotSet() {
+        void getParameterCountThrowsWhenClassFileNotSet()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -210,7 +237,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getParameterCountForMethodWithNoParameters() throws IOException {
+        void getParameterCountForMethodWithNoParameters() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoParams")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -218,27 +246,29 @@ class MethodRefItemTest {
 
             MethodRefItem methodRef = findMethodRefInConstPool(cf);
 
-            if (methodRef != null && methodRef.getDescriptor().equals("()V")) {
+            if (methodRef != null && methodRef.getDescriptor().equals("()V"))
+            {
                 assertEquals(0, methodRef.getParameterCount());
             }
         }
 
         @Test
-        void getParameterCountForMethodWithOneParameter() throws IOException {
+        void getParameterCountForMethodWithOneParameter() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/OneParam")
                 .publicStaticMethod("test", "(I)V")
                     .vreturn()
                 .build();
 
-            int methodRefIndex = cf.getConstPool().addMethodRef(
-                "com/test/OneParam", "test", "(I)V");
+            int methodRefIndex = cf.getConstPool().addMethodRef("com/test/OneParam", "test", "(I)V");
             MethodRefItem methodRef = (MethodRefItem) cf.getConstPool().getItem(methodRefIndex);
 
             assertEquals(1, methodRef.getParameterCount());
         }
 
         @Test
-        void getParameterCountForMethodWithMultipleParameters() throws IOException {
+        void getParameterCountForMethodWithMultipleParameters() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/MultiParam")
                 .publicStaticMethod("test", "(ILjava/lang/String;D)V")
                     .vreturn()
@@ -252,7 +282,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsThrowsWhenClassFileNotSet() {
+        void getReturnTypeSlotsThrowsWhenClassFileNotSet()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -260,59 +291,59 @@ class MethodRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForVoidReturn() throws IOException {
+        void getReturnTypeSlotsForVoidReturn() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/VoidReturn")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
                 .build();
 
-            int methodRefIndex = cf.getConstPool().addMethodRef(
-                "com/test/VoidReturn", "test", "()V");
+            int methodRefIndex = cf.getConstPool().addMethodRef("com/test/VoidReturn", "test", "()V");
             MethodRefItem methodRef = (MethodRefItem) cf.getConstPool().getItem(methodRefIndex);
 
             assertEquals(0, methodRef.getReturnTypeSlots());
         }
 
         @Test
-        void getReturnTypeSlotsForIntReturn() throws IOException {
+        void getReturnTypeSlotsForIntReturn() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/IntReturn")
                 .publicStaticMethod("test", "()I")
                     .iconst(42)
                     .ireturn()
                 .build();
 
-            int methodRefIndex = cf.getConstPool().addMethodRef(
-                "com/test/IntReturn", "test", "()I");
+            int methodRefIndex = cf.getConstPool().addMethodRef("com/test/IntReturn", "test", "()I");
             MethodRefItem methodRef = (MethodRefItem) cf.getConstPool().getItem(methodRefIndex);
 
             assertEquals(1, methodRef.getReturnTypeSlots());
         }
 
         @Test
-        void getReturnTypeSlotsForLongReturn() throws IOException {
+        void getReturnTypeSlotsForLongReturn() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/LongReturn")
                 .publicStaticMethod("test", "()J")
                     .lconst(42L)
                     .lreturn()
                 .build();
 
-            int methodRefIndex = cf.getConstPool().addMethodRef(
-                "com/test/LongReturn", "test", "()J");
+            int methodRefIndex = cf.getConstPool().addMethodRef("com/test/LongReturn", "test", "()J");
             MethodRefItem methodRef = (MethodRefItem) cf.getConstPool().getItem(methodRefIndex);
 
             assertEquals(2, methodRef.getReturnTypeSlots());
         }
 
         @Test
-        void getReturnTypeSlotsForDoubleReturn() throws IOException {
+        void getReturnTypeSlotsForDoubleReturn() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/DoubleReturn")
                 .publicStaticMethod("test", "()D")
                     .dconst(1.0)
                     .dreturn()
                 .build();
 
-            int methodRefIndex = cf.getConstPool().addMethodRef(
-                "com/test/DoubleReturn", "test", "()D");
+            int methodRefIndex = cf.getConstPool().addMethodRef("com/test/DoubleReturn", "test", "()D");
             MethodRefItem methodRef = (MethodRefItem) cf.getConstPool().getItem(methodRefIndex);
 
             assertEquals(2, methodRef.getReturnTypeSlots());
@@ -320,10 +351,12 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class SerializationTests {
+    class SerializationTests
+    {
 
         @Test
-        void writeMethodRef() throws IOException {
+        void writeMethodRef() throws IOException
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(0x0005, 0x000A));
 
@@ -340,7 +373,8 @@ class MethodRefItemTest {
         }
 
         @Test
-        void writeMethodRefWithLargeIndices() throws IOException {
+        void writeMethodRefWithLargeIndices() throws IOException
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(0xFFFF, 0x1234));
 
@@ -358,10 +392,12 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringWithoutClassFile() {
+        void toStringWithoutClassFile()
+        {
             MethodRefItem item = new MethodRefItem();
             item.setValue(new MethodRef(1, 2));
 
@@ -371,10 +407,12 @@ class MethodRefItemTest {
         }
 
         @Test
-        void toStringWithClassFile() {
+        void toStringWithClassFile()
+        {
             MethodRefItem methodRef = findMethodRefInConstPool();
 
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 String result = methodRef.toString();
                 assertNotNull(result);
                 assertTrue(result.contains("MethodRefItem"));
@@ -383,24 +421,30 @@ class MethodRefItemTest {
     }
 
     @Nested
-    class TypeTests {
+    class TypeTests
+    {
 
         @Test
-        void getTypeReturnsMethodRefConstant() {
+        void getTypeReturnsMethodRefConstant()
+        {
             MethodRefItem item = new MethodRefItem();
             assertEquals(Item.ITEM_METHOD_REF, item.getType());
             assertEquals(0xA, item.getType());
         }
     }
 
-    private MethodRefItem findMethodRefInConstPool() {
+    private MethodRefItem findMethodRefInConstPool()
+    {
         return findMethodRefInConstPool(classFile);
     }
 
-    private MethodRefItem findMethodRefInConstPool(ClassFile cf) {
-        for (int i = 1; i < cf.getConstPool().getItems().size(); i++) {
+    private MethodRefItem findMethodRefInConstPool(ClassFile cf)
+    {
+        for (int i = 1; i < cf.getConstPool().getItems().size(); i++)
+        {
             Item<?> item = cf.getConstPool().getItems().get(i);
-            if (item instanceof MethodRefItem) {
+            if (item instanceof MethodRefItem)
+            {
                 return (MethodRefItem) item;
             }
         }

@@ -6,27 +6,30 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class ThreadHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for java.lang.Thread, StackWalker and stack trace natives, stubbed as no-ops or
+ * empty results since the interpreter is single-threaded.
+ */
+public final class ThreadHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerThreadHandlers(registry);
         registerStackWalkerHandlers(registry);
         registerStackTraceHandlers(registry);
     }
 
-    private void registerThreadHandlers(NativeRegistry registry) {
-        registry.register("java/lang/Thread", "setNativeName", "(Ljava/lang/String;)V",
-            (receiver, args, ctx) -> null);
+    private void registerThreadHandlers(NativeRegistry registry)
+    {
+        registry.register("java/lang/Thread", "setNativeName", "(Ljava/lang/String;)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "suspend0", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "suspend0", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "resume0", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "resume0", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "stop0", "(Ljava/lang/Object;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "stop0", "(Ljava/lang/Object;)V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Thread", "countStackFrames", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
@@ -48,7 +51,8 @@ public final class ThreadHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerStackWalkerHandlers(NativeRegistry registry) {
+    private void registerStackWalkerHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/StackStreamFactory", "checkStackWalkModes", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
@@ -59,7 +63,8 @@ public final class ThreadHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
     }
 
-    private void registerStackTraceHandlers(NativeRegistry registry) {
+    private void registerStackTraceHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/StackTraceElement", "initStackTraceElement", "(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
             (receiver, args, ctx) -> null);
 

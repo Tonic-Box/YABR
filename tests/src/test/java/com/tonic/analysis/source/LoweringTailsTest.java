@@ -20,21 +20,21 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Three re-lowering tails that produced unverifiable or unresolvable bytecode:
- * <ul>
- * <li>A member accessed through a TYPE-VARIABLE-typed receiver resolves against the variable's
- *     erasure ({@code T extends Bound} erases to {@code Bound}), as javac erases it.</li>
- * <li>{@code (long) byteValue & 255L} needs {@code i2l} (byte/short/char sit as int on the stack;
+ * - A member accessed through a TYPE-VARIABLE-typed receiver resolves against the variable's
+ *     erasure ({@code T extends Bound} erases to {@code Bound}), as javac erases it.
+ * - {@code (long) byteValue & 255L} needs {@code i2l} (byte/short/char sit as int on the stack;
  *     their conversions and widenings are the int ones) and the {@code &} must be {@code land} even
  *     when the parse-time type guessed int - binary numeric promotion is never narrower than an
- *     operand's promoted type.</li>
- * <li>A lambda assigned to a FIELD takes its functional interface from the field's declared type;
- *     without it the invokedynamic site returns void and the following putfield underflows.</li>
- * </ul>
+ *     operand's promoted type.
+ * - A lambda assigned to a FIELD takes its functional interface from the field's declared type;
+ *     without it the invokedynamic site returns void and the following putfield underflows.
  */
-class LoweringTailsTest {
+class LoweringTailsTest
+{
 
     @Test
-    void aTypeVariableReceiverErasesToItsBound() throws Exception {
+    void aTypeVariableReceiverErasesToItsBound() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Holder",
                 "public class Holder<T extends StringBuilder> {",
                 "    T item;",
@@ -58,7 +58,8 @@ class LoweringTailsTest {
     }
 
     @Test
-    void aGenericBoundErasesToItsRawType() throws Exception {
+    void aGenericBoundErasesToItsRawType() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Ring",
                 "public class Ring<T extends Comparable<T>> {",
                 "    T lo;",
@@ -81,7 +82,8 @@ class LoweringTailsTest {
     }
 
     @Test
-    void aMaskedByteWidensToLong() throws Exception {
+    void aMaskedByteWidensToLong() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Pack",
                 "public class Pack {",
                 "    static long conv(byte[] bytes, int offset) {",
@@ -103,7 +105,8 @@ class LoweringTailsTest {
     }
 
     @Test
-    void aNegatedFloatKeepsItsCastToDouble() throws Exception {
+    void aNegatedFloatKeepsItsCastToDouble() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Energy",
                 "public class Energy {",
                 "    float mass = 2.5f;",
@@ -117,14 +120,14 @@ class LoweringTailsTest {
         ClassPool pool = new ClassPool();
         pool.loadClass(cf.write());
         String d1 = ClassDecompiler.decompile(cf);
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Energy"),
-                "the f2d must survive the negation:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Energy"), "the f2d must survive the negation:\n" + d1);
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
     }
 
     @Test
-    void aFieldStoredLambdaTakesTheFieldsInterface() throws Exception {
+    void aFieldStoredLambdaTakesTheFieldsInterface() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Gate",
                 "import java.util.function.Predicate;",
                 "public class Gate {",
@@ -153,7 +156,8 @@ class LoweringTailsTest {
     }
 
     @Test
-    void aFieldOnAnAbsentClassResolvesFromTheOriginalPool() throws Exception {
+    void aFieldOnAnAbsentClassResolvesFromTheOriginalPool() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("absentfield");
@@ -188,24 +192,27 @@ class LoweringTailsTest {
     }
 
     private static Object invokeWith(byte[] userBytes, String userName, byte[] depBytes, String depName)
-            throws Exception {
+            throws Exception
+            {
         TestClassLoader loader = new TestClassLoader();
         loader.defineClass(depName, depBytes);
         return loader.defineClass(userName, userBytes).getMethod("check").invoke(null);
     }
 
-    private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception {
+    private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory(primary.toLowerCase());
         Path src = dir.resolve(primary + ".java");
         Files.writeString(src, String.join(System.lineSeparator(), lines));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = new ClassPool();
         Map<String, ClassFile> loaded = new HashMap<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class")) {
-            for (Path p : stream) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class"))
+        {
+            for (Path p : stream)
+            {
                 ClassFile cf = pool.loadClass(Files.readAllBytes(p));
                 loaded.put(cf.getClassName(), cf);
             }

@@ -8,7 +8,6 @@ import java.util.Objects;
 /**
  * Represents a MethodHandle constant loaded via ldc.
  * Corresponds to CONSTANT_MethodHandle in the constant pool.
- *
  * Reference kinds (per JVM spec):
  * 1: REF_getField
  * 2: REF_getStatic
@@ -20,7 +19,8 @@ import java.util.Objects;
  * 8: REF_newInvokeSpecial
  * 9: REF_invokeInterface
  */
-public final class MethodHandleConstant extends Constant {
+public final class MethodHandleConstant extends Constant
+{
 
     public static final int REF_getField = 1;
     public static final int REF_getStatic = 2;
@@ -39,14 +39,15 @@ public final class MethodHandleConstant extends Constant {
 
     /**
      * Creates a MethodHandle constant.
-     *
      * @param referenceKind the reference kind (1-9)
      * @param owner the class containing the referenced member
      * @param name the name of the referenced member
      * @param descriptor the descriptor of the referenced member
      */
-    public MethodHandleConstant(int referenceKind, String owner, String name, String descriptor) {
-        if (referenceKind < 1 || referenceKind > 9) {
+    public MethodHandleConstant(int referenceKind, String owner, String name, String descriptor)
+    {
+        if (referenceKind < 1 || referenceKind > 9)
+        {
             throw new IllegalArgumentException("Invalid reference kind: " + referenceKind);
         }
         this.referenceKind = referenceKind;
@@ -55,29 +56,47 @@ public final class MethodHandleConstant extends Constant {
         this.descriptor = descriptor;
     }
 
-    public int getReferenceKind() {
+    /**
+     * @return the reference kind
+     */
+    public int getReferenceKind()
+    {
         return referenceKind;
     }
 
-    public String getOwner() {
+    /**
+     * @return the owner
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
     @Override
-    public IRType getType() {
+    public IRType getType()
+    {
         return new ReferenceType("java/lang/invoke/MethodHandle");
     }
 
     @Override
-    public Object getValue() {
+    public Object getValue()
+    {
         return this; // Return self for complex constants
     }
 
@@ -85,7 +104,8 @@ public final class MethodHandleConstant extends Constant {
      * Checks if this method handle references a field.
      * @return true if this is a field reference
      */
-    public boolean isFieldReference() {
+    public boolean isFieldReference()
+    {
         return referenceKind >= REF_getField && referenceKind <= REF_putStatic;
     }
 
@@ -93,7 +113,8 @@ public final class MethodHandleConstant extends Constant {
      * Checks if this method handle references a method.
      * @return true if this is a method reference
      */
-    public boolean isMethodReference() {
+    public boolean isMethodReference()
+    {
         return referenceKind >= REF_invokeVirtual && referenceKind <= REF_invokeInterface;
     }
 
@@ -101,8 +122,10 @@ public final class MethodHandleConstant extends Constant {
      * Gets a human-readable name for the reference kind.
      * @return the reference kind name
      */
-    public String getReferenceKindName() {
-        switch (referenceKind) {
+    public String getReferenceKindName()
+    {
+        switch (referenceKind)
+        {
             case REF_getField:
                 return "REF_getField";
             case REF_getStatic:
@@ -127,12 +150,14 @@ public final class MethodHandleConstant extends Constant {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodHandle[" + getReferenceKindName() + " " + owner + "." + name + descriptor + "]";
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof MethodHandleConstant)) return false;
         MethodHandleConstant that = (MethodHandleConstant) o;
@@ -143,7 +168,8 @@ public final class MethodHandleConstant extends Constant {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(referenceKind, owner, name, descriptor);
     }
 }

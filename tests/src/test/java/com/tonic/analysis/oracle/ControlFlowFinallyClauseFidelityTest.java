@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * region over the handler's dominator subtree. Asserts the finally body survives decompilation and that
  * the recompiled bytecode runs the cleanup on both the normal and the throwing path.
  */
-class ControlFlowFinallyClauseFidelityTest {
+class ControlFlowFinallyClauseFidelityTest
+{
 
     private static final String SOURCE =
             "public class CfFinally {\n"
@@ -53,14 +54,14 @@ class ControlFlowFinallyClauseFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("cf-finally");
         Path src = dir.resolve("CfFinally.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("CfFinally.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -71,17 +72,18 @@ class ControlFlowFinallyClauseFidelityTest {
     }
 
     @Test
-    void finallyBodySurvivesDecompilation() {
+    void finallyBodySurvivesDecompilation()
+    {
         assertFalse(d1.contains("finally {}"),
                 "the control-flow finally body must not collapse to an empty clause:\n" + d1);
         assertTrue(d1.contains("finally"), "the finally clause must be present:\n" + d1);
         int finallyAt = d1.indexOf("finally");
-        assertTrue(d1.indexOf("closed", finallyAt) > 0,
-                "the finally clause must contain the guarded cleanup:\n" + d1);
+        assertTrue(d1.indexOf("closed", finallyAt) > 0, "the finally clause must contain the guarded cleanup:\n" + d1);
     }
 
     @Test
-    void cleanupRunsOnBothPaths() throws Exception {
+    void cleanupRunsOnBothPaths() throws Exception
+    {
         java.lang.reflect.Field res = recompiledClass.getField("res");
         java.lang.reflect.Field closed = recompiledClass.getField("closed");
         res.set(null, "open");
@@ -91,9 +93,12 @@ class ControlFlowFinallyClauseFidelityTest {
         assertEquals(1, closed.getInt(null), "normal path must run the cleanup exactly once");
 
         closed.setInt(null, 0);
-        try {
+        try
+        {
             recompiledClass.getMethod("run", boolean.class).invoke(null, true);
-        } catch (InvocationTargetException expected) {
+        }
+        catch (InvocationTargetException expected)
+        {
             assertTrue(expected.getCause() instanceof IllegalStateException);
         }
         assertEquals(1, closed.getInt(null),

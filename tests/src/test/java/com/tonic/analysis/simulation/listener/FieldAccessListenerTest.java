@@ -14,19 +14,22 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FieldAccessListenerTest {
+class FieldAccessListenerTest
+{
 
     private FieldAccessListener listener;
     private SimulationState mockState;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new FieldAccessListener();
         mockState = SimulationState.empty();
     }
 
     @Test
-    void trackGetField() {
+    void trackGetField()
+    {
         FieldAccessInstruction instr = createGetFieldInstruction("Ljava/lang/String;", "value", "Ljava/lang/String;", false);
 
         listener.onFieldRead(instr, mockState);
@@ -40,7 +43,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackMultipleGetField() {
+    void trackMultipleGetField()
+    {
         FieldAccessInstruction instr1 = createGetFieldInstruction("Ljava/lang/String;", "value", "Ljava/lang/String;", false);
         FieldAccessInstruction instr2 = createGetFieldInstruction("Ljava/lang/Integer;", "MAX_VALUE", "I", false);
         FieldAccessInstruction instr3 = createGetFieldInstruction("Ljava/lang/String;", "value", "Ljava/lang/String;", false);
@@ -57,7 +61,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackPutField() {
+    void trackPutField()
+    {
         FieldAccessInstruction instr = createPutFieldInstruction("Ljava/lang/String;", "value", "Ljava/lang/String;", false);
 
         listener.onFieldWrite(instr, mockState);
@@ -71,7 +76,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackMultiplePutField() {
+    void trackMultiplePutField()
+    {
         FieldAccessInstruction instr1 = createPutFieldInstruction("Ljava/lang/String;", "value", "Ljava/lang/String;", false);
         FieldAccessInstruction instr2 = createPutFieldInstruction("Ljava/lang/Integer;", "count", "I", false);
         FieldAccessInstruction instr3 = createPutFieldInstruction("Ljava/lang/String;", "value", "Ljava/lang/String;", false);
@@ -88,7 +94,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackGetStatic() {
+    void trackGetStatic()
+    {
         FieldAccessInstruction instr = createGetFieldInstruction("Ljava/lang/System;", "out", "Ljava/io/PrintStream;", true);
 
         listener.onFieldRead(instr, mockState);
@@ -101,7 +108,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackMultipleGetStatic() {
+    void trackMultipleGetStatic()
+    {
         FieldAccessInstruction instr1 = createGetFieldInstruction("Ljava/lang/System;", "out", "Ljava/io/PrintStream;", true);
         FieldAccessInstruction instr2 = createGetFieldInstruction("Ljava/lang/Integer;", "MAX_VALUE", "I", true);
         FieldAccessInstruction instr3 = createGetFieldInstruction("Ljava/lang/System;", "out", "Ljava/io/PrintStream;", true);
@@ -118,7 +126,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackPutStatic() {
+    void trackPutStatic()
+    {
         FieldAccessInstruction instr = createPutFieldInstruction("Lcom/example/Config;", "DEBUG", "Z", true);
 
         listener.onFieldWrite(instr, mockState);
@@ -131,7 +140,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackMultiplePutStatic() {
+    void trackMultiplePutStatic()
+    {
         FieldAccessInstruction instr1 = createPutFieldInstruction("Lcom/example/Config;", "DEBUG", "Z", true);
         FieldAccessInstruction instr2 = createPutFieldInstruction("Lcom/example/Config;", "VERSION", "Ljava/lang/String;", true);
         FieldAccessInstruction instr3 = createPutFieldInstruction("Lcom/example/Config;", "DEBUG", "Z", true);
@@ -149,7 +159,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void distinguishStaticVsInstance() {
+    void distinguishStaticVsInstance()
+    {
         FieldAccessInstruction getStatic = createGetFieldInstruction("Ljava/lang/System;", "out", "Ljava/io/PrintStream;", true);
         FieldAccessInstruction getInstance = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction putStatic = createPutFieldInstruction("Lcom/example/Config;", "DEBUG", "Z", true);
@@ -172,7 +183,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void getAccessesByField() {
+    void getAccessesByField()
+    {
         FieldAccessInstruction read1 = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction write1 = createPutFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction read2 = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
@@ -192,7 +204,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackArrayAccess() {
+    void trackArrayAccess()
+    {
         ArrayAccessInstruction load = createMockArrayLoadInstruction();
         ArrayAccessInstruction store = createMockArrayStoreInstruction();
 
@@ -205,7 +218,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void trackMultipleArrayAccess() {
+    void trackMultipleArrayAccess()
+    {
         ArrayAccessInstruction load1 = createMockArrayLoadInstruction();
         ArrayAccessInstruction load2 = createMockArrayLoadInstruction();
         ArrayAccessInstruction store1 = createMockArrayStoreInstruction();
@@ -224,7 +238,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void getFieldAccessesMap() {
+    void getFieldAccessesMap()
+    {
         FieldAccessInstruction read1 = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction write1 = createPutFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction read2 = createGetFieldInstruction("Ljava/lang/Integer;", "MAX_VALUE", "I", true);
@@ -250,7 +265,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void getFieldAccessesIsUnmodifiable() {
+    void getFieldAccessesIsUnmodifiable()
+    {
         FieldAccessInstruction read = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         listener.onFieldRead(read, mockState);
 
@@ -262,7 +278,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void getDistinctFieldCount() {
+    void getDistinctFieldCount()
+    {
         FieldAccessInstruction read1 = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction write1 = createPutFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction read2 = createGetFieldInstruction("Ljava/lang/Integer;", "MAX_VALUE", "I", true);
@@ -284,7 +301,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void resetOnNewSimulation() {
+    void resetOnNewSimulation()
+    {
         FieldAccessInstruction read = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction write = createPutFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         ArrayAccessInstruction arrayRead = createMockArrayLoadInstruction();
@@ -316,7 +334,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void fieldReferenceEquality() {
+    void fieldReferenceEquality()
+    {
         FieldAccessListener.FieldReference ref1 = new FieldAccessListener.FieldReference("Ljava/lang/String;", "value", "[C");
         FieldAccessListener.FieldReference ref2 = new FieldAccessListener.FieldReference("Ljava/lang/String;", "value", "[C");
         FieldAccessListener.FieldReference ref3 = new FieldAccessListener.FieldReference("Ljava/lang/String;", "hash", "I");
@@ -329,13 +348,15 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void fieldReferenceToString() {
+    void fieldReferenceToString()
+    {
         FieldAccessListener.FieldReference ref = new FieldAccessListener.FieldReference("Ljava/lang/String;", "value", "[C");
         assertEquals("Ljava/lang/String;.value:[C", ref.toString());
     }
 
     @Test
-    void accessStatsIncrements() {
+    void accessStatsIncrements()
+    {
         FieldAccessListener.AccessStats stats = new FieldAccessListener.AccessStats();
 
         assertEquals(0, stats.getReadCount());
@@ -360,7 +381,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void accessStatsToString() {
+    void accessStatsToString()
+    {
         FieldAccessListener.AccessStats stats = new FieldAccessListener.AccessStats();
         stats.incrementReads();
         stats.incrementReads();
@@ -372,7 +394,8 @@ class FieldAccessListenerTest {
     }
 
     @Test
-    void listenerToString() {
+    void listenerToString()
+    {
         FieldAccessInstruction read1 = createGetFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         FieldAccessInstruction write1 = createPutFieldInstruction("Ljava/lang/String;", "value", "[C", false);
         ArrayAccessInstruction arrayRead = createMockArrayLoadInstruction();
@@ -390,49 +413,65 @@ class FieldAccessListenerTest {
         assertTrue(str.contains("arrayWrites=1"));
     }
 
-    private static FieldAccessInstruction createGetFieldInstruction(String owner, String name, String descriptor, boolean isStatic) {
-        if (isStatic) {
+    private static FieldAccessInstruction createGetFieldInstruction(String owner, String name, String descriptor, boolean isStatic)
+    {
+        if (isStatic)
+        {
             return FieldAccessInstruction.createStaticLoad(new MockSSAValue(), owner, name, descriptor);
-        } else {
+        }
+        else
+        {
             return FieldAccessInstruction.createLoad(new MockSSAValue(), owner, name, descriptor, new MockValue());
         }
     }
 
-    private static FieldAccessInstruction createPutFieldInstruction(String owner, String name, String descriptor, boolean isStatic) {
-        if (isStatic) {
+    private static FieldAccessInstruction createPutFieldInstruction(String owner, String name, String descriptor, boolean isStatic)
+    {
+        if (isStatic)
+        {
             return FieldAccessInstruction.createStaticStore(owner, name, descriptor, new MockValue());
-        } else {
+        }
+        else
+        {
             return FieldAccessInstruction.createStore(owner, name, descriptor, new MockValue(), new MockValue());
         }
     }
 
-    private static ArrayAccessInstruction createMockArrayLoadInstruction() {
+    private static ArrayAccessInstruction createMockArrayLoadInstruction()
+    {
         return ArrayAccessInstruction.createLoad(new MockSSAValue(), new MockValue(), new MockValue());
     }
 
-    private static ArrayAccessInstruction createMockArrayStoreInstruction() {
+    private static ArrayAccessInstruction createMockArrayStoreInstruction()
+    {
         return ArrayAccessInstruction.createStore(new MockValue(), new MockValue(), new MockValue());
     }
 
-    private static class MockValue implements Value {
+    private static class MockValue implements Value
+    {
         @Override
-        public IRType getType() {
+        public IRType getType()
+        {
             return PrimitiveType.INT;
         }
 
         @Override
-        public boolean isConstant() {
+        public boolean isConstant()
+        {
             return false;
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return "MockValue";
         }
     }
 
-    private static class MockSSAValue extends SSAValue {
-        MockSSAValue() {
+    private static class MockSSAValue extends SSAValue
+    {
+        MockSSAValue()
+        {
             super(PrimitiveType.INT);
         }
     }

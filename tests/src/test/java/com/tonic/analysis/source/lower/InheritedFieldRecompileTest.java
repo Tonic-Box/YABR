@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * stopped at the parsed declaration's own fields and gave up, so any class touching {@code this.inherited}
  * failed to recompile at all; not declared here does not mean not a field - the superclass chain owns it.
  */
-class InheritedFieldRecompileTest {
+class InheritedFieldRecompileTest
+{
 
     private static final String[] BASE_LINES = {
             "public class BaseHolder {",
@@ -46,7 +47,8 @@ class InheritedFieldRecompileTest {
     };
 
     @Test
-    void anInheritedFieldResolvesOnRelowering() throws Exception {
+    void anInheritedFieldResolvesOnRelowering() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("inherited-field");
@@ -68,11 +70,11 @@ class InheritedFieldRecompileTest {
         String d1 = ClassDecompiler.decompile(cf);
         assertTrue(TestUtils.recompileSource(cf, pool, d1, "SubUser"),
                 "a class using inherited fields must recompile:\n" + d1);
-        assertEquals(original, invokeCheck(cf.write(), baseBytes),
-                "the round-tripped class must behave the same");
+        assertEquals(original, invokeCheck(cf.write(), baseBytes), "the round-tripped class must behave the same");
     }
 
-    private static Object invokeCheck(byte[] subBytes, byte[] baseBytes) throws Exception {
+    private static Object invokeCheck(byte[] subBytes, byte[] baseBytes) throws Exception
+    {
         TestClassLoader loader = new TestClassLoader();
         loader.defineClass("BaseHolder", baseBytes);
         Class<?> clazz = loader.defineClass("SubUser", subBytes);

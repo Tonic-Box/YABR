@@ -4,105 +4,140 @@ package com.tonic.fixtures;
  * Control flow test fixture for CFG analysis and decompilation tests.
  * Used for: control flow analysis, loop detection, switch handling, dominator tests.
  */
-public class ControlFlow {
+public class ControlFlow
+{
 
-    // ========== Simple Conditionals ==========
+    // Simple Conditionals
 
-    public static int abs(int x) {
-        if (x < 0) {
+    public static int abs(int x)
+    {
+        if (x < 0)
+        {
             return -x;
-        } else {
+        }
+        else
+        {
             return x;
         }
     }
 
-    public static int max(int a, int b) {
-        if (a > b) {
+    public static int max(int a, int b)
+    {
+        if (a > b)
+        {
             return a;
         }
         return b;
     }
 
-    public static int min(int a, int b) {
-        if (a < b) {
+    public static int min(int a, int b)
+    {
+        if (a < b)
+        {
             return a;
         }
         return b;
     }
 
-    public static int sign(int x) {
-        if (x > 0) {
+    public static int sign(int x)
+    {
+        if (x > 0)
+        {
             return 1;
-        } else if (x < 0) {
+        }
+        else if (x < 0)
+        {
             return -1;
-        } else {
+        }
+        else
+        {
             return 0;
         }
     }
 
-    // ========== Nested Conditionals ==========
+    // Nested Conditionals
 
-    public static int clamp(int value, int min, int max) {
-        if (value < min) {
+    public static int clamp(int value, int min, int max)
+    {
+        if (value < min)
+        {
             return min;
-        } else if (value > max) {
+        }
+        else if (value > max)
+        {
             return max;
-        } else {
+        }
+        else
+        {
             return value;
         }
     }
 
-    public static boolean isInRange(int value, int low, int high) {
-        if (value >= low) {
-            if (value <= high) {
+    public static boolean isInRange(int value, int low, int high)
+    {
+        if (value >= low)
+        {
+            if (value <= high)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    // ========== For Loops ==========
+    // For Loops
 
-    public static int sumToN(int n) {
+    public static int sumToN(int n)
+    {
         int sum = 0;
-        for (int i = 1; i <= n; i++) {
+        for (int i = 1; i <= n; i++)
+        {
             sum = sum + i;
         }
         return sum;
     }
 
-    public static int countDown(int n) {
+    public static int countDown(int n)
+    {
         int count = 0;
-        for (int i = n; i > 0; i--) {
+        for (int i = n; i > 0; i--)
+        {
             count++;
         }
         return count;
     }
 
-    public static int nestedLoop(int n, int m) {
+    public static int nestedLoop(int n, int m)
+    {
         int total = 0;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < m; j++)
+            {
                 total++;
             }
         }
         return total;
     }
 
-    // ========== While Loops ==========
+    // While Loops
 
-    public static int whileSum(int n) {
+    public static int whileSum(int n)
+    {
         int sum = 0;
         int i = 1;
-        while (i <= n) {
+        while (i <= n)
+        {
             sum = sum + i;
             i++;
         }
         return sum;
     }
 
-    public static int gcd(int a, int b) {
-        while (b != 0) {
+    public static int gcd(int a, int b)
+    {
+        while (b != 0)
+        {
             int temp = b;
             b = a % b;
             a = temp;
@@ -110,33 +145,41 @@ public class ControlFlow {
         return a;
     }
 
-    // ========== Do-While Loops ==========
+    // Do-While Loops
 
-    public static int doWhileSum(int n) {
+    public static int doWhileSum(int n)
+    {
         int sum = 0;
         int i = 1;
-        do {
+        do
+        {
             sum = sum + i;
             i++;
         } while (i <= n);
         return sum;
     }
 
-    // ========== Loop Control ==========
+    // Loop Control
 
-    public static int findFirst(int[] arr, int target) {
-        for (int i = 0; i < arr.length; i++) {
-            if (arr[i] == target) {
+    public static int findFirst(int[] arr, int target)
+    {
+        for (int i = 0; i < arr.length; i++)
+        {
+            if (arr[i] == target)
+            {
                 return i;
             }
         }
         return -1;
     }
 
-    public static int sumEvenOnly(int n) {
+    public static int sumEvenOnly(int n)
+    {
         int sum = 0;
-        for (int i = 1; i <= n; i++) {
-            if (i % 2 != 0) {
+        for (int i = 1; i <= n; i++)
+        {
+            if (i % 2 != 0)
+            {
                 continue;
             }
             sum = sum + i;
@@ -144,21 +187,26 @@ public class ControlFlow {
         return sum;
     }
 
-    public static int sumUntilThreshold(int[] arr, int threshold) {
+    public static int sumUntilThreshold(int[] arr, int threshold)
+    {
         int sum = 0;
-        for (int value : arr) {
+        for (int value : arr)
+        {
             sum = sum + value;
-            if (sum > threshold) {
+            if (sum > threshold)
+            {
                 break;
             }
         }
         return sum;
     }
 
-    // ========== Switch Statements ==========
+    // Switch Statements
 
-    public static String getGrade(int score) {
-        switch (score / 10) {
+    public static String getGrade(int score)
+    {
+        switch (score / 10)
+        {
             case 10:
             case 9:
                 return "A";
@@ -173,8 +221,10 @@ public class ControlFlow {
         }
     }
 
-    public static int dayOfWeek(int day) {
-        switch (day) {
+    public static int dayOfWeek(int day)
+    {
+        switch (day)
+        {
             case 1:
                 return 1;
             case 2:
@@ -194,21 +244,27 @@ public class ControlFlow {
         }
     }
 
-    // ========== Complex Control Flow ==========
+    // Complex Control Flow
 
-    public static boolean isPrime(int n) {
-        if (n <= 1) {
+    public static boolean isPrime(int n)
+    {
+        if (n <= 1)
+        {
             return false;
         }
-        if (n <= 3) {
+        if (n <= 3)
+        {
             return true;
         }
-        if (n % 2 == 0 || n % 3 == 0) {
+        if (n % 2 == 0 || n % 3 == 0)
+        {
             return false;
         }
         int i = 5;
-        while (i * i <= n) {
-            if (n % i == 0 || n % (i + 2) == 0) {
+        while (i * i <= n)
+        {
+            if (n % i == 0 || n % (i + 2) == 0)
+            {
                 return false;
             }
             i = i + 6;
@@ -216,16 +272,20 @@ public class ControlFlow {
         return true;
     }
 
-    public static int fibonacci(int n) {
-        if (n <= 0) {
+    public static int fibonacci(int n)
+    {
+        if (n <= 0)
+        {
             return 0;
         }
-        if (n == 1) {
+        if (n == 1)
+        {
             return 1;
         }
         int a = 0;
         int b = 1;
-        for (int i = 2; i <= n; i++) {
+        for (int i = 2; i <= n; i++)
+        {
             int temp = a + b;
             a = b;
             b = temp;
@@ -233,27 +293,32 @@ public class ControlFlow {
         return b;
     }
 
-    // ========== Ternary Operator ==========
+    // Ternary Operator
 
-    public static int ternaryMax(int a, int b) {
+    public static int ternaryMax(int a, int b)
+    {
         return a > b ? a : b;
     }
 
-    public static int ternaryAbs(int x) {
+    public static int ternaryAbs(int x)
+    {
         return x < 0 ? -x : x;
     }
 
-    // ========== Short-Circuit Evaluation ==========
+    // Short-Circuit Evaluation
 
-    public static boolean andShortCircuit(int a, int b) {
+    public static boolean andShortCircuit(int a, int b)
+    {
         return a > 0 && b > 0;
     }
 
-    public static boolean orShortCircuit(int a, int b) {
+    public static boolean orShortCircuit(int a, int b)
+    {
         return a > 0 || b > 0;
     }
 
-    public static boolean complexCondition(int a, int b, int c) {
+    public static boolean complexCondition(int a, int b, int c)
+    {
         return (a > 0 && b > 0) || (c > 0);
     }
 }

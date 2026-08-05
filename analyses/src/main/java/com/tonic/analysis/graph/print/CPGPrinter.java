@@ -11,42 +11,73 @@ import java.io.Writer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CPGPrinter {
+/**
+ * A text renderer for a code property graph, emitting nodes grouped by method or by node type
+ * with detail controlled by a GraphPrinterConfig.
+ */
+public class CPGPrinter
+{
 
     private final GraphPrinterConfig config;
 
-    public CPGPrinter() {
+    /**
+     * Creates a printer using the default configuration.
+     */
+    public CPGPrinter()
+    {
         this(GraphPrinterConfig.defaults());
     }
 
-    public CPGPrinter(GraphPrinterConfig config) {
+    /**
+     * Creates a printer with the given configuration.
+     * @param config grouping, verbosity and truncation settings
+     */
+    public CPGPrinter(GraphPrinterConfig config)
+    {
         this.config = config;
     }
 
-    public String print(CodePropertyGraph cpg) {
+    /**
+     * Renders the graph to a string.
+     * @param cpg the graph to print
+     * @return the rendered text
+     */
+    public String print(CodePropertyGraph cpg)
+    {
         StringWriter sw = new StringWriter();
         print(cpg, sw);
         return sw.toString();
     }
 
-    public void print(CodePropertyGraph cpg, Writer output) {
+    /**
+     * Renders the graph to a writer and flushes it.
+     * @param cpg the graph to print
+     * @param output destination for the rendered text
+     */
+    public void print(CodePropertyGraph cpg, Writer output)
+    {
         IndentingWriter writer = new IndentingWriter(output, config.getIndentString());
 
         printHeader(writer, cpg);
         writer.newLine();
 
-        if (config.isGroupByMethod()) {
+        if (config.isGroupByMethod())
+        {
             printByMethod(writer, cpg);
-        } else {
+        }
+        else
+        {
             printAllNodes(writer, cpg);
         }
 
-        if (config.getVerbosity().ordinal() >= Verbosity.VERBOSE.ordinal()) {
+        if (config.getVerbosity().ordinal() >= Verbosity.VERBOSE.ordinal())
+        {
             writer.newLine();
             printEdges(writer, cpg);
         }
 
-        if (config.isShowStatistics()) {
+        if (config.isShowStatistics())
+        {
             writer.newLine();
             printStatistics(writer, cpg);
         }
@@ -54,27 +85,32 @@ public class CPGPrinter {
         writer.flush();
     }
 
-    private void printHeader(IndentingWriter writer, CodePropertyGraph cpg) {
+    private void printHeader(IndentingWriter writer, CodePropertyGraph cpg)
+    {
         writer.writeLine("=== Code Property Graph ===");
         writer.writeLine(cpg.toString());
     }
 
-    private void printByMethod(IndentingWriter writer, CodePropertyGraph cpg) {
+    private void printByMethod(IndentingWriter writer, CodePropertyGraph cpg)
+    {
         writer.writeLine("--- Methods ---");
 
         List<MethodNode> methods = cpg.nodes(MethodNode.class)
                 .sorted(Comparator.comparing(MethodNode::getFullSignature))
                 .collect(Collectors.toList());
 
-        for (MethodNode method : methods) {
+        for (MethodNode method : methods)
+        {
             writer.newLine();
             printMethod(writer, cpg, method);
         }
     }
 
-    private void printMethod(IndentingWriter writer, CodePropertyGraph cpg, MethodNode method) {
+    private void printMethod(IndentingWriter writer, CodePropertyGraph cpg, MethodNode method)
+    {
         StringBuilder header = new StringBuilder();
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             header.append("[").append(method.getId()).append("] ");
         }
         header.append("METHOD: ").append(method.getFullSignature());
@@ -89,7 +125,8 @@ public class CPGPrinter {
             .sorted(Comparator.comparingInt(BlockNode::getBlockId))
             .collect(Collectors.toList());
 
-        for (BlockNode block : blocks) {
+        for (BlockNode block : blocks)
+        {
             printBlock(writer, block);
         }
 
@@ -97,10 +134,12 @@ public class CPGPrinter {
             .filter(cs -> isInMethod(cs, method))
             .collect(Collectors.toList());
 
-        if (!callSites.isEmpty() && config.getVerbosity().ordinal() >= Verbosity.VERBOSE.ordinal()) {
+        if (!callSites.isEmpty() && config.getVerbosity().ordinal() >= Verbosity.VERBOSE.ordinal())
+        {
             writer.writeLine("Call Sites:");
             writer.indent();
-            for (CallSiteNode callSite : callSites) {
+            for (CallSiteNode callSite : callSites)
+            {
                 printCallSite(writer, callSite);
             }
             writer.dedent();
@@ -109,16 +148,24 @@ public class CPGPrinter {
         writer.dedent();
     }
 
-    private boolean isInMethod(CallSiteNode callSite, MethodNode method) {
-        for (CPGEdge edge : callSite.getIncomingEdges()) {
-            if (edge.getType() == CPGEdgeType.CALL) {
+    private boolean isInMethod(CallSiteNode callSite, MethodNode method)
+    {
+        for (CPGEdge edge : callSite.getIncomingEdges())
+        {
+            if (edge.getType() == CPGEdgeType.CALL)
+            {
                 CPGNode source = edge.getSource();
-                if (source instanceof InstructionNode) {
-                    for (CPGEdge containsEdge : source.getIncomingEdges()) {
-                        if (containsEdge.getType() == CPGEdgeType.CONTAINS) {
+                if (source instanceof InstructionNode)
+                {
+                    for (CPGEdge containsEdge : source.getIncomingEdges())
+                    {
+                        if (containsEdge.getType() == CPGEdgeType.CONTAINS)
+                        {
                             CPGNode block = containsEdge.getSource();
-                            for (CPGEdge methodEdge : block.getIncomingEdges()) {
-                                if (methodEdge.getSource().equals(method)) {
+                            for (CPGEdge methodEdge : block.getIncomingEdges())
+                            {
+                                if (methodEdge.getSource().equals(method))
+                                {
                                     return true;
                                 }
                             }
@@ -130,9 +177,11 @@ public class CPGPrinter {
         return false;
     }
 
-    private void printBlock(IndentingWriter writer, BlockNode block) {
+    private void printBlock(IndentingWriter writer, BlockNode block)
+    {
         StringBuilder sb = new StringBuilder();
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             sb.append("[").append(block.getId()).append("] ");
         }
         sb.append("BLOCK ").append(block.getBlockId());
@@ -140,7 +189,8 @@ public class CPGPrinter {
         if (block.isExitBlock()) sb.append(" (exit)");
         writer.writeLine(sb.toString());
 
-        if (config.getVerbosity().ordinal() >= Verbosity.NORMAL.ordinal()) {
+        if (config.getVerbosity().ordinal() >= Verbosity.NORMAL.ordinal())
+        {
             writer.indent();
 
             List<InstructionNode> instructions = block.getOutgoingEdges().stream()
@@ -152,8 +202,10 @@ public class CPGPrinter {
                 .collect(Collectors.toList());
 
             int printed = 0;
-            for (InstructionNode instr : instructions) {
-                if (printed >= config.getMaxNodesPerMethod()) {
+            for (InstructionNode instr : instructions)
+            {
+                if (printed >= config.getMaxNodesPerMethod())
+                {
                     writer.writeLine("... (" + (instructions.size() - printed) + " more instructions)");
                     break;
                 }
@@ -165,32 +217,39 @@ public class CPGPrinter {
         }
     }
 
-    private void printInstruction(IndentingWriter writer, InstructionNode instr) {
+    private void printInstruction(IndentingWriter writer, InstructionNode instr)
+    {
         StringBuilder sb = new StringBuilder();
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             sb.append("[").append(instr.getId()).append("] ");
         }
 
         String label = instr.getLabel();
-        if (config.isTruncateLongLabels() && label.length() > config.getMaxLabelLength()) {
+        if (config.isTruncateLongLabels() && label.length() > config.getMaxLabelLength())
+        {
             label = label.substring(0, config.getMaxLabelLength() - 3) + "...";
         }
         sb.append(label);
 
         writer.writeLine(sb.toString());
 
-        if (config.isShowProperties() && !instr.getProperties().isEmpty()) {
+        if (config.isShowProperties() && !instr.getProperties().isEmpty())
+        {
             writer.indent();
-            for (Map.Entry<String, Object> prop : instr.getProperties().entrySet()) {
+            for (Map.Entry<String, Object> prop : instr.getProperties().entrySet())
+            {
                 writer.writeLine(prop.getKey() + ": " + prop.getValue());
             }
             writer.dedent();
         }
     }
 
-    private void printCallSite(IndentingWriter writer, CallSiteNode callSite) {
+    private void printCallSite(IndentingWriter writer, CallSiteNode callSite)
+    {
         StringBuilder sb = new StringBuilder();
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             sb.append("[").append(callSite.getId()).append("] ");
         }
         sb.append(callSite.getInvokeType().name()).append(" ");
@@ -199,21 +258,26 @@ public class CPGPrinter {
         writer.writeLine(sb.toString());
     }
 
-    private void printAllNodes(IndentingWriter writer, CodePropertyGraph cpg) {
+    private void printAllNodes(IndentingWriter writer, CodePropertyGraph cpg)
+    {
         writer.writeLine("--- All Nodes ---");
 
         Map<CPGNodeType, List<CPGNode>> byType = new EnumMap<>(CPGNodeType.class);
-        for (CPGNode node : cpg.getAllNodes()) {
+        for (CPGNode node : cpg.getAllNodes())
+        {
             byType.computeIfAbsent(node.getNodeType(), k -> new ArrayList<>()).add(node);
         }
 
-        for (Map.Entry<CPGNodeType, List<CPGNode>> entry : byType.entrySet()) {
+        for (Map.Entry<CPGNodeType, List<CPGNode>> entry : byType.entrySet())
+        {
             writer.writeLine(entry.getKey().name() + " (" + entry.getValue().size() + "):");
             writer.indent();
 
             int printed = 0;
-            for (CPGNode node : entry.getValue()) {
-                if (printed >= config.getMaxNodesPerMethod()) {
+            for (CPGNode node : entry.getValue())
+            {
+                if (printed >= config.getMaxNodesPerMethod())
+                {
                     writer.writeLine("... (" + (entry.getValue().size() - printed) + " more)");
                     break;
                 }
@@ -225,14 +289,17 @@ public class CPGPrinter {
         }
     }
 
-    private void printGenericNode(IndentingWriter writer, CPGNode node) {
+    private void printGenericNode(IndentingWriter writer, CPGNode node)
+    {
         StringBuilder sb = new StringBuilder();
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             sb.append("[").append(node.getId()).append("] ");
         }
 
         String label = node.getLabel();
-        if (config.isTruncateLongLabels() && label.length() > config.getMaxLabelLength()) {
+        if (config.isTruncateLongLabels() && label.length() > config.getMaxLabelLength())
+        {
             label = label.substring(0, config.getMaxLabelLength() - 3) + "...";
         }
         sb.append(label);
@@ -240,20 +307,25 @@ public class CPGPrinter {
         writer.writeLine(sb.toString());
     }
 
-    private void printEdges(IndentingWriter writer, CodePropertyGraph cpg) {
+    private void printEdges(IndentingWriter writer, CodePropertyGraph cpg)
+    {
         writer.writeLine("--- Edges by Type ---");
 
         Map<CPGEdgeType, Integer> edgeCounts = cpg.getEdgeTypeCounts();
 
-        for (Map.Entry<CPGEdgeType, Integer> entry : edgeCounts.entrySet()) {
+        for (Map.Entry<CPGEdgeType, Integer> entry : edgeCounts.entrySet())
+        {
             writer.writeLine(entry.getKey().name() + ": " + entry.getValue());
 
-            if (config.getVerbosity() == Verbosity.DEBUG) {
+            if (config.getVerbosity() == Verbosity.DEBUG)
+            {
                 writer.indent();
                 int printed = 0;
-                for (CPGEdge edge : cpg.getAllEdges()) {
+                for (CPGEdge edge : cpg.getAllEdges())
+                {
                     if (edge.getType() != entry.getKey()) continue;
-                    if (printed >= 10) {
+                    if (printed >= 10)
+                    {
                         writer.writeLine("...");
                         break;
                     }
@@ -265,7 +337,8 @@ public class CPGPrinter {
         }
     }
 
-    private void printStatistics(IndentingWriter writer, CodePropertyGraph cpg) {
+    private void printStatistics(IndentingWriter writer, CodePropertyGraph cpg)
+    {
         writer.writeLine("--- Statistics ---");
         writer.writeLine("Total nodes: " + cpg.getNodeCount());
         writer.writeLine("Total edges: " + cpg.getEdgeCount());
@@ -274,7 +347,8 @@ public class CPGPrinter {
         Map<CPGEdgeType, Integer> edgeCounts = cpg.getEdgeTypeCounts();
         writer.writeLine("Edge type breakdown:");
         writer.indent();
-        for (Map.Entry<CPGEdgeType, Integer> entry : edgeCounts.entrySet()) {
+        for (Map.Entry<CPGEdgeType, Integer> entry : edgeCounts.entrySet())
+        {
             writer.writeLine(entry.getKey().name() + ": " + entry.getValue());
         }
         writer.dedent();

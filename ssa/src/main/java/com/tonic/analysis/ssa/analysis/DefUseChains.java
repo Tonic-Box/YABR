@@ -9,9 +9,10 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Computes def-use chains for SSA values.
+ * Def-use chains mapping each SSA value to its defining instruction and its uses.
  */
-public class DefUseChains {
+public class DefUseChains
+{
 
     private final IRMethod method;
     private final Map<SSAValue, IRInstruction> definitions;
@@ -19,7 +20,12 @@ public class DefUseChains {
     private final Map<IRInstruction, Set<SSAValue>> instrUses;
     private final Map<IRInstruction, SSAValue> instrDefs;
 
-    public DefUseChains(IRMethod method) {
+    /**
+     * Creates empty chains for the given method.
+     * @param method the method to analyze
+     */
+    public DefUseChains(IRMethod method)
+    {
         this.method = method;
         this.definitions = new HashMap<>();
         this.uses = new HashMap<>();
@@ -27,50 +33,78 @@ public class DefUseChains {
         this.instrDefs = new HashMap<>();
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public Map<SSAValue, IRInstruction> getDefinitions() {
+    /**
+     * @return the definitions
+     */
+    public Map<SSAValue, IRInstruction> getDefinitions()
+    {
         return definitions;
     }
 
-    public Map<SSAValue, Set<IRInstruction>> getUses() {
+    /**
+     * @return the uses
+     */
+    public Map<SSAValue, Set<IRInstruction>> getUses()
+    {
         return uses;
     }
 
-    public Map<IRInstruction, Set<SSAValue>> getInstrUses() {
+    /**
+     * @return the instr uses
+     */
+    public Map<IRInstruction, Set<SSAValue>> getInstrUses()
+    {
         return instrUses;
     }
 
-    public Map<IRInstruction, SSAValue> getInstrDefs() {
+    /**
+     * @return the instr defs
+     */
+    public Map<IRInstruction, SSAValue> getInstrDefs()
+    {
         return instrDefs;
     }
 
     /**
      * Computes def-use chains for all values in the method.
      */
-    public void compute() {
-        for (IRBlock block : method.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+    public void compute()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 processInstruction(phi);
             }
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 processInstruction(instr);
             }
         }
     }
 
-    private void processInstruction(IRInstruction instr) {
-        if (instr.getResult() != null) {
+    private void processInstruction(IRInstruction instr)
+    {
+        if (instr.getResult() != null)
+        {
             SSAValue def = instr.getResult();
             definitions.put(def, instr);
             instrDefs.put(instr, def);
         }
 
         Set<SSAValue> instrUseSet = new HashSet<>();
-        for (Value operand : instr.getOperands()) {
-            if (operand instanceof SSAValue) {
+        for (Value operand : instr.getOperands())
+        {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) operand;
                 uses.computeIfAbsent(ssa, k -> new HashSet<>()).add(instr);
                 instrUseSet.add(ssa);
@@ -81,73 +115,73 @@ public class DefUseChains {
 
     /**
      * Gets the instruction that defines the specified value.
-     *
      * @param value the value to query
      * @return the defining instruction, or null if none exists
      */
-    public IRInstruction getDefinition(SSAValue value) {
+    public IRInstruction getDefinition(SSAValue value)
+    {
         return definitions.get(value);
     }
 
     /**
      * Gets all instructions that use the specified value.
-     *
      * @param value the value to query
      * @return the set of instructions that use the value
      */
-    public Set<IRInstruction> getUses(SSAValue value) {
+    public Set<IRInstruction> getUses(SSAValue value)
+    {
         return uses.getOrDefault(value, Collections.emptySet());
     }
 
     /**
      * Gets all values used by the specified instruction.
-     *
      * @param instr the instruction to query
      * @return the set of values used by the instruction
      */
-    public Set<SSAValue> getUsedValues(IRInstruction instr) {
+    public Set<SSAValue> getUsedValues(IRInstruction instr)
+    {
         return instrUses.getOrDefault(instr, Collections.emptySet());
     }
 
     /**
      * Gets the value defined by the specified instruction.
-     *
      * @param instr the instruction to query
      * @return the defined value, or null if the instruction defines no value
      */
-    public SSAValue getDefinedValue(IRInstruction instr) {
+    public SSAValue getDefinedValue(IRInstruction instr)
+    {
         return instrDefs.get(instr);
     }
 
     /**
      * Checks if the specified value has any uses.
-     *
      * @param value the value to check
      * @return true if the value has at least one use
      */
-    public boolean hasUses(SSAValue value) {
+    public boolean hasUses(SSAValue value)
+    {
         Set<IRInstruction> useSet = uses.get(value);
         return useSet != null && !useSet.isEmpty();
     }
 
     /**
      * Gets the number of uses of the specified value.
-     *
      * @param value the value to query
      * @return the use count
      */
-    public int getUseCount(SSAValue value) {
+    public int getUseCount(SSAValue value)
+    {
         Set<IRInstruction> useSet = uses.get(value);
         return useSet != null ? useSet.size() : 0;
     }
 
     /**
      * Checks if an instruction is dead code.
-     *
      * @param instr the instruction to check
      * @return true if the instruction defines a value that has no uses
      */
-    public boolean isDeadCode(IRInstruction instr) {
+    public boolean isDeadCode(IRInstruction instr)
+    {
         SSAValue def = instrDefs.get(instr);
         if (def == null) return false;
         return !hasUses(def);

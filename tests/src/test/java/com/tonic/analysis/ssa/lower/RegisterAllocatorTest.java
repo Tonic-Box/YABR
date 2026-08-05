@@ -20,18 +20,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Covers basic allocation, two-slot parameter handling, reserved slot management,
  * live interval building, phi result pre-allocation, fallback allocation, and maxLocals calculation.
  */
-class RegisterAllocatorTest {
+class RegisterAllocatorTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Allocation Tests ==========
+    // Basic Allocation Tests
 
     @Test
-    void allocateEmptyMethod() {
+    void allocateEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -48,7 +51,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void allocateSimpleMethod() {
+    void allocateSimpleMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -58,7 +62,6 @@ class RegisterAllocatorTest {
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         entry.addInstruction(new ConstantInstruction(v0, new IntConstant(42)));
 
-        // return v0
         entry.addInstruction(new ReturnInstruction(v0));
 
         LivenessAnalysis liveness = new LivenessAnalysis(method);
@@ -74,7 +77,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void allocateMultipleValues() {
+    void allocateMultipleValues()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -92,7 +96,6 @@ class RegisterAllocatorTest {
         SSAValue v2 = new SSAValue(PrimitiveType.INT, "v2");
         entry.addInstruction(new BinaryOpInstruction(v2, BinaryOp.ADD, v0, v1));
 
-        // return v2
         entry.addInstruction(new ReturnInstruction(v2));
 
         LivenessAnalysis liveness = new LivenessAnalysis(method);
@@ -111,13 +114,13 @@ class RegisterAllocatorTest {
         assertTrue(reg2 >= 0);
     }
 
-    // ========== Two-Slot Parameter Handling Tests ==========
+    // Two-Slot Parameter Handling Tests
 
     @Test
-    void twoSlotParameterTakesConsecutiveSlots() {
+    void twoSlotParameterTakesConsecutiveSlots()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(J)J", true);
 
-        // Add long parameter
         SSAValue param0 = new SSAValue(PrimitiveType.LONG, "param0");
         method.addParameter(param0);
 
@@ -140,11 +143,11 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void multipleTwoSlotParameters() {
+    void multipleTwoSlotParameters()
+    {
         // Test method signature: (JJ)J - two long params -> long
         IRMethod method = new IRMethod("com/test/Test", "foo", "(JJ)J", true);
 
-        // Add two long parameters
         SSAValue param0 = new SSAValue(PrimitiveType.LONG, "param0");
         SSAValue param1 = new SSAValue(PrimitiveType.LONG, "param1");
         method.addParameter(param0);
@@ -178,7 +181,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void mixedSingleAndTwoSlotParameters() {
+    void mixedSingleAndTwoSlotParameters()
+    {
         // Test method signature: (IJ)V - int param, long param
         IRMethod method = new IRMethod("com/test/Test", "foo", "(IJ)V", true);
 
@@ -211,7 +215,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void doubleParameterTakesConsecutiveSlots() {
+    void doubleParameterTakesConsecutiveSlots()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(D)D", true);
 
         SSAValue param0 = new SSAValue(PrimitiveType.DOUBLE, "param0");
@@ -235,10 +240,11 @@ class RegisterAllocatorTest {
         assertTrue(allocator.getMaxLocals() >= 2);
     }
 
-    // ========== Reserved Slot Management Tests ==========
+    // Reserved Slot Management Tests
 
     @Test
-    void reservedSlotsNotReusedAfterExpiry() {
+    void reservedSlotsNotReusedAfterExpiry()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)I", true);
 
         SSAValue param0 = new SSAValue(PrimitiveType.INT, "param0");
@@ -251,7 +257,6 @@ class RegisterAllocatorTest {
         method.setEntryBlock(entry);
         entry.addSuccessor(block2);
 
-        // Use param0 in entry block
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         entry.addInstruction(new BinaryOpInstruction(v0, BinaryOp.ADD, param0, new IntConstant(1)));
 
@@ -276,7 +281,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void reservedSlotCountCorrectWithNoParameters() {
+    void reservedSlotCountCorrectWithNoParameters()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -292,10 +298,11 @@ class RegisterAllocatorTest {
         assertEquals(0, allocator.getReservedSlotCount());
     }
 
-    // ========== Live Interval Building Tests ==========
+    // Live Interval Building Tests
 
     @Test
-    void liveIntervalSpansDefinitionToLastUse() {
+    void liveIntervalSpansDefinitionToLastUse()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -313,7 +320,6 @@ class RegisterAllocatorTest {
         SSAValue v2 = new SSAValue(PrimitiveType.INT, "v2");
         entry.addInstruction(new BinaryOpInstruction(v2, BinaryOp.ADD, v0, v1));
 
-        // return v2 (position 3)
         entry.addInstruction(new ReturnInstruction(v2));
 
         LivenessAnalysis liveness = new LivenessAnalysis(method);
@@ -334,7 +340,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void phiResultIntervalExtendedToCoverPhiCopies() {
+    void phiResultIntervalExtendedToCoverPhiCopies()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -368,14 +375,10 @@ class RegisterAllocatorTest {
         merge.addPhi(phi);
         merge.addInstruction(new ReturnInstruction(v2));
 
-        // Set up phi copy mapping
         SSAValue copy0 = new SSAValue(PrimitiveType.INT, "copy0");
         SSAValue copy1 = new SSAValue(PrimitiveType.INT, "copy1");
         Map<SSAValue, List<CopyInfo>> phiCopyMapping = new HashMap<>();
-        phiCopyMapping.put(v2, List.of(
-            new CopyInfo(copy0, left),
-            new CopyInfo(copy1, right)
-        ));
+        phiCopyMapping.put(v2, List.of(new CopyInfo(copy0, left), new CopyInfo(copy1, right)));
         method.setPhiCopyMapping(phiCopyMapping);
 
         LivenessAnalysis liveness = new LivenessAnalysis(method);
@@ -389,10 +392,11 @@ class RegisterAllocatorTest {
         assertTrue(reg2 >= 0);
     }
 
-    // ========== Pre-allocation of Phi Results Tests ==========
+    // Pre-allocation of Phi Results Tests
 
     @Test
-    void phiResultsPreAllocatedBeforeRegularValues() {
+    void phiResultsPreAllocatedBeforeRegularValues()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -427,10 +431,7 @@ class RegisterAllocatorTest {
         SSAValue copy0 = new SSAValue(PrimitiveType.INT, "copy0");
         SSAValue copy1 = new SSAValue(PrimitiveType.INT, "copy1");
         Map<SSAValue, List<CopyInfo>> phiCopyMapping = new HashMap<>();
-        phiCopyMapping.put(v2, List.of(
-            new CopyInfo(copy0, left),
-            new CopyInfo(copy1, right)
-        ));
+        phiCopyMapping.put(v2, List.of(new CopyInfo(copy0, left), new CopyInfo(copy1, right)));
         method.setPhiCopyMapping(phiCopyMapping);
 
         LivenessAnalysis liveness = new LivenessAnalysis(method);
@@ -445,7 +446,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void phiResultWithTwoSlotType() {
+    void phiResultWithTwoSlotType()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()J", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -477,14 +479,10 @@ class RegisterAllocatorTest {
         merge.addPhi(phi);
         merge.addInstruction(new ReturnInstruction(v2));
 
-        // Set up phi copy mapping
         SSAValue copy0 = new SSAValue(PrimitiveType.LONG, "copy0");
         SSAValue copy1 = new SSAValue(PrimitiveType.LONG, "copy1");
         Map<SSAValue, List<CopyInfo>> phiCopyMapping = new HashMap<>();
-        phiCopyMapping.put(v2, List.of(
-            new CopyInfo(copy0, left),
-            new CopyInfo(copy1, right)
-        ));
+        phiCopyMapping.put(v2, List.of(new CopyInfo(copy0, left), new CopyInfo(copy1, right)));
         method.setPhiCopyMapping(phiCopyMapping);
 
         LivenessAnalysis liveness = new LivenessAnalysis(method);
@@ -501,10 +499,11 @@ class RegisterAllocatorTest {
         assertTrue(allocator.getMaxLocals() >= phiReg + 2);
     }
 
-    // ========== Fallback Allocation Tests ==========
+    // Fallback Allocation Tests
 
     @Test
-    void fallbackAllocatesOnDemandForMissedValue() {
+    void fallbackAllocatesOnDemandForMissedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -527,7 +526,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void fallbackAllocationForTwoSlotValue() {
+    void fallbackAllocationForTwoSlotValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -551,7 +551,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void fallbackAllocatesMultipleValuesSequentially() {
+    void fallbackAllocatesMultipleValuesSequentially()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -583,10 +584,11 @@ class RegisterAllocatorTest {
         assertNotEquals(reg1, reg3);
     }
 
-    // ========== MaxLocals Calculation Tests ==========
+    // MaxLocals Calculation Tests
 
     @Test
-    void maxLocalsReturnsHighestSlotPlusOne() {
+    void maxLocalsReturnsHighestSlotPlusOne()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -610,7 +612,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void maxLocalsAccountsForTwoSlotValues() {
+    void maxLocalsAccountsForTwoSlotValues()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()J", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -634,7 +637,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void maxLocalsWithMixedSingleAndTwoSlotValues() {
+    void maxLocalsWithMixedSingleAndTwoSlotValues()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()J", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -676,7 +680,8 @@ class RegisterAllocatorTest {
     }
 
     @Test
-    void maxLocalsIncludesReservedParameterSlots() {
+    void maxLocalsIncludesReservedParameterSlots()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(IJI)V", true);
 
         SSAValue param0 = new SSAValue(PrimitiveType.INT, "param0");
@@ -707,10 +712,11 @@ class RegisterAllocatorTest {
         assertEquals(4, allocator.getReservedSlotCount());
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void allocatorHandlesNoPhiCopyMapping() {
+    void allocatorHandlesNoPhiCopyMapping()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -750,14 +756,14 @@ class RegisterAllocatorTest {
         RegisterAllocator allocator = new RegisterAllocator(method, liveness);
         allocator.allocate();
 
-        // Should still allocate successfully
         assertTrue(allocator.getRegister(v0) >= 0);
         assertTrue(allocator.getRegister(v1) >= 0);
         assertTrue(allocator.getRegister(v2) >= 0);
     }
 
     @Test
-    void allocatorHandlesComplexControlFlow() {
+    void allocatorHandlesComplexControlFlow()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock loop = new IRBlock("loop");
@@ -788,13 +794,13 @@ class RegisterAllocatorTest {
         RegisterAllocator allocator = new RegisterAllocator(method, liveness);
         allocator.allocate();
 
-        // Should handle loop back-edges
         assertTrue(allocator.getRegister(v0) >= 0);
         assertTrue(allocator.getRegister(v1) >= 0);
     }
 
     @Test
-    void getterMethodsReturnCorrectValues() {
+    void getterMethodsReturnCorrectValues()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)I", true);
         SSAValue param0 = new SSAValue(PrimitiveType.INT, "param0");
         method.addParameter(param0);
@@ -809,7 +815,6 @@ class RegisterAllocatorTest {
 
         RegisterAllocator allocator = new RegisterAllocator(method, liveness);
 
-        // Test getters
         assertEquals(method, allocator.getMethod());
         assertEquals(liveness, allocator.getLiveness());
 

@@ -28,20 +28,22 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Range-aware LVT attribution invariants that the corpus cannot exercise:
- * <ul>
- * <li>A store takes effect at the NEXT INSTRUCTION, whatever its byte length - the fixed forward
+ * - A store takes effect at the NEXT INSTRUCTION, whatever its byte length - the fixed forward
  *     window this replaced missed a store whose following boundary sits more than two bytes away
- *     and could overshoot into the next variable's scope.</li>
- * <li>A duplicated instruction keeps its bytecode offset - the reducibility transform's copies
- *     otherwise feed the partition offset-less instructions whose names all fall back.</li>
- * <li>A parameter is named by the entry covering pc 0 even when its slot is reused later (which
- *     makes the whole-slot name set ambiguous and used to degrade the parameter).</li>
- * </ul>
+ *     and could overshoot into the next variable's scope.
+ * - A duplicated instruction keeps its bytecode offset - the reducibility transform's copies
+ *     otherwise feed the partition offset-less instructions whose names all fall back.
+ * - A parameter is named by the entry covering pc 0 even when its slot is reused later (which
+ *     makes the whole-slot name set ambiguous and used to degrade the parameter).
  */
-class RangeAttributionTest {
+class RangeAttributionTest
+{
 
-    /** Compiles a tiny fixture and returns its ClassFile + the requested method. */
-    private static Object[] fixture() throws Exception {
+    /**
+     * Compiles a tiny fixture and returns its ClassFile + the requested method.
+     */
+    private static Object[] fixture() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("rangeattr");
@@ -61,9 +63,12 @@ class RangeAttributionTest {
         return new Object[]{cf, m};
     }
 
-    private static LocalVariableTableAttribute lvtOf(MethodEntry m) {
-        for (Attribute a : m.getCodeAttribute().getAttributes()) {
-            if (a instanceof LocalVariableTableAttribute) {
+    private static LocalVariableTableAttribute lvtOf(MethodEntry m)
+    {
+        for (Attribute a : m.getCodeAttribute().getAttributes())
+        {
+            if (a instanceof LocalVariableTableAttribute)
+            {
                 return (LocalVariableTableAttribute) a;
             }
         }
@@ -71,7 +76,8 @@ class RangeAttributionTest {
     }
 
     @Test
-    void aStoreResolvesAtTheNextInstructionNotAFixedWindow() throws Exception {
+    void aStoreResolvesAtTheNextInstructionNotAFixedWindow() throws Exception
+    {
         Object[] fx = fixture();
         ClassFile cf = (ClassFile) fx[0];
         MethodEntry m = (MethodEntry) fx[1];
@@ -100,15 +106,19 @@ class RangeAttributionTest {
     }
 
     @Test
-    void aClonedMethodKeepsItsInstructionOffsets() throws Exception {
+    void aClonedMethodKeepsItsInstructionOffsets() throws Exception
+    {
         Object[] fx = fixture();
         ClassFile cf = (ClassFile) fx[0];
         MethodEntry m = (MethodEntry) fx[1];
         IRMethod ir = new SSA(cf.getConstPool()).lift(m);
         int stamped = 0;
-        for (IRBlock b : ir.getBlocks()) {
-            for (IRInstruction i : b.getInstructions()) {
-                if (i.getBytecodeOffset() >= 0) {
+        for (IRBlock b : ir.getBlocks())
+        {
+            for (IRInstruction i : b.getInstructions())
+            {
+                if (i.getBytecodeOffset() >= 0)
+                {
                     stamped++;
                 }
             }
@@ -116,19 +126,22 @@ class RangeAttributionTest {
         assumeTrue(stamped > 0, "the lift stamps offsets");
         IRMethod cloned = new IRMethodCloner().clone(ir);
         int clonedStamped = 0;
-        for (IRBlock b : cloned.getBlocks()) {
-            for (IRInstruction i : b.getInstructions()) {
-                if (i.getBytecodeOffset() >= 0) {
+        for (IRBlock b : cloned.getBlocks())
+        {
+            for (IRInstruction i : b.getInstructions())
+            {
+                if (i.getBytecodeOffset() >= 0)
+                {
                     clonedStamped++;
                 }
             }
         }
-        assertEquals(stamped, clonedStamped,
-                "every cloned instruction stands in at the original's source position");
+        assertEquals(stamped, clonedStamped, "every cloned instruction stands in at the original's source position");
     }
 
     @Test
-    void aParameterKeepsItsNameWhenItsSlotIsReusedLater() throws Exception {
+    void aParameterKeepsItsNameWhenItsSlotIsReusedLater() throws Exception
+    {
         Object[] fx = fixture();
         ClassFile cf = (ClassFile) fx[0];
         MethodEntry m = (MethodEntry) fx[1];

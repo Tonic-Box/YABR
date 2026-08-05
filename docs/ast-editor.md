@@ -29,7 +29,8 @@ ASTEditor editor = new ASTEditor(methodBody, "myMethod", "(I)V", "com/example/My
 
 // Replace deprecated method calls
 editor.onMethodCall((ctx, call) -> {
-    if (call.getMethodName().equals("oldMethod")) {
+    if (call.getMethodName().equals("oldMethod"))
+    {
         return Replacement.with(ctx.factory()
             .methodCall("newMethod")
             .on(call.getReceiver())
@@ -129,7 +130,8 @@ import com.tonic.analysis.source.editor.handler.ArrayAccessHandler.ArrayAccessTy
 
 // Handle all array accesses
 editor.onArrayAccess((ctx, access, accessType) -> {
-    switch (accessType) {
+    switch (accessType)
+    {
         case READ:           // value = array[i]
             System.out.println("Reading from " + access);
             break;
@@ -258,7 +260,8 @@ return Replacement.insertAfter(cleanupStmt);
 ```java
 // Replace method call with literal
 editor.onMethodCall((ctx, call) -> {
-    if (call.getMethodName().equals("getConstant")) {
+    if (call.getMethodName().equals("getConstant"))
+    {
         return Replacement.with(ctx.factory().intLiteral(42));
     }
     return Replacement.keep();
@@ -277,7 +280,8 @@ editor.onReturn((ctx, ret) -> {
 // Remove debug statements
 editor.onMethodCall((ctx, call) -> {
     if (call.getMethodName().equals("debug") &&
-        call.getOwnerClass().equals("com/example/Logger")) {
+        call.getOwnerClass().equals("com/example/Logger"))
+    {
         return Replacement.remove();
     }
     return Replacement.keep();
@@ -285,7 +289,8 @@ editor.onMethodCall((ctx, call) -> {
 
 // Wrap with try-catch
 editor.onMethodCall((ctx, call) -> {
-    if (call.getMethodName().equals("riskyOperation")) {
+    if (call.getMethodName().equals("riskyOperation"))
+    {
         // Create try-catch wrapper
         TryCatchStmt wrapper = ...;
         return Replacement.with(wrapper);
@@ -607,9 +612,11 @@ com.tonic.analysis.source.editor/
 Add method entry/exit logging:
 
 ```java
-public class LoggingInjector {
+public class LoggingInjector
+{
 
-    public static void injectLogging(BlockStmt methodBody, String methodName) {
+    public static void injectLogging(BlockStmt methodBody, String methodName)
+    {
         ASTEditor editor = new ASTEditor(methodBody, methodName, "()V", "com/example/MyClass");
         ASTFactory factory = new ASTFactory();
 
@@ -639,15 +646,19 @@ public class LoggingInjector {
 Replace deprecated API calls:
 
 ```java
-public class ApiMigrator {
+public class ApiMigrator
+{
 
-    public static void migrateApi(BlockStmt methodBody) {
+    public static void migrateApi(BlockStmt methodBody)
+    {
         ASTEditor editor = new ASTEditor(methodBody);
 
         // Replace deprecated method calls
         editor.onMethodCall((ctx, call) -> {
-            if (call.getOwnerClass().equals("com/old/Api")) {
-                switch (call.getMethodName()) {
+            if (call.getOwnerClass().equals("com/old/Api"))
+            {
+                switch (call.getMethodName())
+                {
                     case "oldMethod":
                         return Replacement.with(ctx.factory()
                             .methodCall("newMethod")
@@ -667,7 +678,8 @@ public class ApiMigrator {
         // Replace deprecated field access
         editor.onFieldAccess((ctx, access) -> {
             if (access.getOwnerClass().equals("com/old/Constants") &&
-                access.getFieldName().equals("OLD_VALUE")) {
+                access.getFieldName().equals("OLD_VALUE"))
+            {
                 return Replacement.with(ctx.factory()
                     .staticField("com/new/Constants", "NEW_VALUE", access.getType()));
             }
@@ -684,19 +696,23 @@ public class ApiMigrator {
 Add null checks before field accesses:
 
 ```java
-public class NullCheckInserter {
+public class NullCheckInserter
+{
 
-    public static void insertNullChecks(BlockStmt methodBody) {
+    public static void insertNullChecks(BlockStmt methodBody)
+    {
         ExpressionEditor editor = new ExpressionEditor(methodBody, "test", "()V", "Test");
 
         editor.onFieldAccess((ctx, access) -> {
             // Skip static field access
-            if (access.isStatic()) {
+            if (access.isStatic())
+            {
                 return Replacement.keep();
             }
 
             Expression receiver = access.getReceiver();
-            if (receiver != null && !ctx.isNullChecked(receiver)) {
+            if (receiver != null && !ctx.isNullChecked(receiver))
+            {
                 // Create: if (receiver == null) throw new NullPointerException();
                 IfStmt nullCheck = ctx.factory().ifStmt(
                     ctx.factory().equals(receiver, ctx.factory().nullLiteral()),

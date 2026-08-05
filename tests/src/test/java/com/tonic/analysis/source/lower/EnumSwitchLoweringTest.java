@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * constants' ordinals as keys, resolved from the enum's own class, and recovery reads that direct-ordinal
  * form back into constant-name labels; a label that cannot be resolved fails the lowering loudly instead.
  */
-class EnumSwitchLoweringTest {
+class EnumSwitchLoweringTest
+{
 
     private static final String[] ENUM_LINES = {
             "public enum Step { Begin, Render, End }",
@@ -71,7 +72,8 @@ class EnumSwitchLoweringTest {
     };
 
     @Test
-    void anEnumSwitchKeepsItsDispatch() throws Exception {
+    void anEnumSwitchKeepsItsDispatch() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("enum-dispatch");
@@ -86,13 +88,18 @@ class EnumSwitchLoweringTest {
         ClassFile target = null;
         List<byte[]> siblings = new ArrayList<>();
         List<String> siblingNames = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class")) {
-            for (Path p : stream) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class"))
+        {
+            for (Path p : stream)
+            {
                 byte[] bytes = Files.readAllBytes(p);
                 ClassFile cf = pool.loadClass(bytes);
-                if (cf.getClassName().equals("EnumDispatch")) {
+                if (cf.getClassName().equals("EnumDispatch"))
+                {
                     target = cf;
-                } else {
+                }
+                else
+                {
                     siblings.add(bytes);
                     siblingNames.add(cf.getClassName().replace('/', '.'));
                 }
@@ -118,9 +125,11 @@ class EnumSwitchLoweringTest {
     }
 
     private static Object invokeCheck(byte[] targetBytes, List<byte[]> siblings, List<String> names)
-            throws Exception {
+            throws Exception
+            {
         TestClassLoader loader = new TestClassLoader();
-        for (int i = 0; i < siblings.size(); i++) {
+        for (int i = 0; i < siblings.size(); i++)
+        {
             loader.defineClass(names.get(i), siblings.get(i));
         }
         Class<?> clazz = loader.defineClass("EnumDispatch", targetBytes);

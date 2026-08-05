@@ -6,13 +6,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class VerificationTypeTest {
+class VerificationTypeTest
+{
 
     @Nested
-    class PrimitiveTypeTests {
+    class PrimitiveTypeTests
+    {
 
         @Test
-        void primitiveConstantsHaveCorrectTags() {
+        void primitiveConstantsHaveCorrectTags()
+        {
             assertEquals(VerificationType.TAG_TOP, VerificationType.TOP.getTag());
             assertEquals(VerificationType.TAG_INTEGER, VerificationType.INTEGER.getTag());
             assertEquals(VerificationType.TAG_FLOAT, VerificationType.FLOAT.getTag());
@@ -23,7 +26,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveConstantsHaveCorrectNames() {
+        void primitiveConstantsHaveCorrectNames()
+        {
             VerificationType.PrimitiveType top = (VerificationType.PrimitiveType) VerificationType.TOP;
             VerificationType.PrimitiveType integer = (VerificationType.PrimitiveType) VerificationType.INTEGER;
             VerificationType.PrimitiveType floatType = (VerificationType.PrimitiveType) VerificationType.FLOAT;
@@ -42,7 +46,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveToStringUsesName() {
+        void primitiveToStringUsesName()
+        {
             assertEquals("top", VerificationType.TOP.toString());
             assertEquals("int", VerificationType.INTEGER.toString());
             assertEquals("float", VerificationType.FLOAT.toString());
@@ -53,7 +58,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveEqualsComparesTag() {
+        void primitiveEqualsComparesTag()
+        {
             VerificationType.PrimitiveType int1 = (VerificationType.PrimitiveType) VerificationType.INTEGER;
             VerificationType.PrimitiveType int2 = (VerificationType.PrimitiveType) VerificationType.INTEGER;
 
@@ -62,7 +68,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveNotEqualsWhenDifferentTag() {
+        void primitiveNotEqualsWhenDifferentTag()
+        {
             assertNotEquals(VerificationType.INTEGER, VerificationType.FLOAT);
             assertNotEquals(VerificationType.LONG, VerificationType.DOUBLE);
             assertFalse(VerificationType.INTEGER.equals(VerificationType.FLOAT));
@@ -70,7 +77,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveNotEqualsWhenDifferentType() {
+        void primitiveNotEqualsWhenDifferentType()
+        {
             VerificationType.PrimitiveType primitiveType = (VerificationType.PrimitiveType) VerificationType.INTEGER;
             VerificationType.ObjectType objectType = new VerificationType.ObjectType(1);
 
@@ -78,7 +86,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveHashCodeBasedOnTag() {
+        void primitiveHashCodeBasedOnTag()
+        {
             VerificationType.PrimitiveType int1 = (VerificationType.PrimitiveType) VerificationType.INTEGER;
             VerificationType.PrimitiveType int2 = (VerificationType.PrimitiveType) VerificationType.INTEGER;
 
@@ -87,7 +96,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveHashCodeDiffersForDifferentTags() {
+        void primitiveHashCodeDiffersForDifferentTags()
+        {
             VerificationType.PrimitiveType intType = (VerificationType.PrimitiveType) VerificationType.INTEGER;
             VerificationType.PrimitiveType floatType = (VerificationType.PrimitiveType) VerificationType.FLOAT;
 
@@ -95,7 +105,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void primitiveToVerificationTypeInfo() {
+        void primitiveToVerificationTypeInfo()
+        {
             VerificationTypeInfo info = VerificationType.INTEGER.toVerificationTypeInfo();
 
             assertNotNull(info);
@@ -105,10 +116,12 @@ class VerificationTypeTest {
     }
 
     @Nested
-    class ObjectTypeTests {
+    class ObjectTypeTests
+    {
 
         @Test
-        void objectTypeConstructorWithClassIndex() {
+        void objectTypeConstructorWithClassIndex()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42);
 
             assertEquals(VerificationType.TAG_OBJECT, obj.getTag());
@@ -117,7 +130,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeConstructorWithClassNameAndIndex() {
+        void objectTypeConstructorWithClassNameAndIndex()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42, "java/lang/String");
 
             assertEquals(VerificationType.TAG_OBJECT, obj.getTag());
@@ -126,7 +140,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeStaticFactoryMethodWithIndex() {
+        void objectTypeStaticFactoryMethodWithIndex()
+        {
             VerificationType obj = VerificationType.object(100);
 
             assertEquals(VerificationType.TAG_OBJECT, obj.getTag());
@@ -136,7 +151,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeStaticFactoryMethodWithClassNameAndIndex() {
+        void objectTypeStaticFactoryMethodWithClassNameAndIndex()
+        {
             VerificationType obj = VerificationType.object("java/util/List", 50);
 
             assertEquals(VerificationType.TAG_OBJECT, obj.getTag());
@@ -146,21 +162,24 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeToStringWithoutClassName() {
+        void objectTypeToStringWithoutClassName()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42);
 
             assertEquals("Object(#42)", obj.toString());
         }
 
         @Test
-        void objectTypeToStringWithClassName() {
+        void objectTypeToStringWithClassName()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42, "java/lang/String");
 
             assertEquals("Object(java/lang/String)", obj.toString());
         }
 
         @Test
-        void objectTypeEqualsComparesClassIndex() {
+        void objectTypeEqualsComparesClassIndex()
+        {
             VerificationType.ObjectType obj1 = new VerificationType.ObjectType(42, "java/lang/String");
             VerificationType.ObjectType obj2 = new VerificationType.ObjectType(42, "java/lang/Integer");
 
@@ -168,14 +187,16 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeEqualsSameInstance() {
+        void objectTypeEqualsSameInstance()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42);
 
             assertEquals(obj, obj);
         }
 
         @Test
-        void objectTypeNotEqualsWhenDifferentClassIndex() {
+        void objectTypeNotEqualsWhenDifferentClassIndex()
+        {
             VerificationType.ObjectType obj1 = new VerificationType.ObjectType(42);
             VerificationType.ObjectType obj2 = new VerificationType.ObjectType(43);
 
@@ -183,7 +204,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeNotEqualsWhenDifferentType() {
+        void objectTypeNotEqualsWhenDifferentType()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42);
             VerificationType.PrimitiveType prim = (VerificationType.PrimitiveType) VerificationType.INTEGER;
 
@@ -191,7 +213,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeHashCodeBasedOnTagAndClassIndex() {
+        void objectTypeHashCodeBasedOnTagAndClassIndex()
+        {
             VerificationType.ObjectType obj1 = new VerificationType.ObjectType(42, "java/lang/String");
             VerificationType.ObjectType obj2 = new VerificationType.ObjectType(42, "java/lang/Integer");
 
@@ -199,7 +222,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeHashCodeDiffersForDifferentClassIndex() {
+        void objectTypeHashCodeDiffersForDifferentClassIndex()
+        {
             VerificationType.ObjectType obj1 = new VerificationType.ObjectType(42);
             VerificationType.ObjectType obj2 = new VerificationType.ObjectType(43);
 
@@ -207,7 +231,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void objectTypeToVerificationTypeInfo() {
+        void objectTypeToVerificationTypeInfo()
+        {
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42);
             VerificationTypeInfo info = obj.toVerificationTypeInfo();
 
@@ -218,10 +243,12 @@ class VerificationTypeTest {
     }
 
     @Nested
-    class UninitializedTypeTests {
+    class UninitializedTypeTests
+    {
 
         @Test
-        void uninitializedTypeConstructor() {
+        void uninitializedTypeConstructor()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(100);
 
             assertEquals(VerificationType.TAG_UNINITIALIZED, uninit.getTag());
@@ -229,21 +256,24 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeConstructorWithZeroOffset() {
+        void uninitializedTypeConstructorWithZeroOffset()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(0);
 
             assertEquals(0, uninit.getNewInstructionOffset());
         }
 
         @Test
-        void uninitializedTypeConstructorWithNegativeOffset() {
+        void uninitializedTypeConstructorWithNegativeOffset()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(-1);
 
             assertEquals(-1, uninit.getNewInstructionOffset());
         }
 
         @Test
-        void uninitializedTypeStaticFactoryMethod() {
+        void uninitializedTypeStaticFactoryMethod()
+        {
             VerificationType uninit = VerificationType.uninitialized(200);
 
             assertEquals(VerificationType.TAG_UNINITIALIZED, uninit.getTag());
@@ -252,21 +282,24 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeToString() {
+        void uninitializedTypeToString()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(100);
 
             assertEquals("Uninitialized(@100)", uninit.toString());
         }
 
         @Test
-        void uninitializedTypeToStringWithZeroOffset() {
+        void uninitializedTypeToStringWithZeroOffset()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(0);
 
             assertEquals("Uninitialized(@0)", uninit.toString());
         }
 
         @Test
-        void uninitializedTypeEqualsSameOffset() {
+        void uninitializedTypeEqualsSameOffset()
+        {
             VerificationType.UninitializedType uninit1 = new VerificationType.UninitializedType(100);
             VerificationType.UninitializedType uninit2 = new VerificationType.UninitializedType(100);
 
@@ -274,14 +307,16 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeEqualsSameInstance() {
+        void uninitializedTypeEqualsSameInstance()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(100);
 
             assertEquals(uninit, uninit);
         }
 
         @Test
-        void uninitializedTypeNotEqualsWhenDifferentOffset() {
+        void uninitializedTypeNotEqualsWhenDifferentOffset()
+        {
             VerificationType.UninitializedType uninit1 = new VerificationType.UninitializedType(100);
             VerificationType.UninitializedType uninit2 = new VerificationType.UninitializedType(200);
 
@@ -289,7 +324,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeNotEqualsWhenDifferentType() {
+        void uninitializedTypeNotEqualsWhenDifferentType()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(100);
             VerificationType.ObjectType obj = new VerificationType.ObjectType(42);
 
@@ -297,7 +333,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeHashCodeSameForSameOffset() {
+        void uninitializedTypeHashCodeSameForSameOffset()
+        {
             VerificationType.UninitializedType uninit1 = new VerificationType.UninitializedType(100);
             VerificationType.UninitializedType uninit2 = new VerificationType.UninitializedType(100);
 
@@ -305,7 +342,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeHashCodeDiffersForDifferentOffset() {
+        void uninitializedTypeHashCodeDiffersForDifferentOffset()
+        {
             VerificationType.UninitializedType uninit1 = new VerificationType.UninitializedType(100);
             VerificationType.UninitializedType uninit2 = new VerificationType.UninitializedType(200);
 
@@ -313,7 +351,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void uninitializedTypeToVerificationTypeInfo() {
+        void uninitializedTypeToVerificationTypeInfo()
+        {
             VerificationType.UninitializedType uninit = new VerificationType.UninitializedType(100);
             VerificationTypeInfo info = uninit.toVerificationTypeInfo();
 
@@ -324,96 +363,115 @@ class VerificationTypeTest {
     }
 
     @Nested
-    class TwoSlotTests {
+    class TwoSlotTests
+    {
 
         @Test
-        void longIsTwoSlot() {
+        void longIsTwoSlot()
+        {
             assertTrue(VerificationType.LONG.isTwoSlot());
         }
 
         @Test
-        void doubleIsTwoSlot() {
+        void doubleIsTwoSlot()
+        {
             assertTrue(VerificationType.DOUBLE.isTwoSlot());
         }
 
         @Test
-        void integerIsNotTwoSlot() {
+        void integerIsNotTwoSlot()
+        {
             assertFalse(VerificationType.INTEGER.isTwoSlot());
         }
 
         @Test
-        void floatIsNotTwoSlot() {
+        void floatIsNotTwoSlot()
+        {
             assertFalse(VerificationType.FLOAT.isTwoSlot());
         }
 
         @Test
-        void topIsNotTwoSlot() {
+        void topIsNotTwoSlot()
+        {
             assertFalse(VerificationType.TOP.isTwoSlot());
         }
 
         @Test
-        void nullIsNotTwoSlot() {
+        void nullIsNotTwoSlot()
+        {
             assertFalse(VerificationType.NULL.isTwoSlot());
         }
 
         @Test
-        void objectIsNotTwoSlot() {
+        void objectIsNotTwoSlot()
+        {
             VerificationType obj = VerificationType.object(42);
             assertFalse(obj.isTwoSlot());
         }
 
         @Test
-        void uninitializedIsNotTwoSlot() {
+        void uninitializedIsNotTwoSlot()
+        {
             VerificationType uninit = VerificationType.uninitialized(100);
             assertFalse(uninit.isTwoSlot());
         }
     }
 
     @Nested
-    class FromDescriptorCharTests {
+    class FromDescriptorCharTests
+    {
 
         @Test
-        void fromDescriptorByteReturnsInteger() {
+        void fromDescriptorByteReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor('B'));
         }
 
         @Test
-        void fromDescriptorCharReturnsInteger() {
+        void fromDescriptorCharReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor('C'));
         }
 
         @Test
-        void fromDescriptorIntReturnsInteger() {
+        void fromDescriptorIntReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor('I'));
         }
 
         @Test
-        void fromDescriptorShortReturnsInteger() {
+        void fromDescriptorShortReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor('S'));
         }
 
         @Test
-        void fromDescriptorBooleanReturnsInteger() {
+        void fromDescriptorBooleanReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor('Z'));
         }
 
         @Test
-        void fromDescriptorFloatReturnsFloat() {
+        void fromDescriptorFloatReturnsFloat()
+        {
             assertEquals(VerificationType.FLOAT, VerificationType.fromDescriptor('F'));
         }
 
         @Test
-        void fromDescriptorDoubleReturnsDouble() {
+        void fromDescriptorDoubleReturnsDouble()
+        {
             assertEquals(VerificationType.DOUBLE, VerificationType.fromDescriptor('D'));
         }
 
         @Test
-        void fromDescriptorLongReturnsLong() {
+        void fromDescriptorLongReturnsLong()
+        {
             assertEquals(VerificationType.LONG, VerificationType.fromDescriptor('J'));
         }
 
         @Test
-        void fromDescriptorInvalidCharThrows() {
+        void fromDescriptorInvalidCharThrows()
+        {
             IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> VerificationType.fromDescriptor('X')
@@ -422,7 +480,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorObjectClassThrows() {
+        void fromDescriptorObjectClassThrows()
+        {
             IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> VerificationType.fromDescriptor('L')
@@ -431,7 +490,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorArrayThrows() {
+        void fromDescriptorArrayThrows()
+        {
             IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> VerificationType.fromDescriptor('[')
@@ -441,10 +501,12 @@ class VerificationTypeTest {
     }
 
     @Nested
-    class FromDescriptorStringTests {
+    class FromDescriptorStringTests
+    {
 
         @Test
-        void fromDescriptorStringEmptyThrows() {
+        void fromDescriptorStringEmptyThrows()
+        {
             IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> VerificationType.fromDescriptor("", 0)
@@ -453,47 +515,56 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorStringByteReturnsInteger() {
+        void fromDescriptorStringByteReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor("B", 0));
         }
 
         @Test
-        void fromDescriptorStringCharReturnsInteger() {
+        void fromDescriptorStringCharReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor("C", 0));
         }
 
         @Test
-        void fromDescriptorStringIntReturnsInteger() {
+        void fromDescriptorStringIntReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor("I", 0));
         }
 
         @Test
-        void fromDescriptorStringShortReturnsInteger() {
+        void fromDescriptorStringShortReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor("S", 0));
         }
 
         @Test
-        void fromDescriptorStringBooleanReturnsInteger() {
+        void fromDescriptorStringBooleanReturnsInteger()
+        {
             assertEquals(VerificationType.INTEGER, VerificationType.fromDescriptor("Z", 0));
         }
 
         @Test
-        void fromDescriptorStringFloatReturnsFloat() {
+        void fromDescriptorStringFloatReturnsFloat()
+        {
             assertEquals(VerificationType.FLOAT, VerificationType.fromDescriptor("F", 0));
         }
 
         @Test
-        void fromDescriptorStringDoubleReturnsDouble() {
+        void fromDescriptorStringDoubleReturnsDouble()
+        {
             assertEquals(VerificationType.DOUBLE, VerificationType.fromDescriptor("D", 0));
         }
 
         @Test
-        void fromDescriptorStringLongReturnsLong() {
+        void fromDescriptorStringLongReturnsLong()
+        {
             assertEquals(VerificationType.LONG, VerificationType.fromDescriptor("J", 0));
         }
 
         @Test
-        void fromDescriptorStringClassReturnsObject() {
+        void fromDescriptorStringClassReturnsObject()
+        {
             VerificationType type = VerificationType.fromDescriptor("Ljava/lang/String;", 42);
 
             assertEquals(VerificationType.TAG_OBJECT, type.getTag());
@@ -502,7 +573,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorStringArrayReturnsObject() {
+        void fromDescriptorStringArrayReturnsObject()
+        {
             VerificationType type = VerificationType.fromDescriptor("[I", 100);
 
             assertEquals(VerificationType.TAG_OBJECT, type.getTag());
@@ -511,7 +583,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorStringObjectArrayReturnsObject() {
+        void fromDescriptorStringObjectArrayReturnsObject()
+        {
             VerificationType type = VerificationType.fromDescriptor("[Ljava/lang/String;", 200);
 
             assertEquals(VerificationType.TAG_OBJECT, type.getTag());
@@ -520,7 +593,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorStringInvalidThrows() {
+        void fromDescriptorStringInvalidThrows()
+        {
             IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> VerificationType.fromDescriptor("X", 0)
@@ -529,7 +603,8 @@ class VerificationTypeTest {
         }
 
         @Test
-        void fromDescriptorStringVoidThrows() {
+        void fromDescriptorStringVoidThrows()
+        {
             IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> VerificationType.fromDescriptor("V", 0)
@@ -539,10 +614,12 @@ class VerificationTypeTest {
     }
 
     @Nested
-    class TagConstantsTests {
+    class TagConstantsTests
+    {
 
         @Test
-        void tagConstantsHaveCorrectValues() {
+        void tagConstantsHaveCorrectValues()
+        {
             assertEquals(0, VerificationType.TAG_TOP);
             assertEquals(1, VerificationType.TAG_INTEGER);
             assertEquals(2, VerificationType.TAG_FLOAT);

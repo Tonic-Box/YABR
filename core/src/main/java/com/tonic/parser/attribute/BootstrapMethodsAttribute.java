@@ -12,66 +12,93 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the BootstrapMethods attribute.
- * Stores bootstrap method information for invokedynamic instructions.
+ * The BootstrapMethods attribute: bootstrap method entries for invokedynamic call sites.
  */
-public class BootstrapMethodsAttribute extends Attribute {
+public class BootstrapMethodsAttribute extends Attribute
+{
     private List<BootstrapMethod> bootstrapMethods;
 
-    public BootstrapMethodsAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public BootstrapMethodsAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public BootstrapMethodsAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public BootstrapMethodsAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
     /**
      * Constructor for programmatic creation of a BootstrapMethods attribute.
-     *
      * @param constPool The constant pool to use for creating the attribute name.
      */
-    public BootstrapMethodsAttribute(ConstPool constPool) {
+    public BootstrapMethodsAttribute(ConstPool constPool)
+    {
         super("BootstrapMethods", (ClassFile) null, constPool.findOrAddUtf8("BootstrapMethods").getIndex(constPool), 2);
         this.bootstrapMethods = new ArrayList<>();
     }
 
-    public List<BootstrapMethod> getBootstrapMethods() {
+    /**
+     * @return the bootstrap methods
+     */
+    public List<BootstrapMethod> getBootstrapMethods()
+    {
         return bootstrapMethods;
     }
 
     /**
      * Adds a bootstrap method entry.
-     *
      * @param methodHandleIndex The constant pool index of the method handle.
      * @param arguments The list of constant pool indices for the bootstrap arguments.
      */
-    public void addBootstrapMethod(int methodHandleIndex, List<Integer> arguments) {
-        if (bootstrapMethods == null) {
+    public void addBootstrapMethod(int methodHandleIndex, List<Integer> arguments)
+    {
+        if (bootstrapMethods == null)
+        {
             bootstrapMethods = new ArrayList<>();
         }
         bootstrapMethods.add(new BootstrapMethod(methodHandleIndex, arguments));
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
+    public void read(ClassFile classFile, int length)
+    {
         int startIndex = classFile.getIndex();
 
-        if (length < 2) {
+        if (length < 2)
+        {
             throw new IllegalArgumentException("BootstrapMethods attribute length must be at least 2, found: " + length);
         }
 
         int numBootstrapMethods = classFile.readUnsignedShort();
         this.bootstrapMethods = new ArrayList<>(numBootstrapMethods);
-        for (int i = 0; i < numBootstrapMethods; i++) {
-            if (classFile.getLength() - classFile.getIndex() < 4) {
+        for (int i = 0; i < numBootstrapMethods; i++)
+        {
+            if (classFile.getLength() - classFile.getIndex() < 4)
+            {
                 throw new IllegalArgumentException("Not enough bytes to read BootstrapMethod " + (i + 1));
             }
             int bootstrapMethodRef = classFile.readUnsignedShort();
             int numBootstrapArguments = classFile.readUnsignedShort();
             List<Integer> bootstrapArguments = new ArrayList<>(numBootstrapArguments);
-            for (int j = 0; j < numBootstrapArguments; j++) {
-                if (classFile.getLength() - classFile.getIndex() < 2) {
+            for (int j = 0; j < numBootstrapArguments; j++)
+            {
+                if (classFile.getLength() - classFile.getIndex() < 2)
+                {
                     throw new IllegalArgumentException("Not enough bytes to read bootstrap argument " + (j + 1) + " of BootstrapMethod " + (i + 1));
                 }
                 bootstrapArguments.add(classFile.readUnsignedShort());
@@ -81,27 +108,33 @@ public class BootstrapMethodsAttribute extends Attribute {
 
         int bytesRead = classFile.getIndex() - startIndex;
 
-        if (bytesRead != length) {
+        if (bytesRead != length)
+        {
             Logger.error("Warning: BootstrapMethodsAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
         }
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(bootstrapMethods.size());
-        for (BootstrapMethod bm : bootstrapMethods) {
+        for (BootstrapMethod bm : bootstrapMethods)
+        {
             dos.writeShort(bm.getBootstrapMethodRef());
             dos.writeShort(bm.getBootstrapArguments().size());
-            for (Integer arg : bm.getBootstrapArguments()) {
+            for (Integer arg : bm.getBootstrapArguments())
+            {
                 dos.writeShort(arg);
             }
         }
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         int size = 2;
-        for (BootstrapMethod bm : bootstrapMethods) {
+        for (BootstrapMethod bm : bootstrapMethods)
+        {
             size += 4;
             size += 2 * bm.getBootstrapArguments().size();
         }
@@ -109,7 +142,8 @@ public class BootstrapMethodsAttribute extends Attribute {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "BootstrapMethodsAttribute{bootstrapMethods=" + bootstrapMethods + "}";
     }
 }

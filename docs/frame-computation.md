@@ -46,7 +46,8 @@ Bytecode bc = new Bytecode(method);
 bc.finalizeBytecode();
 
 // Compute frames if bytecode was modified
-if (bc.isModified()) {
+if (bc.isModified())
+{
     bc.computeFrames();
 }
 
@@ -166,7 +167,8 @@ bytecode.computeFrames();   // Must recompute
 
 ```java
 // After modification
-if (bytecode.isModified()) {
+if (bytecode.isModified())
+{
     bytecode.computeFrames();
 }
 ```
@@ -204,7 +206,8 @@ ClassFactory.computeFrames(classFile, method);
 When modifying multiple methods, compute frames once at the class level:
 
 ```java
-for (MethodEntry method : classFile.getMethods()) {
+for (MethodEntry method : classFile.getMethods())
+{
     // Modify method
     Bytecode bc = new Bytecode(method);
     // ... modifications ...
@@ -220,9 +223,12 @@ ClassFactory.computeFrames(classFile);
 Frame computation may fail for invalid bytecode:
 
 ```java
-try {
+try
+{
     ClassFactory.computeFrames(classFile, method);
-} catch (Exception e) {
+}
+catch (Exception e)
+{
     System.err.println("Frame computation failed for " + method.getName());
     System.err.println("Bytecode may be invalid: " + e.getMessage());
 }
@@ -238,15 +244,19 @@ byte[] classBytes = classFile.write();
 // Verify by loading
 ClassLoader loader = new ClassLoader() {
     @Override
-    protected Class<?> findClass(String name) {
+    protected Class<?> findClass(String name)
+    {
         return defineClass(name, classBytes, 0, classBytes.length);
     }
 };
 
-try {
+try
+{
     Class<?> clazz = loader.loadClass(classFile.getClassName().replace('/', '.'));
     System.out.println("Class verified successfully");
-} catch (VerifyError e) {
+}
+catch (VerifyError e)
+{
     System.err.println("Verification failed: " + e.getMessage());
 }
 ```
@@ -254,8 +264,10 @@ try {
 ## Complete Example
 
 ```java
-public void modifyAndVerify(ClassFile classFile) throws IOException {
-    for (MethodEntry method : classFile.getMethods()) {
+public void modifyAndVerify(ClassFile classFile) throws IOException
+{
+    for (MethodEntry method : classFile.getMethods())
+    {
         if (method.getCodeAttribute() == null) continue;
         if (method.getName().startsWith("<")) continue;
 
@@ -283,12 +295,15 @@ public void modifyAndVerify(ClassFile classFile) throws IOException {
     Files.write(Path.of("Modified.class"), bytes);
 
     // Test loading
-    try {
+    try
+    {
         Class<?> clazz = new URLClassLoader(
             new URL[]{new File(".").toURI().toURL()}
         ).loadClass("Modified");
         System.out.println("Verification successful");
-    } catch (Exception e) {
+    }
+    catch (Exception e)
+    {
         System.err.println("Verification failed: " + e.getMessage());
     }
 }

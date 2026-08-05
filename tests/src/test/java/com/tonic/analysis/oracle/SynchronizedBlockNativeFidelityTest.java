@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the reaching-condition engine can structure the body directly with no finally to emit. This asserts the
  * block is preserved, is a round-trip fixed point, and executes equivalently on each path.
  */
-class SynchronizedBlockNativeFidelityTest {
+class SynchronizedBlockNativeFidelityTest
+{
 
     private static final String SOURCE =
             "public class SyncBody {\n"
@@ -51,14 +52,14 @@ class SynchronizedBlockNativeFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("sync-body-native");
         Path src = dir.resolve("SyncBody.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("SyncBody.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -70,27 +71,26 @@ class SynchronizedBlockNativeFidelityTest {
     }
 
     @Test
-    void isRoundTripFixedPoint() {
+    void isRoundTripFixedPoint()
+    {
         assertTrue(d1.contains("synchronized"), "the synchronized block must be preserved:\n" + d1);
         assertEquals(d1, d2, "a synchronized block with a multi-exit body must be a round-trip fixed point");
     }
 
     @Test
-    void eachPathExecutesEquivalently() throws Exception {
+    void eachPathExecutesEquivalently() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         assertEquals(-1, recompiledClass.getMethod("classify", int.class).invoke(inst, -5),
                 "the negative path returns -1");
-        assertEquals(-1, recompiledClass.getMethod("state").invoke(inst),
-                "the negative path set state to -1");
+        assertEquals(-1, recompiledClass.getMethod("state").invoke(inst), "the negative path set state to -1");
 
         assertEquals(0, recompiledClass.getMethod("classify", int.class).invoke(inst, 0),
                 "the zero path returns 0 without touching state");
-        assertEquals(-1, recompiledClass.getMethod("state").invoke(inst),
-                "the zero path left state unchanged");
+        assertEquals(-1, recompiledClass.getMethod("state").invoke(inst), "the zero path left state unchanged");
 
         assertEquals(14, recompiledClass.getMethod("classify", int.class).invoke(inst, 7),
                 "the positive path returns x*2");
-        assertEquals(7, recompiledClass.getMethod("state").invoke(inst),
-                "the positive path set state to x");
+        assertEquals(7, recompiledClass.getMethod("state").invoke(inst), "the positive path set state to x");
     }
 }

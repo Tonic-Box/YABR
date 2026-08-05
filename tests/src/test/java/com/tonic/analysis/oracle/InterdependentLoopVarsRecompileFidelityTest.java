@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * whose source reads the OTHER loop-carried phi is now placed right after its definition so it stores in
  * computation order. Asserts a round-trip fixed point, the preserved body order, and correct execution.
  */
-class InterdependentLoopVarsRecompileFidelityTest {
+class InterdependentLoopVarsRecompileFidelityTest
+{
 
     private static final String SOURCE =
             "public class Inter {\n"
@@ -46,14 +47,14 @@ class InterdependentLoopVarsRecompileFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("interdependent-loop");
         Path src = dir.resolve("Inter.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("Inter.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -65,7 +66,8 @@ class InterdependentLoopVarsRecompileFidelityTest {
     }
 
     @Test
-    void bodyOrderIsPreservedAndRoundTripsFixed() {
+    void bodyOrderIsPreservedAndRoundTripsFixed()
+    {
         int add = d1.indexOf("a = a + b");
         int mul = d1.indexOf("b = b * 2");
         assertTrue(add >= 0 && mul >= 0 && add < mul,
@@ -74,11 +76,11 @@ class InterdependentLoopVarsRecompileFidelityTest {
     }
 
     @Test
-    void executesEquivalently() throws Exception {
+    void executesEquivalently() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         // a += b then b *= 2, b starting at 1: after n iterations a = 1 + 2 + 4 + ... + 2^(n-1) = 2^n - 1
-        assertEquals(7L, recompiledClass.getMethod("run", int.class).invoke(inst, 3),
-                "3 iterations: 1 + 2 + 4 = 7");
+        assertEquals(7L, recompiledClass.getMethod("run", int.class).invoke(inst, 3), "3 iterations: 1 + 2 + 4 = 7");
         assertEquals(1023L, recompiledClass.getMethod("run", int.class).invoke(inst, 10),
                 "10 iterations: 2^10 - 1 = 1023");
     }

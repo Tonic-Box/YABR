@@ -37,34 +37,43 @@ import com.tonic.analysis.common.MethodReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CPGIntegrationTest {
+class CPGIntegrationTest
+{
 
     private static final Path DEMO_JAR_PATH = Paths.get("C:/test/obber/DemoJar.jar");
     private static ClassPool pool;
     private static boolean jarAvailable = false;
 
     @BeforeAll
-    static void setUp() {
+    static void setUp()
+    {
         jarAvailable = Files.exists(DEMO_JAR_PATH);
-        if (jarAvailable) {
-            try {
+        if (jarAvailable)
+        {
+            try
+            {
                 pool = new ClassPool(true);
-                try (JarFile jar = new JarFile(DEMO_JAR_PATH.toFile())) {
+                try (JarFile jar = new JarFile(DEMO_JAR_PATH.toFile()))
+                {
                     pool.loadJar(jar);
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 jarAvailable = false;
             }
         }
     }
 
-    static boolean isJarAvailable() {
+    static boolean isJarAvailable()
+    {
         return jarAvailable;
     }
 
     @Test
     @EnabledIf("isJarAvailable")
-    void buildCPGFromDemoJar() {
+    void buildCPGFromDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool)
             .withCallGraph()
             .withPDG()
@@ -78,7 +87,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void queryMethodsInDemoJar() {
+    void queryMethodsInDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool).build();
 
         List<CPGNode> methods = cpg.query().methods().toList();
@@ -88,7 +98,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void queryCallSitesInDemoJar() {
+    void queryCallSitesInDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool)
             .withCallGraph()
             .build();
@@ -100,7 +111,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void traverseCFGInDemoJar() {
+    void traverseCFGInDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool).build();
 
         List<CPGNode> reachable = cpg.query()
@@ -114,15 +126,19 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void buildPDGForDemoJarMethod() {
-        for (ClassFile cf : pool.getClasses()) {
+    void buildPDGForDemoJarMethod()
+    {
+        for (ClassFile cf : pool.getClasses())
+        {
             String className = cf.getClassName();
             if (className.startsWith("java/")) continue;
 
-            for (MethodEntry method : cf.getMethods()) {
+            for (MethodEntry method : cf.getMethods())
+            {
                 if (method.getCodeAttribute() == null) continue;
 
-                try {
+                try
+                {
                     SSA ssa = new SSA(cf.getConstPool());
                     IRMethod irMethod = ssa.lift(method);
                     if (irMethod == null) continue;
@@ -132,7 +148,9 @@ class CPGIntegrationTest {
                     assertNotNull(pdg);
                     assertTrue(pdg.hasEntryNode());
                     return;
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     // Continue to next method
                 }
             }
@@ -141,7 +159,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void buildSDGForDemoJar() {
+    void buildSDGForDemoJar()
+    {
         CallGraph callGraph = CallGraph.build(pool);
         Map<MethodReference, IRMethod> irMethods = buildIRMethods();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
@@ -149,21 +168,28 @@ class CPGIntegrationTest {
         assertNotNull(sdg);
     }
 
-    private Map<MethodReference, IRMethod> buildIRMethods() {
+    private Map<MethodReference, IRMethod> buildIRMethods()
+    {
         Map<MethodReference, IRMethod> irMethods = new HashMap<>();
-        for (ClassFile cf : pool.getClasses()) {
+        for (ClassFile cf : pool.getClasses())
+        {
             String className = cf.getClassName();
             if (className.startsWith("java/")) continue;
-            for (MethodEntry method : cf.getMethods()) {
+            for (MethodEntry method : cf.getMethods())
+            {
                 if (method.getCodeAttribute() == null) continue;
-                try {
+                try
+                {
                     SSA ssa = new SSA(cf.getConstPool());
                     IRMethod irMethod = ssa.lift(method);
-                    if (irMethod != null) {
+                    if (irMethod != null)
+                    {
                         MethodReference ref = new MethodReference(className, method.getName(), method.getDesc());
                         irMethods.put(ref, irMethod);
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     // Skip
                 }
             }
@@ -173,7 +199,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void printCPGForDemoJar() {
+    void printCPGForDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool).build();
 
         CPGPrinter printer = new CPGPrinter(GraphPrinterConfig.minimal());
@@ -186,15 +213,19 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void printPDGForDemoJarMethod() {
-        for (ClassFile cf : pool.getClasses()) {
+    void printPDGForDemoJarMethod()
+    {
+        for (ClassFile cf : pool.getClasses())
+        {
             String className = cf.getClassName();
             if (className.startsWith("java/")) continue;
 
-            for (MethodEntry method : cf.getMethods()) {
+            for (MethodEntry method : cf.getMethods())
+            {
                 if (method.getCodeAttribute() == null) continue;
 
-                try {
+                try
+                {
                     SSA ssa = new SSA(cf.getConstPool());
                     IRMethod irMethod = ssa.lift(method);
                     if (irMethod == null) continue;
@@ -206,7 +237,9 @@ class CPGIntegrationTest {
                     assertNotNull(output);
                     assertTrue(output.contains("Program Dependence Graph"));
                     return;
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     // Continue to next method
                 }
             }
@@ -215,7 +248,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void printSDGForDemoJar() {
+    void printSDGForDemoJar()
+    {
         CallGraph callGraph = CallGraph.build(pool);
         Map<MethodReference, IRMethod> irMethods = buildIRMethods();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
@@ -229,7 +263,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void exportCPGToDOT() {
+    void exportCPGToDOT()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool).build();
 
         CPGDOTExporter exporter = new CPGDOTExporter(DOTExporterConfig.compact());
@@ -241,15 +276,19 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void exportPDGToDOT() {
-        for (ClassFile cf : pool.getClasses()) {
+    void exportPDGToDOT()
+    {
+        for (ClassFile cf : pool.getClasses())
+        {
             String className = cf.getClassName();
             if (className.startsWith("java/")) continue;
 
-            for (MethodEntry method : cf.getMethods()) {
+            for (MethodEntry method : cf.getMethods())
+            {
                 if (method.getCodeAttribute() == null) continue;
 
-                try {
+                try
+                {
                     SSA ssa = new SSA(cf.getConstPool());
                     IRMethod irMethod = ssa.lift(method);
                     if (irMethod == null) continue;
@@ -261,7 +300,9 @@ class CPGIntegrationTest {
                     assertNotNull(dot);
                     assertTrue(dot.contains("digraph"));
                     return;
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     // Continue
                 }
             }
@@ -270,7 +311,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void exportSDGToDOT() {
+    void exportSDGToDOT()
+    {
         CallGraph callGraph = CallGraph.build(pool);
         Map<MethodReference, IRMethod> irMethods = buildIRMethods();
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
@@ -284,7 +326,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void taintAnalysisOnDemoJar() {
+    void taintAnalysisOnDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool)
             .withCallGraph()
             .withPDG()
@@ -303,7 +346,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void findMethodsByPatternInDemoJar() {
+    void findMethodsByPatternInDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool).build();
 
         List<CPGNode> methods = cpg.query()
@@ -315,7 +359,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void cpgStatisticsForDemoJar() {
+    void cpgStatisticsForDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool)
             .withCallGraph()
             .withPDG()
@@ -333,7 +378,8 @@ class CPGIntegrationTest {
 
     @Test
     @EnabledIf("isJarAvailable")
-    void chainedQueryOnDemoJar() {
+    void chainedQueryOnDemoJar()
+    {
         CodePropertyGraph cpg = CPGBuilder.forClassPool(pool)
             .withCallGraph()
             .build();

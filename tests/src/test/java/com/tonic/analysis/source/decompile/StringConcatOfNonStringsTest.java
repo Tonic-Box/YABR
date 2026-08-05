@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the bytecode - and recovered without it, {@code a() + b()} is arithmetic: two booleans added under a
  * String signature, which does not even verify.
  */
-class StringConcatOfNonStringsTest {
+class StringConcatOfNonStringsTest
+{
 
     private static final String[] LINES = {
             "public class BoolConcat {",
@@ -43,14 +44,14 @@ class StringConcatOfNonStringsTest {
     };
 
     @Test
-    void aConcatOfNonStringOperandsKeepsItsEmptyString() throws Exception {
+    void aConcatOfNonStringOperandsKeepsItsEmptyString() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("bool-concat");
         Path src = dir.resolve("BoolConcat.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("BoolConcat.class")));

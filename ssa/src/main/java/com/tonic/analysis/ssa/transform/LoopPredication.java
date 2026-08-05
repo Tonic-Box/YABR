@@ -12,28 +12,29 @@ import java.util.*;
 
 /**
  * Loop Predication optimization transform.
- *
  * Converts loop-variant guards into loop-invariant predicates:
  * - Identifies guards inside loops that compare induction variables to limits
  * - When the guard condition can be proven true for all iterations, eliminates it
- *
  * Example:
- *   for (i = 0; i < n; i++) {
- *       if (i < limit) { ... }  // Guard checked every iteration
+ *   for (i = 0; i &lt; n; i++) {
+ *       if (i &lt; limit) { ... }  // Guard checked every iteration
  *   }
- *
- * If n <= limit, the guard is always true and can be eliminated.
+ * If n &lt;= limit, the guard is always true and can be eliminated.
  */
-public class LoopPredication implements IRTransform {
+public class LoopPredication implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "LoopPredication";
     }
 
     @Override
-    public boolean run(IRMethod method) {
-        if (method.getEntryBlock() == null) {
+    public boolean run(IRMethod method)
+    {
+        if (method.getEntryBlock() == null)
+        {
             return false;
         }
 
@@ -43,39 +44,47 @@ public class LoopPredication implements IRTransform {
         LoopAnalysis loopAnalysis = new LoopAnalysis(method, domTree);
         loopAnalysis.compute();
 
-        if (loopAnalysis.getLoops().isEmpty()) {
+        if (loopAnalysis.getLoops().isEmpty())
+        {
             return false;
         }
 
         boolean changed = false;
-        for (Loop loop : loopAnalysis.getLoops()) {
+        for (Loop loop : loopAnalysis.getLoops())
+        {
             changed |= processLoop(loop, method, loopAnalysis);
         }
 
         return changed;
     }
 
-    private boolean processLoop(Loop loop, IRMethod method, LoopAnalysis loopAnalysis) {
+    private boolean processLoop(Loop loop, IRMethod method, LoopAnalysis loopAnalysis)
+    {
         IRBlock header = loop.getHeader();
         IRBlock preheader = findPreheader(header, loop);
-        if (preheader == null) {
+        if (preheader == null)
+        {
             return false;
         }
 
         List<BasicIV> basicIVs = findBasicInductionVariables(loop, preheader);
-        if (basicIVs.isEmpty()) {
+        if (basicIVs.isEmpty())
+        {
             return false;
         }
 
         Set<Integer> loopDefinedValues = collectLoopDefinedValues(loop);
 
         boolean changed = false;
-        for (IRBlock block : loop.getBlocks()) {
+        for (IRBlock block : loop.getBlocks())
+        {
             IRInstruction term = block.getTerminator();
-            if (term instanceof BranchInstruction) {
+            if (term instanceof BranchInstruction)
+            {
                 BranchInstruction branch = (BranchInstruction) term;
                 LoopGuard guard = analyzeGuard(branch, basicIVs, loopDefinedValues, loop);
-                if (guard != null) {
+                if (guard != null)
+                {
                     changed |= tryPredicateGuard(guard, loop, preheader);
                 }
             }
@@ -84,25 +93,34 @@ public class LoopPredication implements IRTransform {
         return changed;
     }
 
-    private IRBlock findPreheader(IRBlock header, Loop loop) {
-        for (IRBlock pred : header.getPredecessors()) {
-            if (!loop.contains(pred)) {
+    private IRBlock findPreheader(IRBlock header, Loop loop)
+    {
+        for (IRBlock pred : header.getPredecessors())
+        {
+            if (!loop.contains(pred))
+            {
                 return pred;
             }
         }
         return null;
     }
 
-    private Set<Integer> collectLoopDefinedValues(Loop loop) {
+    private Set<Integer> collectLoopDefinedValues(Loop loop)
+    {
         Set<Integer> defined = new HashSet<>();
-        for (IRBlock block : loop.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                if (phi.getResult() != null) {
+        for (IRBlock block : loop.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                if (phi.getResult() != null)
+                {
                     defined.add(phi.getResult().getId());
                 }
             }
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr.getResult() != null) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr.getResult() != null)
+                {
                     defined.add(instr.getResult().getId());
                 }
             }
@@ -110,24 +128,31 @@ public class LoopPredication implements IRTransform {
         return defined;
     }
 
-    private List<BasicIV> findBasicInductionVariables(Loop loop, IRBlock preheader) {
+    private List<BasicIV> findBasicInductionVariables(Loop loop, IRBlock preheader)
+    {
         List<BasicIV> basicIVs = new ArrayList<>();
         IRBlock header = loop.getHeader();
 
-        for (PhiInstruction phi : header.getPhiInstructions()) {
+        for (PhiInstruction phi : header.getPhiInstructions())
+        {
             SSAValue phiResult = phi.getResult();
             if (phiResult == null) continue;
 
             Value initialValue = phi.getIncoming(preheader);
             if (initialValue == null) continue;
 
-            for (IRBlock block : loop.getBlocks()) {
-                for (IRInstruction instr : block.getInstructions()) {
-                    if (instr instanceof BinaryOpInstruction) {
+            for (IRBlock block : loop.getBlocks())
+            {
+                for (IRInstruction instr : block.getInstructions())
+                {
+                    if (instr instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                        if (binOp.getOp() == BinaryOp.ADD) {
+                        if (binOp.getOp() == BinaryOp.ADD)
+                        {
                             Integer stride = getStrideIfBasicIV(binOp, phiResult);
-                            if (stride != null && isPhiBackedge(phi, binOp.getResult(), loop)) {
+                            if (stride != null && isPhiBackedge(phi, binOp.getResult(), loop))
+                            {
                                 basicIVs.add(new BasicIV(phi, binOp, stride, initialValue));
                             }
                         }
@@ -138,32 +163,41 @@ public class LoopPredication implements IRTransform {
         return basicIVs;
     }
 
-    private Integer getStrideIfBasicIV(BinaryOpInstruction binOp, SSAValue inductionVar) {
+    private Integer getStrideIfBasicIV(BinaryOpInstruction binOp, SSAValue inductionVar)
+    {
         Value left = binOp.getLeft();
         Value right = binOp.getRight();
 
-        if (left instanceof SSAValue) {
+        if (left instanceof SSAValue)
+        {
             SSAValue ssaLeft = (SSAValue) left;
-            if (ssaLeft.getId() == inductionVar.getId()) {
+            if (ssaLeft.getId() == inductionVar.getId())
+            {
                 return getIntConstant(right);
             }
         }
-        if (right instanceof SSAValue) {
+        if (right instanceof SSAValue)
+        {
             SSAValue ssaRight = (SSAValue) right;
-            if (ssaRight.getId() == inductionVar.getId()) {
+            if (ssaRight.getId() == inductionVar.getId())
+            {
                 return getIntConstant(left);
             }
         }
         return null;
     }
 
-    private boolean isPhiBackedge(PhiInstruction phi, SSAValue incrementResult, Loop loop) {
-        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+    private boolean isPhiBackedge(PhiInstruction phi, SSAValue incrementResult, Loop loop)
+    {
+        for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+        {
             IRBlock fromBlock = entry.getKey();
             Value value = entry.getValue();
-            if (loop.contains(fromBlock) && value instanceof SSAValue) {
+            if (loop.contains(fromBlock) && value instanceof SSAValue)
+            {
                 SSAValue ssaValue = (SSAValue) value;
-                if (ssaValue.getId() == incrementResult.getId()) {
+                if (ssaValue.getId() == incrementResult.getId())
+                {
                     return true;
                 }
             }
@@ -171,18 +205,23 @@ public class LoopPredication implements IRTransform {
         return false;
     }
 
-    private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant) {
+    private Integer getIntConstant(Value value)
+    {
+        if (value instanceof IntConstant)
+        {
             IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }
@@ -191,11 +230,12 @@ public class LoopPredication implements IRTransform {
         return null;
     }
 
-    private LoopGuard analyzeGuard(BranchInstruction branch, List<BasicIV> ivs,
-                                     Set<Integer> loopDefined, Loop loop) {
+    private LoopGuard analyzeGuard(BranchInstruction branch, List<BasicIV> ivs, Set<Integer> loopDefined, Loop loop)
+    {
         CompareOp cond = branch.getCondition();
 
-        if (!isSimpleComparison(cond)) {
+        if (!isSimpleComparison(cond))
+        {
             return null;
         }
 
@@ -203,25 +243,32 @@ public class LoopPredication implements IRTransform {
         Value right = branch.getRight();
         if (right == null) return null;
 
-        for (BasicIV iv : ivs) {
+        for (BasicIV iv : ivs)
+        {
             int ivId = iv.phi.getResult().getId();
 
-            if (left instanceof SSAValue) {
+            if (left instanceof SSAValue)
+            {
                 SSAValue ssaLeft = (SSAValue) left;
-                if (ssaLeft.getId() == ivId) {
-                    if (isLoopInvariant(right, loopDefined)) {
-                        return new LoopGuard(branch, iv, right, cond,
-                                branch.getTrueTarget(), branch.getFalseTarget());
+                if (ssaLeft.getId() == ivId)
+                {
+                    if (isLoopInvariant(right, loopDefined))
+                    {
+                        return new LoopGuard(branch, iv, right, cond, branch.getTrueTarget(), branch.getFalseTarget());
                     }
                 }
             }
 
-            if (right instanceof SSAValue) {
+            if (right instanceof SSAValue)
+            {
                 SSAValue ssaRight = (SSAValue) right;
-                if (ssaRight.getId() == ivId) {
-                    if (isLoopInvariant(left, loopDefined)) {
+                if (ssaRight.getId() == ivId)
+                {
+                    if (isLoopInvariant(left, loopDefined))
+                    {
                         CompareOp flipped = flipComparison(cond);
-                        if (flipped != null) {
+                        if (flipped != null)
+                        {
                             return new LoopGuard(branch, iv, left, flipped,
                                     branch.getTrueTarget(), branch.getFalseTarget());
                         }
@@ -232,13 +279,16 @@ public class LoopPredication implements IRTransform {
         return null;
     }
 
-    private boolean isSimpleComparison(CompareOp cond) {
+    private boolean isSimpleComparison(CompareOp cond)
+    {
         return cond == CompareOp.LT || cond == CompareOp.LE ||
                cond == CompareOp.GT || cond == CompareOp.GE;
     }
 
-    private CompareOp flipComparison(CompareOp cond) {
-        switch (cond) {
+    private CompareOp flipComparison(CompareOp cond)
+    {
+        switch (cond)
+        {
             case LT:
                 return CompareOp.GT;
             case LE:
@@ -252,16 +302,19 @@ public class LoopPredication implements IRTransform {
         }
     }
 
-    private boolean isLoopInvariant(Value value, Set<Integer> loopDefined) {
+    private boolean isLoopInvariant(Value value, Set<Integer> loopDefined)
+    {
         if (value instanceof Constant) return true;
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             return !loopDefined.contains(ssa.getId());
         }
         return false;
     }
 
-    private boolean tryPredicateGuard(LoopGuard guard, Loop loop, IRBlock preheader) {
+    private boolean tryPredicateGuard(LoopGuard guard, Loop loop, IRBlock preheader)
+    {
         BasicIV iv = guard.iv;
 
         Value loopBound = findLoopBound(loop, iv);
@@ -271,10 +324,12 @@ public class LoopPredication implements IRTransform {
         Integer limitVal = getIntConstant(guard.limit);
         Integer boundVal = getIntConstant(loopBound);
 
-        if (initVal != null && limitVal != null && boundVal != null && iv.stride > 0) {
+        if (initVal != null && limitVal != null && boundVal != null && iv.stride > 0)
+        {
             boolean canEliminate = false;
 
-            switch (guard.condition) {
+            switch (guard.condition)
+            {
                 case LT:
                     canEliminate = (initVal >= 0) && (boundVal <= limitVal);
                     break;
@@ -289,23 +344,29 @@ public class LoopPredication implements IRTransform {
                     break;
             }
 
-            if (canEliminate) {
+            if (canEliminate)
+            {
                 eliminateGuard(guard);
                 return true;
             }
         }
 
-        if (loopBound.equals(guard.limit)) {
-            if (guard.condition == CompareOp.LT) {
+        if (loopBound.equals(guard.limit))
+        {
+            if (guard.condition == CompareOp.LT)
+            {
                 eliminateGuard(guard);
                 return true;
             }
         }
-        if (loopBound instanceof SSAValue && guard.limit instanceof SSAValue) {
+        if (loopBound instanceof SSAValue && guard.limit instanceof SSAValue)
+        {
             SSAValue lb = (SSAValue) loopBound;
             SSAValue gl = (SSAValue) guard.limit;
-            if (lb.getId() == gl.getId()) {
-                if (guard.condition == CompareOp.LT) {
+            if (lb.getId() == gl.getId())
+            {
+                if (guard.condition == CompareOp.LT)
+                {
                     eliminateGuard(guard);
                     return true;
                 }
@@ -315,26 +376,34 @@ public class LoopPredication implements IRTransform {
         return false;
     }
 
-    private Value findLoopBound(Loop loop, BasicIV iv) {
+    private Value findLoopBound(Loop loop, BasicIV iv)
+    {
         IRBlock header = loop.getHeader();
-        for (IRBlock block : loop.getBlocks()) {
-            if (block.getSuccessors().contains(header)) {
+        for (IRBlock block : loop.getBlocks())
+        {
+            if (block.getSuccessors().contains(header))
+            {
                 IRInstruction term = block.getTerminator();
-                if (term instanceof BranchInstruction) {
+                if (term instanceof BranchInstruction)
+                {
                     BranchInstruction branch = (BranchInstruction) term;
                     Value left = branch.getLeft();
                     Value right = branch.getRight();
                     int ivId = iv.phi.getResult().getId();
 
-                    if (left instanceof SSAValue) {
+                    if (left instanceof SSAValue)
+                    {
                         SSAValue ssaLeft = (SSAValue) left;
-                        if (ssaLeft.getId() == ivId) {
+                        if (ssaLeft.getId() == ivId)
+                        {
                             return right;
                         }
                     }
-                    if (right instanceof SSAValue) {
+                    if (right instanceof SSAValue)
+                    {
                         SSAValue ssaRight = (SSAValue) right;
-                        if (ssaRight.getId() == ivId) {
+                        if (ssaRight.getId() == ivId)
+                        {
                             return left;
                         }
                     }
@@ -344,7 +413,8 @@ public class LoopPredication implements IRTransform {
         return null;
     }
 
-    private void eliminateGuard(LoopGuard guard) {
+    private void eliminateGuard(LoopGuard guard)
+    {
         BranchInstruction branch = guard.branch;
         IRBlock block = branch.getBlock();
 
@@ -352,7 +422,8 @@ public class LoopPredication implements IRTransform {
         gotoInstr.setBlock(block);
 
         int idx = block.getInstructions().indexOf(branch);
-        if (idx >= 0) {
+        if (idx >= 0)
+        {
             block.removeInstruction(branch);
             block.addInstruction(gotoInstr);
 
@@ -361,13 +432,15 @@ public class LoopPredication implements IRTransform {
         }
     }
 
-    private static class BasicIV {
+    private static class BasicIV
+    {
         final PhiInstruction phi;
         final BinaryOpInstruction increment;
         final int stride;
         final Value initialValue;
 
-        BasicIV(PhiInstruction phi, BinaryOpInstruction increment, int stride, Value initialValue) {
+        BasicIV(PhiInstruction phi, BinaryOpInstruction increment, int stride, Value initialValue)
+        {
             this.phi = phi;
             this.increment = increment;
             this.stride = stride;
@@ -375,7 +448,8 @@ public class LoopPredication implements IRTransform {
         }
     }
 
-    private static class LoopGuard {
+    private static class LoopGuard
+    {
         final BranchInstruction branch;
         final BasicIV iv;
         final Value limit;
@@ -384,7 +458,8 @@ public class LoopPredication implements IRTransform {
         final IRBlock errorTarget;
 
         LoopGuard(BranchInstruction branch, BasicIV iv, Value limit, CompareOp condition,
-                  IRBlock safeTarget, IRBlock errorTarget) {
+                  IRBlock safeTarget, IRBlock errorTarget)
+                  {
             this.branch = branch;
             this.iv = iv;
             this.limit = limit;

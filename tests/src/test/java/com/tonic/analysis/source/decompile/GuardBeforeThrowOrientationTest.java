@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the throw pushed to the end. Same meaning, but no longer a fixed point, and the rejection case stops being
  * the thing the reader sees first.
  */
-class GuardBeforeThrowOrientationTest {
+class GuardBeforeThrowOrientationTest
+{
 
     private static final String SOURCE = String.join("\n",
             "public class GuardBeforeThrow {",
@@ -42,14 +43,14 @@ class GuardBeforeThrowOrientationTest {
             "");
 
     @Test
-    void theRejectionGuardStaysLeadingAcrossGenerations() throws Exception {
+    void theRejectionGuardStaysLeadingAcrossGenerations() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("guard-throw");
         Path src = dir.resolve("GuardBeforeThrow.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("GuardBeforeThrow.class")));
@@ -59,8 +60,7 @@ class GuardBeforeThrowOrientationTest {
         assertTrue(d1.replaceAll("\\s+", " ").contains("if (this.opened) { throw"),
                 "the guard must lead in the first decompile:\n" + d1);
 
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "GuardBeforeThrow"),
-                "the decompiled source must recompile");
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "GuardBeforeThrow"), "the decompiled source must recompile");
         assertEquals(d1, ClassDecompiler.decompile(cf),
                 "the guard's orientation must survive relowering, keeping the decompile a fixed point");
         assertEquals("s", TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),

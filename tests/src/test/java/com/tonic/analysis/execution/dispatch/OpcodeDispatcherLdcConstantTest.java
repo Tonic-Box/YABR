@@ -16,11 +16,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherLdcConstantTest {
+class OpcodeDispatcherLdcConstantTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -28,13 +30,17 @@ class OpcodeDispatcherLdcConstantTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -42,9 +48,11 @@ class OpcodeDispatcherLdcConstantTest {
     }
 
     @Nested
-    class LConstTests {
+    class LConstTests
+    {
         @Test
-        void testLConst0() throws IOException {
+        void testLConst0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLConst0")
                     .publicStaticMethod("test", "()J")
                         .lconst(0L)
@@ -56,7 +64,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLConst1() throws IOException {
+        void testLConst1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLConst1")
                     .publicStaticMethod("test", "()J")
                         .lconst(1L)
@@ -68,7 +77,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLConst0WithArithmetic() throws IOException {
+        void testLConst0WithArithmetic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLConst0Arith")
                     .publicStaticMethod("test", "(J)J")
                         .lload(0)
@@ -82,7 +92,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLConst1WithArithmetic() throws IOException {
+        void testLConst1WithArithmetic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLConst1Arith")
                     .publicStaticMethod("test", "(J)J")
                         .lload(0)
@@ -96,7 +107,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLConst0And1Combined() throws IOException {
+        void testLConst0And1Combined() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLConst01")
                     .publicStaticMethod("test", "()J")
                         .lconst(0L)
@@ -111,9 +123,11 @@ class OpcodeDispatcherLdcConstantTest {
     }
 
     @Nested
-    class LdcWTests {
+    class LdcWTests
+    {
         @Test
-        void testLdcWInteger() throws IOException {
+        void testLdcWInteger() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWInt")
                     .publicStaticMethod("test", "()I")
                         .ldcw_int(12345)
@@ -125,7 +139,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcWFloat() throws IOException {
+        void testLdcWFloat() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWFloat")
                     .publicStaticMethod("test", "()F")
                         .ldcw_float(3.14159f)
@@ -137,7 +152,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcWString() throws IOException {
+        void testLdcWString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWString")
                     .publicStaticMethod("test", "()Ljava/lang/String;")
                         .ldcw_string("Hello LDC_W")
@@ -149,7 +165,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcWClass() throws IOException {
+        void testLdcWClass() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWClass")
                     .publicStaticMethod("test", "()Ljava/lang/Class;")
                         .ldcw_class("java/lang/String")
@@ -161,7 +178,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcWIntegerArithmetic() throws IOException {
+        void testLdcWIntegerArithmetic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWIntArith")
                     .publicStaticMethod("test", "(I)I")
                         .iload(0)
@@ -175,7 +193,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcWFloatArithmetic() throws IOException {
+        void testLdcWFloatArithmetic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWFloatArith")
                     .publicStaticMethod("test", "(F)F")
                         .fload(0)
@@ -189,7 +208,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcWMultipleConstants() throws IOException {
+        void testLdcWMultipleConstants() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcWMulti")
                     .publicStaticMethod("test", "()I")
                         .ldcw_int(100)
@@ -206,9 +226,11 @@ class OpcodeDispatcherLdcConstantTest {
     }
 
     @Nested
-    class LdcEdgeCasesTests {
+    class LdcEdgeCasesTests
+    {
         @Test
-        void testLdcClassConstant() throws IOException {
+        void testLdcClassConstant() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcClass")
                     .publicStaticMethod("test", "()Ljava/lang/Class;")
                         .ldc_class("java/lang/Object")
@@ -220,7 +242,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcIntegerEdgeValues() throws IOException {
+        void testLdcIntegerEdgeValues() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcIntEdge")
                     .publicStaticMethod("test", "()I")
                         .ldc_int(Integer.MAX_VALUE)
@@ -232,7 +255,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdcFloatSpecialValues() throws IOException {
+        void testLdcFloatSpecialValues() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcFloatSpecial")
                     .publicStaticMethod("test", "()F")
                         .ldc_float(Float.NaN)
@@ -245,9 +269,11 @@ class OpcodeDispatcherLdcConstantTest {
     }
 
     @Nested
-    class Ldc2WEdgeCasesTests {
+    class Ldc2WEdgeCasesTests
+    {
         @Test
-        void testLdc2WLongMaxValue() throws IOException {
+        void testLdc2WLongMaxValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdc2WLongMax")
                     .publicStaticMethod("test", "()J")
                         .ldc2w_long(Long.MAX_VALUE)
@@ -259,7 +285,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdc2WLongMinValue() throws IOException {
+        void testLdc2WLongMinValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdc2WLongMin")
                     .publicStaticMethod("test", "()J")
                         .ldc2w_long(Long.MIN_VALUE)
@@ -271,7 +298,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdc2WDoubleInfinity() throws IOException {
+        void testLdc2WDoubleInfinity() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdc2WDoubleInf")
                     .publicStaticMethod("test", "()D")
                         .ldc2w_double(Double.POSITIVE_INFINITY)
@@ -283,7 +311,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdc2WDoubleNaN() throws IOException {
+        void testLdc2WDoubleNaN() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdc2WDoubleNaN")
                     .publicStaticMethod("test", "()D")
                         .ldc2w_double(Double.NaN)
@@ -295,7 +324,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testLdc2WDoubleNegativeZero() throws IOException {
+        void testLdc2WDoubleNegativeZero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdc2WDoubleNegZero")
                     .publicStaticMethod("test", "()D")
                         .ldc2w_double(-0.0)
@@ -308,9 +338,11 @@ class OpcodeDispatcherLdcConstantTest {
     }
 
     @Nested
-    class CombinedConstantTests {
+    class CombinedConstantTests
+    {
         @Test
-        void testMixedConstantTypes() throws IOException {
+        void testMixedConstantTypes() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestMixedConst")
                     .publicStaticMethod("test", "()I")
                         .iconst(5)
@@ -327,7 +359,8 @@ class OpcodeDispatcherLdcConstantTest {
         }
 
         @Test
-        void testConstantsWithBranching() throws IOException {
+        void testConstantsWithBranching() throws IOException
+        {
             BytecodeBuilder.Label trueLabel = new BytecodeBuilder.Label();
             BytecodeBuilder.Label end = new BytecodeBuilder.Label();
 

@@ -26,13 +26,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * into concise try-with-resources ({@code SomeType r = ...; try (r) { ... }}). Each fixture is compiled with javac,
  * decompiled, and its decompiled source recompiled.
  *
- * <p>The fixture is the resource itself: {@code close()} increments a static counter (and optionally throws). The
+ *The fixture is the resource itself: {@code close()} increments a static counter (and optionally throws). The
  * normal case asserts a round-trip fixed point AND a preserved close; the exception cases let the thrown exception
  * propagate (the test catches it) and assert the resource is closed when the body throws, and that a close failure
  * is suppressed into the body's exception when both throw - the paths a recompiler that drops the resource
  * management, or mis-wires the suppress handler, would break.
  */
-class TryWithResourcesFidelityTest {
+class TryWithResourcesFidelityTest
+{
 
     private static final String NORMAL_SOURCE =
             "public class TwrNormal implements AutoCloseable {\n"
@@ -82,7 +83,8 @@ class TryWithResourcesFidelityTest {
     private static Class<?> throwingClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
 
@@ -97,20 +99,23 @@ class TryWithResourcesFidelityTest {
     }
 
     @Test
-    void isRoundTripFixedPoint() {
+    void isRoundTripFixedPoint()
+    {
         assertTrue(normalD1.contains("try ("), "decompiler should fold to try-with-resources:\n" + normalD1);
         assertEquals(normalD1, normalD2, "try-with-resources must be a round-trip fixed point");
     }
 
     @Test
-    void conditionallyThrowingBodyIsRoundTripFixedPoint() {
+    void conditionallyThrowingBodyIsRoundTripFixedPoint()
+    {
         assertTrue(throwingD1.contains("try ("), "decompiler should fold to try-with-resources:\n" + throwingD1);
         assertEquals(throwingD1, throwingD2,
                 "a conditionally-throwing try-with-resources body must be a round-trip fixed point");
     }
 
     @Test
-    void closesOnNormalCompletion() throws Exception {
+    void closesOnNormalCompletion() throws Exception
+    {
         assertEquals(42, normalClass.getDeclaredMethod("f").invoke(null),
                 "recompiled method must return the same value");
         assertEquals(1, normalClass.getDeclaredMethod("closeCount").invoke(null),
@@ -118,7 +123,8 @@ class TryWithResourcesFidelityTest {
     }
 
     @Test
-    void closesWhenBodyThrows() throws Exception {
+    void closesWhenBodyThrows() throws Exception
+    {
         InvocationTargetException wrapper = assertThrows(InvocationTargetException.class,
                 () -> throwingClass.getDeclaredMethod("bodyThrows", boolean.class).invoke(null, true));
         assertEquals("body", wrapper.getCause().getMessage(), "the body's exception must propagate unchanged");
@@ -127,7 +133,8 @@ class TryWithResourcesFidelityTest {
     }
 
     @Test
-    void suppressesCloseFailureIntoBodyException() {
+    void suppressesCloseFailureIntoBodyException()
+    {
         InvocationTargetException wrapper = assertThrows(InvocationTargetException.class,
                 () -> throwingClass.getDeclaredMethod("suppress", boolean.class).invoke(null, true));
         Throwable thrown = wrapper.getCause();
@@ -137,12 +144,12 @@ class TryWithResourcesFidelityTest {
         assertEquals("close", suppressed[0].getMessage(), "the suppressed exception must be the close's");
     }
 
-    private static Recovered recompile(JavaCompiler compiler, String className, String source) throws Exception {
+    private static Recovered recompile(JavaCompiler compiler, String className, String source) throws Exception
+    {
         Path dir = Files.createTempDirectory("twr-fidelity");
         Path src = dir.resolve(className + ".java");
         Files.writeString(src, source);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve(className + ".class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -152,12 +159,14 @@ class TryWithResourcesFidelityTest {
         return new Recovered(d1, ClassDecompiler.decompile(recovered), TestUtils.loadAndVerify(recovered));
     }
 
-    private static final class Recovered {
+    private static final class Recovered
+    {
         final String d1;
         final String d2;
         final Class<?> recompiled;
 
-        Recovered(String d1, String d2, Class<?> recompiled) {
+        Recovered(String d1, String d2, Class<?> recompiled)
+        {
             this.d1 = d1;
             this.d2 = d2;
             this.recompiled = recompiled;

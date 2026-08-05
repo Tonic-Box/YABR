@@ -19,13 +19,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for DataFlowGraph - building and querying data flow graphs.
  * Covers node creation, edge creation, and def-use analysis integration.
  */
-class DataFlowGraphTest {
+class DataFlowGraphTest
+{
 
     private IRMethod method;
     private DataFlowGraph graph;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -37,30 +39,34 @@ class DataFlowGraphTest {
         graph = new DataFlowGraph(method);
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void constructorCreatesGraph() {
+    void constructorCreatesGraph()
+    {
         DataFlowGraph dfg = new DataFlowGraph(method);
         assertNotNull(dfg);
     }
 
     @Test
-    void constructorSetsMethodName() {
+    void constructorSetsMethodName()
+    {
         DataFlowGraph dfg = new DataFlowGraph(method);
         assertEquals("testMethod", dfg.getMethodName());
     }
 
     @Test
-    void constructorSetsMethod() {
+    void constructorSetsMethod()
+    {
         DataFlowGraph dfg = new DataFlowGraph(method);
         assertEquals(method, dfg.getMethod());
     }
 
-    // ========== Build Tests ==========
+    // Build Tests
 
     @Test
-    void buildOnEmptyMethod() {
+    void buildOnEmptyMethod()
+    {
         graph.build();
 
         assertNotNull(graph.getNodes());
@@ -68,7 +74,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildCreatesNodesForDefinitions() {
+    void buildCreatesNodesForDefinitions()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -82,7 +89,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildCreatesEdgesForUses() {
+    void buildCreatesEdgesForUses()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -96,7 +104,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildHandlesMultipleInstructions() {
+    void buildHandlesMultipleInstructions()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -114,10 +123,11 @@ class DataFlowGraphTest {
         assertTrue(graph.getEdgeCount() > 0);
     }
 
-    // ========== Node Creation Tests ==========
+    // Node Creation Tests
 
     @Test
-    void buildCreatesNodeForConstant() {
+    void buildCreatesNodeForConstant()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -131,7 +141,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildCreatesNodeForNewInstruction() {
+    void buildCreatesNodeForNewInstruction()
+    {
         IRBlock entry = method.getEntryBlock();
         ReferenceType stringType = new ReferenceType("java/lang/String");
         SSAValue v0 = new SSAValue(stringType, "v0");
@@ -146,7 +157,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildCreatesNodeForBinaryOp() {
+    void buildCreatesNodeForBinaryOp()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -164,7 +176,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildCreatesSinkNodeForReturn() {
+    void buildCreatesSinkNodeForReturn()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -178,10 +191,11 @@ class DataFlowGraphTest {
         assertNotNull(returnNodes);
     }
 
-    // ========== Phi Instruction Tests ==========
+    // Phi Instruction Tests
 
     @Test
-    void buildHandlesPhiInstructions() {
+    void buildHandlesPhiInstructions()
+    {
         IRBlock entry = method.getEntryBlock();
         IRBlock merge = new IRBlock("merge");
         method.addBlock(merge);
@@ -206,10 +220,11 @@ class DataFlowGraphTest {
         assertEquals(DataFlowNodeType.PHI, phiNode.getType());
     }
 
-    // ========== Query Tests ==========
+    // Query Tests
 
     @Test
-    void getNodesReturnsUnmodifiableList() {
+    void getNodesReturnsUnmodifiableList()
+    {
         graph.build();
         List<DataFlowNode> nodes = graph.getNodes();
 
@@ -217,7 +232,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getEdgesReturnsUnmodifiableList() {
+    void getEdgesReturnsUnmodifiableList()
+    {
         graph.build();
         List<DataFlowEdge> edges = graph.getEdges();
 
@@ -225,7 +241,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getNodeForValueReturnsNode() {
+    void getNodeForValueReturnsNode()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -238,7 +255,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getNodeForValueReturnsNullForNonExistent() {
+    void getNodeForValueReturnsNullForNonExistent()
+    {
         graph.build();
         SSAValue unknown = new SSAValue(PrimitiveType.INT, "unknown");
 
@@ -248,7 +266,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getOutgoingEdgesReturnsEdges() {
+    void getOutgoingEdgesReturnsEdges()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -258,14 +277,16 @@ class DataFlowGraphTest {
         graph.build();
         DataFlowNode node = graph.getNodeForValue(v0);
 
-        if (node != null) {
+        if (node != null)
+        {
             List<DataFlowEdge> edges = graph.getOutgoingEdges(node);
             assertNotNull(edges);
         }
     }
 
     @Test
-    void getIncomingEdgesReturnsEdges() {
+    void getIncomingEdgesReturnsEdges()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -277,16 +298,18 @@ class DataFlowGraphTest {
         graph.build();
         DataFlowNode node = graph.getNodeForValue(v1);
 
-        if (node != null) {
+        if (node != null)
+        {
             List<DataFlowEdge> edges = graph.getIncomingEdges(node);
             assertNotNull(edges);
         }
     }
 
-    // ========== Source/Sink Tests ==========
+    // Source/Sink Tests
 
     @Test
-    void getPotentialSourcesReturnsNodes() {
+    void getPotentialSourcesReturnsNodes()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -299,7 +322,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getPotentialSinksReturnsNodes() {
+    void getPotentialSinksReturnsNodes()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -312,10 +336,11 @@ class DataFlowGraphTest {
         assertNotNull(sinks);
     }
 
-    // ========== Node Type Query Tests ==========
+    // Node Type Query Tests
 
     @Test
-    void getNodesByTypeReturnsFilteredNodes() {
+    void getNodesByTypeReturnsFilteredNodes()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -331,17 +356,19 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getNodesByTypeReturnsEmptyForNonExistent() {
+    void getNodesByTypeReturnsEmptyForNonExistent()
+    {
         graph.build();
         List<DataFlowNode> invokeNodes = graph.getNodesByType(DataFlowNodeType.INVOKE_RESULT);
 
         assertNotNull(invokeNodes);
     }
 
-    // ========== Reachability Tests ==========
+    // Reachability Tests
 
     @Test
-    void getReachableNodesReturnsSet() {
+    void getReachableNodesReturnsSet()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -353,7 +380,8 @@ class DataFlowGraphTest {
         graph.build();
         DataFlowNode startNode = graph.getNodeForValue(v0);
 
-        if (startNode != null) {
+        if (startNode != null)
+        {
             Set<DataFlowNode> reachable = graph.getReachableNodes(startNode);
             assertNotNull(reachable);
             assertTrue(reachable.contains(startNode));
@@ -361,7 +389,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getFlowingIntoNodesReturnsSet() {
+    void getFlowingIntoNodesReturnsSet()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -373,17 +402,19 @@ class DataFlowGraphTest {
         graph.build();
         DataFlowNode targetNode = graph.getNodeForValue(v1);
 
-        if (targetNode != null) {
+        if (targetNode != null)
+        {
             Set<DataFlowNode> flowing = graph.getFlowingIntoNodes(targetNode);
             assertNotNull(flowing);
             assertTrue(flowing.contains(targetNode));
         }
     }
 
-    // ========== Count Tests ==========
+    // Count Tests
 
     @Test
-    void getNodeCountReturnsCorrectCount() {
+    void getNodeCountReturnsCorrectCount()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
@@ -397,7 +428,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void getEdgeCountReturnsCorrectCount() {
+    void getEdgeCountReturnsCorrectCount()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
 
@@ -409,10 +441,11 @@ class DataFlowGraphTest {
         assertTrue(graph.getEdgeCount() >= 0);
     }
 
-    // ========== Field Access Tests ==========
+    // Field Access Tests
 
     @Test
-    void buildHandlesFieldStore() {
+    void buildHandlesFieldStore()
+    {
         IRBlock entry = method.getEntryBlock();
         ReferenceType objectType = new ReferenceType("com/test/MyClass");
         SSAValue obj = new SSAValue(objectType, "obj");
@@ -431,7 +464,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildHandlesFieldLoad() {
+    void buildHandlesFieldLoad()
+    {
         IRBlock entry = method.getEntryBlock();
         ReferenceType objectType = new ReferenceType("com/test/MyClass");
         SSAValue obj = new SSAValue(objectType, "obj");
@@ -449,10 +483,11 @@ class DataFlowGraphTest {
         assertEquals(DataFlowNodeType.FIELD_LOAD, node.getType());
     }
 
-    // ========== ToString Tests ==========
+    // ToString Tests
 
     @Test
-    void toStringReturnsGraphInfo() {
+    void toStringReturnsGraphInfo()
+    {
         graph.build();
         String str = graph.toString();
 
@@ -462,10 +497,11 @@ class DataFlowGraphTest {
         assertTrue(str.contains("edges"));
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void buildEmptyMethodProducesEmptyGraph() {
+    void buildEmptyMethodProducesEmptyGraph()
+    {
         DataFlowGraph emptyGraph = new DataFlowGraph(method);
         emptyGraph.build();
 
@@ -474,7 +510,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void buildMultipleTimes() {
+    void buildMultipleTimes()
+    {
         IRBlock entry = method.getEntryBlock();
         SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
         entry.addInstruction(new ConstantInstruction(v0, new IntConstant(42)));
@@ -490,7 +527,8 @@ class DataFlowGraphTest {
     }
 
     @Test
-    void complexControlFlow() {
+    void complexControlFlow()
+    {
         IRBlock block1 = new IRBlock("block1");
         IRBlock block2 = new IRBlock("block2");
         IRBlock merge = new IRBlock("merge");

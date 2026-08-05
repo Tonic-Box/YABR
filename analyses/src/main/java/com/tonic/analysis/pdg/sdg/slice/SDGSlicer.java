@@ -10,55 +10,108 @@ import com.tonic.analysis.pdg.slice.SliceResult;
 
 import java.util.*;
 
-public class SDGSlicer {
+/**
+ * Interprocedural slicer over a system dependence graph, using the two-phase
+ * ascend/descend walk so slices stay context sensitive across call sites.
+ */
+public class SDGSlicer
+{
 
     private final SDG sdg;
     private boolean useSummaryEdges = true;
     private boolean contextSensitive = true;
 
-    public SDGSlicer(SDG sdg) {
+    /**
+     * Creates a slicer over a graph, with summary edges and context sensitivity on.
+     * @param sdg the graph to slice
+     */
+    public SDGSlicer(SDG sdg)
+    {
         this.sdg = sdg;
     }
 
-    public SDG getSdg() {
+    /**
+     * @return the sdg
+     */
+    public SDG getSdg()
+    {
         return sdg;
     }
 
-    public boolean isUseSummaryEdges() {
+    /**
+     * @return whether use summary edges
+     */
+    public boolean isUseSummaryEdges()
+    {
         return useSummaryEdges;
     }
 
-    public boolean isContextSensitive() {
+    /**
+     * @return whether context sensitive
+     */
+    public boolean isContextSensitive()
+    {
         return contextSensitive;
     }
 
-    public SDGSlicer withSummaryEdges(boolean use) {
+    /**
+     * Toggles following summary edges, which short-circuit a call's input-to-output flow.
+     * @param use true to follow summary edges
+     * @return this slicer
+     */
+    public SDGSlicer withSummaryEdges(boolean use)
+    {
         this.useSummaryEdges = use;
         return this;
     }
 
-    public SDGSlicer withContextSensitivity(boolean contextSensitive) {
+    /**
+     * Toggles matching calls to returns instead of walking all interprocedural edges.
+     * @param contextSensitive true for the context sensitive walk
+     * @return this slicer
+     */
+    public SDGSlicer withContextSensitivity(boolean contextSensitive)
+    {
         this.contextSensitive = contextSensitive;
         return this;
     }
 
-    public SliceResult interproceduralBackwardSlice(PDGNode criterion) {
-        if (contextSensitive) {
+    /**
+     * Collects everything the criterion may depend on, across procedures.
+     * @param criterion the node to slice back from
+     * @return the backward slice
+     */
+    public SliceResult interproceduralBackwardSlice(PDGNode criterion)
+    {
+        if (contextSensitive)
+        {
             return contextSensitiveBackwardSlice(criterion);
-        } else {
+        }
+        else
+        {
             return contextInsensitiveBackwardSlice(criterion);
         }
     }
 
-    public SliceResult interproceduralForwardSlice(PDGNode criterion) {
-        if (contextSensitive) {
+    /**
+     * Collects everything that may depend on the criterion, across procedures.
+     * @param criterion the node to slice forward from
+     * @return the forward slice
+     */
+    public SliceResult interproceduralForwardSlice(PDGNode criterion)
+    {
+        if (contextSensitive)
+        {
             return contextSensitiveForwardSlice(criterion);
-        } else {
+        }
+        else
+        {
             return contextInsensitiveForwardSlice(criterion);
         }
     }
 
-    private SliceResult contextSensitiveBackwardSlice(PDGNode criterion) {
+    private SliceResult contextSensitiveBackwardSlice(PDGNode criterion)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.BACKWARD, Set.of(criterion));
 
         Set<PDGNode> phase1Visited = new LinkedHashSet<>();
@@ -70,32 +123,40 @@ public class SDGSlicer {
         return result;
     }
 
-    private void ascendingPhase(PDGNode start, Set<PDGNode> visited, SliceResult result) {
+    private void ascendingPhase(PDGNode start, Set<PDGNode> visited, SliceResult result)
+    {
         Deque<PDGNode> worklist = new ArrayDeque<>();
         worklist.add(start);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
             if (!visited.add(current)) continue;
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getIncomingEdges()) {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
                 PDGNode source = edge.getSource();
 
-                if (edge.getType() == PDGDependenceType.PARAMETER_OUT) {
+                if (edge.getType() == PDGDependenceType.PARAMETER_OUT)
+                {
                     continue;
                 }
 
-                if (edge.getType() == PDGDependenceType.CALL) {
+                if (edge.getType() == PDGDependenceType.CALL)
+                {
                     continue;
                 }
 
-                if (edge.getType() == PDGDependenceType.PARAMETER_IN) {
-                    if (source instanceof SDGActualInNode) {
+                if (edge.getType() == PDGDependenceType.PARAMETER_IN)
+                {
+                    if (source instanceof SDGActualInNode)
+                    {
                         SDGActualInNode actualIn = (SDGActualInNode) source;
                         SDGCallNode callNode = actualIn.getCallNode();
-                        if (callNode != null && !visited.contains(callNode)) {
+                        if (callNode != null && !visited.contains(callNode))
+                        {
                             result.addEdge(edge);
                             worklist.add(callNode);
                         }
@@ -103,17 +164,21 @@ public class SDGSlicer {
                     continue;
                 }
 
-                if (useSummaryEdges && edge.getType() == PDGDependenceType.SUMMARY) {
+                if (useSummaryEdges && edge.getType() == PDGDependenceType.SUMMARY)
+                {
                     result.addEdge(edge);
-                    if (!visited.contains(source)) {
+                    if (!visited.contains(source))
+                    {
                         worklist.add(source);
                     }
                     continue;
                 }
 
-                if (!edge.isInterprocedural()) {
+                if (!edge.isInterprocedural())
+                {
                     result.addEdge(edge);
-                    if (!visited.contains(source)) {
+                    if (!visited.contains(source))
+                    {
                         worklist.add(source);
                     }
                 }
@@ -121,40 +186,50 @@ public class SDGSlicer {
         }
     }
 
-    private void descendingPhase(Set<PDGNode> phase1Nodes, Set<PDGNode> visited, SliceResult result) {
+    private void descendingPhase(Set<PDGNode> phase1Nodes, Set<PDGNode> visited, SliceResult result)
+    {
         Deque<PDGNode> worklist = new ArrayDeque<>();
 
-        for (PDGNode node : phase1Nodes) {
-            if (node instanceof SDGCallNode) {
+        for (PDGNode node : phase1Nodes)
+        {
+            if (node instanceof SDGCallNode)
+            {
                 SDGCallNode callNode = (SDGCallNode) node;
                 SDGEntryNode targetEntry = callNode.getTargetEntry();
-                if (targetEntry != null) {
+                if (targetEntry != null)
+                {
                     worklist.add(targetEntry);
                 }
             }
         }
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
             if (!visited.add(current)) continue;
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getIncomingEdges()) {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
                 PDGNode source = edge.getSource();
 
-                if (edge.getType() == PDGDependenceType.PARAMETER_IN) {
+                if (edge.getType() == PDGDependenceType.PARAMETER_IN)
+                {
                     continue;
                 }
 
-                if (edge.getType() == PDGDependenceType.CALL) {
+                if (edge.getType() == PDGDependenceType.CALL)
+                {
                     result.addEdge(edge);
                     continue;
                 }
 
-                if (!edge.isInterprocedural()) {
+                if (!edge.isInterprocedural())
+                {
                     result.addEdge(edge);
-                    if (!visited.contains(source)) {
+                    if (!visited.contains(source))
+                    {
                         worklist.add(source);
                     }
                 }
@@ -162,24 +237,29 @@ public class SDGSlicer {
         }
     }
 
-    private SliceResult contextInsensitiveBackwardSlice(PDGNode criterion) {
+    private SliceResult contextInsensitiveBackwardSlice(PDGNode criterion)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.BACKWARD, Set.of(criterion));
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<PDGNode> worklist = new ArrayDeque<>();
         worklist.add(criterion);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
             if (!visited.add(current)) continue;
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getIncomingEdges()) {
-                if (shouldFollowEdgeBackward(edge)) {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
+                if (shouldFollowEdgeBackward(edge))
+                {
                     result.addEdge(edge);
                     PDGNode source = edge.getSource();
-                    if (!visited.contains(source)) {
+                    if (!visited.contains(source))
+                    {
                         worklist.add(source);
                     }
                 }
@@ -189,26 +269,31 @@ public class SDGSlicer {
         return result;
     }
 
-    private SliceResult contextSensitiveForwardSlice(PDGNode criterion) {
+    private SliceResult contextSensitiveForwardSlice(PDGNode criterion)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.FORWARD, Set.of(criterion));
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<SliceContext> worklist = new ArrayDeque<>();
         worklist.add(new SliceContext(criterion, new ArrayDeque<>()));
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             SliceContext ctx = worklist.poll();
             PDGNode current = ctx.node;
 
             if (!visited.add(current)) continue;
             result.addNode(current);
 
-            for (PDGEdge edge : current.getOutgoingEdges()) {
+            for (PDGEdge edge : current.getOutgoingEdges())
+            {
                 PDGNode target = edge.getTarget();
 
-                if (edge.getType() == PDGDependenceType.CALL) {
+                if (edge.getType() == PDGDependenceType.CALL)
+                {
                     Deque<SDGCallNode> newStack = new ArrayDeque<>(ctx.callStack);
-                    if (current instanceof SDGCallNode) {
+                    if (current instanceof SDGCallNode)
+                    {
                         newStack.push((SDGCallNode) current);
                     }
                     result.addEdge(edge);
@@ -216,12 +301,16 @@ public class SDGSlicer {
                     continue;
                 }
 
-                if (edge.getType() == PDGDependenceType.PARAMETER_OUT) {
-                    if (!ctx.callStack.isEmpty()) {
+                if (edge.getType() == PDGDependenceType.PARAMETER_OUT)
+                {
+                    if (!ctx.callStack.isEmpty())
+                    {
                         SDGCallNode expectedCaller = ctx.callStack.peek();
-                        if (target instanceof SDGActualOutNode) {
+                        if (target instanceof SDGActualOutNode)
+                        {
                             SDGActualOutNode actualOut = (SDGActualOutNode) target;
-                            if (actualOut.getCallNode() == expectedCaller) {
+                            if (actualOut.getCallNode() == expectedCaller)
+                            {
                                 Deque<SDGCallNode> newStack = new ArrayDeque<>(ctx.callStack);
                                 newStack.pop();
                                 result.addEdge(edge);
@@ -232,7 +321,8 @@ public class SDGSlicer {
                     continue;
                 }
 
-                if (!edge.isInterprocedural()) {
+                if (!edge.isInterprocedural())
+                {
                     result.addEdge(edge);
                     worklist.add(new SliceContext(target, ctx.callStack));
                 }
@@ -242,24 +332,29 @@ public class SDGSlicer {
         return result;
     }
 
-    private SliceResult contextInsensitiveForwardSlice(PDGNode criterion) {
+    private SliceResult contextInsensitiveForwardSlice(PDGNode criterion)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.FORWARD, Set.of(criterion));
 
         Set<PDGNode> visited = new LinkedHashSet<>();
         Deque<PDGNode> worklist = new ArrayDeque<>();
         worklist.add(criterion);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             PDGNode current = worklist.poll();
             if (!visited.add(current)) continue;
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getOutgoingEdges()) {
-                if (shouldFollowEdgeForward(edge)) {
+            for (PDGEdge edge : current.getOutgoingEdges())
+            {
+                if (shouldFollowEdgeForward(edge))
+                {
                     result.addEdge(edge);
                     PDGNode target = edge.getTarget();
-                    if (!visited.contains(target)) {
+                    if (!visited.contains(target))
+                    {
                         worklist.add(target);
                     }
                 }
@@ -269,7 +364,15 @@ public class SDGSlicer {
         return result;
     }
 
-    public SliceResult sliceWithCallingContext(PDGNode criterion, List<SDGCallNode> callingContext) {
+    /**
+     * Slices backward from a criterion reached through a known chain of call sites,
+     * so only parameter flows matching that chain are followed.
+     * @param criterion the node to slice back from
+     * @param callingContext the call sites leading to the criterion, outermost first
+     * @return the backward slice restricted to that context
+     */
+    public SliceResult sliceWithCallingContext(PDGNode criterion, List<SDGCallNode> callingContext)
+    {
         SliceResult result = new SliceResult(SliceResult.SliceType.BACKWARD, Set.of(criterion));
 
         Set<PDGNode> visited = new LinkedHashSet<>();
@@ -278,7 +381,8 @@ public class SDGSlicer {
         Deque<SDGCallNode> initialContext = new ArrayDeque<>(callingContext);
         worklist.add(new ContextualNode(criterion, initialContext));
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             ContextualNode ctx = worklist.poll();
             PDGNode current = ctx.node;
 
@@ -287,15 +391,19 @@ public class SDGSlicer {
 
             result.addNode(current);
 
-            for (PDGEdge edge : current.getIncomingEdges()) {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
                 PDGNode source = edge.getSource();
 
-                if (edge.getType() == PDGDependenceType.PARAMETER_IN) {
-                    if (source instanceof SDGActualInNode) {
+                if (edge.getType() == PDGDependenceType.PARAMETER_IN)
+                {
+                    if (source instanceof SDGActualInNode)
+                    {
                         SDGActualInNode actualIn = (SDGActualInNode) source;
                         SDGCallNode callNode = actualIn.getCallNode();
 
-                        if (!ctx.context.isEmpty() && ctx.context.peek() == callNode) {
+                        if (!ctx.context.isEmpty() && ctx.context.peek() == callNode)
+                        {
                             Deque<SDGCallNode> newContext = new ArrayDeque<>(ctx.context);
                             newContext.pop();
                             result.addEdge(edge);
@@ -305,8 +413,10 @@ public class SDGSlicer {
                     continue;
                 }
 
-                if (edge.getType() == PDGDependenceType.CALL) {
-                    if (source instanceof SDGCallNode) {
+                if (edge.getType() == PDGDependenceType.CALL)
+                {
+                    if (source instanceof SDGCallNode)
+                    {
                         Deque<SDGCallNode> newContext = new ArrayDeque<>(ctx.context);
                         newContext.push((SDGCallNode) source);
                         result.addEdge(edge);
@@ -315,7 +425,8 @@ public class SDGSlicer {
                     continue;
                 }
 
-                if (!edge.isInterprocedural()) {
+                if (!edge.isInterprocedural())
+                {
                     result.addEdge(edge);
                     worklist.add(new ContextualNode(source, ctx.context));
                 }
@@ -325,37 +436,54 @@ public class SDGSlicer {
         return result;
     }
 
-    public List<List<SDGCallNode>> findCallingContexts(PDGNode node, int maxDepth) {
+    /**
+     * Enumerates the call-site chains through which a node can be reached, walking
+     * call edges up to a bounded depth.
+     * @param node the node to find contexts for
+     * @param maxDepth how many call levels to ascend
+     * @return one list of call sites per context, outermost call first
+     */
+    public List<List<SDGCallNode>> findCallingContexts(PDGNode node, int maxDepth)
+    {
         List<List<SDGCallNode>> contexts = new ArrayList<>();
         findContextsDFS(node, new ArrayList<>(), contexts, new HashSet<>(), maxDepth);
         return contexts;
     }
 
-    private void findContextsDFS(PDGNode current, List<SDGCallNode> currentContext,
-                                 List<List<SDGCallNode>> allContexts,
-                                 Set<PDGNode> visited, int remainingDepth) {
+    private void findContextsDFS(PDGNode current, List<SDGCallNode> currentContext, List<List<SDGCallNode>> allContexts, Set<PDGNode> visited, int remainingDepth)
+    {
         if (remainingDepth < 0) return;
         if (!visited.add(current)) return;
 
-        if (current instanceof SDGEntryNode) {
+        if (current instanceof SDGEntryNode)
+        {
             SDGEntryNode entry = (SDGEntryNode) current;
             MethodReference methodRef = entry.getMethodRef();
             Set<SDGCallNode> callSites = sdg.getCallSitesTo(methodRef);
 
-            if (callSites.isEmpty()) {
+            if (callSites.isEmpty())
+            {
                 allContexts.add(new ArrayList<>(currentContext));
-            } else {
-                for (SDGCallNode callSite : callSites) {
+            }
+            else
+            {
+                for (SDGCallNode callSite : callSites)
+                {
                     List<SDGCallNode> newContext = new ArrayList<>(currentContext);
                     newContext.add(0, callSite);
                     findContextsDFS(callSite, newContext, allContexts, new HashSet<>(visited), remainingDepth - 1);
                 }
             }
-        } else {
-            for (PDGEdge edge : current.getIncomingEdges()) {
-                if (edge.getType() == PDGDependenceType.CALL) {
+        }
+        else
+        {
+            for (PDGEdge edge : current.getIncomingEdges())
+            {
+                if (edge.getType() == PDGDependenceType.CALL)
+                {
                     PDGNode source = edge.getSource();
-                    if (source instanceof SDGCallNode) {
+                    if (source instanceof SDGCallNode)
+                    {
                         List<SDGCallNode> newContext = new ArrayList<>(currentContext);
                         newContext.add(0, (SDGCallNode) source);
                         findContextsDFS(source, newContext, allContexts, new HashSet<>(visited), remainingDepth - 1);
@@ -367,35 +495,43 @@ public class SDGSlicer {
         visited.remove(current);
     }
 
-    private boolean shouldFollowEdgeBackward(PDGEdge edge) {
-        if (useSummaryEdges && edge.getType() == PDGDependenceType.SUMMARY) {
+    private boolean shouldFollowEdgeBackward(PDGEdge edge)
+    {
+        if (useSummaryEdges && edge.getType() == PDGDependenceType.SUMMARY)
+        {
             return true;
         }
         return edge.getType() != PDGDependenceType.RETURN;
     }
 
-    private boolean shouldFollowEdgeForward(PDGEdge edge) {
-        if (useSummaryEdges && edge.getType() == PDGDependenceType.SUMMARY) {
+    private boolean shouldFollowEdgeForward(PDGEdge edge)
+    {
+        if (useSummaryEdges && edge.getType() == PDGDependenceType.SUMMARY)
+        {
             return true;
         }
         return edge.getType() != PDGDependenceType.PARAMETER_IN;
     }
 
-    private static class SliceContext {
+    private static class SliceContext
+    {
         final PDGNode node;
         final Deque<SDGCallNode> callStack;
 
-        SliceContext(PDGNode node, Deque<SDGCallNode> callStack) {
+        SliceContext(PDGNode node, Deque<SDGCallNode> callStack)
+        {
             this.node = node;
             this.callStack = callStack;
         }
     }
 
-    private static class ContextualNode {
+    private static class ContextualNode
+    {
         final PDGNode node;
         final Deque<SDGCallNode> context;
 
-        ContextualNode(PDGNode node, Deque<SDGCallNode> context) {
+        ContextualNode(PDGNode node, Deque<SDGCallNode> context)
+        {
             this.node = node;
             this.context = context;
         }

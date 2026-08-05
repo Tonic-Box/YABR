@@ -8,7 +8,8 @@ import java.util.List;
 /**
  * Describes a hook method to be called at instrumentation points.
  */
-public class HookDescriptor {
+public class HookDescriptor
+{
 
     private final String owner;
     private final String name;
@@ -17,7 +18,8 @@ public class HookDescriptor {
     private final List<HookParameter> parameters;
     private final boolean replacesValue;
 
-    private HookDescriptor(Builder builder) {
+    private HookDescriptor(Builder builder)
+    {
         this.owner = builder.owner;
         this.name = builder.name;
         this.descriptor = builder.descriptor;
@@ -26,40 +28,63 @@ public class HookDescriptor {
         this.replacesValue = builder.replacesValue;
     }
 
-    /** Returns the owner class of the hook method (internal name, e.g. {@code "com/example/Hooks"}). */
-    public String getOwner() {
+    /**
+     * @return the owner class of the hook method (internal name, e.g. {@code "com/example/Hooks"})
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    /** Returns the name of the hook method. */
-    public String getName() {
+    /**
+     * @return the name of the hook method
+     */
+    public String getName()
+    {
         return name;
     }
 
-    /** Returns the hook method descriptor. */
-    public String getDescriptor() {
+    /**
+     * @return the hook method descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    /** Returns the invocation type (typically STATIC). */
-    public InvokeType getInvokeType() {
+    /**
+     * @return the invocation type (typically STATIC)
+     */
+    public InvokeType getInvokeType()
+    {
         return invokeType;
     }
 
-    /** Returns the parameters to pass to the hook method. */
-    public List<HookParameter> getParameters() {
+    /**
+     * @return the parameters to pass to the hook method
+     */
+    public List<HookParameter> getParameters()
+    {
         return parameters;
     }
 
-    /** Returns whether the hook's return value should replace the original value. */
-    public boolean isReplacesValue() {
+    /**
+     * @return whether the hook's return value should replace the original value
+     */
+    public boolean isReplacesValue()
+    {
         return replacesValue;
     }
 
     /**
-     * Creates a static hook descriptor.
+     * Creates a descriptor for a static hook method.
+     * @param owner the hook class internal name
+     * @param name the hook method name
+     * @param descriptor the hook method descriptor
+     * @return the descriptor
      */
-    public static HookDescriptor staticHook(String owner, String name, String descriptor) {
+    public static HookDescriptor staticHook(String owner, String name, String descriptor)
+    {
         return HookDescriptor.builder()
                 .owner(owner)
                 .name(name)
@@ -68,11 +93,20 @@ public class HookDescriptor {
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * Creates a new builder.
+     * @return a new Builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Builder for HookDescriptor instances.
+     */
+    public static class Builder
+    {
         private String owner;
         private String name;
         private String descriptor;
@@ -80,37 +114,78 @@ public class HookDescriptor {
         private List<HookParameter> parameters = new ArrayList<>();
         private boolean replacesValue = false;
 
-        public Builder owner(String owner) {
+        /**
+         * Sets the hook class internal name.
+         * @param owner the owner class internal name
+         * @return this builder
+         */
+        public Builder owner(String owner)
+        {
             this.owner = owner;
             return this;
         }
 
-        public Builder name(String name) {
+        /**
+         * Sets the hook method name.
+         * @param name the hook method name
+         * @return this builder
+         */
+        public Builder name(String name)
+        {
             this.name = name;
             return this;
         }
 
-        public Builder descriptor(String descriptor) {
+        /**
+         * Sets the hook method descriptor.
+         * @param descriptor the hook method descriptor
+         * @return this builder
+         */
+        public Builder descriptor(String descriptor)
+        {
             this.descriptor = descriptor;
             return this;
         }
 
-        public Builder invokeType(InvokeType invokeType) {
+        /**
+         * Sets the invocation type used to call the hook.
+         * @param invokeType the invocation type
+         * @return this builder
+         */
+        public Builder invokeType(InvokeType invokeType)
+        {
             this.invokeType = invokeType;
             return this;
         }
 
-        public Builder parameters(List<HookParameter> parameters) {
+        /**
+         * Sets the parameters to pass to the hook method.
+         * @param parameters the hook parameters
+         * @return this builder
+         */
+        public Builder parameters(List<HookParameter> parameters)
+        {
             this.parameters = parameters;
             return this;
         }
 
-        public Builder replacesValue(boolean replacesValue) {
+        /**
+         * Sets whether the hook's return value replaces the original value.
+         * @param replacesValue true if the hook result replaces the value
+         * @return this builder
+         */
+        public Builder replacesValue(boolean replacesValue)
+        {
             this.replacesValue = replacesValue;
             return this;
         }
 
-        public HookDescriptor build() {
+        /**
+         * Builds the hook descriptor.
+         * @return the built HookDescriptor
+         */
+        public HookDescriptor build()
+        {
             return new HookDescriptor(this);
         }
     }
@@ -118,40 +193,75 @@ public class HookDescriptor {
     /**
      * Types of parameters that can be passed to hooks.
      */
-    public enum HookParameter {
-        /** The 'this' reference (null for static methods) */
+    public enum HookParameter
+    {
+        /**
+         * The 'this' reference (null for static methods)
+         */
         THIS,
-        /** The method name as a String */
+        /**
+         * The method name as a String
+         */
         METHOD_NAME,
-        /** The method descriptor as a String */
+        /**
+         * The method descriptor as a String
+         */
         METHOD_DESCRIPTOR,
-        /** The class name as a String */
+        /**
+         * The class name as a String
+         */
         CLASS_NAME,
-        /** All method parameters as Object[] */
+        /**
+         * All method parameters as Object[]
+         */
         ALL_PARAMETERS,
-        /** A specific parameter by index */
+        /**
+         * A specific parameter by index
+         */
         PARAMETER,
-        /** The return value (for exit hooks) */
+        /**
+         * The return value (for exit hooks)
+         */
         RETURN_VALUE,
-        /** The field owner object */
+        /**
+         * The field owner object
+         */
         FIELD_OWNER,
-        /** The field name as a String */
+        /**
+         * The field name as a String
+         */
         FIELD_NAME,
-        /** The new value being assigned (for write hooks) */
+        /**
+         * The new value being assigned (for write hooks)
+         */
         NEW_VALUE,
-        /** The old/read value (for read hooks) */
+        /**
+         * The old/read value (for read hooks)
+         */
         READ_VALUE,
-        /** The array reference */
+        /**
+         * The array reference
+         */
         ARRAY_REF,
-        /** The array index */
+        /**
+         * The array index
+         */
         ARRAY_INDEX,
-        /** The exception object (for exception hooks) */
+        /**
+         * The exception object (for exception hooks)
+         */
         EXCEPTION,
-        /** The receiver of a method call */
+        /**
+         * The receiver of a method call
+         */
         CALL_RECEIVER,
-        /** Arguments of a method call */
+        /**
+         * Arguments of a method call
+         */
         CALL_ARGUMENTS,
-        /** Result of a method call */
+        /**
+         * Result of a method call
+         */
         CALL_RESULT
     }
 }

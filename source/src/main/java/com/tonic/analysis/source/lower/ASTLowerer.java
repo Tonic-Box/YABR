@@ -55,38 +55,57 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Main facade for lowering AST back to IR.
- * Converts source-level AST statements into SSA IR that can be lowered to bytecode.
+ * Facade that lowers a source-level AST method body into SSA IR ready for bytecode emission.
  */
-public class ASTLowerer {
+public class ASTLowerer
+{
 
     private final ConstPool constPool;
     private final ClassPool classPool;
     private TypeDecl currentClassDecl;
     private List<ImportDecl> imports = new ArrayList<>();
 
-    /** Synthetic lambda methods produced by lowering, awaiting materialization into the class. */
+    /**
+     * Synthetic lambda methods produced by lowering, awaiting materialization into the class.
+     */
     private final List<SyntheticLambdaMethod> pendingLambdas = new ArrayList<>();
 
-    /** Synthetic array-constructor methods produced by lowering, awaiting materialization. */
+    /**
+     * Synthetic array-constructor methods produced by lowering, awaiting materialization.
+     */
     private final List<SyntheticArrayConstructor> pendingArrayConstructors = new ArrayList<>();
 
-    public ASTLowerer(ConstPool constPool, ClassPool classPool) {
+    /**
+     * Creates a lowerer bound to the given pools.
+     * @param constPool the constant pool that receives emitted entries
+     * @param classPool the class pool used for type resolution
+     */
+    public ASTLowerer(ConstPool constPool, ClassPool classPool)
+    {
         this.constPool = constPool;
         this.classPool = classPool;
     }
 
-    public void setCurrentClassDecl(TypeDecl currentClassDecl) {
+    /**
+     * Sets the enclosing class declaration used to resolve member references during lowering.
+     * @param currentClassDecl the class declaration being lowered
+     */
+    public void setCurrentClassDecl(TypeDecl currentClassDecl)
+    {
         this.currentClassDecl = currentClassDecl;
     }
 
-    public void setImports(List<ImportDecl> imports) {
+    /**
+     * Sets the imports used to resolve simple type names during lowering.
+     * @param imports the compilation unit's import declarations
+     */
+    public void setImports(List<ImportDecl> imports)
+    {
         this.imports = imports;
     }
 
     /**
      * Lowers an AST method body to a new IRMethod.
-     *
      * @param body the method body as BlockStmt
      * @param methodName the method name
      * @param ownerClass the owning class (internal name)
@@ -95,16 +114,16 @@ public class ASTLowerer {
      * @param returnType the return type
      * @return the generated IRMethod
      */
-    public IRMethod lower(BlockStmt body, String methodName, String ownerClass,
-                          boolean isStatic, List<SourceType> parameters,
-                          SourceType returnType) {
+    public IRMethod lower(BlockStmt body, String methodName, String ownerClass, boolean isStatic, List<SourceType> parameters, SourceType returnType)
+    {
 
         TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
 
         String superClassName = resolveSuperClassName(typeResolver);
-        if ("<init>".equals(methodName)) {
+        if ("<init>".equals(methodName))
+        {
             ensureConstructorChainCall(body, superClassName);
         }
 
@@ -121,7 +140,8 @@ public class ASTLowerer {
         irMethod.setEntryBlock(entryBlock);
         ctx.setCurrentBlock(entryBlock);
 
-        if (!isStatic) {
+        if (!isStatic)
+        {
             IRType thisType = new ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
@@ -129,7 +149,8 @@ public class ASTLowerer {
             ctx.setVariable("this", thisVal);
         }
 
-        for (int i = 0; i < parameters.size(); i++) {
+        for (int i = 0; i < parameters.size(); i++)
+        {
             IRType paramType = resolvedParamType(parameters.get(i), typeResolver);
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
@@ -148,9 +169,18 @@ public class ASTLowerer {
         return irMethod;
     }
 
-    public IRMethod lower(MethodDecl methodDecl, String ownerClass) {
+    /**
+     * Desugars and lowers a full method declaration to a new IRMethod.
+     * @param methodDecl the method declaration; must have a body
+     * @param ownerClass the owning class internal name
+     * @return the generated IRMethod
+     * @throws LoweringException if the method has no body
+     */
+    public IRMethod lower(MethodDecl methodDecl, String ownerClass)
+    {
         BlockStmt body = methodDecl.getBody();
-        if (body == null) {
+        if (body == null)
+        {
             throw new LoweringException("Cannot lower abstract method: " + methodDecl.getName());
         }
         new PatternInstanceOfDesugar().transform(body);
@@ -161,11 +191,13 @@ public class ASTLowerer {
         List<ParameterDecl> paramDecls = methodDecl.getParameters();
         List<SourceType> parameters = new ArrayList<>();
         List<String> paramNames = new ArrayList<>();
-        for (ParameterDecl p : paramDecls) {
+        for (ParameterDecl p : paramDecls)
+        {
             // A varargs declaration carries the element type; the parameter's actual type is one
             // array dimension up, both in the descriptor and as the local's bound type.
             SourceType paramType = p.getType();
-            if (p.isVarArgs()) {
+            if (p.isVarArgs())
+            {
                 paramType = paramType instanceof ArraySourceType
                         ? ((ArraySourceType) paramType).addDimension()
                         : new ArraySourceType(paramType);
@@ -183,7 +215,8 @@ public class ASTLowerer {
         typeResolver.setImports(imports);
 
         String superClassName = resolveSuperClassName(typeResolver);
-        if ("<init>".equals(methodName)) {
+        if ("<init>".equals(methodName))
+        {
             ensureConstructorChainCall(body, superClassName);
         }
 
@@ -200,12 +233,15 @@ public class ASTLowerer {
         // merge (if/else, switch): the direct-value path inserts no phi at a merge, so a variable
         // assigned in branches and read afterward would wrongly take the last branch's value.
         boolean hasLoops = containsLoops(body) || containsBranches(body);
-        if (hasLoops) {
+        if (hasLoops)
+        {
             ctx.setEmitLocalInstructions(true);
             int paramSlotCount = isStatic ? 0 : 1;
-            for (SourceType param : parameters) {
+            for (SourceType param : parameters)
+            {
                 paramSlotCount++;
-                if (param.toIRType().isTwoSlot()) {
+                if (param.toIRType().isTwoSlot())
+                {
                     paramSlotCount++;
                 }
             }
@@ -217,31 +253,40 @@ public class ASTLowerer {
         ctx.setCurrentBlock(entryBlock);
 
         int paramSlot = 0;
-        if (!isStatic) {
+        if (!isStatic)
+        {
             IRType thisType = new ReferenceType(ownerClass);
             SSAValue thisVal = ctx.newValue(thisType);
             irMethod.addParameter(thisVal);
             ctx.declareLocal("this", thisType, true);
-            if (hasLoops) {
+            if (hasLoops)
+            {
                 ctx.registerParameter("this", paramSlot, thisVal);
-            } else {
+            }
+            else
+            {
                 ctx.setVariable("this", thisVal);
             }
             paramSlot++;
         }
 
-        for (int i = 0; i < parameters.size(); i++) {
+        for (int i = 0; i < parameters.size(); i++)
+        {
             IRType paramType = resolvedParamType(parameters.get(i), typeResolver);
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
             ctx.declareLocal(paramNames.get(i), paramType, true);
-            if (hasLoops) {
+            if (hasLoops)
+            {
                 ctx.registerParameter(paramNames.get(i), paramSlot, paramVal);
-            } else {
+            }
+            else
+            {
                 ctx.setVariable(paramNames.get(i), paramVal);
             }
             paramSlot++;
-            if (paramType.isTwoSlot()) {
+            if (paramType.isTwoSlot())
+            {
                 paramSlot++;
             }
         }
@@ -253,7 +298,8 @@ public class ASTLowerer {
 
         appendImpliedReturn(ctx, returnIrType(methodDecl.getReturnType()));
 
-        if (hasLoops) {
+        if (hasLoops)
+        {
             constructSSAForm(irMethod);
         }
 
@@ -266,17 +312,21 @@ public class ASTLowerer {
      * (an implicit-Object class). Lets {@code super(...)}/{@code super.x} resolve to the real superclass
      * instead of always defaulting to Object.
      */
-    private String resolveSuperClassName(TypeResolver typeResolver) {
-        if (currentClassDecl instanceof EnumDecl) {
+    private String resolveSuperClassName(TypeResolver typeResolver)
+    {
+        if (currentClassDecl instanceof EnumDecl)
+        {
             return "java/lang/Enum";
         }
         SourceType superType = currentClassDecl instanceof ClassDecl
                 ? ((ClassDecl) currentClassDecl).getSuperclass() : null;
-        if (superType == null) {
+        if (superType == null)
+        {
             return "java/lang/Object";
         }
         String descriptor = typeResolver.descriptorOf(superType);
-        if (descriptor != null && descriptor.startsWith("L") && descriptor.endsWith(";")) {
+        if (descriptor != null && descriptor.startsWith("L") && descriptor.endsWith(";"))
+        {
             return descriptor.substring(1, descriptor.length() - 1);
         }
         return "java/lang/Object";
@@ -288,16 +338,19 @@ public class ASTLowerer {
      * would lower to an unverifiable {@code <init>}; this prepends a synthetic {@code super()} targeting
      * {@code superClassName}.
      */
-    private void ensureConstructorChainCall(BlockStmt body, String superClassName) {
+    private void ensureConstructorChainCall(BlockStmt body, String superClassName)
+    {
         List<Statement> statements = body.getStatements();
         // javac emits synthetic outer-instance / captured-variable field initializers (this$0, val$...)
         // BEFORE the super() call, and the decompiler drops the now-implicit super(). Re-inject it after
         // any such leading run - not at index 0 - so the synthetic fields keep preceding super().
         int idx = 0;
-        while (idx < statements.size() && isSyntheticCaptureFieldInit(statements.get(idx))) {
+        while (idx < statements.size() && isSyntheticCaptureFieldInit(statements.get(idx)))
+        {
             idx++;
         }
-        if (idx < statements.size() && isConstructorChainCall(statements.get(idx))) {
+        if (idx < statements.size() && isConstructorChainCall(statements.get(idx)))
+        {
             return;
         }
         MethodCallExpr superCall = new MethodCallExpr(
@@ -306,18 +359,24 @@ public class ASTLowerer {
         statements.add(idx, new ExprStmt(superCall));
     }
 
-    /** Whether {@code stmt} is a {@code super(...)}/{@code this(...)} constructor-chain call. */
-    private boolean isConstructorChainCall(Statement stmt) {
-        if (!(stmt instanceof ExprStmt)) {
+    /**
+     * Whether {@code stmt} is a {@code super(...)}/{@code this(...)} constructor-chain call.
+     */
+    private boolean isConstructorChainCall(Statement stmt)
+    {
+        if (!(stmt instanceof ExprStmt))
+        {
             return false;
         }
         Expression expr = ((ExprStmt) stmt).getExpression();
-        if (!(expr instanceof MethodCallExpr)) {
+        if (!(expr instanceof MethodCallExpr))
+        {
             return false;
         }
         MethodCallExpr call = (MethodCallExpr) expr;
         Expression receiver = call.getReceiver();
-        if (receiver instanceof SuperExpr || receiver instanceof ThisExpr) {
+        if (receiver instanceof SuperExpr || receiver instanceof ThisExpr)
+        {
             return true;
         }
         return receiver == null
@@ -330,35 +389,46 @@ public class ASTLowerer {
      * ({@code val$...}). These are emitted before super(); ordinary field assignments are not, so the
      * name pattern is what keeps normal constructors emitting super() first.
      */
-    private boolean isSyntheticCaptureFieldInit(Statement stmt) {
-        if (!(stmt instanceof ExprStmt)) {
+    private boolean isSyntheticCaptureFieldInit(Statement stmt)
+    {
+        if (!(stmt instanceof ExprStmt))
+        {
             return false;
         }
         Expression expr = ((ExprStmt) stmt).getExpression();
-        if (!(expr instanceof BinaryExpr)) {
+        if (!(expr instanceof BinaryExpr))
+        {
             return false;
         }
         BinaryExpr assign = (BinaryExpr) expr;
-        if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof FieldAccessExpr)) {
+        if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof FieldAccessExpr))
+        {
             return false;
         }
         FieldAccessExpr field = (FieldAccessExpr) assign.getLeft();
-        if (!(field.getReceiver() instanceof ThisExpr)) {
+        if (!(field.getReceiver() instanceof ThisExpr))
+        {
             return false;
         }
         return isSyntheticCaptureFieldName(field.getFieldName());
     }
 
-    private static boolean isSyntheticCaptureFieldName(String name) {
-        if (name == null) {
+    private static boolean isSyntheticCaptureFieldName(String name)
+    {
+        if (name == null)
+        {
             return false;
         }
-        if (name.startsWith("val$")) {
+        if (name.startsWith("val$"))
+        {
             return true;
         }
-        if (name.length() > 5 && name.startsWith("this$")) {
-            for (int i = 5; i < name.length(); i++) {
-                if (!Character.isDigit(name.charAt(i))) {
+        if (name.length() > 5 && name.startsWith("this$"))
+        {
+            for (int i = 5; i < name.length(); i++)
+            {
+                if (!Character.isDigit(name.charAt(i)))
+                {
                     return false;
                 }
             }
@@ -371,40 +441,58 @@ public class ASTLowerer {
      * Moves the synthetic methods registered on a finished lowering context into this lowerer's
      * pending queues, so callers can materialize them into the class after the user methods.
      */
-    private void drainSynthetics(LoweringContext ctx) {
+    private void drainSynthetics(LoweringContext ctx)
+    {
         pendingLambdas.addAll(ctx.getSyntheticMethods());
         pendingArrayConstructors.addAll(ctx.getArrayConstructors());
         ctx.clearSyntheticMethods();
         ctx.clearArrayConstructors();
     }
 
-    /** Whether any synthetic methods are awaiting materialization. */
-    public boolean hasPendingSynthetics() {
+    /**
+     * @return true while a lambda or array-constructor synthetic is still queued
+     */
+    public boolean hasPendingSynthetics()
+    {
         return !pendingLambdas.isEmpty() || !pendingArrayConstructors.isEmpty();
     }
 
-    /** Removes and returns the queued synthetic lambda methods. */
-    public List<SyntheticLambdaMethod> drainPendingLambdas() {
+    /**
+     * Empties the lambda queue.
+     *
+     * @return the queued synthetic lambda methods
+     */
+    public List<SyntheticLambdaMethod> drainPendingLambdas()
+    {
         List<SyntheticLambdaMethod> drained = new ArrayList<>(pendingLambdas);
         pendingLambdas.clear();
         return drained;
     }
 
-    /** Removes and returns the queued synthetic array-constructor methods. */
-    public List<SyntheticArrayConstructor> drainPendingArrayConstructors() {
+    /**
+     * Empties the array-constructor queue.
+     *
+     * @return the queued synthetic array-constructor methods
+     */
+    public List<SyntheticArrayConstructor> drainPendingArrayConstructors()
+    {
         List<SyntheticArrayConstructor> drained = new ArrayList<>(pendingArrayConstructors);
         pendingArrayConstructors.clear();
         return drained;
     }
 
     /**
-     * Lowers a synthetic lambda method body into an IRMethod. Captured variables and lambda
-     * parameters are registered as locals by their source names, in the synthetic descriptor's
-     * parameter order. Only static synthetics (lambdas that do not capture {@code this}) are
-     * supported; an instance-capturing synthetic throws so the caller can preserve the original.
+     * Lowers a synthetic lambda body, binding captures then lambda parameters as named locals.
+     *
+     * @param synthetic the queued lambda, whose descriptor fixes the parameter order
+     * @param ownerClass internal name of the class the synthetic is emitted into
+     * @return the lowered method, in SSA form when the body branches or loops
+     * @throws LoweringException if the synthetic captures {@code this}, which cannot be emitted here
      */
-    public IRMethod lowerSyntheticLambda(SyntheticLambdaMethod synthetic, String ownerClass) {
-        if (!synthetic.isStatic()) {
+    public IRMethod lowerSyntheticLambda(SyntheticLambdaMethod synthetic, String ownerClass)
+    {
+        if (!synthetic.isStatic())
+        {
             throw new LoweringException(
                 "Instance-capturing lambda synthetic not supported for emission: " + synthetic.getName());
         }
@@ -421,11 +509,13 @@ public class ASTLowerer {
 
         List<SourceType> paramTypes = new ArrayList<>();
         List<String> paramNames = new ArrayList<>();
-        for (SyntheticLambdaMethod.CapturedVariable capture : synthetic.getCaptures()) {
+        for (SyntheticLambdaMethod.CapturedVariable capture : synthetic.getCaptures())
+        {
             paramTypes.add(capture.getType());
             paramNames.add(capture.getName());
         }
-        for (var param : synthetic.getParameters()) {
+        for (var param : synthetic.getParameters())
+        {
             paramTypes.add(param.type() != null ? param.type() : ReferenceSourceType.OBJECT);
             paramNames.add(param.name());
         }
@@ -434,12 +524,15 @@ public class ASTLowerer {
         // merge (if/else, switch): the direct-value path inserts no phi at a merge, so a variable
         // assigned in branches and read afterward would wrongly take the last branch's value.
         boolean hasLoops = containsLoops(body) || containsBranches(body);
-        if (hasLoops) {
+        if (hasLoops)
+        {
             ctx.setEmitLocalInstructions(true);
             int paramSlotCount = 0;
-            for (SourceType type : paramTypes) {
+            for (SourceType type : paramTypes)
+            {
                 paramSlotCount++;
-                if (type.toIRType().isTwoSlot()) {
+                if (type.toIRType().isTwoSlot())
+                {
                     paramSlotCount++;
                 }
             }
@@ -451,18 +544,23 @@ public class ASTLowerer {
         ctx.setCurrentBlock(entryBlock);
 
         int paramSlot = 0;
-        for (int i = 0; i < paramTypes.size(); i++) {
+        for (int i = 0; i < paramTypes.size(); i++)
+        {
             IRType paramType = paramTypes.get(i).toIRType();
             SSAValue paramVal = ctx.newValue(paramType);
             irMethod.addParameter(paramVal);
             ctx.declareLocal(paramNames.get(i), paramType, true);
-            if (hasLoops) {
+            if (hasLoops)
+            {
                 ctx.registerParameter(paramNames.get(i), paramSlot, paramVal);
-            } else {
+            }
+            else
+            {
                 ctx.setVariable(paramNames.get(i), paramVal);
             }
             paramSlot++;
-            if (paramType.isTwoSlot()) {
+            if (paramType.isTwoSlot())
+            {
                 paramSlot++;
             }
         }
@@ -473,7 +571,8 @@ public class ASTLowerer {
 
         appendImpliedReturn(ctx, returnIrType(synthetic.getDescriptor()));
 
-        if (hasLoops) {
+        if (hasLoops)
+        {
             constructSSAForm(irMethod);
         }
 
@@ -483,8 +582,13 @@ public class ASTLowerer {
 
     /**
      * Lowers a synthetic array-constructor method ({@code (I)[T} returning {@code new T[arg0]}).
+     *
+     * @param constructor the queued constructor, supplying the name and array type
+     * @param ownerClass internal name of the class the synthetic is emitted into
+     * @return the lowered method
      */
-    public IRMethod lowerSyntheticArrayConstructor(SyntheticArrayConstructor constructor, String ownerClass) {
+    public IRMethod lowerSyntheticArrayConstructor(SyntheticArrayConstructor constructor, String ownerClass)
+    {
         IRMethod irMethod = new IRMethod(ownerClass, constructor.getName(), constructor.getDescriptor(), true);
 
         TypeResolver typeResolver = new TypeResolver(classPool, ownerClass);
@@ -511,46 +615,60 @@ public class ASTLowerer {
         return irMethod;
     }
 
-    private BlockStmt syntheticBody(SyntheticLambdaMethod synthetic) {
-        if (synthetic.getBody() instanceof BlockStmt) {
+    private BlockStmt syntheticBody(SyntheticLambdaMethod synthetic)
+    {
+        if (synthetic.getBody() instanceof BlockStmt)
+        {
             return (BlockStmt) synthetic.getBody();
         }
         Expression expr = (Expression) synthetic.getBody();
         BlockStmt block = new BlockStmt();
-        if (synthetic.getReturnType() == null || synthetic.getReturnType() instanceof VoidSourceType) {
+        if (synthetic.getReturnType() == null || synthetic.getReturnType() instanceof VoidSourceType)
+        {
             block.addStatement(new ExprStmt(expr));
-        } else {
+        }
+        else
+        {
             block.addStatement(new ReturnStmt(expr));
         }
         return block;
     }
 
-    private boolean containsLoops(BlockStmt body) {
+    private boolean containsLoops(BlockStmt body)
+    {
         return new LoopDetector().visit(body);
     }
 
-    /** True if the body contains an if/switch — control flow that can merge a variable's value. */
-    private boolean containsBranches(BlockStmt body) {
+    /**
+     * True if the body contains an if/switch - control flow that can merge a variable's value.
+     */
+    private boolean containsBranches(BlockStmt body)
+    {
         return containsBranchNode(body);
     }
 
-    private boolean containsBranchNode(ASTNode node) {
+    private boolean containsBranchNode(ASTNode node)
+    {
         // try/catch and synchronized create control-flow merges (the protected/handler paths join a
         // continuation), so a variable assigned inside and read afterwards needs the slot-based SSA form
         // and a phi at the join - exactly like if/switch.
         if (node instanceof IfStmt || node instanceof SwitchStmt
-                || node instanceof TryCatchStmt || node instanceof SynchronizedStmt) {
+                || node instanceof TryCatchStmt || node instanceof SynchronizedStmt)
+        {
             return true;
         }
-        for (ASTNode child : node.getChildren()) {
-            if (containsBranchNode(child)) {
+        for (ASTNode child : node.getChildren())
+        {
+            if (containsBranchNode(child))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private void constructSSAForm(IRMethod irMethod) {
+    private void constructSSAForm(IRMethod irMethod)
+    {
         DominatorTree domTree = new DominatorTree(irMethod);
         domTree.compute();
 
@@ -570,52 +688,76 @@ public class ASTLowerer {
      * a bare void {@code return} contradicts the descriptor and fails verification - so it returns
      * the type's default value instead.
      */
-    private void appendImpliedReturn(LoweringContext ctx, IRType returnType) {
-        if (ctx.getCurrentBlock().getTerminator() != null) {
+    private void appendImpliedReturn(LoweringContext ctx, IRType returnType)
+    {
+        if (ctx.getCurrentBlock().getTerminator() != null)
+        {
             return;
         }
-        if (returnType == null) {
+        if (returnType == null)
+        {
             ctx.getCurrentBlock().addInstruction(new ReturnInstruction());
             return;
         }
         SSAValue dflt = ctx.newValue(returnType);
         Constant zero;
-        if (returnType == PrimitiveType.LONG) {
+        if (returnType == PrimitiveType.LONG)
+        {
             zero = LongConstant.ZERO;
-        } else if (returnType == PrimitiveType.FLOAT) {
+        }
+        else if (returnType == PrimitiveType.FLOAT)
+        {
             zero = FloatConstant.ZERO;
-        } else if (returnType == PrimitiveType.DOUBLE) {
+        }
+        else if (returnType == PrimitiveType.DOUBLE)
+        {
             zero = DoubleConstant.ZERO;
-        } else if (returnType instanceof PrimitiveType) {
+        }
+        else if (returnType instanceof PrimitiveType)
+        {
             zero = IntConstant.ZERO;
-        } else {
+        }
+        else
+        {
             zero = NullConstant.INSTANCE;
         }
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(dflt, zero));
         ctx.getCurrentBlock().addInstruction(new ReturnInstruction(dflt));
     }
 
-    /** The IR return type of a declared source return type; null stands for void. */
-    private static IRType returnIrType(SourceType returnType) {
+    /**
+     * The IR return type of a declared source return type; null stands for void.
+     */
+    private static IRType returnIrType(SourceType returnType)
+    {
         return returnType == null || returnType instanceof VoidSourceType ? null : returnType.toIRType();
     }
 
-    /** The IR return type encoded in a method descriptor; null stands for void. */
-    private static IRType returnIrType(String methodDescriptor) {
+    /**
+     * The IR return type encoded in a method descriptor; null stands for void.
+     */
+    private static IRType returnIrType(String methodDescriptor)
+    {
         String ret = methodDescriptor.substring(methodDescriptor.indexOf(')') + 1);
         return "V".equals(ret) ? null : IRType.fromDescriptor(ret);
     }
 
-    private void removeDeadPhis(IRMethod irMethod) {
+    private void removeDeadPhis(IRMethod irMethod)
+    {
         boolean changed = true;
-        while (changed) {
+        while (changed)
+        {
             changed = false;
-            for (IRBlock block : irMethod.getBlocks()) {
-                for (PhiInstruction phi : new ArrayList<>(block.getPhiInstructions())) {
-                    if (!phi.getResult().getUses().isEmpty()) {
+            for (IRBlock block : irMethod.getBlocks())
+            {
+                for (PhiInstruction phi : new ArrayList<>(block.getPhiInstructions()))
+                {
+                    if (!phi.getResult().getUses().isEmpty())
+                    {
                         continue;
                     }
-                    for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks())) {
+                    for (IRBlock pred : new ArrayList<>(phi.getIncomingBlocks()))
+                    {
                         phi.removeIncoming(pred);
                     }
                     block.removePhi(phi);
@@ -627,11 +769,11 @@ public class ASTLowerer {
 
     /**
      * Convenience method to lower and replace an IRMethod's body from AST.
-     *
      * @param body the new method body
      * @param irMethod the existing IRMethod
      */
-    public void replaceBody(BlockStmt body, IRMethod irMethod) {
+    public void replaceBody(BlockStmt body, IRMethod irMethod)
+    {
         TypeResolver typeResolver = new TypeResolver(classPool, irMethod.getOwnerClass());
         typeResolver.setCurrentClassDecl(currentClassDecl);
         typeResolver.setImports(imports);
@@ -646,13 +788,15 @@ public class ASTLowerer {
         boolean isStatic = irMethod.isStatic();
         List<SSAValue> params = irMethod.getParameters();
 
-        if (!isStatic && !params.isEmpty()) {
+        if (!isStatic && !params.isEmpty())
+        {
             ctx.declareLocal("this", params.get(0).getType(), true);
             ctx.setVariable("this", params.get(0));
         }
 
         int paramOffset = isStatic ? 0 : 1;
-        for (int i = paramOffset; i < params.size(); i++) {
+        for (int i = paramOffset; i < params.size(); i++)
+        {
             ctx.declareLocal("arg" + (i - paramOffset), params.get(i).getType(), true);
             ctx.setVariable("arg" + (i - paramOffset), params.get(i));
         }
@@ -664,9 +808,11 @@ public class ASTLowerer {
         appendImpliedReturn(ctx, returnIrType(irMethod.getDescriptor()));
     }
 
-    private String buildDescriptor(List<SourceType> parameters, SourceType returnType, TypeResolver resolver) {
+    private String buildDescriptor(List<SourceType> parameters, SourceType returnType, TypeResolver resolver)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SourceType param : parameters) {
+        for (SourceType param : parameters)
+        {
             sb.append(resolver.descriptorOf(param));
         }
         sb.append(")");
@@ -676,16 +822,26 @@ public class ASTLowerer {
 
     /** A parameter's IR type with reference names resolved to FQN (imports/same-package), via the descriptor - so the
      * SSA value and its StackMapTable frame use {@code java/awt/Frame}, not a bare {@code Frame} CONSTANT_Class. */
-    private static IRType resolvedParamType(SourceType param, TypeResolver resolver) {
+    private static IRType resolvedParamType(SourceType param, TypeResolver resolver)
+    {
         return IRType.fromDescriptor(resolver.descriptorOf(param));
     }
 
     /**
-     * Static convenience method to lower AST to IR.
+     * Lowers one method body without keeping the lowerer around.
+     *
+     * @param body the statements to lower
+     * @param methodName name of the method being lowered
+     * @param ownerClass internal name of the declaring class
+     * @param isStatic true when the method takes no {@code this} slot
+     * @param parameters declared parameter types, in order
+     * @param returnType declared return type
+     * @param constPool constant pool the lowered references are written into
+     * @param classPool pool used to resolve referenced types
+     * @return the lowered method
      */
-    public static IRMethod lowerMethod(BlockStmt body, String methodName, String ownerClass,
-                                       boolean isStatic, List<SourceType> parameters,
-                                       SourceType returnType, ConstPool constPool, ClassPool classPool) {
+    public static IRMethod lowerMethod(BlockStmt body, String methodName, String ownerClass, boolean isStatic, List<SourceType> parameters, SourceType returnType, ConstPool constPool, ClassPool classPool)
+    {
         ASTLowerer lowerer = new ASTLowerer(constPool, classPool);
         return lowerer.lower(body, methodName, ownerClass, isStatic, parameters, returnType);
     }

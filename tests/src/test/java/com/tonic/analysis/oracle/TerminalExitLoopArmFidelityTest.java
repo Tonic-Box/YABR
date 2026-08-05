@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the method as unreachable code after a return. A break target is now only kept when an unlabeled
  * {@code break} actually reaches it; a divergent terminating chain is inlined in its arm instead.
  */
-class TerminalExitLoopArmFidelityTest {
+class TerminalExitLoopArmFidelityTest
+{
 
     private static final String SOURCE =
             "public class LoopExit {\n"
@@ -58,14 +59,14 @@ class TerminalExitLoopArmFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("loop-exit-arm");
         Path src = dir.resolve("LoopExit.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("LoopExit.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -75,12 +76,12 @@ class TerminalExitLoopArmFidelityTest {
     }
 
     @Test
-    void successChainStaysInsideItsArm() {
+    void successChainStaysInsideItsArm()
+    {
         int ifAt = d1.indexOf("check(");
         int sleepAt = d1.indexOf("Thread.sleep");
         int maxAt = d1.indexOf("\"max;\"");
-        assertTrue(ifAt >= 0 && sleepAt > ifAt,
-                "the sleep try must be recovered inside the success arm:\n" + d1);
+        assertTrue(ifAt >= 0 && sleepAt > ifAt, "the sleep try must be recovered inside the success arm:\n" + d1);
         assertTrue(maxAt > sleepAt,
                 "the terminal condition tail must follow the loop, not precede the success chain:\n" + d1);
         int lastReturn = d1.lastIndexOf("return");
@@ -90,7 +91,8 @@ class TerminalExitLoopArmFidelityTest {
     }
 
     @Test
-    void successPathRunsItsOwnContinuation() throws Exception {
+    void successPathRunsItsOwnContinuation() throws Exception
+    {
         java.lang.reflect.Field log = recompiledClass.getField("log");
         ((StringBuilder) log.get(null)).setLength(0);
         Object r = recompiledClass.getMethod("run").invoke(null);

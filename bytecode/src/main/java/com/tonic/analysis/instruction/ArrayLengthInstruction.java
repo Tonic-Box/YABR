@@ -8,43 +8,50 @@ import java.io.IOException;
 /**
  * Represents the ARRAYLENGTH instruction (0xBE).
  */
-public class ArrayLengthInstruction extends Instruction {
+public class ArrayLengthInstruction extends Instruction
+{
 
     /**
      * Constructs an ArrayLengthInstruction.
-     *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
-    public ArrayLengthInstruction(int opcode, int offset) {
+    public ArrayLengthInstruction(int opcode, int offset)
+    {
         super(opcode, offset, 1);
-        if (opcode != 0xBE) {
+        if (opcode != 0xBE)
+        {
             throw new IllegalArgumentException("Invalid opcode for ArrayLengthInstruction: " + opcode);
         }
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
     }
 
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         return 0;
     }
 
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ARRAYLENGTH";
     }
 }

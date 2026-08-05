@@ -7,19 +7,13 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import java.util.List;
 
 /**
- * Public entry point for lifting textual LLVM IR (computational subset, {@code NONE} model) back
- * to YABR SSA IR.
+ * Entry point for lifting textual LLVM IR back to YABR SSA IR, inverting
+ * {@link com.tonic.analysis.ssa.llvm.LlvmLowering}.
  *
- * <p>The lifter inverts the lowering performed by {@link com.tonic.analysis.ssa.llvm.LlvmLowering}:
- * it parses a {@code define … { … }} block, constructs {@link IRMethod}/{@link IRBlock}/{@link IRInstruction}
- * objects, folds synthesized temporaries (shift masks, narrowing conversions, 3-way compare
- * expansions) back to the originating single IR instructions, and returns an {@link IRMethod} ready
- * for {@code SSA.runTransforms(ir)} or further YABR analysis.
- *
- * <p>Only the computational subset emitted under {@link com.tonic.analysis.ssa.llvm.LlvmLoweringConfig.ObjectModel#NONE}
- * is supported. LLVM IR with {@code jvm_*} ABI calls or other runtime-model constructs is parsed
- * on a best-effort basis; unrecognised lines are silently skipped.
- *
+ * Only the computational subset emitted under
+ * {@link com.tonic.analysis.ssa.llvm.LlvmLoweringConfig.ObjectModel#NONE} is supported; {@code jvm_*}
+ * ABI calls and other runtime-model constructs are parsed best-effort and unrecognised lines are
+ * silently skipped.
  * <pre>{@code
  *   IRMethod original = new SSA(cp).lift(method);
  *   String ll = new LlvmLowering().lower(original);
@@ -27,15 +21,21 @@ import java.util.List;
  *   IRMethod lifted = new LlvmLifter().lift(ll);
  * }</pre>
  */
-public final class LlvmLifter {
+public final class LlvmLifter
+{
 
     /**
-     * Lifts the first {@code define} function found in {@code llvmModuleText} and returns it as an
-     * {@link IRMethod}. Throws {@link LlvmLiftException} if no function is found.
+     * Lifts the first {@code define} function found in {@code llvmModuleText}.
+     *
+     * @param llvmModuleText the textual LLVM IR module
+     * @return the first function as an IRMethod
+     * @throws LlvmLiftException if the module defines no function
      */
-    public IRMethod lift(String llvmModuleText) {
+    public IRMethod lift(String llvmModuleText)
+    {
         List<IRMethod> methods = liftModule(llvmModuleText);
-        if (methods.isEmpty()) {
+        if (methods.isEmpty())
+        {
             throw new LlvmLiftException("no define found in LLVM module text");
         }
         return methods.get(0);
@@ -43,11 +43,16 @@ public final class LlvmLifter {
 
     /**
      * Lifts all {@code define} functions in {@code llvmModuleText} and returns them in order.
+     *
+     * @param llvmModuleText the textual LLVM IR module
+     * @return one IRMethod per function, empty if the module defines none
      */
-    public List<IRMethod> liftModule(String llvmModuleText) {
+    public List<IRMethod> liftModule(String llvmModuleText)
+    {
         List<ParsedFunction> parsed = LlvmParser.parse(llvmModuleText);
         List<IRMethod> result = new java.util.ArrayList<>(parsed.size());
-        for (ParsedFunction pf : parsed) {
+        for (ParsedFunction pf : parsed)
+        {
             SSAValue.resetIdCounter();
             IRBlock.resetIdCounter();
             IRInstruction.resetIdCounter();

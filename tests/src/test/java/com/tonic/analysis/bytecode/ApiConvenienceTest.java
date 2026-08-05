@@ -26,12 +26,18 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Covers the convenience gaps: CodeWriter.getInstructionList, ClassFile lookups, InvokeInsn. */
-class ApiConvenienceTest {
+/**
+ * Covers the convenience gaps: CodeWriter.getInstructionList, ClassFile lookups, InvokeInsn.
+ */
+class ApiConvenienceTest
+{
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -39,7 +45,8 @@ class ApiConvenienceTest {
     }
 
     @Test
-    void getInstructionListIsOrderedAndIdentityIndexed() {
+    void getInstructionListIsOrderedAndIdentityIndexed()
+    {
         ClassFile cf = ClassBuilder.create("IL")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "m", "()I")
@@ -56,7 +63,8 @@ class ApiConvenienceTest {
     }
 
     @Test
-    void classFileByNameLookups() throws Exception {
+    void classFileByNameLookups() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.createNewClass("T", new AccessBuilder().setPublic().build());
         int pubStatic = new AccessBuilder().setPublic().setStatic().build();
@@ -77,7 +85,8 @@ class ApiConvenienceTest {
     }
 
     @Test
-    void invokeInsnUnifiesTheFourInvokesAndExcludesIndy() {
+    void invokeInsnUnifiesTheFourInvokesAndExcludesIndy()
+    {
         // Type relationship: the four owner-bearing invokes implement InvokeInsn; invokedynamic doesn't.
         assertTrue(InvokeInsn.class.isAssignableFrom(InvokeVirtualInstruction.class));
         assertTrue(InvokeInsn.class.isAssignableFrom(InvokeSpecialInstruction.class));
@@ -98,13 +107,16 @@ class ApiConvenienceTest {
                 .end().end().build();
 
         int invokes = 0;
-        for (Instruction i : new CodeWriter(method(calls, "parse")).getInstructions()) {
-            if (i instanceof InvokeInsn) {
+        for (Instruction i : new CodeWriter(method(calls, "parse")).getInstructions())
+        {
+            if (i instanceof InvokeInsn)
+            {
                 InvokeInsn call = (InvokeInsn) i;
                 assertNotNull(call.getOwnerClass());
                 assertNotNull(call.getMethodName());
                 assertNotNull(call.getMethodDescriptor());
-                if (call.getMethodName().equals("parseInt")) {
+                if (call.getMethodName().equals("parseInt"))
+                {
                     assertEquals("java/lang/Integer", call.getOwnerClass());
                     assertTrue(call.isStatic());
                 }

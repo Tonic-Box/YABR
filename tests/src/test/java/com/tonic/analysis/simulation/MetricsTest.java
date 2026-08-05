@@ -8,14 +8,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for metrics classes.
+ * * Tests for metrics classes.
  */
-class MetricsTest {
+class MetricsTest
+{
 
-    // ========== StackMetrics Tests ==========
+    // StackMetrics Tests
 
     @Test
-    void testStackMetricsEmpty() {
+    void testStackMetricsEmpty()
+    {
         StackMetrics metrics = StackMetrics.empty();
 
         assertEquals(0, metrics.getPushCount());
@@ -25,7 +27,8 @@ class MetricsTest {
     }
 
     @Test
-    void testStackMetricsFromListener() {
+    void testStackMetricsFromListener()
+    {
         StackOperationListener listener = new StackOperationListener();
         listener.onSimulationStart(null);
 
@@ -42,7 +45,8 @@ class MetricsTest {
     }
 
     @Test
-    void testStackMetricsCombine() {
+    void testStackMetricsCombine()
+    {
         StackOperationListener l1 = new StackOperationListener();
         StackOperationListener l2 = new StackOperationListener();
         l1.onSimulationStart(null);
@@ -62,7 +66,8 @@ class MetricsTest {
     }
 
     @Test
-    void testStackMetricsNetChange() {
+    void testStackMetricsNetChange()
+    {
         StackOperationListener listener = new StackOperationListener();
         listener.onSimulationStart(null);
 
@@ -77,10 +82,11 @@ class MetricsTest {
         assertTrue(metrics.hasStackGrowth());
     }
 
-    // ========== AllocationMetrics Tests ==========
+    // AllocationMetrics Tests
 
     @Test
-    void testAllocationMetricsEmpty() {
+    void testAllocationMetricsEmpty()
+    {
         AllocationMetrics metrics = AllocationMetrics.empty();
 
         assertEquals(0, metrics.getObjectCount());
@@ -90,7 +96,8 @@ class MetricsTest {
     }
 
     @Test
-    void testAllocationMetricsFromListener() {
+    void testAllocationMetricsFromListener()
+    {
         AllocationListener listener = new AllocationListener();
         listener.onSimulationStart(null);
 
@@ -101,10 +108,11 @@ class MetricsTest {
         assertEquals(0, metrics.getDistinctTypeCount());
     }
 
-    // ========== AccessMetrics Tests ==========
+    // AccessMetrics Tests
 
     @Test
-    void testAccessMetricsEmpty() {
+    void testAccessMetricsEmpty()
+    {
         AccessMetrics metrics = AccessMetrics.empty();
 
         assertEquals(0, metrics.getFieldReads());
@@ -116,7 +124,8 @@ class MetricsTest {
     }
 
     @Test
-    void testAccessMetricsFromListener() {
+    void testAccessMetricsFromListener()
+    {
         FieldAccessListener listener = new FieldAccessListener();
         listener.onSimulationStart(null);
 
@@ -126,10 +135,11 @@ class MetricsTest {
         assertEquals(0, metrics.getTotalArrayAccesses());
     }
 
-    // ========== CallMetrics Tests ==========
+    // CallMetrics Tests
 
     @Test
-    void testCallMetricsEmpty() {
+    void testCallMetricsEmpty()
+    {
         CallMetrics metrics = CallMetrics.empty();
 
         assertEquals(0, metrics.getTotalCalls());
@@ -139,7 +149,8 @@ class MetricsTest {
     }
 
     @Test
-    void testCallMetricsFromListener() {
+    void testCallMetricsFromListener()
+    {
         MethodCallListener listener = new MethodCallListener();
         listener.onSimulationStart(null);
 
@@ -149,10 +160,11 @@ class MetricsTest {
         assertEquals(0, metrics.getPolymorphicCalls());
     }
 
-    // ========== PathMetrics Tests ==========
+    // PathMetrics Tests
 
     @Test
-    void testPathMetricsEmpty() {
+    void testPathMetricsEmpty()
+    {
         PathMetrics metrics = PathMetrics.empty();
 
         assertEquals(0, metrics.getBlocksVisited());
@@ -163,7 +175,8 @@ class MetricsTest {
     }
 
     @Test
-    void testPathMetricsFromListener() {
+    void testPathMetricsFromListener()
+    {
         ControlFlowListener listener = new ControlFlowListener();
         listener.onSimulationStart(null);
 

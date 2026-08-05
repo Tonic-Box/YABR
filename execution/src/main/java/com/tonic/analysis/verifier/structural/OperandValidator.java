@@ -9,41 +9,80 @@ import com.tonic.util.Opcode;
 
 import static com.tonic.util.Opcode.*;
 
-public class OperandValidator {
+/**
+ * Verifier pass that checks each instruction's constant pool operand points at an entry of the
+ * kind the opcode requires.
+ */
+public class OperandValidator
+{
     private final ConstPool constPool;
 
-    public OperandValidator(ConstPool constPool) {
+    /**
+     * Creates a validator bound to the pool that operands are resolved against.
+     * @param constPool the constant pool of the class being verified
+     */
+    public OperandValidator(ConstPool constPool)
+    {
         this.constPool = constPool;
     }
 
-    public void validate(int opcode, int offset, byte[] bytecode, ErrorCollector collector) {
-        if (opcode == LDC.getCode()) {
+    /**
+     * Checks the constant pool operand of one instruction, reporting any mismatch to the collector.
+     * Opcodes without a pool operand are ignored.
+     * @param opcode the opcode at the offset
+     * @param offset the bytecode offset of the opcode
+     * @param bytecode the method's code array
+     * @param collector receives the verification errors found
+     */
+    public void validate(int opcode, int offset, byte[] bytecode, ErrorCollector collector)
+    {
+        if (opcode == LDC.getCode())
+        {
             validateLdc(offset, bytecode, collector);
-        } else if (opcode == LDC_W.getCode()) {
+        }
+        else if (opcode == LDC_W.getCode())
+        {
             validateLdcW(offset, bytecode, collector);
-        } else if (opcode == LDC2_W.getCode()) {
+        }
+        else if (opcode == LDC2_W.getCode())
+        {
             validateLdc2W(offset, bytecode, collector);
-        } else if (opcode == GETSTATIC.getCode() || opcode == PUTSTATIC.getCode() ||
-                   opcode == GETFIELD.getCode() || opcode == PUTFIELD.getCode()) {
+        }
+        else if (opcode == GETSTATIC.getCode() || opcode == PUTSTATIC.getCode() ||
+                   opcode == GETFIELD.getCode() || opcode == PUTFIELD.getCode())
+                   {
             validateFieldRef(offset, bytecode, opcode, collector);
-        } else if (opcode == INVOKEVIRTUAL.getCode() || opcode == INVOKESPECIAL.getCode() ||
-                   opcode == INVOKESTATIC.getCode()) {
+        }
+        else if (opcode == INVOKEVIRTUAL.getCode() || opcode == INVOKESPECIAL.getCode() ||
+                   opcode == INVOKESTATIC.getCode())
+                   {
             validateMethodRef(offset, bytecode, opcode, collector);
-        } else if (opcode == INVOKEINTERFACE.getCode()) {
+        }
+        else if (opcode == INVOKEINTERFACE.getCode())
+        {
             validateInterfaceMethodRef(offset, bytecode, collector);
-        } else if (opcode == INVOKEDYNAMIC.getCode()) {
+        }
+        else if (opcode == INVOKEDYNAMIC.getCode())
+        {
             validateInvokeDynamic(offset, bytecode, collector);
-        } else if (opcode == NEW.getCode() || opcode == ANEWARRAY.getCode() ||
-                   opcode == CHECKCAST.getCode() || opcode == INSTANCEOF.getCode()) {
+        }
+        else if (opcode == NEW.getCode() || opcode == ANEWARRAY.getCode() ||
+                   opcode == CHECKCAST.getCode() || opcode == INSTANCEOF.getCode())
+                   {
             validateClassRef(offset, bytecode, opcode, collector);
-        } else if (opcode == NEWARRAY.getCode()) {
+        }
+        else if (opcode == NEWARRAY.getCode())
+        {
             validateNewArray(offset, bytecode, collector);
-        } else if (opcode == MULTIANEWARRAY.getCode()) {
+        }
+        else if (opcode == MULTIANEWARRAY.getCode())
+        {
             validateMultiANewArray(offset, bytecode, collector);
         }
     }
 
-    private void validateLdc(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateLdc(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 1 >= bytecode.length) return;
 
@@ -59,7 +98,8 @@ public class OperandValidator {
             !(item instanceof StringRefItem) &&
             !(item instanceof ClassRefItem) &&
             !(item instanceof MethodTypeItem) &&
-            !(item instanceof MethodHandleItem)) {
+            !(item instanceof MethodHandleItem))
+            {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
                     offset,
@@ -68,7 +108,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateLdcW(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateLdcW(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 2 >= bytecode.length) return;
 
@@ -84,7 +125,8 @@ public class OperandValidator {
             !(item instanceof StringRefItem) &&
             !(item instanceof ClassRefItem) &&
             !(item instanceof MethodTypeItem) &&
-            !(item instanceof MethodHandleItem)) {
+            !(item instanceof MethodHandleItem))
+            {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
                     offset,
@@ -93,7 +135,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateLdc2W(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateLdc2W(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 2 >= bytecode.length) return;
 
@@ -104,7 +147,8 @@ public class OperandValidator {
         Item<?> item = constPool.getItem(cpIndex);
         if (item == null) return;
 
-        if (!(item instanceof LongItem) && !(item instanceof DoubleItem)) {
+        if (!(item instanceof LongItem) && !(item instanceof DoubleItem))
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
                     offset,
@@ -114,7 +158,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateFieldRef(int offset, byte[] bytecode, int opcode, ErrorCollector collector) {
+    private void validateFieldRef(int offset, byte[] bytecode, int opcode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 2 >= bytecode.length) return;
 
@@ -125,7 +170,8 @@ public class OperandValidator {
         Item<?> item = constPool.getItem(cpIndex);
         if (item == null) return;
 
-        if (!(item instanceof FieldRefItem)) {
+        if (!(item instanceof FieldRefItem))
+        {
             String opName = getOpcodeNameForField(opcode);
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
@@ -135,7 +181,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateMethodRef(int offset, byte[] bytecode, int opcode, ErrorCollector collector) {
+    private void validateMethodRef(int offset, byte[] bytecode, int opcode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 2 >= bytecode.length) return;
 
@@ -146,7 +193,8 @@ public class OperandValidator {
         Item<?> item = constPool.getItem(cpIndex);
         if (item == null) return;
 
-        if (!(item instanceof MethodRefItem) && !(item instanceof InterfaceRefItem)) {
+        if (!(item instanceof MethodRefItem) && !(item instanceof InterfaceRefItem))
+        {
             String opName = getOpcodeNameForMethod(opcode);
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
@@ -156,7 +204,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateInterfaceMethodRef(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateInterfaceMethodRef(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 4 >= bytecode.length) return;
 
@@ -167,7 +216,8 @@ public class OperandValidator {
         Item<?> item = constPool.getItem(cpIndex);
         if (item == null) return;
 
-        if (!(item instanceof InterfaceRefItem)) {
+        if (!(item instanceof InterfaceRefItem))
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
                     offset,
@@ -176,7 +226,8 @@ public class OperandValidator {
         }
 
         int count = Byte.toUnsignedInt(bytecode[offset + 3]);
-        if (count == 0) {
+        if (count == 0)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_OPERAND,
                     offset,
@@ -185,7 +236,8 @@ public class OperandValidator {
         }
 
         int zero = Byte.toUnsignedInt(bytecode[offset + 4]);
-        if (zero != 0) {
+        if (zero != 0)
+        {
             collector.addWarning(new VerificationError(
                     VerificationErrorType.INVALID_OPERAND,
                     offset,
@@ -195,7 +247,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateInvokeDynamic(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateInvokeDynamic(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 4 >= bytecode.length) return;
 
@@ -206,7 +259,8 @@ public class OperandValidator {
         Item<?> item = constPool.getItem(cpIndex);
         if (item == null) return;
 
-        if (!(item instanceof InvokeDynamicItem)) {
+        if (!(item instanceof InvokeDynamicItem))
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
                     offset,
@@ -216,7 +270,8 @@ public class OperandValidator {
 
         int zero1 = Byte.toUnsignedInt(bytecode[offset + 3]);
         int zero2 = Byte.toUnsignedInt(bytecode[offset + 4]);
-        if (zero1 != 0 || zero2 != 0) {
+        if (zero1 != 0 || zero2 != 0)
+        {
             collector.addWarning(new VerificationError(
                     VerificationErrorType.INVALID_OPERAND,
                     offset,
@@ -226,7 +281,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateClassRef(int offset, byte[] bytecode, int opcode, ErrorCollector collector) {
+    private void validateClassRef(int offset, byte[] bytecode, int opcode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 2 >= bytecode.length) return;
 
@@ -237,7 +293,8 @@ public class OperandValidator {
         Item<?> item = constPool.getItem(cpIndex);
         if (item == null) return;
 
-        if (!(item instanceof ClassRefItem)) {
+        if (!(item instanceof ClassRefItem))
+        {
             String opName = getOpcodeNameForClass(opcode);
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
@@ -247,11 +304,13 @@ public class OperandValidator {
         }
     }
 
-    private void validateNewArray(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateNewArray(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (offset + 1 >= bytecode.length) return;
 
         int atype = Byte.toUnsignedInt(bytecode[offset + 1]);
-        if (atype < 4 || atype > 11) {
+        if (atype < 4 || atype > 11)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_OPERAND,
                     offset,
@@ -260,7 +319,8 @@ public class OperandValidator {
         }
     }
 
-    private void validateMultiANewArray(int offset, byte[] bytecode, ErrorCollector collector) {
+    private void validateMultiANewArray(int offset, byte[] bytecode, ErrorCollector collector)
+    {
         if (constPool == null) return;
         if (offset + 3 >= bytecode.length) return;
 
@@ -269,7 +329,8 @@ public class OperandValidator {
         if (collector.shouldStop()) return;
 
         Item<?> item = constPool.getItem(cpIndex);
-        if (item != null && !(item instanceof ClassRefItem)) {
+        if (item != null && !(item instanceof ClassRefItem))
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_TYPE,
                     offset,
@@ -278,7 +339,8 @@ public class OperandValidator {
         }
 
         int dimensions = Byte.toUnsignedInt(bytecode[offset + 3]);
-        if (dimensions == 0) {
+        if (dimensions == 0)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_OPERAND,
                     offset,
@@ -287,10 +349,12 @@ public class OperandValidator {
         }
     }
 
-    private void validateConstantPoolIndex(int cpIndex, int offset, ErrorCollector collector) {
+    private void validateConstantPoolIndex(int cpIndex, int offset, ErrorCollector collector)
+    {
         if (constPool == null) return;
 
-        if (cpIndex <= 0) {
+        if (cpIndex <= 0)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_INDEX,
                     offset,
@@ -300,7 +364,8 @@ public class OperandValidator {
         }
 
         Item<?> item = constPool.getItem(cpIndex);
-        if (item == null) {
+        if (item == null)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INVALID_CONSTANT_POOL_INDEX,
                     offset,
@@ -309,17 +374,20 @@ public class OperandValidator {
         }
     }
 
-    private String getOpcodeNameForField(int opcode) {
+    private String getOpcodeNameForField(int opcode)
+    {
         Opcode op = Opcode.fromCode(opcode);
         return op != Opcode.UNKNOWN ? op.getMnemonic().toUpperCase() : "FIELD_OP";
     }
 
-    private String getOpcodeNameForMethod(int opcode) {
+    private String getOpcodeNameForMethod(int opcode)
+    {
         Opcode op = Opcode.fromCode(opcode);
         return op != Opcode.UNKNOWN ? op.getMnemonic().toUpperCase() : "INVOKE_OP";
     }
 
-    private String getOpcodeNameForClass(int opcode) {
+    private String getOpcodeNameForClass(int opcode)
+    {
         Opcode op = Opcode.fromCode(opcode);
         return op != Opcode.UNKNOWN ? op.getMnemonic().toUpperCase() : "CLASS_OP";
     }

@@ -25,21 +25,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Demonstrates the AST mutation capability:
- * 1. Load a class file
- * 2. Lift bytecode to IR
- * 3. Recover AST from IR
- * 4. Mutate the AST
- * 5. Lower AST back to IR
- * 6. Lower IR to bytecode
- * 7. Export modified class file
- * 8. Run the modified class and verify behavior
+ * Demo showing round-trip AST mutation: lift a class to IR, recover and mutate the AST, lower back to bytecode, and run the result.
  */
-public class ASTMutationDemo {
+public class ASTMutationDemo
+{
 
     private static final String OUTPUT_DIR = "C:\\test\\mutation";
 
-    public static void main(String[] args) throws Exception {
+    /**
+     * Runs the AST mutation demo end to end.
+     * @param args unused
+     * @throws Exception if loading, mutation, or execution of the class fails
+     */
+    public static void main(String[] args) throws Exception
+    {
         Logger.setLog(false);
 
         System.out.println("===========================================");
@@ -47,11 +46,12 @@ public class ASTMutationDemo {
         System.out.println("===========================================");
         System.out.println();
 
-        // Load the SSAShowcase class
         ClassPool classPool = ClassPool.getDefault();
 
-        try (InputStream is = ASTMutationDemo.class.getResourceAsStream("SSAShowcase.class")) {
-            if (is == null) {
+        try (InputStream is = ASTMutationDemo.class.getResourceAsStream("SSAShowcase.class"))
+        {
+            if (is == null)
+            {
                 throw new IOException("Resource 'SSAShowcase.class' not found.");
             }
 
@@ -63,24 +63,27 @@ public class ASTMutationDemo {
 
             // Find a simple method to mutate
             MethodEntry targetMethod = null;
-            for (MethodEntry method : classFile.getMethods()) {
-                if (method.getName().equals("constantFolding")) {
+            for (MethodEntry method : classFile.getMethods())
+            {
+                if (method.getName().equals("constantFolding"))
+                {
                     targetMethod = method;
                     break;
                 }
             }
 
-            if (targetMethod == null) {
+            if (targetMethod == null)
+            {
                 System.err.println("Could not find 'constantFolding' method");
                 return;
             }
 
-            // Run the full mutation pipeline
             demonstrateMutation(targetMethod, constPool, classFile, classPool);
         }
     }
 
-    private static void demonstrateMutation(MethodEntry method, ConstPool constPool, ClassFile classFile, ClassPool classPool) throws Exception {
+    private static void demonstrateMutation(MethodEntry method, ConstPool constPool, ClassFile classFile, ClassPool classPool) throws Exception
+    {
         System.out.println("--- Method: " + method.getName() + method.getDesc() + " ---");
         System.out.println();
 
@@ -146,110 +149,150 @@ public class ASTMutationDemo {
      * Mutates the AST by finding all integer literals with value 10 and changing to 100.
      * This demonstrates modifying expressions deep within the AST.
      */
-    private static BlockStmt mutateAst(BlockStmt ast) {
+    private static BlockStmt mutateAst(BlockStmt ast)
+    {
         // Traverse all statements and mutate expressions
-        for (Statement stmt : ast.getStatements()) {
+        for (Statement stmt : ast.getStatements())
+        {
             mutateStatement(stmt);
         }
         return ast;
     }
 
-    private static void mutateStatement(Statement stmt) {
-        if (stmt instanceof ReturnStmt) {
+    private static void mutateStatement(Statement stmt)
+    {
+        if (stmt instanceof ReturnStmt)
+        {
             ReturnStmt returnStmt = (ReturnStmt) stmt;
-            if (returnStmt.getValue() != null) {
+            if (returnStmt.getValue() != null)
+            {
                 mutateExpression(returnStmt.getValue());
             }
-        } else if (stmt instanceof VarDeclStmt) {
+        }
+        else if (stmt instanceof VarDeclStmt)
+        {
             VarDeclStmt varDecl = (VarDeclStmt) stmt;
-            if (varDecl.getInitializer() != null) {
+            if (varDecl.getInitializer() != null)
+            {
                 mutateExpression(varDecl.getInitializer());
             }
-        } else if (stmt instanceof ExprStmt) {
+        }
+        else if (stmt instanceof ExprStmt)
+        {
             ExprStmt exprStmt = (ExprStmt) stmt;
             mutateExpression(exprStmt.getExpression());
-        } else if (stmt instanceof BlockStmt) {
+        }
+        else if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
-            for (Statement s : block.getStatements()) {
+            for (Statement s : block.getStatements())
+            {
                 mutateStatement(s);
             }
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
             mutateExpression(ifStmt.getCondition());
             mutateStatement(ifStmt.getThenBranch());
-            if (ifStmt.getElseBranch() != null) {
+            if (ifStmt.getElseBranch() != null)
+            {
                 mutateStatement(ifStmt.getElseBranch());
             }
-        } else if (stmt instanceof WhileStmt) {
+        }
+        else if (stmt instanceof WhileStmt)
+        {
             WhileStmt whileStmt = (WhileStmt) stmt;
             mutateExpression(whileStmt.getCondition());
             mutateStatement(whileStmt.getBody());
-        } else if (stmt instanceof ForStmt) {
+        }
+        else if (stmt instanceof ForStmt)
+        {
             ForStmt forStmt = (ForStmt) stmt;
-            for (Statement init : forStmt.getInit()) {
+            for (Statement init : forStmt.getInit())
+            {
                 mutateStatement(init);
             }
-            if (forStmt.getCondition() != null) {
+            if (forStmt.getCondition() != null)
+            {
                 mutateExpression(forStmt.getCondition());
             }
-            for (Expression update : forStmt.getUpdate()) {
+            for (Expression update : forStmt.getUpdate())
+            {
                 mutateExpression(update);
             }
             mutateStatement(forStmt.getBody());
         }
     }
 
-    private static void mutateExpression(Expression expr) {
-        if (expr instanceof LiteralExpr) {
+    private static void mutateExpression(Expression expr)
+    {
+        if (expr instanceof LiteralExpr)
+        {
             LiteralExpr literal = (LiteralExpr) expr;
             Object value = literal.getValue();
-            if (value instanceof Integer) {
+            if (value instanceof Integer)
+            {
                 Integer intVal = (Integer) value;
-                if (intVal == 10) {
+                if (intVal == 10)
+                {
                     // Mutate: change 10 to 100
                     System.out.println("  Mutation: literal 10 -> 100");
                     literal.setValue(100);
                 }
             }
-        } else if (expr instanceof BinaryExpr) {
+        }
+        else if (expr instanceof BinaryExpr)
+        {
             BinaryExpr binary = (BinaryExpr) expr;
             mutateExpression(binary.getLeft());
             mutateExpression(binary.getRight());
-        } else if (expr instanceof UnaryExpr) {
+        }
+        else if (expr instanceof UnaryExpr)
+        {
             UnaryExpr unary = (UnaryExpr) expr;
             mutateExpression(unary.getOperand());
-        } else if (expr instanceof CastExpr) {
+        }
+        else if (expr instanceof CastExpr)
+        {
             CastExpr cast = (CastExpr) expr;
             mutateExpression(cast.getExpression());
-        } else if (expr instanceof TernaryExpr) {
+        }
+        else if (expr instanceof TernaryExpr)
+        {
             TernaryExpr ternary = (TernaryExpr) expr;
             mutateExpression(ternary.getCondition());
             mutateExpression(ternary.getThenExpr());
             mutateExpression(ternary.getElseExpr());
-        } else if (expr instanceof MethodCallExpr) {
+        }
+        else if (expr instanceof MethodCallExpr)
+        {
             MethodCallExpr call = (MethodCallExpr) expr;
-            for (Expression arg : call.getArguments()) {
+            for (Expression arg : call.getArguments())
+            {
                 mutateExpression(arg);
             }
-        } else if (expr instanceof ArrayAccessExpr) {
+        }
+        else if (expr instanceof ArrayAccessExpr)
+        {
             ArrayAccessExpr arrayAccess = (ArrayAccessExpr) expr;
             mutateExpression(arrayAccess.getArray());
             mutateExpression(arrayAccess.getIndex());
         }
     }
 
-    private static void runModifiedClass(String className) {
-        try {
+    private static void runModifiedClass(String className)
+    {
+        try
+        {
             // Create a URL class loader to load the modified class
             Path classDir = Path.of(OUTPUT_DIR);
             URL[] urls = {classDir.toUri().toURL()};
             URLClassLoader classLoader = new URLClassLoader(urls, null);
 
-            // Load the modified class
             Class<?> modifiedClass = classLoader.loadClass(className);
             System.out.println("  Loaded class: " + modifiedClass.getName());
 
-            // Create an instance
             Object instance = modifiedClass.getDeclaredConstructor().newInstance();
 
             // Find and invoke the constantFolding method
@@ -257,32 +300,41 @@ public class ASTMutationDemo {
             Object result = targetMethod.invoke(instance);
             System.out.println("  Result of constantFolding(): " + result);
 
-            // Verify the mutation worked
-            if (result instanceof Integer) {
+            if (result instanceof Integer)
+            {
                 int intResult = (int) result;
                 // Original: (10 + 20) * 2 - 10 = 50
                 // After mutation (10->100): (100 + 20) * 2 - 100 = 140
                 System.out.println();
-                if (intResult == 140) {
+                if (intResult == 140)
+                {
                     System.out.println("  SUCCESS: Mutation verified!");
                     System.out.println("  Original: (10 + 20) * 2 - 10 = 50");
                     System.out.println("  Mutated:  (100 + 20) * 2 - 100 = 140");
-                } else if (intResult == 50) {
+                }
+                else if (intResult == 50)
+                {
                     System.out.println("  FAILED: Mutation did not take effect, original value returned");
-                } else {
+                }
+                else
+                {
                     System.out.println("  Result: " + intResult);
                 }
             }
 
             classLoader.close();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.err.println("  Error running modified class: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private static void printIndented(String text, String indent) {
-        for (String line : text.split("\n")) {
+    private static void printIndented(String text, String indent)
+    {
+        for (String line : text.split("\n"))
+        {
             System.out.println(indent + line);
         }
     }

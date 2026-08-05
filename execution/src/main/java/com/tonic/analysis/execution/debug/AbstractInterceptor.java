@@ -5,28 +5,38 @@ import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 
-public abstract class AbstractInterceptor implements InstructionInterceptor {
+/**
+ * No-op base implementation of {@link InstructionInterceptor} whose callbacks all continue
+ * execution.
+ */
+public abstract class AbstractInterceptor implements InstructionInterceptor
+{
 
     @Override
-    public InterceptorAction beforeInstruction(StackFrame frame, Instruction instruction) {
+    public InterceptorAction beforeInstruction(StackFrame frame, Instruction instruction)
+    {
         return InterceptorAction.CONTINUE;
     }
 
     @Override
-    public void afterInstruction(StackFrame frame, Instruction instruction) {
+    public void afterInstruction(StackFrame frame, Instruction instruction)
+    {
     }
 
     @Override
-    public InterceptorAction onMethodEntry(StackFrame frame) {
+    public InterceptorAction onMethodEntry(StackFrame frame)
+    {
         return InterceptorAction.CONTINUE;
     }
 
     @Override
-    public void onMethodExit(StackFrame frame, ConcreteValue returnValue) {
+    public void onMethodExit(StackFrame frame, ConcreteValue returnValue)
+    {
     }
 
     @Override
-    public InterceptorAction onException(StackFrame frame, ObjectInstance exception) {
+    public InterceptorAction onException(StackFrame frame, ObjectInstance exception)
+    {
         return InterceptorAction.CONTINUE;
     }
 }

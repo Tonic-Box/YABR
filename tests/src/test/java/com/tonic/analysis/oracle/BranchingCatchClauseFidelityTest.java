@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * exception-reached region's blocks were indexed in collection order, so the join's guard silently lost
  * the second condition's disjunct. All three are fixed; this locks the behavior by execution.
  */
-class BranchingCatchClauseFidelityTest {
+class BranchingCatchClauseFidelityTest
+{
 
     private static final String SOURCE =
             "public class CatchCond {\n"
@@ -63,14 +64,14 @@ class BranchingCatchClauseFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("catch-cond");
         Path src = dir.resolve("CatchCond.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("CatchCond.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -79,28 +80,31 @@ class BranchingCatchClauseFidelityTest {
         recompiledClass = TestUtils.loadAndVerify(recovered);
     }
 
-    private static void reset() throws Exception {
+    private static void reset() throws Exception
+    {
         java.lang.reflect.Field reports = recompiledClass.getDeclaredField("reports");
         reports.setAccessible(true);
         reports.setInt(null, 0);
     }
 
-    private static int reports() throws Exception {
+    private static int reports() throws Exception
+    {
         java.lang.reflect.Field reports = recompiledClass.getDeclaredField("reports");
         reports.setAccessible(true);
         return reports.getInt(null);
     }
 
     @Test
-    void matchingMessageRunsTheGuardedArmAndSwallows() throws Exception {
+    void matchingMessageRunsTheGuardedArmAndSwallows() throws Exception
+    {
         reset();
         recompiledClass.getMethod("init", int.class).invoke(null, 1);
-        assertEquals(3, reports(),
-                "the guarded report arm must run when the message matches - not be dropped:\n" + d1);
+        assertEquals(3, reports(), "the guarded report arm must run when the message matches - not be dropped:\n" + d1);
     }
 
     @Test
-    void nonMatchingMessageRethrows() throws Exception {
+    void nonMatchingMessageRethrows() throws Exception
+    {
         reset();
         InvocationTargetException ex = assertThrows(InvocationTargetException.class,
                 () -> recompiledClass.getMethod("init", int.class).invoke(null, 2),
@@ -110,7 +114,8 @@ class BranchingCatchClauseFidelityTest {
     }
 
     @Test
-    void normalPathTakesNoCatch() throws Exception {
+    void normalPathTakesNoCatch() throws Exception
+    {
         reset();
         recompiledClass.getMethod("init", int.class).invoke(null, 0);
         assertEquals(0, reports(), "the normal path must not enter the catch:\n" + d1);

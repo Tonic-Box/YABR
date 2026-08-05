@@ -14,25 +14,25 @@ import com.tonic.parser.MethodEntry;
 import java.io.FileInputStream;
 
 /**
- * Demo for the Simulation API.
- *
- * <p>Shows how to:
- * <ul>
- *   <li>Configure simulation context</li>
- *   <li>Use built-in listeners</li>
- *   <li>Collect and display metrics</li>
- *   <li>Track stack operations</li>
- *   <li>Track allocations and method calls</li>
- * </ul>
+ * Demo showing the simulation API: listeners, metrics, and stack/allocation tracking.
  */
-public class SimulationDemo {
+public class SimulationDemo
+{
 
-    public static void main(String[] args) throws Exception {
-        if (args.length > 0) {
-            // Load user-specified class file
+    /**
+     * Simulates methods of the given class file, or runs synthetic examples when none is given.
+     * @param args path of a class file to load and analyze
+     * @throws Exception if a class file cannot be read or simulation fails
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length > 0)
+        {
             ClassPool pool = ClassPool.getDefault();
-            for (String path : args) {
-                try (FileInputStream fis = new FileInputStream(path)) {
+            for (String path : args)
+            {
+                try (FileInputStream fis = new FileInputStream(path))
+                {
                     pool.loadClass(fis);
                 }
             }
@@ -40,20 +40,25 @@ public class SimulationDemo {
             // Analyze first class
             ClassFile cf = pool.getClasses().iterator().next();
             analyzeClass(cf);
-        } else {
+        }
+        else
+        {
             System.out.println("Usage: SimulationDemo <classfile>");
             System.out.println("\nRunning demo with synthetic examples...\n");
             runSyntheticDemo();
         }
     }
 
-    private static void analyzeClass(ClassFile cf) {
+    private static void analyzeClass(ClassFile cf)
+    {
         System.out.println("=== Analyzing: " + cf.getClassName() + " ===\n");
 
         SSA ssa = new SSA(cf.getConstPool());
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getCodeAttribute() == null) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getCodeAttribute() == null)
+            {
                 // Skip abstract/native methods that have no code
                 continue;
             }
@@ -61,10 +66,13 @@ public class SimulationDemo {
             System.out.println("Method: " + method.getName() + method.getDesc());
             System.out.println("-".repeat(60));
 
-            try {
+            try
+            {
                 IRMethod irMethod = ssa.lift(method);
                 analyzeMethod(irMethod);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.out.println("  Error: " + e.getMessage());
             }
 
@@ -72,21 +80,20 @@ public class SimulationDemo {
         }
     }
 
-    private static void analyzeMethod(IRMethod irMethod) {
+    private static void analyzeMethod(IRMethod irMethod)
+    {
         // Configure simulation
         SimulationContext ctx = SimulationContext.defaults()
             .withMode(SimulationMode.INSTRUCTION)
             .withValueTracking(true)
             .withStackOperationTracking(true);
 
-        // Create listeners
         StackOperationListener stackListener = new StackOperationListener(true);
         AllocationListener allocListener = new AllocationListener();
         FieldAccessListener fieldListener = new FieldAccessListener();
         MethodCallListener callListener = new MethodCallListener();
         ControlFlowListener cfListener = new ControlFlowListener();
 
-        // Run simulation
         SimulationEngine engine = new SimulationEngine(ctx)
             .addListener(stackListener)
             .addListener(allocListener)
@@ -110,20 +117,23 @@ public class SimulationDemo {
         System.out.println("    Max Depth: " + stackMetrics.getMaxDepth());
         System.out.println("    Net Change: " + stackMetrics.getNetChange());
 
-        if (allocMetrics.hasAllocations()) {
+        if (allocMetrics.hasAllocations())
+        {
             System.out.println("  Allocations:");
             System.out.println("    Objects: " + allocMetrics.getObjectCount());
             System.out.println("    Arrays:  " + allocMetrics.getArrayCount());
             System.out.println("    Distinct Types: " + allocMetrics.getDistinctTypeCount());
         }
 
-        if (accessMetrics.hasAccesses()) {
+        if (accessMetrics.hasAccesses())
+        {
             System.out.println("  Field Accesses:");
             System.out.println("    Reads:  " + accessMetrics.getFieldReads());
             System.out.println("    Writes: " + accessMetrics.getFieldWrites());
         }
 
-        if (callMetrics.hasCalls()) {
+        if (callMetrics.hasCalls())
+        {
             System.out.println("  Method Calls:");
             System.out.println("    Total:     " + callMetrics.getTotalCalls());
             System.out.println("    Virtual:   " + callMetrics.getVirtualCalls());
@@ -136,13 +146,15 @@ public class SimulationDemo {
         System.out.println("    Blocks Visited: " + pathMetrics.getBlocksVisited());
         System.out.println("    Branches: " + pathMetrics.getBranchCount());
         System.out.println("    Returns:  " + pathMetrics.getReturnCount());
-        if (pathMetrics.hasLoops()) {
+        if (pathMetrics.hasLoops())
+        {
             System.out.println("    Has Loops: yes");
         }
         System.out.println("    Complexity: " + pathMetrics.getComplexityIndicator());
     }
 
-    private static void runSyntheticDemo() {
+    private static void runSyntheticDemo()
+    {
         System.out.println("=== Simulation API Demo ===\n");
 
         // Demo 1: Basic stack operations
@@ -155,13 +167,13 @@ public class SimulationDemo {
         demoListenerComposition();
     }
 
-    private static void demoStackOperations() {
+    private static void demoStackOperations()
+    {
         System.out.println("--- Demo 1: Basic Stack Operations ---\n");
 
         StackOperationListener listener = new StackOperationListener(true);
         listener.onSimulationStart(null);
 
-        // Simulate some operations
         SimValue intVal = SimValue.constant(42, PrimitiveType.INT, null);
         SimValue longVal = SimValue.ofType(PrimitiveType.LONG, null);
         SimValue refVal = SimValue.unknown(null);
@@ -187,7 +199,8 @@ public class SimulationDemo {
         System.out.println();
     }
 
-    private static void demoMetricsCollection() {
+    private static void demoMetricsCollection()
+    {
         System.out.println("--- Demo 2: Metrics Collection ---\n");
 
         // Stack metrics
@@ -223,23 +236,20 @@ public class SimulationDemo {
         System.out.println();
     }
 
-    private static void demoListenerComposition() {
+    private static void demoListenerComposition()
+    {
         System.out.println("--- Demo 3: Listener Composition ---\n");
 
-        // Create individual listeners
         StackOperationListener stackListener = new StackOperationListener();
         AllocationListener allocListener = new AllocationListener();
         MethodCallListener callListener = new MethodCallListener();
 
         // Compose them
-        CompositeListener composite = new CompositeListener(
-            stackListener, allocListener, callListener
-        );
+        CompositeListener composite = new CompositeListener(stackListener, allocListener, callListener);
 
         // Start simulation
         composite.onSimulationStart(null);
 
-        // Simulate events
         SimValue val = SimValue.unknown(null);
         composite.onStackPush(val, null);
         composite.onStackPush(val, null);

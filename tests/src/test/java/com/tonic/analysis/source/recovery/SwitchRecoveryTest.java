@@ -27,21 +27,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for StatementRecoverer switch statement handling.
  * Coverage: tableswitch, lookupswitch, control flow patterns, edge cases.
  */
-class SwitchRecoveryTest {
+class SwitchRecoveryTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Tableswitch Tests ==========
+    // Basic Tableswitch Tests
 
     @Nested
-    class TableswitchTests {
+    class TableswitchTests
+    {
 
         @Test
-        void simpleTableswitchWithConsecutiveCases() throws IOException {
+        void simpleTableswitchWithConsecutiveCases() throws IOException
+        {
             // switch (x) { case 0: return 10; case 1: return 20; case 2: return 30; case 3: return 40; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("simpleSwitch", "(I)I");
@@ -53,12 +57,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .tableswitch(0, 3, Map.of(
-                    0, case0,
-                    1, case1,
-                    2, case2,
-                    3, case3
-                ), defaultCase)
+                .tableswitch(0, 3, Map.of(0, case0, 1, case1, 2, case2, 3, case3), defaultCase)
                 .label(case0)
                 .iconst(10)
                 .ireturn()
@@ -87,7 +86,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void tableswitchWithOnlyDefaultCase() throws IOException {
+        void tableswitchWithOnlyDefaultCase() throws IOException
+        {
             // switch (x) { default: return 100; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("defaultOnly", "(I)I");
@@ -112,7 +112,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void tableswitchWithSingleCaseAndDefault() throws IOException {
+        void tableswitchWithSingleCaseAndDefault() throws IOException
+        {
             // switch (x) { case 0: return 50; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("singleCase", "(I)I");
@@ -141,13 +142,15 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void tableswitchWithManyCases() throws IOException {
+        void tableswitchWithManyCases() throws IOException
+        {
             // switch (x) { case 0-11: return case*10; default: return -1; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("manyCases", "(I)I");
 
             Label[] cases = new Label[12];
-            for (int i = 0; i < 12; i++) {
+            for (int i = 0; i < 12; i++)
+            {
                 cases[i] = mb.newLabel();
             }
             Label defaultCase = mb.newLabel();
@@ -161,7 +164,8 @@ class SwitchRecoveryTest {
 
             mb.iload(0).tableswitch(0, 11, caseMap, defaultCase);
 
-            for (int i = 0; i < 12; i++) {
+            for (int i = 0; i < 12; i++)
+            {
                 mb.label(cases[i]).iconst(i * 10).ireturn();
             }
 
@@ -179,7 +183,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void tableswitchAtEndOfMethod() throws IOException {
+        void tableswitchAtEndOfMethod() throws IOException
+        {
             // No code after switch - all cases return
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("endSwitch", "(I)I");
@@ -212,13 +217,15 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Basic Lookupswitch Tests ==========
+    // Basic Lookupswitch Tests
 
     @Nested
-    class LookupswitchTests {
+    class LookupswitchTests
+    {
 
         @Test
-        void simpleLookupswitchWithSparseCases() throws IOException {
+        void simpleLookupswitchWithSparseCases() throws IOException
+        {
             // switch (x) { case 1: return 100; case 10: return 200; case 100: return 300; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("sparseSwitch", "(I)I");
@@ -229,11 +236,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .lookupswitch(Map.of(
-                    1, case1,
-                    10, case10,
-                    100, case100
-                ), defaultCase)
+                .lookupswitch(Map.of(1, case1, 10, case10, 100, case100), defaultCase)
                 .label(case1)
                 .iconst(100)
                 .ireturn()
@@ -259,7 +262,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void lookupswitchWithNegativeValues() throws IOException {
+        void lookupswitchWithNegativeValues() throws IOException
+        {
             // switch (x) { case -5: return 1; case 0: return 2; case 5: return 3; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("negativeSwitch", "(I)I");
@@ -270,11 +274,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .lookupswitch(Map.of(
-                    -5, caseNeg5,
-                    0, case0,
-                    5, case5
-                ), defaultCase)
+                .lookupswitch(Map.of(-5, caseNeg5, 0, case0, 5, case5), defaultCase)
                 .label(caseNeg5)
                 .iconst(1)
                 .ireturn()
@@ -300,7 +300,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void lookupswitchWithExtremeValues() throws IOException {
+        void lookupswitchWithExtremeValues() throws IOException
+        {
             // switch (x) { case MIN_VALUE: return 1; case MAX_VALUE: return 2; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("extremeSwitch", "(I)I");
@@ -310,10 +311,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .lookupswitch(Map.of(
-                    Integer.MIN_VALUE, caseMin,
-                    Integer.MAX_VALUE, caseMax
-                ), defaultCase)
+                .lookupswitch(Map.of(Integer.MIN_VALUE, caseMin, Integer.MAX_VALUE, caseMax), defaultCase)
                 .label(caseMin)
                 .iconst(1)
                 .ireturn()
@@ -336,13 +334,15 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Control Flow Tests ==========
+    // Control Flow Tests
 
     @Nested
-    class ControlFlowTests {
+    class ControlFlowTests
+    {
 
         @Test
-        void switchWithFallThrough() throws IOException {
+        void switchWithFallThrough() throws IOException
+        {
             // switch (x) { case 0: case 1: return 10; case 2: return 20; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("fallThrough", "(I)I");
@@ -352,11 +352,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .tableswitch(0, 2, Map.of(
-                    0, case0and1,
-                    1, case0and1,
-                    2, case2
-                ), defaultCase)
+                .tableswitch(0, 2, Map.of(0, case0and1, 1, case0and1, 2, case2), defaultCase)
                 .label(case0and1)
                 .iconst(10)
                 .ireturn()
@@ -379,7 +375,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithBreakInEachCase() throws IOException {
+        void switchWithBreakInEachCase() throws IOException
+        {
             // switch (x) { case 0: y=1; break; case 1: y=2; break; default: y=0; } return y;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("withBreaks", "(I)I");
@@ -418,7 +415,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithMixedFallThroughAndBreak() throws IOException {
+        void switchWithMixedFallThroughAndBreak() throws IOException
+        {
             // switch (x) { case 0: case 1: y=10; break; case 2: y=20; case 3: y=30; break; default: y=0; } return y;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("mixedFlow", "(I)I");
@@ -430,12 +428,7 @@ class SwitchRecoveryTest {
             Label end = mb.newLabel();
 
             mb.iload(0)
-                .tableswitch(0, 3, Map.of(
-                    0, case0and1,
-                    1, case0and1,
-                    2, case2,
-                    3, case3
-                ), defaultCase)
+                .tableswitch(0, 3, Map.of(0, case0and1, 1, case0and1, 2, case2, 3, case3), defaultCase)
                 .label(case0and1)
                 .iconst(10)
                 .istore(1)
@@ -466,7 +459,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithReturnInCases() throws IOException {
+        void switchWithReturnInCases() throws IOException
+        {
             // switch (x) { case 0: return 10; case 1: return 20; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("returnsInCases", "(I)I");
@@ -499,7 +493,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithEmptyCases() throws IOException {
+        void switchWithEmptyCases() throws IOException
+        {
             // switch (x) { case 0: case 1: case 2: return 100; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("emptyCases", "(I)I");
@@ -508,11 +503,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .tableswitch(0, 2, Map.of(
-                    0, allCases,
-                    1, allCases,
-                    2, allCases
-                ), defaultCase)
+                .tableswitch(0, 2, Map.of(0, allCases, 1, allCases, 2, allCases), defaultCase)
                 .label(allCases)
                 .iconst(100)
                 .ireturn()
@@ -532,13 +523,15 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Complex Pattern Tests ==========
+    // Complex Pattern Tests
 
     @Nested
-    class ComplexPatternTests {
+    class ComplexPatternTests
+    {
 
         @Test
-        void nestedSwitchStatements() throws IOException {
+        void nestedSwitchStatements() throws IOException
+        {
             // switch (x) { case 0: switch(y) { case 0: return 1; default: return 2; } default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("nestedSwitch", "(II)I");
@@ -575,7 +568,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchInsideWhileLoop() throws IOException {
+        void switchInsideWhileLoop() throws IOException
+        {
             // while (i > 0) { switch (x) { case 0: sum++; break; case 1: sum+=2; break; } i--; } return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("switchInLoop", "(II)I");
@@ -626,7 +620,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void loopInsideSwitchCase() throws IOException {
+        void loopInsideSwitchCase() throws IOException
+        {
             // switch (x) { case 0: while (i > 0) { sum++; i--; } return sum; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("loopInSwitch", "(II)I");
@@ -669,7 +664,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchInsideIfElse() throws IOException {
+        void switchInsideIfElse() throws IOException
+        {
             // if (flag) { switch(x) { case 0: return 1; default: return 2; } } else { return 3; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("switchInIf", "(ZI)I");
@@ -706,7 +702,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void ifElseInsideSwitchCase() throws IOException {
+        void ifElseInsideSwitchCase() throws IOException
+        {
             // switch (x) { case 0: if (flag) return 1; else return 2; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("ifInSwitch", "(IZ)I");
@@ -741,13 +738,15 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Self-Store PHI Pattern Tests ==========
+    // Self-Store PHI Pattern Tests
 
     @Nested
-    class SelfStorePhiPatternTests {
+    class SelfStorePhiPatternTests
+    {
 
         @Test
-        void selfStorePhiWithConditionalWrite() throws IOException {
+        void selfStorePhiWithConditionalWrite() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SelfStoreTest")
                 .publicStaticMethod("conditionalFieldUpdate", "()V");
 
@@ -780,13 +779,15 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void switchOnNegativeValues() throws IOException {
+        void switchOnNegativeValues() throws IOException
+        {
             // switch (x) { case -3: return 1; case -2: return 2; case -1: return 3; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("negativeValues", "(I)I");
@@ -797,11 +798,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .lookupswitch(Map.of(
-                    -3, caseNeg3,
-                    -2, caseNeg2,
-                    -1, caseNeg1
-                ), defaultCase)
+                .lookupswitch(Map.of(-3, caseNeg3, -2, caseNeg2, -1, caseNeg1), defaultCase)
                 .label(caseNeg3)
                 .iconst(1)
                 .ireturn()
@@ -827,7 +824,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithIntegerExtremeValues() throws IOException {
+        void switchWithIntegerExtremeValues() throws IOException
+        {
             // switch (x) { case MIN_VALUE: return -1; case 0: return 0; case MAX_VALUE: return 1; default: return 99; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("extremeValues", "(I)I");
@@ -838,11 +836,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .lookupswitch(Map.of(
-                    Integer.MIN_VALUE, caseMin,
-                    0, case0,
-                    Integer.MAX_VALUE, caseMax
-                ), defaultCase)
+                .lookupswitch(Map.of(Integer.MIN_VALUE, caseMin, 0, case0, Integer.MAX_VALUE, caseMax), defaultCase)
                 .label(caseMin)
                 .iconst(-1)
                 .ireturn()
@@ -868,7 +862,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void emptySwitchBodyOnlyDefault() throws IOException {
+        void emptySwitchBodyOnlyDefault() throws IOException
+        {
             // switch (x) { default: return x; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("emptySwitch", "(I)I");
@@ -893,7 +888,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithSameTargetForMultipleCases() throws IOException {
+        void switchWithSameTargetForMultipleCases() throws IOException
+        {
             // switch (x) { case 0: case 5: case 10: return 100; default: return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("sameTarget", "(I)I");
@@ -902,11 +898,7 @@ class SwitchRecoveryTest {
             Label defaultCase = mb.newLabel();
 
             mb.iload(0)
-                .lookupswitch(Map.of(
-                    0, sharedCase,
-                    5, sharedCase,
-                    10, sharedCase
-                ), defaultCase)
+                .lookupswitch(Map.of(0, sharedCase, 5, sharedCase, 10, sharedCase), defaultCase)
                 .label(sharedCase)
                 .iconst(100)
                 .ireturn()
@@ -926,7 +918,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchAsLastStatementBeforeReturn() throws IOException {
+        void switchAsLastStatementBeforeReturn() throws IOException
+        {
             // int result; switch (x) { case 0: result=1; break; case 1: result=2; break; default: result=0; } return result;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("beforeReturn", "(I)I");
@@ -965,13 +958,15 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Default Case Content Tests ==========
+    // Default Case Content Tests
 
     @Nested
-    class DefaultCaseContentTests {
+    class DefaultCaseContentTests
+    {
 
         @Test
-        void defaultCaseWithStatementsHasContent() throws IOException {
+        void defaultCaseWithStatementsHasContent() throws IOException
+        {
             // Regression test: switch (x) { case 0: return 1; default: int y = 10; return y; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("defaultWithContent", "(I)I");
@@ -1006,12 +1001,12 @@ class SwitchRecoveryTest {
                 .orElse(null);
             assertNotNull(defaultSwitchCase, "Should have a default case");
 
-            assertFalse(defaultSwitchCase.statements().isEmpty(),
-                "Default case should have statements, not be empty");
+            assertFalse(defaultSwitchCase.statements().isEmpty(), "Default case should have statements, not be empty");
         }
 
         @Test
-        void defaultCaseWithMultipleStatements() throws IOException {
+        void defaultCaseWithMultipleStatements() throws IOException
+        {
             // switch (x) { case 0: return 1; default: y = 5; y = y + 1; return y; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("defaultMultiStmt", "(I)I");
@@ -1050,12 +1045,12 @@ class SwitchRecoveryTest {
                 .orElse(null);
             assertNotNull(defaultSwitchCase, "Should have a default case");
 
-            assertTrue(defaultSwitchCase.statements().size() >= 2,
-                "Default case should have multiple statements");
+            assertTrue(defaultSwitchCase.statements().size() >= 2, "Default case should have multiple statements");
         }
 
         @Test
-        void defaultCaseEmittedWithContent() throws IOException {
+        void defaultCaseEmittedWithContent() throws IOException
+        {
             // Test that default case content is properly emitted in source output
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("defaultEmit", "(I)I");
@@ -1089,7 +1084,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void switchWithMergeBlockDefaultHasContent() throws IOException {
+        void switchWithMergeBlockDefaultHasContent() throws IOException
+        {
             // More complex case: switch with merge block after
             // switch (x) { case 0: y=1; break; case 1: y=2; break; default: y=99; } return y;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
@@ -1138,7 +1134,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void defaultTargetIsMergeBlock() throws IOException {
+        void defaultTargetIsMergeBlock() throws IOException
+        {
             // Edge case: default points to merge block (all cases fall through to default)
             // switch (x) { case 0: y=1; default: } return y;
             // Here default has no code - it's just the fall-through point
@@ -1175,7 +1172,8 @@ class SwitchRecoveryTest {
         }
 
         @Test
-        void defaultCaseWithBreakToMerge() throws IOException {
+        void defaultCaseWithBreakToMerge() throws IOException
+        {
             // switch (x) { case 0: y=1; break; default: y=99; } return y;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchTest")
                 .publicStaticMethod("defaultWithBreak", "(I)I");
@@ -1218,25 +1216,30 @@ class SwitchRecoveryTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private SwitchStmt findSwitch(BlockStmt body) {
-        for (Statement stmt : body.getStatements()) {
-            if (stmt instanceof SwitchStmt) {
+    private SwitchStmt findSwitch(BlockStmt body)
+    {
+        for (Statement stmt : body.getStatements())
+        {
+            if (stmt instanceof SwitchStmt)
+            {
                 return (SwitchStmt) stmt;
             }
         }
         return null;
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()
             .orElseThrow(() -> new AssertionError("Method not found: " + name));
     }
 
-    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method) {
+    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method)
+    {
         DominatorTree domTree = new DominatorTree(ir);
         domTree.compute();
 
@@ -1253,9 +1256,7 @@ class SwitchRecoveryTest {
 
         ExpressionRecoverer exprRecoverer = new ExpressionRecoverer(recoveryContext);
 
-        ControlFlowContext cfContext = new ControlFlowContext(
-            ir, domTree, loopAnalysis, recoveryContext
-        );
+        ControlFlowContext cfContext = new ControlFlowContext(ir, domTree, loopAnalysis, recoveryContext);
 
         return new StatementRecoverer(cfContext, analyzer, exprRecoverer);
     }

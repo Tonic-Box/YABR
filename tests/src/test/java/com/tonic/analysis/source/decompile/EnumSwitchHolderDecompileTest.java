@@ -23,10 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * on a switch over the enum variable, which does not recompile. With the holder reachable in the pool the
  * switch must emit constant-name labels.
  */
-public class EnumSwitchHolderDecompileTest {
+public class EnumSwitchHolderDecompileTest
+{
 
     @Test
-    public void enumSwitchResolvesConstantsFromOwningPool() throws Exception {
+    public void enumSwitchResolvesConstantsFromOwningPool() throws Exception
+    {
         Path jar = Paths.get("src/test/resources/DemoJar.jar");
         Assumptions.assumeTrue(Files.exists(jar), "demo jar missing");
         byte[] loginDialog = entry(jar, "osrs/dev/auth/LoginDialog.class");
@@ -38,7 +40,8 @@ public class EnumSwitchHolderDecompileTest {
         // must resolve its $SwitchMap$ holder from the pool that loaded it.
         ClassPool pool = new ClassPool(true);
         pool.loadClass(holder);
-        if (messageType != null) {
+        if (messageType != null)
+        {
             pool.loadClass(messageType);
         }
         ClassFile cf = pool.loadClass(loginDialog);
@@ -56,17 +59,22 @@ public class EnumSwitchHolderDecompileTest {
                 "enum switch must not leave raw $SwitchMap$ indices:\n" + body);
     }
 
-    private static byte[] entry(Path jar, String name) throws IOException {
-        try (ZipFile zf = new ZipFile(jar.toFile())) {
+    private static byte[] entry(Path jar, String name) throws IOException
+    {
+        try (ZipFile zf = new ZipFile(jar.toFile()))
+        {
             ZipEntry e = zf.getEntry(name);
-            if (e == null) {
+            if (e == null)
+            {
                 return null;
             }
-            try (InputStream is = zf.getInputStream(e)) {
+            try (InputStream is = zf.getInputStream(e))
+            {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
                 int n;
-                while ((n = is.read(buf)) != -1) {
+                while ((n = is.read(buf)) != -1)
+                {
                     bos.write(buf, 0, n);
                 }
                 return bos.toByteArray();

@@ -4,7 +4,8 @@ import com.tonic.analysis.execution.dispatch.*;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 
-public class StubDispatchContext implements DispatchContext {
+public class StubDispatchContext implements DispatchContext
+{
     private int lastIntConstant;
     private long lastLongConstant;
     private float lastFloatConstant;
@@ -13,182 +14,222 @@ public class StubDispatchContext implements DispatchContext {
     private ObjectInstance lastClassConstant;
     private int branchTarget;
 
-    public void setLastIntConstant(int value) {
+    public void setLastIntConstant(int value)
+    {
         this.lastIntConstant = value;
     }
 
-    public void setLastLongConstant(long value) {
+    public void setLastLongConstant(long value)
+    {
         this.lastLongConstant = value;
     }
 
-    public void setLastFloatConstant(float value) {
+    public void setLastFloatConstant(float value)
+    {
         this.lastFloatConstant = value;
     }
 
-    public void setLastDoubleConstant(double value) {
+    public void setLastDoubleConstant(double value)
+    {
         this.lastDoubleConstant = value;
     }
 
-    public void setLastStringConstant(String value) {
+    public void setLastStringConstant(String value)
+    {
         this.lastStringConstant = value;
     }
 
-    public void setLastClassConstant(ObjectInstance value) {
+    public void setLastClassConstant(ObjectInstance value)
+    {
         this.lastClassConstant = value;
     }
 
     @Override
-    public int resolveIntConstant(int index) {
+    public int resolveIntConstant(int index)
+    {
         return lastIntConstant;
     }
 
     @Override
-    public long resolveLongConstant(int index) {
+    public long resolveLongConstant(int index)
+    {
         return lastLongConstant;
     }
 
     @Override
-    public float resolveFloatConstant(int index) {
+    public float resolveFloatConstant(int index)
+    {
         return lastFloatConstant;
     }
 
     @Override
-    public double resolveDoubleConstant(int index) {
+    public double resolveDoubleConstant(int index)
+    {
         return lastDoubleConstant;
     }
 
     @Override
-    public String resolveStringConstant(int index) {
+    public String resolveStringConstant(int index)
+    {
         return lastStringConstant;
     }
 
     @Override
-    public ObjectInstance resolveStringObject(int index) {
+    public ObjectInstance resolveStringObject(int index)
+    {
         return null;
     }
 
     @Override
-    public ObjectInstance resolveClassConstant(int index) {
+    public ObjectInstance resolveClassConstant(int index)
+    {
         return lastClassConstant;
     }
 
     @Override
-    public ArrayInstance getArray(ObjectInstance ref) {
+    public ArrayInstance getArray(ObjectInstance ref)
+    {
         return (ArrayInstance) ref;
     }
 
     @Override
-    public void checkArrayBounds(ArrayInstance array, int index) {
-        if (index < 0 || index >= array.getLength()) {
+    public void checkArrayBounds(ArrayInstance array, int index)
+    {
+        if (index < 0 || index >= array.getLength())
+        {
             throw new ArrayIndexOutOfBoundsException("Index: " + index + ", Length: " + array.getLength());
         }
     }
 
     @Override
-    public void checkNullReference(ObjectInstance ref, String operation) {
-        if (ref == null) {
+    public void checkNullReference(ObjectInstance ref, String operation)
+    {
+        if (ref == null)
+        {
             throw new NullPointerException(operation);
         }
     }
 
     @Override
-    public FieldInfo resolveField(int cpIndex) {
+    public FieldInfo resolveField(int cpIndex)
+    {
         return null;
     }
 
     @Override
-    public MethodInfo resolveMethod(int cpIndex) {
+    public MethodInfo resolveMethod(int cpIndex)
+    {
         return null;
     }
 
     @Override
-    public boolean isInstanceOf(ObjectInstance obj, String className) {
+    public boolean isInstanceOf(ObjectInstance obj, String className)
+    {
         return obj.isInstanceOf(className);
     }
 
     @Override
-    public void checkCast(ObjectInstance obj, String className) {
+    public void checkCast(ObjectInstance obj, String className)
+    {
     }
 
     @Override
-    public MethodInfo getPendingInvoke() {
+    public MethodInfo getPendingInvoke()
+    {
         return null;
     }
 
     @Override
-    public FieldInfo getPendingFieldAccess() {
+    public FieldInfo getPendingFieldAccess()
+    {
         return null;
     }
 
     @Override
-    public String getPendingNewClass() {
+    public String getPendingNewClass()
+    {
         return null;
     }
 
     @Override
-    public int[] getPendingArrayDimensions() {
+    public int[] getPendingArrayDimensions()
+    {
         return null;
     }
 
     @Override
-    public void setPendingInvoke(MethodInfo methodInfo) {
+    public void setPendingInvoke(MethodInfo methodInfo)
+    {
     }
 
     @Override
-    public void setPendingFieldAccess(FieldInfo fieldInfo) {
+    public void setPendingFieldAccess(FieldInfo fieldInfo)
+    {
     }
 
     @Override
-    public void setPendingNewClass(String className) {
+    public void setPendingNewClass(String className)
+    {
     }
 
     @Override
-    public void setPendingArrayDimensions(int[] dimensions) {
+    public void setPendingArrayDimensions(int[] dimensions)
+    {
     }
 
     @Override
-    public void setBranchTarget(int target) {
+    public void setBranchTarget(int target)
+    {
         this.branchTarget = target;
     }
 
     @Override
-    public int getBranchTarget() {
+    public int getBranchTarget()
+    {
         return branchTarget;
     }
 
     @Override
-    public void setPendingInvokeDynamic(InvokeDynamicInfo info) {
+    public void setPendingInvokeDynamic(InvokeDynamicInfo info)
+    {
     }
 
     @Override
-    public InvokeDynamicInfo getPendingInvokeDynamic() {
+    public InvokeDynamicInfo getPendingInvokeDynamic()
+    {
         return null;
     }
 
     @Override
-    public void setPendingMethodHandle(MethodHandleInfo info) {
+    public void setPendingMethodHandle(MethodHandleInfo info)
+    {
     }
 
     @Override
-    public MethodHandleInfo getPendingMethodHandle() {
+    public MethodHandleInfo getPendingMethodHandle()
+    {
         return null;
     }
 
     @Override
-    public void setPendingMethodType(MethodTypeInfo info) {
+    public void setPendingMethodType(MethodTypeInfo info)
+    {
     }
 
     @Override
-    public MethodTypeInfo getPendingMethodType() {
+    public MethodTypeInfo getPendingMethodType()
+    {
         return null;
     }
 
     @Override
-    public void setPendingConstantDynamic(ConstantDynamicInfo info) {
+    public void setPendingConstantDynamic(ConstantDynamicInfo info)
+    {
     }
 
     @Override
-    public ConstantDynamicInfo getPendingConstantDynamic() {
+    public ConstantDynamicInfo getPendingConstantDynamic()
+    {
         return null;
     }
 }

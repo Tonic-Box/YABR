@@ -16,21 +16,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests node creation, builder pattern, getters, setters, taint tracking,
  * display methods, equality, and edge cases.
  */
-class DataFlowNodeTest {
+class DataFlowNodeTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         SSAValue.resetIdCounter();
         IRInstruction.resetIdCounter();
     }
 
-    // ==================== Constructor and Builder Tests ====================
+    // Constructor and Builder Tests
 
     @Nested
-    class BuilderTests {
+    class BuilderTests
+    {
 
         @Test
-        void builderCreatesNodeWithDefaultType() {
+        void builderCreatesNodeWithDefaultType()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -40,7 +44,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderCreatesNodeWithSpecificType() {
+        void builderCreatesNodeWithSpecificType()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.CONSTANT)
@@ -50,7 +55,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderSetsId() {
+        void builderSetsId()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(42)
                     .build();
@@ -59,7 +65,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderSetsName() {
+        void builderSetsName()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name("myVar")
@@ -69,7 +76,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderSetsDescription() {
+        void builderSetsDescription()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .description("Test description")
@@ -79,7 +87,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderSetsSsaValue() {
+        void builderSetsSsaValue()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -90,7 +99,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderAutomaticallySetsNameFromSsaValue() {
+        void builderAutomaticallySetsNameFromSsaValue()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -101,7 +111,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderExplicitNameOverridesSsaValueName() {
+        void builderExplicitNameOverridesSsaValueName()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -113,7 +124,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderSetsInstruction() {
+        void builderSetsInstruction()
+        {
             SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
             ConstantInstruction instr = new ConstantInstruction(v0, new IntConstant(42));
 
@@ -126,7 +138,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderSetsLocation() {
+        void builderSetsLocation()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .location(5, 10)
@@ -137,7 +150,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderChainingWorksCorrectly() {
+        void builderChainingWorksCorrectly()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -158,7 +172,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void builderCreatesNewBuilderInstance() {
+        void builderCreatesNewBuilderInstance()
+        {
             DataFlowNode.Builder builder1 = DataFlowNode.builder();
             DataFlowNode.Builder builder2 = DataFlowNode.builder();
 
@@ -166,13 +181,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== Getter Tests ====================
+    // Getter Tests
 
     @Nested
-    class GetterTests {
+    class GetterTests
+    {
 
         @Test
-        void getIdReturnsCorrectValue() {
+        void getIdReturnsCorrectValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(123)
                     .build();
@@ -181,7 +198,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTypeReturnsCorrectValue() {
+        void getTypeReturnsCorrectValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.PHI)
@@ -191,7 +209,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getNameReturnsCorrectValue() {
+        void getNameReturnsCorrectValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name("testName")
@@ -201,7 +220,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getDescriptionReturnsCorrectValue() {
+        void getDescriptionReturnsCorrectValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .description("Test description")
@@ -211,7 +231,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getSsaValueReturnsNull() {
+        void getSsaValueReturnsNull()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -220,7 +241,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getInstructionReturnsNull() {
+        void getInstructionReturnsNull()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -229,7 +251,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getBlockIdReturnsZero() {
+        void getBlockIdReturnsZero()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -238,7 +261,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getInstructionIndexReturnsZero() {
+        void getInstructionIndexReturnsZero()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -247,7 +271,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void isTaintedReturnsFalseByDefault() {
+        void isTaintedReturnsFalseByDefault()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -256,7 +281,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTaintSourceReturnsNullByDefault() {
+        void getTaintSourceReturnsNullByDefault()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -265,13 +291,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== Taint Tracking Tests ====================
+    // Taint Tracking Tests
 
     @Nested
-    class TaintTrackingTests {
+    class TaintTrackingTests
+    {
 
         @Test
-        void setTaintedToTrue() {
+        void setTaintedToTrue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -282,7 +310,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void setTaintedToFalse() {
+        void setTaintedToFalse()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -294,7 +323,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void setTaintSourceSetsSource() {
+        void setTaintSourceSetsSource()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -305,7 +335,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void setTaintSourceAutomaticallySetsTainted() {
+        void setTaintSourceAutomaticallySetsTainted()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -317,7 +348,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void setTaintSourceToNullClearsTaint() {
+        void setTaintSourceToNullClearsTaint()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -330,7 +362,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void setTaintSourceOverwritesPreviousSource() {
+        void setTaintSourceOverwritesPreviousSource()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -343,13 +376,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== Display Method Tests ====================
+    // Display Method Tests
 
     @Nested
-    class DisplayMethodTests {
+    class DisplayMethodTests
+    {
 
         @Test
-        void getLabelReturnsNameWhenSet() {
+        void getLabelReturnsNameWhenSet()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name("myVariable")
@@ -360,7 +395,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getLabelReturnsSsaValueNameWhenNoNameSet() {
+        void getLabelReturnsSsaValueNameWhenNoNameSet()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -371,7 +407,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getLabelReturnsTypeAndIdWhenNoNameOrSsaValue() {
+        void getLabelReturnsTypeAndIdWhenNoNameOrSsaValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(42)
                     .type(DataFlowNodeType.CONSTANT)
@@ -381,7 +418,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getLabelIgnoresEmptyName() {
+        void getLabelIgnoresEmptyName()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -393,7 +431,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getLocationReturnsFormattedString() {
+        void getLocationReturnsFormattedString()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .location(5, 10)
@@ -403,7 +442,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getLocationWithZeroValues() {
+        void getLocationWithZeroValues()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .location(0, 0)
@@ -413,7 +453,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTooltipWithMinimalInfo() {
+        void getTooltipWithMinimalInfo()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.LOCAL)
@@ -427,7 +468,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTooltipWithName() {
+        void getTooltipWithName()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name("myVar")
@@ -442,7 +484,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTooltipWithSsaValueType() {
+        void getTooltipWithSsaValueType()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -458,7 +501,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTooltipWithTaintedNode() {
+        void getTooltipWithTaintedNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.LOCAL)
@@ -472,7 +516,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTooltipWithTaintSource() {
+        void getTooltipWithTaintSource()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.LOCAL)
@@ -487,7 +532,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void getTooltipCompleteExample() {
+        void getTooltipCompleteExample()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -509,13 +555,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== Equality and HashCode Tests ====================
+    // Equality and HashCode Tests
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalsSameInstance() {
+        void equalsSameInstance()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -524,7 +572,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void equalsWithSameId() {
+        void equalsWithSameId()
+        {
             DataFlowNode node1 = DataFlowNode.builder()
                     .id(1)
                     .name("name1")
@@ -539,7 +588,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void notEqualsWithDifferentId() {
+        void notEqualsWithDifferentId()
+        {
             DataFlowNode node1 = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -552,7 +602,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void notEqualsWithNull() {
+        void notEqualsWithNull()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -561,7 +612,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void notEqualsWithDifferentClass() {
+        void notEqualsWithDifferentClass()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -570,7 +622,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void hashCodeConsistentWithEquals() {
+        void hashCodeConsistentWithEquals()
+        {
             DataFlowNode node1 = DataFlowNode.builder()
                     .id(1)
                     .name("name1")
@@ -585,7 +638,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void hashCodeDifferentForDifferentIds() {
+        void hashCodeDifferentForDifferentIds()
+        {
             DataFlowNode node1 = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -598,13 +652,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== ToString Tests ====================
+    // ToString Tests
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringWithName() {
+        void toStringWithName()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name("myVar")
@@ -618,7 +674,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void toStringWithSsaValue() {
+        void toStringWithSsaValue()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v0");
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -633,7 +690,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void toStringWithNoNameOrSsaValue() {
+        void toStringWithNoNameOrSsaValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(42)
                     .type(DataFlowNodeType.PHI)
@@ -646,13 +704,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== All Node Types Tests ====================
+    // All Node Types Tests
 
     @Nested
-    class NodeTypeTests {
+    class NodeTypeTests
+    {
 
         @Test
-        void createParamNode() {
+        void createParamNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.PARAM)
@@ -664,7 +724,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createConstantNode() {
+        void createConstantNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.CONSTANT)
@@ -674,7 +735,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createPhiNode() {
+        void createPhiNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.PHI)
@@ -684,7 +746,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createInvokeResultNode() {
+        void createInvokeResultNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.INVOKE_RESULT)
@@ -694,7 +757,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createFieldLoadNode() {
+        void createFieldLoadNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.FIELD_LOAD)
@@ -704,7 +768,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createArrayLoadNode() {
+        void createArrayLoadNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.ARRAY_LOAD)
@@ -714,7 +779,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createBinaryOpNode() {
+        void createBinaryOpNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.BINARY_OP)
@@ -724,7 +790,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createUnaryOpNode() {
+        void createUnaryOpNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.UNARY_OP)
@@ -734,7 +801,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createCastNode() {
+        void createCastNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.CAST)
@@ -744,7 +812,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createNewObjectNode() {
+        void createNewObjectNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.NEW_OBJECT)
@@ -754,7 +823,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createReturnNode() {
+        void createReturnNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.RETURN)
@@ -764,7 +834,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createFieldStoreNode() {
+        void createFieldStoreNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.FIELD_STORE)
@@ -774,7 +845,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createArrayStoreNode() {
+        void createArrayStoreNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.ARRAY_STORE)
@@ -784,7 +856,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void createInvokeArgNode() {
+        void createInvokeArgNode()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.INVOKE_ARG)
@@ -794,13 +867,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== Integration Tests ====================
+    // Integration Tests
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void nodeWithConstantInstruction() {
+        void nodeWithConstantInstruction()
+        {
             SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
             ConstantInstruction instr = new ConstantInstruction(v0, new IntConstant(42));
 
@@ -818,7 +893,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithBinaryOpInstruction() {
+        void nodeWithBinaryOpInstruction()
+        {
             SSAValue v0 = new SSAValue(PrimitiveType.INT, "v0");
             SSAValue v1 = new SSAValue(PrimitiveType.INT, "v1");
             SSAValue v2 = new SSAValue(PrimitiveType.INT, "v2");
@@ -839,7 +915,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithReferenceType() {
+        void nodeWithReferenceType()
+        {
             ReferenceType stringType = new ReferenceType("java/lang/String");
             SSAValue v0 = new SSAValue(stringType, "str");
 
@@ -855,7 +932,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void multipleNodesWithSameType() {
+        void multipleNodesWithSameType()
+        {
             DataFlowNode node1 = DataFlowNode.builder()
                     .id(1)
                     .type(DataFlowNodeType.CONSTANT)
@@ -877,7 +955,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithComplexLocation() {
+        void nodeWithComplexLocation()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .location(100, 255)
@@ -887,13 +966,15 @@ class DataFlowNodeTest {
         }
     }
 
-    // ==================== Edge Cases and Boundary Tests ====================
+    // Edge Cases and Boundary Tests
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void nodeWithZeroId() {
+        void nodeWithZeroId()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(0)
                     .build();
@@ -902,7 +983,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithNegativeId() {
+        void nodeWithNegativeId()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(-1)
                     .build();
@@ -911,7 +993,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithLargeId() {
+        void nodeWithLargeId()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(Integer.MAX_VALUE)
                     .build();
@@ -920,7 +1003,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithNullName() {
+        void nodeWithNullName()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name(null)
@@ -930,7 +1014,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithNullDescription() {
+        void nodeWithNullDescription()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .description(null)
@@ -940,7 +1025,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithNullSsaValue() {
+        void nodeWithNullSsaValue()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .ssaValue(null)
@@ -950,7 +1036,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithNullInstruction() {
+        void nodeWithNullInstruction()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .instruction(null)
@@ -960,7 +1047,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithEmptyString() {
+        void nodeWithEmptyString()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .name("")
@@ -972,7 +1060,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void nodeWithVeryLongName() {
+        void nodeWithVeryLongName()
+        {
             String longName = "a".repeat(1000);
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
@@ -983,7 +1072,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void multipleSetTaintSource() {
+        void multipleSetTaintSource()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -997,7 +1087,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void taintSourceWithEmptyString() {
+        void taintSourceWithEmptyString()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .build();
@@ -1010,7 +1101,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void negativeBlockId() {
+        void negativeBlockId()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .location(-1, 0)
@@ -1021,7 +1113,8 @@ class DataFlowNodeTest {
         }
 
         @Test
-        void negativeInstructionIndex() {
+        void negativeInstructionIndex()
+        {
             DataFlowNode node = DataFlowNode.builder()
                     .id(1)
                     .location(0, -1)

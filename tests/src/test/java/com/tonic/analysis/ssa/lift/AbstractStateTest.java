@@ -22,21 +22,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Debug context for error reporting
  * - Edge cases and boundary conditions
  */
-class AbstractStateTest {
+class AbstractStateTest
+{
 
     private AbstractState state;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         state = new AbstractState();
         SSAValue.resetIdCounter();
     }
 
     @Nested
-    class StackOperations {
+    class StackOperations
+    {
 
         @Test
-        void testPushAddsValueToStack() {
+        void testPushAddsValueToStack()
+        {
             Value value = new SSAValue(PrimitiveType.INT);
 
             state.push(value);
@@ -46,7 +50,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPushMultipleValues() {
+        void testPushMultipleValues()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
             Value v3 = new SSAValue(PrimitiveType.FLOAT);
@@ -59,7 +64,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPopReturnsTopValue() {
+        void testPopReturnsTopValue()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.INT);
 
@@ -73,7 +79,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPopMultipleTimes() {
+        void testPopMultipleTimes()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.INT);
             Value v3 = new SSAValue(PrimitiveType.INT);
@@ -90,18 +97,17 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPopOnEmptyStackThrowsException() {
+        void testPopOnEmptyStackThrowsException()
+        {
             assertThrows(IllegalStateException.class, () -> state.pop());
         }
 
         @Test
-        void testPopUnderflowIncludesDebugContext() {
+        void testPopUnderflowIncludesDebugContext()
+        {
             AbstractState.setDebugContext("block_5", 42);
 
-            IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> state.pop()
-            );
+            IllegalStateException exception = assertThrows(IllegalStateException.class, () -> state.pop());
 
             String message = exception.getMessage();
             assertTrue(message.contains("block_5"), "Exception should include block name");
@@ -110,7 +116,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPeekReturnsTopWithoutRemoving() {
+        void testPeekReturnsTopWithoutRemoving()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.INT);
 
@@ -124,17 +131,16 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPeekOnEmptyStackThrowsException() {
-            IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> state.peek()
-            );
+        void testPeekOnEmptyStackThrowsException()
+        {
+            IllegalStateException exception = assertThrows(IllegalStateException.class, () -> state.peek());
 
             assertTrue(exception.getMessage().contains("Stack is empty"));
         }
 
         @Test
-        void testPeekWithDepthReturnsCorrectValue() {
+        void testPeekWithDepthReturnsCorrectValue()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT, "v1");
             Value v2 = new SSAValue(PrimitiveType.INT, "v2");
             Value v3 = new SSAValue(PrimitiveType.INT, "v3");
@@ -154,20 +160,19 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPeekWithExcessiveDepthThrowsException() {
+        void testPeekWithExcessiveDepthThrowsException()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             state.push(v1);
 
-            IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> state.peek(5)
-            );
+            IllegalStateException exception = assertThrows(IllegalStateException.class, () -> state.peek(5));
 
             assertTrue(exception.getMessage().contains("Stack depth exceeded"));
         }
 
         @Test
-        void testPeekWithNegativeDepthBehavior() {
+        void testPeekWithNegativeDepthBehavior()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             state.push(v1);
 
@@ -177,7 +182,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetStackSizeReturnsCorrectCount() {
+        void testGetStackSizeReturnsCorrectCount()
+        {
             assertEquals(0, state.getStackSize());
 
             state.push(new SSAValue(PrimitiveType.INT));
@@ -191,18 +197,21 @@ class AbstractStateTest {
         }
 
         @Test
-        void testIsStackEmptyInitiallyTrue() {
+        void testIsStackEmptyInitiallyTrue()
+        {
             assertTrue(state.isStackEmpty());
         }
 
         @Test
-        void testIsStackEmptyAfterPush() {
+        void testIsStackEmptyAfterPush()
+        {
             state.push(new SSAValue(PrimitiveType.INT));
             assertFalse(state.isStackEmpty());
         }
 
         @Test
-        void testIsStackEmptyAfterClear() {
+        void testIsStackEmptyAfterClear()
+        {
             state.push(new SSAValue(PrimitiveType.INT));
             state.push(new SSAValue(PrimitiveType.INT));
 
@@ -213,7 +222,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testClearStackRemovesAllValues() {
+        void testClearStackRemovesAllValues()
+        {
             state.push(new SSAValue(PrimitiveType.INT));
             state.push(new SSAValue(PrimitiveType.LONG));
             state.push(new SSAValue(PrimitiveType.FLOAT));
@@ -225,7 +235,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testClearStackOnEmptyStackIsNoop() {
+        void testClearStackOnEmptyStackIsNoop()
+        {
             state.clearStack();
 
             assertTrue(state.isStackEmpty());
@@ -233,7 +244,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetStackValuesReturnsListOfValues() {
+        void testGetStackValuesReturnsListOfValues()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
             Value v3 = new SSAValue(PrimitiveType.FLOAT);
@@ -252,7 +264,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetStackValuesReturnsIndependentList() {
+        void testGetStackValuesReturnsIndependentList()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             state.push(v1);
 
@@ -264,7 +277,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetStackValuesOnEmptyStackReturnsEmptyList() {
+        void testGetStackValuesOnEmptyStackReturnsEmptyList()
+        {
             List<Value> stackValues = state.getStackValues();
 
             assertNotNull(stackValues);
@@ -273,10 +287,12 @@ class AbstractStateTest {
     }
 
     @Nested
-    class LocalVariableOperations {
+    class LocalVariableOperations
+    {
 
         @Test
-        void testSetLocalStoresValue() {
+        void testSetLocalStoresValue()
+        {
             Value value = new SSAValue(PrimitiveType.INT);
 
             state.setLocal(0, value);
@@ -286,7 +302,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testSetLocalMultipleIndices() {
+        void testSetLocalMultipleIndices()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
             Value v3 = new SSAValue(PrimitiveType.FLOAT);
@@ -302,7 +319,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testSetLocalOverwritesExistingValue() {
+        void testSetLocalOverwritesExistingValue()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT, "v1");
             Value v2 = new SSAValue(PrimitiveType.INT, "v2");
 
@@ -313,13 +331,15 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetLocalReturnsNullForUnsetIndex() {
+        void testGetLocalReturnsNullForUnsetIndex()
+        {
             assertNull(state.getLocal(0));
             assertNull(state.getLocal(99));
         }
 
         @Test
-        void testGetLocalReturnsCorrectValue() {
+        void testGetLocalReturnsCorrectValue()
+        {
             Value value = new SSAValue(PrimitiveType.INT);
             state.setLocal(3, value);
 
@@ -327,20 +347,23 @@ class AbstractStateTest {
         }
 
         @Test
-        void testHasLocalReturnsFalseForUnsetIndex() {
+        void testHasLocalReturnsFalseForUnsetIndex()
+        {
             assertFalse(state.hasLocal(0));
             assertFalse(state.hasLocal(10));
         }
 
         @Test
-        void testHasLocalReturnsTrueForSetIndex() {
+        void testHasLocalReturnsTrueForSetIndex()
+        {
             state.setLocal(0, new SSAValue(PrimitiveType.INT));
 
             assertTrue(state.hasLocal(0));
         }
 
         @Test
-        void testGetLocalIndicesReturnsAllSetIndices() {
+        void testGetLocalIndicesReturnsAllSetIndices()
+        {
             state.setLocal(0, new SSAValue(PrimitiveType.INT));
             state.setLocal(2, new SSAValue(PrimitiveType.LONG));
             state.setLocal(5, new SSAValue(PrimitiveType.FLOAT));
@@ -356,7 +379,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetLocalIndicesReturnsEmptySetWhenNoLocals() {
+        void testGetLocalIndicesReturnsEmptySetWhenNoLocals()
+        {
             Set<Integer> indices = state.getLocalIndices();
 
             assertNotNull(indices);
@@ -364,7 +388,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testGetLocalIndicesReturnsIndependentSet() {
+        void testGetLocalIndicesReturnsIndependentSet()
+        {
             state.setLocal(0, new SSAValue(PrimitiveType.INT));
 
             Set<Integer> indices = state.getLocalIndices();
@@ -375,10 +400,10 @@ class AbstractStateTest {
         }
 
         @Test
-        void testLocalVariableWithNegativeIndex() {
+        void testLocalVariableWithNegativeIndex()
+        {
             Value value = new SSAValue(PrimitiveType.INT);
 
-            // Should handle negative indices (though unusual)
             state.setLocal(-1, value);
 
             assertTrue(state.hasLocal(-1));
@@ -386,7 +411,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testLocalVariableWithLargeIndex() {
+        void testLocalVariableWithLargeIndex()
+        {
             Value value = new SSAValue(PrimitiveType.INT);
 
             state.setLocal(1000, value);
@@ -397,10 +423,12 @@ class AbstractStateTest {
     }
 
     @Nested
-    class CopyOperations {
+    class CopyOperations
+    {
 
         @Test
-        void testCopyCreatesIndependentStack() {
+        void testCopyCreatesIndependentStack()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.INT);
 
@@ -417,7 +445,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testCopyCreatesIndependentLocals() {
+        void testCopyCreatesIndependentLocals()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.INT);
 
@@ -433,7 +462,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testCopyPreservesStackValues() {
+        void testCopyPreservesStackValues()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
 
@@ -447,7 +477,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testCopyPreservesLocalVariables() {
+        void testCopyPreservesLocalVariables()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
 
@@ -463,7 +494,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testCopyOfEmptyStateIsEmpty() {
+        void testCopyOfEmptyStateIsEmpty()
+        {
             AbstractState copy = state.copy();
 
             assertTrue(copy.isStackEmpty());
@@ -471,7 +503,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testCopyConstructorCreatesIndependentState() {
+        void testCopyConstructorCreatesIndependentState()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
 
             state.push(v1);
@@ -490,10 +523,12 @@ class AbstractStateTest {
     }
 
     @Nested
-    class MergeOperations {
+    class MergeOperations
+    {
 
         @Test
-        void testMergeAddsNewLocals() {
+        void testMergeAddsNewLocals()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
 
@@ -511,7 +546,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMergeDoesNotOverwriteExistingLocals() {
+        void testMergeDoesNotOverwriteExistingLocals()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT, "v1");
             Value v2 = new SSAValue(PrimitiveType.INT, "v2");
 
@@ -527,7 +563,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMergeWithEmptyStateIsNoop() {
+        void testMergeWithEmptyStateIsNoop()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             state.setLocal(0, v1);
 
@@ -540,7 +577,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMergeIntoEmptyState() {
+        void testMergeIntoEmptyState()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
 
@@ -557,7 +595,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMergeMultipleLocals() {
+        void testMergeMultipleLocals()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT, "v1");
             Value v2 = new SSAValue(PrimitiveType.LONG, "v2");
             Value v3 = new SSAValue(PrimitiveType.FLOAT, "v3");
@@ -580,7 +619,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMergeDoesNotAffectStack() {
+        void testMergeDoesNotAffectStack()
+        {
             Value stackValue = new SSAValue(PrimitiveType.INT);
             state.push(stackValue);
 
@@ -596,7 +636,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMergeDoesNotModifyOtherState() {
+        void testMergeDoesNotModifyOtherState()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
 
@@ -614,17 +655,15 @@ class AbstractStateTest {
     }
 
     @Nested
-    class DebugContext {
+    class DebugContext
+    {
 
         @Test
-        void testSetDebugContextUpdatesStaticFields() {
+        void testSetDebugContextUpdatesStaticFields()
+        {
             AbstractState.setDebugContext("entry_block", 10);
 
-            // Create underflow to test debug context
-            IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> state.pop()
-            );
+            IllegalStateException exception = assertThrows(IllegalStateException.class, () -> state.pop());
 
             String message = exception.getMessage();
             assertTrue(message.contains("entry_block"));
@@ -632,21 +671,16 @@ class AbstractStateTest {
         }
 
         @Test
-        void testDebugContextPersistsAcrossInstances() {
+        void testDebugContextPersistsAcrossInstances()
+        {
             AbstractState.setDebugContext("block_A", 99);
 
             AbstractState state1 = new AbstractState();
             AbstractState state2 = new AbstractState();
 
-            IllegalStateException ex1 = assertThrows(
-                IllegalStateException.class,
-                () -> state1.pop()
-            );
+            IllegalStateException ex1 = assertThrows(IllegalStateException.class, () -> state1.pop());
 
-            IllegalStateException ex2 = assertThrows(
-                IllegalStateException.class,
-                () -> state2.pop()
-            );
+            IllegalStateException ex2 = assertThrows(IllegalStateException.class, () -> state2.pop());
 
             assertTrue(ex1.getMessage().contains("block_A"));
             assertTrue(ex1.getMessage().contains("99"));
@@ -655,13 +689,11 @@ class AbstractStateTest {
         }
 
         @Test
-        void testDebugContextWithNullBlockName() {
+        void testDebugContextWithNullBlockName()
+        {
             AbstractState.setDebugContext(null, 5);
 
-            IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> state.pop()
-            );
+            IllegalStateException exception = assertThrows(IllegalStateException.class, () -> state.pop());
 
             String message = exception.getMessage();
             assertTrue(message.contains("null"));
@@ -669,13 +701,11 @@ class AbstractStateTest {
         }
 
         @Test
-        void testDebugContextWithNegativeOffset() {
+        void testDebugContextWithNegativeOffset()
+        {
             AbstractState.setDebugContext("test_block", -1);
 
-            IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> state.pop()
-            );
+            IllegalStateException exception = assertThrows(IllegalStateException.class, () -> state.pop());
 
             String message = exception.getMessage();
             assertTrue(message.contains("test_block"));
@@ -684,19 +714,23 @@ class AbstractStateTest {
     }
 
     @Nested
-    class EdgeCasesAndBoundaries {
+    class EdgeCasesAndBoundaries
+    {
 
         @Test
-        void testLargeStackOperations() {
+        void testLargeStackOperations()
+        {
             // Push many values
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++)
+            {
                 state.push(new SSAValue(PrimitiveType.INT, "v" + i));
             }
 
             assertEquals(100, state.getStackSize());
 
             // Pop all values
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++)
+            {
                 state.pop();
             }
 
@@ -704,22 +738,24 @@ class AbstractStateTest {
         }
 
         @Test
-        void testManyLocalVariables() {
-            // Set many locals
-            for (int i = 0; i < 100; i++) {
+        void testManyLocalVariables()
+        {
+            for (int i = 0; i < 100; i++)
+            {
                 state.setLocal(i, new SSAValue(PrimitiveType.INT, "local" + i));
             }
 
             assertEquals(100, state.getLocalIndices().size());
 
-            // Verify all are set
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++)
+            {
                 assertTrue(state.hasLocal(i));
             }
         }
 
         @Test
-        void testMixedStackAndLocalOperations() {
+        void testMixedStackAndLocalOperations()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             Value v2 = new SSAValue(PrimitiveType.LONG);
 
@@ -737,7 +773,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testToStringDoesNotThrowException() {
+        void testToStringDoesNotThrowException()
+        {
             state.push(new SSAValue(PrimitiveType.INT));
             state.setLocal(0, new SSAValue(PrimitiveType.LONG));
 
@@ -748,7 +785,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testToStringOnEmptyState() {
+        void testToStringOnEmptyState()
+        {
             String str = state.toString();
 
             assertNotNull(str);
@@ -756,7 +794,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testMultipleCopiesAreIndependent() {
+        void testMultipleCopiesAreIndependent()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT);
             state.push(v1);
 
@@ -772,7 +811,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testSequentialMerges() {
+        void testSequentialMerges()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT, "v1");
             Value v2 = new SSAValue(PrimitiveType.LONG, "v2");
             Value v3 = new SSAValue(PrimitiveType.FLOAT, "v3");
@@ -795,7 +835,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testPeekDoesNotModifyStackIteration() {
+        void testPeekDoesNotModifyStackIteration()
+        {
             Value v1 = new SSAValue(PrimitiveType.INT, "v1");
             Value v2 = new SSAValue(PrimitiveType.INT, "v2");
             Value v3 = new SSAValue(PrimitiveType.INT, "v3");
@@ -816,7 +857,8 @@ class AbstractStateTest {
         }
 
         @Test
-        void testStackOperationsWithTwoSlotTypes() {
+        void testStackOperationsWithTwoSlotTypes()
+        {
             Value longValue = new SSAValue(PrimitiveType.LONG);
             Value doubleValue = new SSAValue(PrimitiveType.DOUBLE);
 

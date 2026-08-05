@@ -185,7 +185,8 @@ After making changes, finalize to write back to the method:
 bytecode.finalizeBytecode();
 
 // Check if modifications were made
-if (bytecode.isModified()) {
+if (bytecode.isModified())
+{
     // Optionally compute stack frames
     bytecode.computeFrames();
 }
@@ -455,7 +456,8 @@ The four owner-bearing invokes - `Invoke{Virtual,Special,Static,Interface}Instru
 common interface **`InvokeInsn`** (`getOwnerClass()`/`getMethodName()`/`getMethodDescriptor()`, plus
 `isStatic()`/`isInterface()`), so a call site of any kind is handled uniformly:
 ```java
-if (insn instanceof InvokeInsn call) {
+if (insn instanceof InvokeInsn call)
+{
     cg.addEdge(call.getOwnerClass(), call.getMethodName(), call.getMethodDescriptor());
 }
 ```

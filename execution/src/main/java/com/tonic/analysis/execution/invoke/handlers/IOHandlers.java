@@ -5,10 +5,15 @@ import com.tonic.analysis.execution.invoke.NativeMethodHandler;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class IOHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for print and output stream APIs, which discard all output and return the receiver or a zero result.
+ */
+public final class IOHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         NativeMethodHandler voidNoOp = (receiver, args, ctx) -> null;
 
         String[] printStreamMethods = {
@@ -43,17 +48,23 @@ public final class IOHandlers implements NativeHandlerProvider {
             "append", "(Ljava/lang/CharSequence;II)Ljava/io/PrintStream;"
         };
 
-        for (int i = 0; i < printStreamMethods.length; i += 2) {
+        for (int i = 0; i < printStreamMethods.length; i += 2)
+        {
             String name = printStreamMethods[i];
             String desc = printStreamMethods[i + 1];
 
-            if (desc.endsWith(")Z")) {
+            if (desc.endsWith(")Z"))
+            {
                 registry.register("java/io/PrintStream", name, desc,
                     (receiver, args, ctx) -> ConcreteValue.intValue(0));
-            } else if (desc.endsWith(")Ljava/io/PrintStream;")) {
+            }
+            else if (desc.endsWith(")Ljava/io/PrintStream;"))
+            {
                 registry.register("java/io/PrintStream", name, desc,
                     (receiver, args, ctx) -> receiver != null ? ConcreteValue.reference(receiver) : ConcreteValue.nullRef());
-            } else {
+            }
+            else
+            {
                 registry.register("java/io/PrintStream", name, desc, voidNoOp);
             }
         }
@@ -100,17 +111,23 @@ public final class IOHandlers implements NativeHandlerProvider {
             "append", "(Ljava/lang/CharSequence;II)Ljava/io/PrintWriter;"
         };
 
-        for (int i = 0; i < printWriterMethods.length; i += 2) {
+        for (int i = 0; i < printWriterMethods.length; i += 2)
+        {
             String name = printWriterMethods[i];
             String desc = printWriterMethods[i + 1];
 
-            if (desc.endsWith(")Z")) {
+            if (desc.endsWith(")Z"))
+            {
                 registry.register("java/io/PrintWriter", name, desc,
                     (receiver, args, ctx) -> ConcreteValue.intValue(0));
-            } else if (desc.endsWith(")Ljava/io/PrintWriter;")) {
+            }
+            else if (desc.endsWith(")Ljava/io/PrintWriter;"))
+            {
                 registry.register("java/io/PrintWriter", name, desc,
                     (receiver, args, ctx) -> receiver != null ? ConcreteValue.reference(receiver) : ConcreteValue.nullRef());
-            } else {
+            }
+            else
+            {
                 registry.register("java/io/PrintWriter", name, desc, voidNoOp);
             }
         }

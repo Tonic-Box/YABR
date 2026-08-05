@@ -18,19 +18,23 @@ import java.util.List;
  * top-level class). Used by stress-test/verify.sh for decompile->recompile->run behavioral checks. No-op if the
  * input dir is absent.
  */
-public class StressReproDumpTest {
+public class StressReproDumpTest
+{
 
     @Test
-    public void dumpRepros() throws Exception {
+    public void dumpRepros() throws Exception
+    {
         Path in = Paths.get("stress-test/repros/classes");
         Path out = Paths.get("stress-test/repros/decompiled");
-        if (!Files.isDirectory(in)) {
+        if (!Files.isDirectory(in))
+        {
             System.out.println("REPRO: no input dir " + in.toAbsolutePath() + " - skipping");
             return;
         }
         Files.createDirectories(out);
         // wipe previous outputs
-        if (Files.isDirectory(out)) {
+        if (Files.isDirectory(out))
+        {
             Files.walk(out).filter(p -> p.toString().endsWith(".java"))
                     .forEach(p -> { try { Files.delete(p); } catch (Exception ignored) {} });
         }
@@ -41,25 +45,34 @@ public class StressReproDumpTest {
         // Make every repro class resolvable in the default pool so cross-class lookups (e.g. enum-switch
         // $SwitchMap$ holders in synthetic sibling classes) work regardless of decompile order.
         ClassPool pool = ClassPool.getDefault();
-        for (Path p : classes) {
-            try {
+        for (Path p : classes)
+        {
+            try
+            {
                 pool.loadClass(Files.readAllBytes(p));
-            } catch (Throwable ignored) {
+            }
+            catch (Throwable ignored)
+            {
             }
         }
 
         int crashes = 0;
-        for (Path p : classes) {
+        for (Path p : classes)
+        {
             String name = p.getFileName().toString();
             name = name.substring(0, name.length() - ".class".length());
-            try {
+            try
+            {
                 byte[] bytes = Files.readAllBytes(p);
                 String src = new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
-                if (!name.contains("$")) {
+                if (!name.contains("$"))
+                {
                     Files.write(out.resolve(name + ".java"), src.getBytes());
                 }
                 Files.write(out.resolve(name + ".dec.txt"), src.getBytes());
-            } catch (Throwable t) {
+            }
+            catch (Throwable t)
+            {
                 crashes++;
                 StringWriter sw = new StringWriter();
                 t.printStackTrace(new PrintWriter(sw));

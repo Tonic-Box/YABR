@@ -12,23 +12,27 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CodePrinterTest {
+class CodePrinterTest
+{
 
     private ConstPool constPool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = new ClassPool(true);
         classFile = pool.createNewClass("com/test/CodePrinterTest", 0x0001);
         constPool = classFile.getConstPool();
     }
 
     @Nested
-    class NoOperandInstructions {
+    class NoOperandInstructions
+    {
 
         @Test
-        void printsNopInstruction() {
+        void printsNopInstruction()
+        {
             byte[] code = {0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -36,7 +40,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIconstInstructions() {
+        void printsIconstInstructions()
+        {
             byte[] code = {
                 0x02,
                 0x03,
@@ -58,7 +63,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsAconstNull() {
+        void printsAconstNull()
+        {
             byte[] code = {0x01};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -66,7 +72,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLconstInstructions() {
+        void printsLconstInstructions()
+        {
             byte[] code = {0x09, 0x0A};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -75,7 +82,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsFconstInstructions() {
+        void printsFconstInstructions()
+        {
             byte[] code = {0x0B, 0x0C, 0x0D};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -85,7 +93,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDconstInstructions() {
+        void printsDconstInstructions()
+        {
             byte[] code = {0x0E, 0x0F};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -94,7 +103,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsReturnInstructions() {
+        void printsReturnInstructions()
+        {
             byte[] code = {
                 (byte) 0xAC,
                 (byte) 0xAD,
@@ -115,10 +125,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ArithmeticInstructions {
+    class ArithmeticInstructions
+    {
 
         @Test
-        void printsAddInstructions() {
+        void printsAddInstructions()
+        {
             byte[] code = {0x60, 0x61, 0x62, 0x63};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -129,7 +141,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsSubInstructions() {
+        void printsSubInstructions()
+        {
             byte[] code = {0x64, 0x65, 0x66, 0x67};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -140,7 +153,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsMulInstructions() {
+        void printsMulInstructions()
+        {
             byte[] code = {0x68, 0x69, 0x6A, 0x6B};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -151,7 +165,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDivInstructions() {
+        void printsDivInstructions()
+        {
             byte[] code = {0x6C, 0x6D, 0x6E, 0x6F};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -162,7 +177,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsRemInstructions() {
+        void printsRemInstructions()
+        {
             byte[] code = {0x70, 0x71, 0x72, 0x73};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -173,7 +189,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNegInstructions() {
+        void printsNegInstructions()
+        {
             byte[] code = {0x74, 0x75, 0x76, 0x77};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -185,10 +202,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class BitwiseInstructions {
+    class BitwiseInstructions
+    {
 
         @Test
-        void printsShiftInstructions() {
+        void printsShiftInstructions()
+        {
             byte[] code = {0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -201,7 +220,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsAndInstructions() {
+        void printsAndInstructions()
+        {
             byte[] code = {0x7E, 0x7F};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -210,7 +230,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsOrInstructions() {
+        void printsOrInstructions()
+        {
             byte[] code = {(byte) 0x80, (byte) 0x81};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -219,7 +240,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsXorInstructions() {
+        void printsXorInstructions()
+        {
             byte[] code = {(byte) 0x82, (byte) 0x83};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -229,10 +251,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class TypeConversionInstructions {
+    class TypeConversionInstructions
+    {
 
         @Test
-        void printsIntConversions() {
+        void printsIntConversions()
+        {
             byte[] code = {
                 (byte) 0x85,
                 (byte) 0x86,
@@ -252,7 +276,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLongConversions() {
+        void printsLongConversions()
+        {
             byte[] code = {
                 (byte) 0x88,
                 (byte) 0x89,
@@ -266,7 +291,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsFloatConversions() {
+        void printsFloatConversions()
+        {
             byte[] code = {
                 (byte) 0x8B,
                 (byte) 0x8C,
@@ -280,7 +306,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDoubleConversions() {
+        void printsDoubleConversions()
+        {
             byte[] code = {
                 (byte) 0x8E,
                 (byte) 0x8F,
@@ -295,10 +322,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ComparisonInstructions {
+    class ComparisonInstructions
+    {
 
         @Test
-        void printsLcmp() {
+        void printsLcmp()
+        {
             byte[] code = {(byte) 0x94};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -306,7 +335,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsFcmpInstructions() {
+        void printsFcmpInstructions()
+        {
             byte[] code = {(byte) 0x95, (byte) 0x96};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -315,7 +345,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDcmpInstructions() {
+        void printsDcmpInstructions()
+        {
             byte[] code = {(byte) 0x97, (byte) 0x98};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -325,10 +356,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class LoadStoreInstructions {
+    class LoadStoreInstructions
+    {
 
         @Test
-        void printsILoadVariants() {
+        void printsILoadVariants()
+        {
             byte[] code = {0x1A, 0x1B, 0x1C, 0x1D};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -339,7 +372,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLLoadVariants() {
+        void printsLLoadVariants()
+        {
             byte[] code = {0x1E, 0x1F, 0x20, 0x21};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -350,7 +384,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsFLoadVariants() {
+        void printsFLoadVariants()
+        {
             byte[] code = {0x22, 0x23, 0x24, 0x25};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -361,7 +396,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDLoadVariants() {
+        void printsDLoadVariants()
+        {
             byte[] code = {0x26, 0x27, 0x28, 0x29};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -372,7 +408,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsALoadVariants() {
+        void printsALoadVariants()
+        {
             byte[] code = {0x2A, 0x2B, 0x2C, 0x2D};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -383,7 +420,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIStoreVariants() {
+        void printsIStoreVariants()
+        {
             byte[] code = {0x3B, 0x3C, 0x3D, 0x3E};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -394,7 +432,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLStoreVariants() {
+        void printsLStoreVariants()
+        {
             byte[] code = {0x3F, 0x40, 0x41, 0x42};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -405,7 +444,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsFStoreVariants() {
+        void printsFStoreVariants()
+        {
             byte[] code = {0x43, 0x44, 0x45, 0x46};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -416,7 +456,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDStoreVariants() {
+        void printsDStoreVariants()
+        {
             byte[] code = {0x47, 0x48, 0x49, 0x4A};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -427,7 +468,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsAStoreVariants() {
+        void printsAStoreVariants()
+        {
             byte[] code = {0x4B, 0x4C, 0x4D, 0x4E};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -438,7 +480,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLoadWithIndex() {
+        void printsLoadWithIndex()
+        {
             byte[] code = {0x15, 0x05};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -447,7 +490,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsStoreWithIndex() {
+        void printsStoreWithIndex()
+        {
             byte[] code = {0x36, 0x03};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -457,10 +501,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ArrayInstructions {
+    class ArrayInstructions
+    {
 
         @Test
-        void printsArrayLoadInstructions() {
+        void printsArrayLoadInstructions()
+        {
             byte[] code = {0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -475,7 +521,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsArrayStoreInstructions() {
+        void printsArrayStoreInstructions()
+        {
             byte[] code = {0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -490,7 +537,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsArrayLength() {
+        void printsArrayLength()
+        {
             byte[] code = {(byte) 0xBE};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -498,7 +546,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayWithType() {
+        void printsNewArrayWithType()
+        {
             byte[] code = {(byte) 0xBC, 0x0A};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -507,7 +556,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayBoolean() {
+        void printsNewArrayBoolean()
+        {
             byte[] code = {(byte) 0xBC, 0x04};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -515,7 +565,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayChar() {
+        void printsNewArrayChar()
+        {
             byte[] code = {(byte) 0xBC, 0x05};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -523,7 +574,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayFloat() {
+        void printsNewArrayFloat()
+        {
             byte[] code = {(byte) 0xBC, 0x06};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -531,7 +583,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayDouble() {
+        void printsNewArrayDouble()
+        {
             byte[] code = {(byte) 0xBC, 0x07};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -539,7 +592,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayByte() {
+        void printsNewArrayByte()
+        {
             byte[] code = {(byte) 0xBC, 0x08};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -547,7 +601,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayShort() {
+        void printsNewArrayShort()
+        {
             byte[] code = {(byte) 0xBC, 0x09};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -555,7 +610,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayLong() {
+        void printsNewArrayLong()
+        {
             byte[] code = {(byte) 0xBC, 0x0B};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -563,7 +619,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsNewArrayUnknownType() {
+        void printsNewArrayUnknownType()
+        {
             byte[] code = {(byte) 0xBC, (byte) 0xFF};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -572,10 +629,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class StackManipulationInstructions {
+    class StackManipulationInstructions
+    {
 
         @Test
-        void printsPop() {
+        void printsPop()
+        {
             byte[] code = {0x57};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -583,7 +642,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsPop2() {
+        void printsPop2()
+        {
             byte[] code = {0x58};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -591,7 +651,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDup() {
+        void printsDup()
+        {
             byte[] code = {0x59};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -599,7 +660,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDupX1() {
+        void printsDupX1()
+        {
             byte[] code = {0x5A};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -607,7 +669,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDupX2() {
+        void printsDupX2()
+        {
             byte[] code = {0x5B};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -615,7 +678,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDup2() {
+        void printsDup2()
+        {
             byte[] code = {0x5C};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -623,7 +687,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDup2X1() {
+        void printsDup2X1()
+        {
             byte[] code = {0x5D};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -631,7 +696,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsDup2X2() {
+        void printsDup2X2()
+        {
             byte[] code = {0x5E};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -639,7 +705,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsSwap() {
+        void printsSwap()
+        {
             byte[] code = {0x5F};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -648,10 +715,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ConstantLoadInstructions {
+    class ConstantLoadInstructions
+    {
 
         @Test
-        void printsBipush() {
+        void printsBipush()
+        {
             byte[] code = {0x10, 0x7F};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -660,7 +729,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsBipushNegative() {
+        void printsBipushNegative()
+        {
             byte[] code = {0x10, (byte) 0xFF};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -669,7 +739,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsSipush() {
+        void printsSipush()
+        {
             byte[] code = {0x11, 0x01, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -678,7 +749,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsSipushNegative() {
+        void printsSipushNegative()
+        {
             byte[] code = {0x11, (byte) 0xFF, (byte) 0xFF};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -688,7 +760,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLdc() {
+        void printsLdc()
+        {
             Utf8Item utf8 = constPool.findOrAddUtf8("test");
             StringRefItem stringRef = constPool.findOrAddString("test");
             int index = constPool.getIndexOf(stringRef);
@@ -702,7 +775,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLdcW() {
+        void printsLdcW()
+        {
             Utf8Item utf8 = constPool.findOrAddUtf8("wide test");
             StringRefItem stringRef = constPool.findOrAddString("wide test");
             int index = constPool.getIndexOf(stringRef);
@@ -716,7 +790,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLdc2W() {
+        void printsLdc2W()
+        {
             DoubleItem doubleItem = constPool.findOrAddDouble(3.14159);
             int index = constPool.getIndexOf(doubleItem);
 
@@ -729,10 +804,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class FieldAccessInstructions {
+    class FieldAccessInstructions
+    {
 
         @Test
-        void printsGetStatic() {
+        void printsGetStatic()
+        {
             FieldRefItem fieldRef = constPool.findOrAddFieldRef("java/lang/System", "out", "Ljava/io/PrintStream;");
             int index = constPool.getIndexOf(fieldRef);
 
@@ -745,7 +822,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsPutStatic() {
+        void printsPutStatic()
+        {
             FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/test/MyClass", "counter", "I");
             int index = constPool.getIndexOf(fieldRef);
 
@@ -758,7 +836,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsGetField() {
+        void printsGetField()
+        {
             FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/test/MyClass", "value", "I");
             int index = constPool.getIndexOf(fieldRef);
 
@@ -771,7 +850,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsPutField() {
+        void printsPutField()
+        {
             FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/test/MyClass", "data", "Ljava/lang/String;");
             int index = constPool.getIndexOf(fieldRef);
 
@@ -785,10 +865,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class MethodInvocationInstructions {
+    class MethodInvocationInstructions
+    {
 
         @Test
-        void printsInvokeVirtual() {
+        void printsInvokeVirtual()
+        {
             MethodRefItem methodRef = constPool.findOrAddMethodRef("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
             int index = constPool.getIndexOf(methodRef);
 
@@ -801,7 +883,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsInvokeSpecial() {
+        void printsInvokeSpecial()
+        {
             MethodRefItem methodRef = constPool.findOrAddMethodRef("java/lang/Object", "<init>", "()V");
             int index = constPool.getIndexOf(methodRef);
 
@@ -814,7 +897,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsInvokeStatic() {
+        void printsInvokeStatic()
+        {
             MethodRefItem methodRef = constPool.findOrAddMethodRef("java/lang/Math", "sqrt", "(D)D");
             int index = constPool.getIndexOf(methodRef);
 
@@ -827,7 +911,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsInvokeInterface() {
+        void printsInvokeInterface()
+        {
             InterfaceRefItem interfaceRef = constPool.findOrAddInterfaceRef("java/util/List", "size", "()I");
             int index = constPool.getIndexOf(interfaceRef);
 
@@ -841,7 +926,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsInvokeDynamic() {
+        void printsInvokeDynamic()
+        {
             byte[] code = {(byte) 0xBA, 0x00, 0x01, 0x00, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -852,10 +938,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ObjectCreationInstructions {
+    class ObjectCreationInstructions
+    {
 
         @Test
-        void printsNew() {
+        void printsNew()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/StringBuilder");
             int index = constPool.getIndexOf(classRef);
 
@@ -868,7 +956,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsAnewArray() {
+        void printsAnewArray()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/String");
             int index = constPool.getIndexOf(classRef);
 
@@ -881,7 +970,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsMultiAnewArray() {
+        void printsMultiAnewArray()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("[[I");
             int index = constPool.getIndexOf(classRef);
 
@@ -894,10 +984,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class TypeCheckInstructions {
+    class TypeCheckInstructions
+    {
 
         @Test
-        void printsCheckCast() {
+        void printsCheckCast()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/String");
             int index = constPool.getIndexOf(classRef);
 
@@ -910,7 +1002,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsInstanceOf() {
+        void printsInstanceOf()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/Number");
             int index = constPool.getIndexOf(classRef);
 
@@ -924,10 +1017,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class BranchInstructions {
+    class BranchInstructions
+    {
 
         @Test
-        void printsIfEq() {
+        void printsIfEq()
+        {
             byte[] code = {(byte) 0x99, 0x00, 0x03};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -936,7 +1031,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfNe() {
+        void printsIfNe()
+        {
             byte[] code = {(byte) 0x9A, 0x00, 0x05};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -945,7 +1041,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfLt() {
+        void printsIfLt()
+        {
             byte[] code = {(byte) 0x9B, 0x00, 0x07};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -954,7 +1051,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfGe() {
+        void printsIfGe()
+        {
             byte[] code = {(byte) 0x9C, 0x00, 0x09};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -963,7 +1061,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfGt() {
+        void printsIfGt()
+        {
             byte[] code = {(byte) 0x9D, 0x00, 0x0B};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -972,7 +1071,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfLe() {
+        void printsIfLe()
+        {
             byte[] code = {(byte) 0x9E, 0x00, 0x0D};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -981,7 +1081,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfIcmpEq() {
+        void printsIfIcmpEq()
+        {
             byte[] code = {(byte) 0x9F, 0x00, 0x06};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -990,7 +1091,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfIcmpNe() {
+        void printsIfIcmpNe()
+        {
             byte[] code = {(byte) 0xA0, 0x00, 0x08};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -999,7 +1101,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfIcmpLt() {
+        void printsIfIcmpLt()
+        {
             byte[] code = {(byte) 0xA1, 0x00, 0x0A};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1008,7 +1111,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfIcmpGe() {
+        void printsIfIcmpGe()
+        {
             byte[] code = {(byte) 0xA2, 0x00, 0x0C};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1017,7 +1121,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfIcmpGt() {
+        void printsIfIcmpGt()
+        {
             byte[] code = {(byte) 0xA3, 0x00, 0x0E};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1026,7 +1131,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfIcmpLe() {
+        void printsIfIcmpLe()
+        {
             byte[] code = {(byte) 0xA4, 0x00, 0x10};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1035,7 +1141,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfAcmpEq() {
+        void printsIfAcmpEq()
+        {
             byte[] code = {(byte) 0xA5, 0x00, 0x12};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1044,7 +1151,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfAcmpNe() {
+        void printsIfAcmpNe()
+        {
             byte[] code = {(byte) 0xA6, 0x00, 0x14};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1053,7 +1161,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsGoto() {
+        void printsGoto()
+        {
             byte[] code = {(byte) 0xA7, 0x00, 0x05};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1062,7 +1171,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsBackwardGotoAsAbsoluteTarget() {
+        void printsBackwardGotoAsAbsoluteTarget()
+        {
             byte[] code = {0x00, 0x00, 0x00, 0x00, (byte) 0xA7, (byte) 0xFF, (byte) 0xFE};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1073,7 +1183,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsJsr() {
+        void printsJsr()
+        {
             byte[] code = {(byte) 0xA8, 0x00, 0x10};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1082,7 +1193,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsRet() {
+        void printsRet()
+        {
             byte[] code = {(byte) 0xA9, 0x01};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1091,7 +1203,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfNull() {
+        void printsIfNull()
+        {
             byte[] code = {(byte) 0xC6, 0x00, 0x03};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1100,7 +1213,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsIfNonNull() {
+        void printsIfNonNull()
+        {
             byte[] code = {(byte) 0xC7, 0x00, 0x03};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1109,7 +1223,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsGotoW() {
+        void printsGotoW()
+        {
             byte[] code = {(byte) 0xC8, 0x00, 0x00, 0x10, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1118,7 +1233,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsJsrW() {
+        void printsJsrW()
+        {
             byte[] code = {(byte) 0xC9, 0x00, 0x00, 0x20, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1128,10 +1244,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class SwitchInstructions {
+    class SwitchInstructions
+    {
 
         @Test
-        void printsTableSwitch() {
+        void printsTableSwitch()
+        {
             byte[] code = {
                 (byte) 0xAA,
                 0x00, 0x00, 0x00,
@@ -1155,7 +1273,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsTableSwitchWithPadding() {
+        void printsTableSwitchWithPadding()
+        {
             byte[] code = {
                 0x00,
                 (byte) 0xAA,
@@ -1175,7 +1294,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLookupSwitch() {
+        void printsLookupSwitch()
+        {
             byte[] code = {
                 (byte) 0xAB,
                 0x00, 0x00, 0x00,
@@ -1196,7 +1316,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsLookupSwitchWithPadding() {
+        void printsLookupSwitchWithPadding()
+        {
             byte[] code = {
                 0x00, 0x00,
                 (byte) 0xAB,
@@ -1216,10 +1337,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class WideInstructions {
+    class WideInstructions
+    {
 
         @Test
-        void printsWideILoad() {
+        void printsWideILoad()
+        {
             byte[] code = {(byte) 0xC4, 0x15, 0x01, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1229,7 +1352,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideLLoad() {
+        void printsWideLLoad()
+        {
             byte[] code = {(byte) 0xC4, 0x16, 0x00, (byte) 0xFF};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1239,7 +1363,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideFLoad() {
+        void printsWideFLoad()
+        {
             byte[] code = {(byte) 0xC4, 0x17, 0x02, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1249,7 +1374,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideDLoad() {
+        void printsWideDLoad()
+        {
             byte[] code = {(byte) 0xC4, 0x18, 0x03, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1259,7 +1385,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideALoad() {
+        void printsWideALoad()
+        {
             byte[] code = {(byte) 0xC4, 0x19, 0x04, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1269,7 +1396,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideIStore() {
+        void printsWideIStore()
+        {
             byte[] code = {(byte) 0xC4, 0x36, 0x01, 0x50};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1279,7 +1407,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideLStore() {
+        void printsWideLStore()
+        {
             byte[] code = {(byte) 0xC4, 0x37, 0x02, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1289,7 +1418,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideFStore() {
+        void printsWideFStore()
+        {
             byte[] code = {(byte) 0xC4, 0x38, 0x03, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1299,7 +1429,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideDStore() {
+        void printsWideDStore()
+        {
             byte[] code = {(byte) 0xC4, 0x39, 0x04, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1309,7 +1440,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideAStore() {
+        void printsWideAStore()
+        {
             byte[] code = {(byte) 0xC4, 0x3A, 0x05, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1319,7 +1451,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsWideIInc() {
+        void printsWideIInc()
+        {
             byte[] code = {(byte) 0xC4, (byte) 0x84, 0x01, 0x00, 0x00, 0x0A};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1331,10 +1464,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class MiscellaneousInstructions {
+    class MiscellaneousInstructions
+    {
 
         @Test
-        void printsIInc() {
+        void printsIInc()
+        {
             byte[] code = {(byte) 0x84, 0x01, 0x05};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1344,7 +1479,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsAThrow() {
+        void printsAThrow()
+        {
             byte[] code = {(byte) 0xBF};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1352,7 +1488,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsMonitorEnter() {
+        void printsMonitorEnter()
+        {
             byte[] code = {(byte) 0xC2};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1360,7 +1497,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsMonitorExit() {
+        void printsMonitorExit()
+        {
             byte[] code = {(byte) 0xC3};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1368,7 +1506,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsBreakpoint() {
+        void printsBreakpoint()
+        {
             byte[] code = {(byte) 0xCA};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1377,10 +1516,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class EdgeCases {
+    class EdgeCases
+    {
 
         @Test
-        void handlesEmptyBytecode() {
+        void handlesEmptyBytecode()
+        {
             byte[] code = {};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1388,7 +1529,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidBipush() {
+        void handlesInvalidBipush()
+        {
             byte[] code = {0x10};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1397,7 +1539,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidSipush() {
+        void handlesInvalidSipush()
+        {
             byte[] code = {0x11, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1406,7 +1549,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidLdc() {
+        void handlesInvalidLdc()
+        {
             byte[] code = {0x12};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1415,7 +1559,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidFieldRef() {
+        void handlesInvalidFieldRef()
+        {
             byte[] code = {(byte) 0xB2, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1424,7 +1569,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidInvokeInterface() {
+        void handlesInvalidInvokeInterface()
+        {
             byte[] code = {(byte) 0xB9, 0x00, 0x01};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1433,7 +1579,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidInvokeDynamic() {
+        void handlesInvalidInvokeDynamic()
+        {
             byte[] code = {(byte) 0xBA, 0x00, 0x01};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1442,7 +1589,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidNewArray() {
+        void handlesInvalidNewArray()
+        {
             byte[] code = {(byte) 0xBC};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1451,7 +1599,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidIInc() {
+        void handlesInvalidIInc()
+        {
             byte[] code = {(byte) 0x84, 0x01};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1460,7 +1609,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidWide() {
+        void handlesInvalidWide()
+        {
             byte[] code = {(byte) 0xC4};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1469,7 +1619,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidWideLoad() {
+        void handlesInvalidWideLoad()
+        {
             byte[] code = {(byte) 0xC4, 0x15, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1479,7 +1630,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidWideIInc() {
+        void handlesInvalidWideIInc()
+        {
             byte[] code = {(byte) 0xC4, (byte) 0x84, 0x00, 0x00, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1489,7 +1641,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesInvalidGotoW() {
+        void handlesInvalidGotoW()
+        {
             byte[] code = {(byte) 0xC8, 0x00, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1498,7 +1651,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesUnknownOpcode() {
+        void handlesUnknownOpcode()
+        {
             byte[] code = {(byte) 0xFE};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1507,7 +1661,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void handlesUnsupportedWideOpcode() {
+        void handlesUnsupportedWideOpcode()
+        {
             byte[] code = {(byte) 0xC4, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1517,10 +1672,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ConstantPoolReferences {
+    class ConstantPoolReferences
+    {
 
         @Test
-        void resolvesStringReference() {
+        void resolvesStringReference()
+        {
             Utf8Item utf8 = constPool.findOrAddUtf8("Hello, World!");
             StringRefItem stringRef = constPool.findOrAddString("Hello, World!");
             int index = constPool.getIndexOf(stringRef);
@@ -1532,7 +1689,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void resolvesClassReference() {
+        void resolvesClassReference()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("com/example/MyClass");
             int index = constPool.getIndexOf(classRef);
 
@@ -1543,7 +1701,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void resolvesMethodReference() {
+        void resolvesMethodReference()
+        {
             MethodRefItem methodRef = constPool.findOrAddMethodRef("com/example/Calculator", "add", "(II)I");
             int index = constPool.getIndexOf(methodRef);
 
@@ -1555,7 +1714,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void resolvesFieldReference() {
+        void resolvesFieldReference()
+        {
             FieldRefItem fieldRef = constPool.findOrAddFieldRef("com/example/Config", "DEBUG", "Z");
             int index = constPool.getIndexOf(fieldRef);
 
@@ -1568,10 +1728,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class FormattingTests {
+    class FormattingTests
+    {
 
         @Test
-        void formatsInstructionOffsets() {
+        void formatsInstructionOffsets()
+        {
             byte[] code = {0x00, 0x01, 0x02};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1581,7 +1743,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void formatsMultiByteInstructionOffsets() {
+        void formatsMultiByteInstructionOffsets()
+        {
             byte[] code = {0x10, 0x7F, 0x11, 0x01, 0x00};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1590,7 +1753,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void includesNewlinesBetweenInstructions() {
+        void includesNewlinesBetweenInstructions()
+        {
             byte[] code = {0x00, 0x01};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
@@ -1599,13 +1763,16 @@ class CodePrinterTest {
         }
 
         @Test
-        void alignsInstructionMnemonics() {
+        void alignsInstructionMnemonics()
+        {
             byte[] code = {0x00, 0x01, 0x02};
             String result = CodePrinter.prettyPrintCode(code, constPool);
 
             String[] lines = result.split("\n");
-            for (String line : lines) {
-                if (!line.trim().isEmpty()) {
+            for (String line : lines)
+            {
+                if (!line.trim().isEmpty())
+                {
                     assertTrue(line.matches("\\d{4}:.*"));
                 }
             }
@@ -1613,10 +1780,12 @@ class CodePrinterTest {
     }
 
     @Nested
-    class ComplexBytecodeSequences {
+    class ComplexBytecodeSequences
+    {
 
         @Test
-        void printsSimpleMethodBytecode() {
+        void printsSimpleMethodBytecode()
+        {
             byte[] code = {
                 0x03,
                 (byte) 0xAC
@@ -1628,7 +1797,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsArithmeticSequence() {
+        void printsArithmeticSequence()
+        {
             byte[] code = {
                 0x1A,
                 0x1B,
@@ -1644,7 +1814,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsFieldAccessSequence() {
+        void printsFieldAccessSequence()
+        {
             FieldRefItem fieldRef = constPool.findOrAddFieldRef("java/lang/System", "out", "Ljava/io/PrintStream;");
             MethodRefItem methodRef = constPool.findOrAddMethodRef("java/io/PrintStream", "println", "(I)V");
             int fieldIndex = constPool.getIndexOf(fieldRef);
@@ -1665,7 +1836,8 @@ class CodePrinterTest {
         }
 
         @Test
-        void printsObjectCreationSequence() {
+        void printsObjectCreationSequence()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/StringBuilder");
             MethodRefItem ctorRef = constPool.findOrAddMethodRef("java/lang/StringBuilder", "<init>", "()V");
             int classIndex = constPool.getIndexOf(classRef);

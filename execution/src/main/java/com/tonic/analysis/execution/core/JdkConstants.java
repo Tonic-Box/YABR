@@ -10,14 +10,17 @@ import java.util.Map;
  * compile-time constants with fixed values, so the engine can supply them directly. Consulted only
  * when the heap has no value for the field, so a genuinely-modeled static still wins.
  */
-final class JdkConstants {
+final class JdkConstants
+{
 
     private static final Map<String, Object> VALUES = new HashMap<>();
 
-    private JdkConstants() {
+    private JdkConstants()
+    {
     }
 
-    static {
+    static
+    {
         put("java/lang/Integer", "MAX_VALUE", Integer.MAX_VALUE);
         put("java/lang/Integer", "MIN_VALUE", Integer.MIN_VALUE);
         put("java/lang/Integer", "SIZE", Integer.SIZE);
@@ -69,12 +72,16 @@ final class JdkConstants {
         put("java/lang/StrictMath", "E", Math.E);
     }
 
-    private static void put(String owner, String name, Object value) {
+    private static void put(String owner, String name, Object value)
+    {
         VALUES.put(owner + "." + name, value);
     }
 
-    /** The constant value for {@code owner.name}, or {@code null} if not a known JDK constant. */
-    static Object lookup(String owner, String name) {
+    /**
+     * The constant value for {@code owner.name}, or {@code null} if not a known JDK constant.
+     */
+    static Object lookup(String owner, String name)
+    {
         return VALUES.get(owner + "." + name);
     }
 }

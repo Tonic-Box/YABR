@@ -17,18 +17,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for LivenessAnalysis.
  * Covers live-in, live-out, and liveness queries.
  */
-class LivenessAnalysisTest {
+class LivenessAnalysisTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Liveness Tests ==========
+    // Basic Liveness Tests
 
     @Test
-    void computeOnEmptyMethod() {
+    void computeOnEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         LivenessAnalysis liveness = new LivenessAnalysis(method);
 
@@ -39,7 +42,8 @@ class LivenessAnalysisTest {
     }
 
     @Test
-    void emptyBlockHasEmptyLiveness() {
+    void emptyBlockHasEmptyLiveness()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -53,10 +57,11 @@ class LivenessAnalysisTest {
         assertTrue(liveIn.isEmpty());
     }
 
-    // ========== Live-In Tests ==========
+    // Live-In Tests
 
     @Test
-    void getLiveInReturnsEmptySetForUnknownBlock() {
+    void getLiveInReturnsEmptySetForUnknownBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         LivenessAnalysis liveness = new LivenessAnalysis(method);
         liveness.compute();
@@ -67,10 +72,11 @@ class LivenessAnalysisTest {
         assertTrue(liveIn.isEmpty());
     }
 
-    // ========== Live-Out Tests ==========
+    // Live-Out Tests
 
     @Test
-    void getLiveOutReturnsEmptySetForExitBlock() {
+    void getLiveOutReturnsEmptySetForExitBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -85,10 +91,11 @@ class LivenessAnalysisTest {
         assertTrue(liveOut.isEmpty());
     }
 
-    // ========== isLiveAt Tests ==========
+    // isLiveAt Tests
 
     @Test
-    void isLiveAtReturnsFalseForUnusedValue() {
+    void isLiveAtReturnsFalseForUnusedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -102,10 +109,11 @@ class LivenessAnalysisTest {
         assertFalse(liveness.isLiveAt(value, entry));
     }
 
-    // ========== getLiveBlocks Tests ==========
+    // getLiveBlocks Tests
 
     @Test
-    void getLiveBlocksReturnsEmptyForUnusedValue() {
+    void getLiveBlocksReturnsEmptyForUnusedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -120,10 +128,11 @@ class LivenessAnalysisTest {
         assertTrue(liveBlocks.isEmpty());
     }
 
-    // ========== Value Definition/Use Tests ==========
+    // Value Definition/Use Tests
 
     @Test
-    void definedValueIsLiveUntilUse() {
+    void definedValueIsLiveUntilUse()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -150,10 +159,11 @@ class LivenessAnalysisTest {
         assertTrue(liveness.getLiveOut(entry).contains(v0));
     }
 
-    // ========== Phi Node Liveness Tests ==========
+    // Phi Node Liveness Tests
 
     @Test
-    void phiOperandsAreLive() {
+    void phiOperandsAreLive()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -196,10 +206,11 @@ class LivenessAnalysisTest {
         assertTrue(liveness.getLiveOut(right).contains(v1));
     }
 
-    // ========== Method Reference Tests ==========
+    // Method Reference Tests
 
     @Test
-    void getMethodReturnsMethod() {
+    void getMethodReturnsMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         LivenessAnalysis liveness = new LivenessAnalysis(method);
 

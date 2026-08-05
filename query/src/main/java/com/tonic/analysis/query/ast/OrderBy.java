@@ -3,36 +3,64 @@ package com.tonic.analysis.query.ast;
 import java.util.Objects;
 
 /**
- * ORDER BY clause for query results.
+ * Ordering clause for query results: a sort key and a direction.
  */
-public final class OrderBy {
+public final class OrderBy
+{
 
     private final String key;
     private final boolean ascending;
 
-    public OrderBy(String key, boolean ascending) {
+    /**
+     * Creates an ordering clause.
+     * @param key the attribute name to sort by
+     * @param ascending whether results sort in ascending order
+     */
+    public OrderBy(String key, boolean ascending)
+    {
         this.key = key;
         this.ascending = ascending;
     }
 
-    public String key() {
+    /**
+     * @return the sort key attribute name
+     */
+    public String key()
+    {
         return key;
     }
 
-    public boolean ascending() {
+    /**
+     * @return whether results sort in ascending order
+     */
+    public boolean ascending()
+    {
         return ascending;
     }
 
-    public static OrderBy asc(String key) {
+    /**
+     * Creates an ascending ordering.
+     * @param key the attribute name to sort by
+     * @return the ascending clause
+     */
+    public static OrderBy asc(String key)
+    {
         return new OrderBy(key, true);
     }
 
-    public static OrderBy desc(String key) {
+    /**
+     * Creates a descending ordering.
+     * @param key the attribute name to sort by
+     * @return the descending clause
+     */
+    public static OrderBy desc(String key)
+    {
         return new OrderBy(key, false);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof OrderBy)) return false;
         OrderBy orderBy = (OrderBy) o;
@@ -40,12 +68,14 @@ public final class OrderBy {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(key, ascending);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "OrderBy{key='" + key + "', ascending=" + ascending + "}";
     }
 }

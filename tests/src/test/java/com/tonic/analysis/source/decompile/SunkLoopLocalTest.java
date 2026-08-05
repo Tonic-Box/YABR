@@ -20,11 +20,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * top of the method with a default initializer, and until it is moved back down the assignment is separated
  * from the declaration - which keeps the single-use inliner from folding a temporary away, so the temporary
  * survives into the output and the two round-trip generations disagree about it.
- * <p>
+ *
  * The declaration is only sunk when the body writes the variable before reading it: a loop that reads first
  * is carrying the value between iterations, and a declaration moved inside would reset it each time.
  */
-class SunkLoopLocalTest {
+class SunkLoopLocalTest
+{
 
     private static final String[] LINES = {
             "public class SunkLoopLocal {",
@@ -54,14 +55,14 @@ class SunkLoopLocalTest {
     };
 
     @Test
-    void aLocalUsedOnlyInALoopIsDeclaredInIt() throws Exception {
+    void aLocalUsedOnlyInALoopIsDeclaredInIt() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("sunk-local");
         Path src = dir.resolve("SunkLoopLocal.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("SunkLoopLocal.class")));
@@ -79,8 +80,7 @@ class SunkLoopLocalTest {
         assertTrue(flat.contains("int running = 0;") && flat.contains("for (int i = 0;"),
                 "an accumulator must keep its declaration outside the loop:\n" + d1);
 
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "SunkLoopLocal"),
-                "the decompiled source must recompile");
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "SunkLoopLocal"), "the decompiled source must recompile");
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
         // Not yet asserted a fixed point: recovering the RELOWERED layout still leaves this declaration at

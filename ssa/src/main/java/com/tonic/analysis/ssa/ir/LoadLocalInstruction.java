@@ -7,42 +7,58 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 import java.util.List;
 
 /**
- * Load from local variable slot (used during lifting before SSA conversion).
+ * A load from a local variable slot, used during lifting before SSA conversion.
  */
-public class LoadLocalInstruction extends IRInstruction {
+public class LoadLocalInstruction extends IRInstruction
+{
 
     private final int localIndex;
 
-    public LoadLocalInstruction(SSAValue result, int localIndex) {
+    /**
+     * Creates a local load.
+     * @param result the SSA value receiving the loaded value
+     * @param localIndex the local variable slot to read
+     */
+    public LoadLocalInstruction(SSAValue result, int localIndex)
+    {
         super(result);
         this.localIndex = localIndex;
     }
 
-    public int getLocalIndex() {
+    /**
+     * @return the local index
+     */
+    public int getLocalIndex()
+    {
         return localIndex;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return List.of();
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitLoadLocal(this);
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
         return new LoadLocalInstruction(newResult, localIndex);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return result + " = load_local " + localIndex;
     }
 }

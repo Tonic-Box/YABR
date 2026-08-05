@@ -24,13 +24,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AnnotationBuilderTest {
+class AnnotationBuilderTest
+{
 
     @Nested
-    class TargetPlacement {
+    class TargetPlacement
+    {
 
         @Test
-        void classAnnotationIsEmitted() {
+        void classAnnotationIsEmitted()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/Marker").end()
                     .build();
@@ -41,7 +44,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void fieldAnnotationIsEmitted() {
+        void fieldAnnotationIsEmitted()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .addField(AccessFlags.ACC_PRIVATE, "value", "I")
                         .annotate("com/example/Marker").end()
@@ -55,7 +59,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void methodAnnotationIsEmitted() {
+        void methodAnnotationIsEmitted()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .addMethod(AccessFlags.ACC_PUBLIC, "run", "()V")
                         .annotate("com/example/Marker").end()
@@ -71,10 +76,12 @@ class AnnotationBuilderTest {
     }
 
     @Nested
-    class ValueKinds {
+    class ValueKinds
+    {
 
         @Test
-        void everyElementValueKindGetsTheCorrectTag() {
+        void everyElementValueKindGetsTheCorrectTag()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/All")
                         .value("i", 7)
@@ -116,7 +123,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void scalarValuesResolveThroughTheConstantPool() {
+        void scalarValuesResolveThroughTheConstantPool()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/All")
                         .value("i", 42)
@@ -139,7 +147,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void arrayValuesCarryTheElementTag() {
+        void arrayValuesCarryTheElementTag()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/All")
                         .stringArray("strs", "a", "b", "c")
@@ -158,7 +167,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void typeNamesAndDescriptorsBothNormalize() {
+        void typeNamesAndDescriptorsBothNormalize()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com.example.Dotted").end()
                     .annotate("Lcom/example/Descriptor;").end()
@@ -172,10 +182,12 @@ class AnnotationBuilderTest {
     }
 
     @Nested
-    class Visibility {
+    class Visibility
+    {
 
         @Test
-        void visibleAndInvisibleAreSeparateAttributes() {
+        void visibleAndInvisibleAreSeparateAttributes()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/Seen").end()
                     .annotate("com/example/Hidden").visible(false).end()
@@ -188,7 +200,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void multipleAnnotationsAppendToOneAttribute() {
+        void multipleAnnotationsAppendToOneAttribute()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/A").end()
                     .annotate("com/example/B").end()
@@ -204,10 +217,12 @@ class AnnotationBuilderTest {
     }
 
     @Nested
-    class ParameterAnnotations {
+    class ParameterAnnotations
+    {
 
         @Test
-        void parameterAnnotationsAreIndexedByPosition() {
+        void parameterAnnotationsAreIndexedByPosition()
+        {
             ClassFile cf = ClassBuilder.create("com/test/Anno")
                     .addMethod(AccessFlags.ACC_PUBLIC, "op", "(ILjava/lang/String;)V")
                         .annotateParameter(1, "com/example/NotNull").end()
@@ -226,7 +241,8 @@ class AnnotationBuilderTest {
         }
 
         @Test
-        void outOfRangeParameterIndexThrows() {
+        void outOfRangeParameterIndexThrows()
+        {
             MethodBuilder mb = ClassBuilder.create("com/test/Anno")
                     .addMethod(AccessFlags.ACC_PUBLIC, "op", "(I)V");
             assertThrows(IllegalArgumentException.class, () -> mb.annotateParameter(2, "com/example/X"));
@@ -234,10 +250,12 @@ class AnnotationBuilderTest {
     }
 
     @Nested
-    class StandaloneAttach {
+    class StandaloneAttach
+    {
 
         @Test
-        void attachToAppendsToExistingAttributeWithoutDuplicating() throws IOException {
+        void attachToAppendsToExistingAttributeWithoutDuplicating() throws IOException
+        {
             ClassFile cf = reparse(ClassBuilder.create("com/test/Anno")
                     .addMethod(AccessFlags.ACC_PUBLIC, "run", "()V")
                         .code().vreturn().end()
@@ -257,10 +275,12 @@ class AnnotationBuilderTest {
     }
 
     @Nested
-    class RoundTrip {
+    class RoundTrip
+    {
 
         @Test
-        void annotationsSurviveSerialization() throws IOException {
+        void annotationsSurviveSerialization() throws IOException
+        {
             ClassFile cf = reparse(ClassBuilder.create("com/test/Anno")
                     .annotate("com/example/Marker")
                         .stringValue("name", "hi")
@@ -282,27 +302,34 @@ class AnnotationBuilderTest {
 
     // Helpers -------------------------------------------------------------------------------------
 
-    private static ClassFile reparse(ClassBuilder builder) throws IOException {
+    private static ClassFile reparse(ClassBuilder builder) throws IOException
+    {
         return new ClassFile(new ByteArrayInputStream(builder.build().write()));
     }
 
-    private static List<Annotation> visibleAnnotations(ClassFile cf) {
+    private static List<Annotation> visibleAnnotations(ClassFile cf)
+    {
         RuntimeVisibleAnnotationsAttribute attr = annotationsAttribute(cf.getClassAttributes(), true);
         assertNotNull(attr, "expected a RuntimeVisibleAnnotations attribute");
         return attr.getAnnotations();
     }
 
-    private static List<Annotation> visibleAnnotations(MemberEntry member) {
+    private static List<Annotation> visibleAnnotations(MemberEntry member)
+    {
         RuntimeVisibleAnnotationsAttribute attr = annotationsAttribute(member.getAttributes(), true);
         assertNotNull(attr, "expected a RuntimeVisibleAnnotations attribute");
         return attr.getAnnotations();
     }
 
-    private static RuntimeVisibleAnnotationsAttribute annotationsAttribute(List<Attribute> attributes, boolean visible) {
-        for (Attribute attribute : attributes) {
-            if (attribute instanceof RuntimeVisibleAnnotationsAttribute) {
+    private static RuntimeVisibleAnnotationsAttribute annotationsAttribute(List<Attribute> attributes, boolean visible)
+    {
+        for (Attribute attribute : attributes)
+        {
+            if (attribute instanceof RuntimeVisibleAnnotationsAttribute)
+            {
                 RuntimeVisibleAnnotationsAttribute a = (RuntimeVisibleAnnotationsAttribute) attribute;
-                if (a.isVisible() == visible) {
+                if (a.isVisible() == visible)
+                {
                     return a;
                 }
             }
@@ -310,44 +337,58 @@ class AnnotationBuilderTest {
         return null;
     }
 
-    private static RuntimeVisibleParameterAnnotationsAttribute parameterAttribute(MethodEntry method) {
-        for (Attribute attribute : method.getAttributes()) {
-            if (attribute instanceof RuntimeVisibleParameterAnnotationsAttribute) {
+    private static RuntimeVisibleParameterAnnotationsAttribute parameterAttribute(MethodEntry method)
+    {
+        for (Attribute attribute : method.getAttributes())
+        {
+            if (attribute instanceof RuntimeVisibleParameterAnnotationsAttribute)
+            {
                 return (RuntimeVisibleParameterAnnotationsAttribute) attribute;
             }
         }
         return null;
     }
 
-    private static ElementValue value(Annotation annotation, String name) {
-        for (ElementValuePair pair : annotation.getElementValuePairs()) {
-            if (pair.getElementName().equals(name)) {
+    private static ElementValue value(Annotation annotation, String name)
+    {
+        for (ElementValuePair pair : annotation.getElementValuePairs())
+        {
+            if (pair.getElementName().equals(name))
+            {
                 return pair.getValue();
             }
         }
         throw new AssertionError("no element named " + name);
     }
 
-    private static String type(ConstPool pool, Annotation annotation) {
+    private static String type(ConstPool pool, Annotation annotation)
+    {
         return utf8(pool, annotation.getTypeIndex());
     }
 
-    private static String utf8(ConstPool pool, int index) {
+    private static String utf8(ConstPool pool, int index)
+    {
         return ((Utf8Item) pool.getItem(index)).getValue();
     }
 
-    private static FieldEntry field(ClassFile cf, String name) {
-        for (FieldEntry f : cf.getFields()) {
-            if (f.getName().equals(name)) {
+    private static FieldEntry field(ClassFile cf, String name)
+    {
+        for (FieldEntry f : cf.getFields())
+        {
+            if (f.getName().equals(name))
+            {
                 return f;
             }
         }
         throw new AssertionError("no field " + name);
     }
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }

@@ -25,25 +25,34 @@ import java.util.function.IntFunction;
  * Partitions each JVM local slot into one or more source variables using a
  * reaching-definition analysis.
  *
- * <p>JVM bytecode reuses a single local slot for unrelated variables whose live
+ *JVM bytecode reuses a single local slot for unrelated variables whose live
  * ranges do not overlap (e.g. a {@code String} in one switch case and a
  * {@code boolean} in another). The recovery layer must split such reuse into
  * distinct source variables, otherwise a slot is declared once with an
  * over-broadened type (boolean, or {@code Object}) that does not compile against
  * all its uses.
  *
- * <p>Locals are not in SSA form at this stage, so sameness cannot be read off
+ *Locals are not in SSA form at this stage, so sameness cannot be read off
  * phi connectivity. Instead we compute, for every load, the set of stores that
  * reach it, and union stores that share a load into one variable. Disjoint reuse
  * therefore yields separate variables, while a genuine control-flow merge (where
  * the verifier already widened the loaded value to the common supertype) keeps
  * the stores in one variable carrying that merged type.
  */
-public class SlotVariablePartition {
+public class SlotVariablePartition
+{
 
-    /** Resolves the source name in scope for a {@code (slot, bytecode offset)}, or null when unknown. */
+    /**
+     * Resolves the source name in scope for a {@code (slot, bytecode offset)}, or null when unknown.
+     */
     @FunctionalInterface
-    public interface ScopeNameResolver {
+    public interface ScopeNameResolver
+    {
+        /**
+         * @param slot the JVM local slot
+         * @param bytecodeOffset the offset the name must be in scope at
+         * @return the declared name, or null when no name is in scope there
+         */
         String nameAt(int slot, int bytecodeOffset);
     }
 
@@ -54,17 +63,29 @@ public class SlotVariablePartition {
 
     private final Map<IRInstruction, String> instructionNames = new HashMap<>();
 
-    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot,
-                                 ScopeNameResolver scopeNameResolver) {
+    /**
+     * Partitions the method's slots immediately, using one resolver for both load and store offsets.
+     *
+     * @param method the method to analyze
+     * @param baseNameForSlot supplies the fallback name for a slot with no scope name
+     * @param scopeNameResolver resolves the declared name in scope at an offset, may be null
+     */
+    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot, ScopeNameResolver scopeNameResolver)
+    {
         this(method, baseNameForSlot, scopeNameResolver, null);
     }
 
     /**
      * As the three-argument form, with a dedicated resolver for STORE offsets: a store's variable
      * becomes visible at the next instruction, so its name lives one instruction past the store.
+     *
+     * @param method the method to analyze
+     * @param baseNameForSlot supplies the fallback name for a slot with no scope name
+     * @param scopeNameResolver resolves the declared name in scope at a load offset, may be null
+     * @param storeNameResolver resolves the declared name in scope at a store offset, may be null
      */
-    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot,
-                                 ScopeNameResolver scopeNameResolver, ScopeNameResolver storeNameResolver) {
+    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot, ScopeNameResolver scopeNameResolver, ScopeNameResolver storeNameResolver)
+    {
         this.method = method;
         this.baseNameForSlot = baseNameForSlot;
         this.scopeNameResolver = scopeNameResolver;
@@ -73,34 +94,39 @@ public class SlotVariablePartition {
     }
 
     /**
-     * Returns the variable name for the value stored by the given store, or null
-     * if the store was not analyzed.
+     * @param store the store whose target variable is wanted
+     * @return the variable name, or null if the store was not analyzed
      */
-    public String nameForStore(StoreLocalInstruction store) {
+    public String nameForStore(StoreLocalInstruction store)
+    {
         return instructionNames.get(store);
     }
 
     /**
-     * Returns the variable name for the result of the given load, or null if the
-     * load was not analyzed.
+     * @param load the load whose source variable is wanted
+     * @return the variable name, or null if the load was not analyzed
      */
-    public String nameForLoad(LoadLocalInstruction load) {
+    public String nameForLoad(LoadLocalInstruction load)
+    {
         return instructionNames.get(load);
     }
 
     /**
-     * Returns the variable name for the given local phi, or null if the phi does
-     * not represent a local slot.
+     * @param phi the phi whose merged variable is wanted
+     * @return the variable name, or null if the phi does not represent a local slot
      */
-    public String nameForPhi(PhiInstruction phi) {
+    public String nameForPhi(PhiInstruction phi)
+    {
         return instructionNames.get(phi);
     }
 
-    private static final class Node {
+    private static final class Node
+    {
         final int id;
         final int slot;
         int parent;
-        Node(int id, int slot) {
+        Node(int id, int slot)
+        {
             this.id = id;
             this.slot = slot;
             this.parent = id;
@@ -110,12 +136,15 @@ public class SlotVariablePartition {
     private final List<Node> nodes = new ArrayList<>();
     private final Map<IRInstruction, Node> defNode = new HashMap<>();
 
-    private int find(int x) {
+    private int find(int x)
+    {
         int root = x;
-        while (nodes.get(root).parent != root) {
+        while (nodes.get(root).parent != root)
+        {
             root = nodes.get(root).parent;
         }
-        while (nodes.get(x).parent != x) {
+        while (nodes.get(x).parent != x)
+        {
             int next = nodes.get(x).parent;
             nodes.get(x).parent = root;
             x = next;
@@ -123,36 +152,45 @@ public class SlotVariablePartition {
         return root;
     }
 
-    private void union(int a, int b) {
+    private void union(int a, int b)
+    {
         int ra = find(a);
         int rb = find(b);
-        if (ra == rb) {
+        if (ra == rb)
+        {
             return;
         }
-        if (ra < rb) {
+        if (ra < rb)
+        {
             nodes.get(rb).parent = ra;
-        } else {
+        }
+        else
+        {
             nodes.get(ra).parent = rb;
         }
     }
 
-    private Node newNode(int slot) {
+    private Node newNode(int slot)
+    {
         Node n = new Node(nodes.size(), slot);
         nodes.add(n);
         return n;
     }
 
-    private void compute() {
+    private void compute()
+    {
         int paramSlots = new MethodLocals(method).parameterSlotCount();
         Map<Integer, Node> paramEntryDef = new HashMap<>();
-        for (int slot = 0; slot < paramSlots; slot++) {
+        for (int slot = 0; slot < paramSlots; slot++)
+        {
             paramEntryDef.put(slot, newNode(slot));
         }
 
         Map<IRBlock, Map<Integer, Set<Node>>> blockIn = new HashMap<>();
         Map<IRBlock, Map<Integer, Set<Node>>> blockOut = new HashMap<>();
         List<IRBlock> blocks = method.getBlocks();
-        for (IRBlock block : blocks) {
+        for (IRBlock block : blocks)
+        {
             blockIn.put(block, new HashMap<>());
             blockOut.put(block, new HashMap<>());
         }
@@ -162,10 +200,13 @@ public class SlotVariablePartition {
         // merges are recovered by the loads that read the merged value, so the stores that
         // feed a phi are unioned only when something actually reads them together.
         Map<IRBlock, List<SlotDef>> blockDefs = new HashMap<>();
-        for (IRBlock block : blocks) {
+        for (IRBlock block : blocks)
+        {
             List<SlotDef> defs = new ArrayList<>();
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof StoreLocalInstruction) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof StoreLocalInstruction)
+                {
                     int slot = ((StoreLocalInstruction) instr).getLocalIndex();
                     Node node = newNode(slot);
                     defNode.put(instr, node);
@@ -176,9 +217,11 @@ public class SlotVariablePartition {
         }
 
         IRBlock entry = blocks.isEmpty() ? null : blocks.get(0);
-        if (entry != null) {
+        if (entry != null)
+        {
             Map<Integer, Set<Node>> entryIn = blockIn.get(entry);
-            for (Map.Entry<Integer, Node> e : paramEntryDef.entrySet()) {
+            for (Map.Entry<Integer, Node> e : paramEntryDef.entrySet())
+            {
                 Set<Node> set = new HashSet<>();
                 set.add(e.getValue());
                 entryIn.put(e.getKey(), set);
@@ -186,25 +229,30 @@ public class SlotVariablePartition {
         }
 
         // Exception edges are not normal CFG edges, so handler blocks have no predecessors and would
-        // otherwise receive no reaching definitions — fragmenting a slot that is really one variable
+        // otherwise receive no reaching definitions - fragmenting a slot that is really one variable
         // shared between the try body and the handler/finally (e.g. `num` in a try/catch/finally).
         // Build, per handler block, the set of try-region blocks it protects; an exception can be
         // thrown at any point in that region, so the handler's reaching-in includes every definition
         // reaching anywhere in the region (its blocks' IN plus their own stores).
         Map<IRBlock, Set<IRBlock>> protectedByHandler = new HashMap<>();
         List<ExceptionHandler> handlers = method.getExceptionHandlers();
-        if (handlers != null) {
-            for (ExceptionHandler h : handlers) {
+        if (handlers != null)
+        {
+            for (ExceptionHandler h : handlers)
+            {
                 IRBlock hb = h.getHandlerBlock();
-                if (hb == null || h.getTryStart() == null) {
+                if (hb == null || h.getTryStart() == null)
+                {
                     continue;
                 }
                 int startOff = h.getTryStart().getBytecodeOffset();
                 int endOff = h.getTryEnd() != null ? h.getTryEnd().getBytecodeOffset() : Integer.MAX_VALUE;
                 Set<IRBlock> region = protectedByHandler.computeIfAbsent(hb, k -> new HashSet<>());
-                for (IRBlock b : blocks) {
+                for (IRBlock b : blocks)
+                {
                     int off = b.getBytecodeOffset();
-                    if (off >= startOff && off < endOff) {
+                    if (off >= startOff && off < endOff)
+                    {
                         region.add(b);
                     }
                 }
@@ -212,35 +260,45 @@ public class SlotVariablePartition {
         }
 
         boolean changed = true;
-        while (changed) {
+        while (changed)
+        {
             changed = false;
-            for (IRBlock block : blocks) {
+            for (IRBlock block : blocks)
+            {
                 Map<Integer, Set<Node>> in = new HashMap<>();
-                if (block == entry) {
+                if (block == entry)
+                {
                     mergeInto(in, blockIn.get(entry));
                 }
-                for (IRBlock pred : block.getPredecessors()) {
+                for (IRBlock pred : block.getPredecessors())
+                {
                     // A predecessor may be absent from blockOut if a CFG transform left a dangling
                     // predecessor edge to a block no longer in method.getBlocks(); skip it.
                     Map<Integer, Set<Node>> predOut = blockOut.get(pred);
-                    if (predOut != null) {
+                    if (predOut != null)
+                    {
                         mergeInto(in, predOut);
                     }
                 }
                 Set<IRBlock> protectedRegion = protectedByHandler.get(block);
-                if (protectedRegion != null) {
-                    for (IRBlock b : protectedRegion) {
+                if (protectedRegion != null)
+                {
+                    for (IRBlock b : protectedRegion)
+                    {
                         Map<Integer, Set<Node>> bIn = blockIn.get(b);
-                        if (bIn != null) {
+                        if (bIn != null)
+                        {
                             mergeInto(in, bIn);
                         }
-                        for (SlotDef d : blockDefs.get(b)) {
+                        for (SlotDef d : blockDefs.get(b))
+                        {
                             in.computeIfAbsent(d.slot, k -> new HashSet<>()).add(d.node);
                         }
                     }
                 }
                 Map<Integer, Set<Node>> out = transfer(in, blockDefs.get(block));
-                if (!out.equals(blockOut.get(block))) {
+                if (!out.equals(blockOut.get(block)))
+                {
                     blockOut.put(block, out);
                     changed = true;
                 }
@@ -248,40 +306,51 @@ public class SlotVariablePartition {
             }
         }
 
-        for (IRBlock block : blocks) {
+        for (IRBlock block : blocks)
+        {
             Map<Integer, Set<Node>> reaching = deepCopy(blockIn.getOrDefault(block, new HashMap<>()));
             // Phis sit at block entry and are transparent: record the value(s) reaching the
             // merge so the phi result can be named, but neither union nor redefine the slot.
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 int slot = localSlotOfPhi(phi);
-                if (slot < 0) {
+                if (slot < 0)
+                {
                     continue;
                 }
                 // If the phi result is stored back to a slot, the phi IS that store's variable;
                 // name it to match the store so the SSA-destruction copies that materialize the
                 // phi agree with the store target instead of a (possibly unrelated) reaching value.
                 Node storeNode = storeDefForPhiResult(phi);
-                if (storeNode != null) {
+                if (storeNode != null)
+                {
                     phiRepresentative.put(phi, storeNode.id);
                     continue;
                 }
                 int rep = minId(reaching.get(slot));
-                if (rep >= 0) {
+                if (rep >= 0)
+                {
                     phiRepresentative.put(phi, rep);
                 }
             }
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof LoadLocalInstruction) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof LoadLocalInstruction)
+                {
                     int slot = ((LoadLocalInstruction) instr).getLocalIndex();
                     Set<Node> defs = reaching.get(slot);
-                    if (defs != null && !defs.isEmpty()) {
+                    if (defs != null && !defs.isEmpty())
+                    {
                         int rep = minId(defs);
-                        for (Node d : defs) {
+                        for (Node d : defs)
+                        {
                             union(rep, d.id);
                         }
                         loadReaching.put((LoadLocalInstruction) instr, rep);
                     }
-                } else if (instr instanceof StoreLocalInstruction) {
+                }
+                else if (instr instanceof StoreLocalInstruction)
+                {
                     StoreLocalInstruction store = (StoreLocalInstruction) instr;
                     int slot = store.getLocalIndex();
                     Node node = defNode.get(instr);
@@ -290,11 +359,12 @@ public class SlotVariablePartition {
                     // with the definitions reaching the read so the def-use webs (the value being read
                     // vs. the value being written) collapse into one variable instead of fragmenting.
                     Set<Node> priorDefs = reaching.get(slot);
-                    if (priorDefs != null && !priorDefs.isEmpty()
-                            && storeValueReadsSlot(store, slot)) {
+                    if (priorDefs != null && !priorDefs.isEmpty() && storeValueReadsSlot(store, slot))
+                    {
                         int rep = minId(priorDefs);
                         union(rep, node.id);
-                        for (Node d : priorDefs) {
+                        for (Node d : priorDefs)
+                        {
                             union(rep, d.id);
                         }
                     }
@@ -308,33 +378,43 @@ public class SlotVariablePartition {
         assignNames();
     }
 
-    /** True if the value stored by {@code store} transitively reads a load of the same slot (read-modify-write). */
-    private boolean storeValueReadsSlot(StoreLocalInstruction store, int slot) {
+    /**
+     * True if the value stored by {@code store} transitively reads a load of the same slot (read-modify-write).
+     */
+    private boolean storeValueReadsSlot(StoreLocalInstruction store, int slot)
+    {
         return valueReadsSlot(store.getValue(), slot, new HashSet<>());
     }
 
-    private boolean valueReadsSlot(Value v, int slot, Set<SSAValue> seen) {
-        if (!(v instanceof SSAValue)) {
+    private boolean valueReadsSlot(Value v, int slot, Set<SSAValue> seen)
+    {
+        if (!(v instanceof SSAValue))
+        {
             return false;
         }
         SSAValue ssa = (SSAValue) v;
-        if (!seen.add(ssa)) {
+        if (!seen.add(ssa))
+        {
             return false;
         }
         IRInstruction def = ssa.getDefinition();
-        if (def == null) {
+        if (def == null)
+        {
             return false;
         }
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) def).getLocalIndex() == slot;
         }
         // Trace through pure value-producing instructions (arithmetic, conversions, copies); stop at
         // stores/calls/field/array ops, which would make this a genuinely new value rather than an
         // in-place update of the slot.
-        if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction
-                || def instanceof CopyInstruction) {
-            for (Value operand : def.getOperands()) {
-                if (valueReadsSlot(operand, slot, seen)) {
+        if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction || def instanceof CopyInstruction)
+        {
+            for (Value operand : def.getOperands())
+            {
+                if (valueReadsSlot(operand, slot, seen))
+                {
                     return true;
                 }
             }
@@ -349,43 +429,55 @@ public class SlotVariablePartition {
      * load, e.g. {@code num += 2} in a finally where {@code num} is a phi of the try/catch results. Such a
      * component is a genuine update of the variable, not an independent spill temp reusing its slot.
      */
-    private boolean storedValueDependsOnSlot(StoreLocalInstruction store, int slot) {
+    private boolean storedValueDependsOnSlot(StoreLocalInstruction store, int slot)
+    {
         Set<SSAValue> storedToSlot = new HashSet<>();
-        for (IRInstruction instr : defNode.keySet()) {
-            if (instr == store || !(instr instanceof StoreLocalInstruction)) {
+        for (IRInstruction instr : defNode.keySet())
+        {
+            if (instr == store || !(instr instanceof StoreLocalInstruction))
+            {
                 continue;
             }
             StoreLocalInstruction s = (StoreLocalInstruction) instr;
-            if (s.getLocalIndex() == slot && s.getValue() instanceof SSAValue) {
+            if (s.getLocalIndex() == slot && s.getValue() instanceof SSAValue)
+            {
                 storedToSlot.add((SSAValue) s.getValue());
             }
         }
         return dependsOnSlot(store.getValue(), slot, storedToSlot, new HashSet<>());
     }
 
-    private boolean dependsOnSlot(Value v, int slot,
-                                  Set<SSAValue> storedToSlot, Set<SSAValue> seen) {
-        if (!(v instanceof SSAValue)) {
+    private boolean dependsOnSlot(Value v, int slot, Set<SSAValue> storedToSlot, Set<SSAValue> seen)
+    {
+        if (!(v instanceof SSAValue))
+        {
             return false;
         }
         SSAValue ssa = (SSAValue) v;
-        if (!seen.add(ssa)) {
+        if (!seen.add(ssa))
+        {
             return false;
         }
-        if (storedToSlot.contains(ssa)) {
+        if (storedToSlot.contains(ssa))
+        {
             return true;
         }
         IRInstruction def = ssa.getDefinition();
-        if (def == null) {
+        if (def == null)
+        {
             return false;
         }
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) def).getLocalIndex() == slot;
         }
         if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction
-                || def instanceof CopyInstruction || def instanceof PhiInstruction) {
-            for (Value operand : def.getOperands()) {
-                if (dependsOnSlot(operand, slot, storedToSlot, seen)) {
+                || def instanceof CopyInstruction || def instanceof PhiInstruction)
+        {
+            for (Value operand : def.getOperands())
+            {
+                if (dependsOnSlot(operand, slot, storedToSlot, seen))
+                {
                     return true;
                 }
             }
@@ -393,13 +485,17 @@ public class SlotVariablePartition {
         return false;
     }
 
-    private static int minId(Set<Node> defs) {
-        if (defs == null || defs.isEmpty()) {
+    private static int minId(Set<Node> defs)
+    {
+        if (defs == null || defs.isEmpty())
+        {
             return -1;
         }
         int min = Integer.MAX_VALUE;
-        for (Node d : defs) {
-            if (d.id < min) {
+        for (Node d : defs)
+        {
+            if (d.id < min)
+            {
                 min = d.id;
             }
         }
@@ -409,22 +505,27 @@ public class SlotVariablePartition {
     private final Map<LoadLocalInstruction, Integer> loadReaching = new HashMap<>();
     private final Map<PhiInstruction, Integer> phiRepresentative = new HashMap<>();
 
-    private void assignNames() {
+    private void assignNames()
+    {
         Map<Integer, Map<Integer, Integer>> slotComponentOrder = new LinkedHashMap<>();
         Map<Integer, List<Integer>> slotRoots = new LinkedHashMap<>();
-        for (Node node : nodes) {
+        for (Node node : nodes)
+        {
             int root = find(node.id);
             List<Integer> roots = slotRoots.computeIfAbsent(node.slot, k -> new ArrayList<>());
-            if (!roots.contains(root)) {
+            if (!roots.contains(root))
+            {
                 roots.add(root);
             }
         }
-        for (Map.Entry<Integer, List<Integer>> e : slotRoots.entrySet()) {
+        for (Map.Entry<Integer, List<Integer>> e : slotRoots.entrySet())
+        {
             int slot = e.getKey();
             List<Integer> roots = new ArrayList<>(e.getValue());
             roots.sort(Integer::compareTo);
             Map<Integer, Integer> order = new HashMap<>();
-            for (int i = 0; i < roots.size(); i++) {
+            for (int i = 0; i < roots.size(); i++)
+            {
                 order.put(roots.get(i), i);
             }
             slotComponentOrder.put(slot, order);
@@ -434,13 +535,16 @@ public class SlotVariablePartition {
         // variable's LocalVariableTable scope, so they identify the right name when a slot is reused.
         Map<Integer, List<Integer>> rootOffsets = new HashMap<>();
         Set<Integer> storeOffsets = new HashSet<>();
-        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet())
+        {
             addOffset(rootOffsets, find(e.getValue().id), e.getKey().getBytecodeOffset());
-            if (e.getKey().getBytecodeOffset() >= 0) {
+            if (e.getKey().getBytecodeOffset() >= 0)
+            {
                 storeOffsets.add(e.getKey().getBytecodeOffset());
             }
         }
-        for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
+        for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet())
+        {
             addOffset(rootOffsets, find(e.getValue()), e.getKey().getBytecodeOffset());
         }
         this.componentStoreOffsets = storeOffsets;
@@ -454,15 +558,19 @@ public class SlotVariablePartition {
         // becomes a declared name on whatever slot relowering assigns, so a later generation synthesizing
         // the same pattern for slot 4 would merge two unrelated variables - and their types with them.
         Set<String> reservedDebugNames = new HashSet<>();
-        for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
-            for (int root : se.getValue().keySet()) {
+        for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet())
+        {
+            for (int root : se.getValue().keySet())
+            {
                 String scoped = scopeName(se.getKey(), rootOffsets.get(root));
-                if (scoped != null) {
+                if (scoped != null)
+                {
                     reservedDebugNames.add(scoped);
                 }
             }
         }
-        for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet()) {
+        for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet())
+        {
             int slot = se.getKey();
             Map<Integer, Integer> order = se.getValue();
             // Pass 1: LVT-scoped names are authoritative - a component whose offsets fall inside a debug
@@ -478,16 +586,21 @@ public class SlotVariablePartition {
             // independent `t = f(...)` does not). Such a component is left for Pass 2 to give a fresh fallback name.
             Set<String> used = new HashSet<>();
             Map<String, List<Integer>> componentsByName = new HashMap<>();
-            for (int root : order.keySet()) {
+            for (int root : order.keySet())
+            {
                 String scoped = scopeName(slot, rootOffsets.get(root));
-                if (scoped != null) {
+                if (scoped != null)
+                {
                     componentsByName.computeIfAbsent(scoped, k -> new ArrayList<>()).add(root);
                 }
             }
-            for (Map.Entry<String, List<Integer>> ce : componentsByName.entrySet()) {
+            for (Map.Entry<String, List<Integer>> ce : componentsByName.entrySet())
+            {
                 List<Integer> roots = ce.getValue();
-                for (int root : roots) {
-                    if (roots.size() > 1 && isReusedSlotSpillTemp(root, slot, roots, rootOffsets)) {
+                for (int root : roots)
+                {
+                    if (roots.size() > 1 && isReusedSlotSpillTemp(root, slot, roots, rootOffsets))
+                    {
                         continue;
                     }
                     rootName.put(root, ce.getKey());
@@ -499,14 +612,17 @@ public class SlotVariablePartition {
             // base (slot) name is the LVT variable's name; a component living outside that variable's scope
             // (e.g. a return-value temp reusing the slot) must not reuse it, else the two merge and the slot's
             // type widens to Object.
-            for (Map.Entry<Integer, Integer> ce : order.entrySet()) {
+            for (Map.Entry<Integer, Integer> ce : order.entrySet())
+            {
                 int root = ce.getKey();
-                if (rootName.containsKey(root)) {
+                if (rootName.containsKey(root))
+                {
                     continue;
                 }
                 int idx = ce.getValue();
                 String name = nameFor(slot, idx);
-                while (used.contains(name) || reservedDebugNames.contains(name)) {
+                while (used.contains(name) || reservedDebugNames.contains(name))
+                {
                     name = "local" + slot + "_" + (++idx);
                 }
                 rootName.put(root, name);
@@ -522,68 +638,87 @@ public class SlotVariablePartition {
         // cannot change between the copy and its reads - the spill IS that variable: name it so, and the
         // spill assignment collapses as an identity store.
         Map<Integer, List<StoreLocalInstruction>> rootStores = new HashMap<>();
-        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
-            if (e.getKey() instanceof StoreLocalInstruction) {
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet())
+        {
+            if (e.getKey() instanceof StoreLocalInstruction)
+            {
                 rootStores.computeIfAbsent(find(e.getValue().id), k -> new ArrayList<>())
                         .add((StoreLocalInstruction) e.getKey());
             }
         }
-        for (Map.Entry<Integer, List<StoreLocalInstruction>> e : rootStores.entrySet()) {
+        for (Map.Entry<Integer, List<StoreLocalInstruction>> e : rootStores.entrySet())
+        {
             int spillRoot = e.getKey();
-            if (scopedRoots.contains(spillRoot) || e.getValue().size() != 1) {
+            if (scopedRoots.contains(spillRoot) || e.getValue().size() != 1)
+            {
                 continue;
             }
             StoreLocalInstruction spill = e.getValue().get(0);
-            if (!(spill.getValue() instanceof SSAValue)) {
+            if (!(spill.getValue() instanceof SSAValue))
+            {
                 continue;
             }
             Integer srcRoot = null;
             IRInstruction def = ((SSAValue) spill.getValue()).getDefinition();
             if (def instanceof LoadLocalInstruction
-                    && ((LoadLocalInstruction) def).getLocalIndex() != spill.getLocalIndex()) {
+                    && ((LoadLocalInstruction) def).getLocalIndex() != spill.getLocalIndex())
+            {
                 Integer srcRep = loadReaching.get(def);
-                if (srcRep != null) {
+                if (srcRep != null)
+                {
                     srcRoot = find(srcRep);
                 }
-            } else {
+            }
+            else
+            {
                 // The lifter forwards a value stored and immediately reloaded, so the spill stores the SAME
                 // SSA value as the source variable's own store, with no load in between.
-                for (Map.Entry<Integer, List<StoreLocalInstruction>> se : rootStores.entrySet()) {
-                    if (se.getKey() == spillRoot || se.getValue().size() != 1) {
+                for (Map.Entry<Integer, List<StoreLocalInstruction>> se : rootStores.entrySet())
+                {
+                    if (se.getKey() == spillRoot || se.getValue().size() != 1)
+                    {
                         continue;
                     }
                     StoreLocalInstruction src = se.getValue().get(0);
-                    if (src.getValue() == spill.getValue()
-                            && src.getLocalIndex() != spill.getLocalIndex()) {
+                    if (src.getValue() == spill.getValue() && src.getLocalIndex() != spill.getLocalIndex())
+                    {
                         srcRoot = se.getKey();
                         break;
                     }
                 }
             }
-            if (srcRoot == null || !scopedRoots.contains(srcRoot)) {
+            if (srcRoot == null || !scopedRoots.contains(srcRoot))
+            {
                 continue;
             }
             List<StoreLocalInstruction> srcStores = rootStores.get(srcRoot);
-            if (srcStores == null || srcStores.size() != 1) {
+            if (srcStores == null || srcStores.size() != 1)
+            {
                 continue;
             }
             rootName.put(spillRoot, rootName.get(srcRoot));
         }
 
-        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet())
+        {
             instructionNames.put(e.getKey(), rootName.get(find(e.getValue().id)));
         }
-        for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
+        for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet())
+        {
             instructionNames.put(e.getKey(), rootName.get(find(e.getValue())));
         }
-        for (Map.Entry<PhiInstruction, Integer> e : phiRepresentative.entrySet()) {
+        for (Map.Entry<PhiInstruction, Integer> e : phiRepresentative.entrySet())
+        {
             instructionNames.put(e.getKey(), rootName.get(find(e.getValue())));
         }
         String dbgSlot = System.getProperty("yabr.debug.slot");
-        if (dbgSlot != null) {
+        if (dbgSlot != null)
+        {
             int want = Integer.parseInt(dbgSlot);
-            for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
-                if (e.getValue().slot == want) {
+            for (Map.Entry<IRInstruction, Node> e : defNode.entrySet())
+            {
+                if (e.getValue().slot == want)
+                {
                     System.err.println("[part] DEF off=" + e.getKey().getBytecodeOffset()
                             + " kind=" + e.getKey().getClass().getSimpleName()
                             + " root=" + find(e.getValue().id)
@@ -591,8 +726,10 @@ public class SlotVariablePartition {
                             + " rootOffs=" + rootOffsets.get(find(e.getValue().id)));
                 }
             }
-            for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet()) {
-                if (e.getKey().getLocalIndex() == want) {
+            for (Map.Entry<LoadLocalInstruction, Integer> e : loadReaching.entrySet())
+            {
+                if (e.getKey().getLocalIndex() == want)
+                {
                     System.err.println("[part] LOAD off=" + e.getKey().getBytecodeOffset()
                             + " root=" + find(e.getValue())
                             + " name=" + rootName.get(find(e.getValue())));
@@ -607,106 +744,135 @@ public class SlotVariablePartition {
      * the next round trip it must NOT inherit the slot's debug name (it is an independent value that inlines back
      * into its single use), or it materializes as a spurious assignment to the named variable.
      *
-     * <p>The signature is precise so genuine variables are never demoted: the component must be single-def,
+     *The signature is precise so genuine variables are never demoted: the component must be single-def,
      * single-use, its stored value must not read the slot back (so a reassignment {@code n = n + 2} - even one
      * whose {@code n} arrives through a phi - is excluded), and its bytecode range must be strictly NESTED inside
      * another same-named component's range (so two same-named locals in disjoint scopes, which merely reuse the
      * slot sequentially, are both kept - neither nests in the other).
      */
-    private boolean isReusedSlotSpillTemp(int root, int slot, List<Integer> sameNameRoots,
-                                          Map<Integer, List<Integer>> rootOffsets) {
+    private boolean isReusedSlotSpillTemp(int root, int slot, List<Integer> sameNameRoots, Map<Integer, List<Integer>> rootOffsets)
+    {
         int defs = 0;
         StoreLocalInstruction theStore = null;
-        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet()) {
-            if (find(e.getValue().id) != root) {
+        for (Map.Entry<IRInstruction, Node> e : defNode.entrySet())
+        {
+            if (find(e.getValue().id) != root)
+            {
                 continue;
             }
             defs++;
-            if (e.getKey() instanceof StoreLocalInstruction) {
+            if (e.getKey() instanceof StoreLocalInstruction)
+            {
                 theStore = (StoreLocalInstruction) e.getKey();
             }
         }
-        if (defs != 1 || theStore == null) {
+        if (defs != 1 || theStore == null)
+        {
             return false;
         }
         int loads = 0;
-        for (Integer v : loadReaching.values()) {
-            if (find(v) == root) {
+        for (Integer v : loadReaching.values())
+        {
+            if (find(v) == root)
+            {
                 loads++;
             }
         }
-        if (loads != 1) {
+        if (loads != 1)
+        {
             return false;
         }
-        if (storedValueDependsOnSlot(theStore, slot)) {
+        if (storedValueDependsOnSlot(theStore, slot))
+        {
             return false;
         }
         return isRangeNestedInSibling(root, sameNameRoots, rootOffsets);
     }
 
-    /** Whether {@code root}'s offset range is strictly contained within some other same-named component's range. */
-    private boolean isRangeNestedInSibling(int root, List<Integer> sameNameRoots,
-                                           Map<Integer, List<Integer>> rootOffsets) {
+    /**
+     * Whether {@code root}'s offset range is strictly contained within some other same-named component's range.
+     */
+    private boolean isRangeNestedInSibling(int root, List<Integer> sameNameRoots, Map<Integer, List<Integer>> rootOffsets)
+    {
         List<Integer> mine = rootOffsets.get(root);
-        if (mine == null || mine.isEmpty()) {
+        if (mine == null || mine.isEmpty())
+        {
             return false;
         }
         int myMin = Integer.MAX_VALUE;
         int myMax = Integer.MIN_VALUE;
-        for (int o : mine) {
+        for (int o : mine)
+        {
             myMin = Math.min(myMin, o);
             myMax = Math.max(myMax, o);
         }
-        for (int other : sameNameRoots) {
-            if (other == root) {
+        for (int other : sameNameRoots)
+        {
+            if (other == root)
+            {
                 continue;
             }
             List<Integer> os = rootOffsets.get(other);
-            if (os == null || os.isEmpty()) {
+            if (os == null || os.isEmpty())
+            {
                 continue;
             }
             int oMin = Integer.MAX_VALUE;
             int oMax = Integer.MIN_VALUE;
-            for (int o : os) {
+            for (int o : os)
+            {
                 oMin = Math.min(oMin, o);
                 oMax = Math.max(oMax, o);
             }
-            if (oMin <= myMin && myMax <= oMax && (oMin < myMin || myMax < oMax)) {
+            if (oMin <= myMin && myMax <= oMax && (oMin < myMin || myMax < oMax))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private void addOffset(Map<Integer, List<Integer>> map, int root, int offset) {
-        if (offset >= 0) {
+    private void addOffset(Map<Integer, List<Integer>> map, int root, int offset)
+    {
+        if (offset >= 0)
+        {
             map.computeIfAbsent(root, k -> new ArrayList<>()).add(offset);
         }
     }
 
-    /** Store offsets across all components, so scopeName probes a store at the pc where it takes effect. */
+    /**
+     * Store offsets across all components, so scopeName probes a store at the pc where it takes effect.
+     */
     private Set<Integer> componentStoreOffsets = new HashSet<>();
 
-    /** The LVT name covering the most of a component's instruction offsets, or null if none resolve. */
-    private String scopeName(int slot, List<Integer> offsets) {
-        if (scopeNameResolver == null || offsets == null || offsets.isEmpty()) {
+    /**
+     * The LVT name covering the most of a component's instruction offsets, or null if none resolve.
+     */
+    private String scopeName(int slot, List<Integer> offsets)
+    {
+        if (scopeNameResolver == null || offsets == null || offsets.isEmpty())
+        {
             return null;
         }
         Map<String, Integer> votes = new HashMap<>();
-        for (int off : offsets) {
+        for (int off : offsets)
+        {
             // A load sits inside its variable's scope; a store sits just BEFORE it (the slot becomes
             // live at the next instruction), so the store resolver probes the exact following pc.
             String n = componentStoreOffsets.contains(off) && storeNameResolver != null
                     ? storeNameResolver.nameAt(slot, off)
                     : scopeNameResolver.nameAt(slot, off);
-            if (n != null) {
+            if (n != null)
+            {
                 votes.merge(n, 1, Integer::sum);
             }
         }
         String best = null;
         int bestCount = 0;
-        for (Map.Entry<String, Integer> e : votes.entrySet()) {
-            if (e.getValue() > bestCount) {
+        for (Map.Entry<String, Integer> e : votes.entrySet())
+        {
+            if (e.getValue() > bestCount)
+            {
                 best = e.getKey();
                 bestCount = e.getValue();
             }
@@ -714,16 +880,20 @@ public class SlotVariablePartition {
         return best;
     }
 
-    private String nameFor(int slot, int componentIndex) {
-        if (componentIndex == 0) {
+    private String nameFor(int slot, int componentIndex)
+    {
+        if (componentIndex == 0)
+        {
             return baseNameForSlot.apply(slot);
         }
         return "local" + slot + "_" + componentIndex;
     }
 
-    private Map<Integer, Set<Node>> transfer(Map<Integer, Set<Node>> in, List<SlotDef> defs) {
+    private Map<Integer, Set<Node>> transfer(Map<Integer, Set<Node>> in, List<SlotDef> defs)
+    {
         Map<Integer, Set<Node>> out = deepCopy(in);
-        for (SlotDef def : defs) {
+        for (SlotDef def : defs)
+        {
             Set<Node> set = new HashSet<>();
             set.add(def.node);
             out.put(def.slot, set);
@@ -731,46 +901,60 @@ public class SlotVariablePartition {
         return out;
     }
 
-    private void mergeInto(Map<Integer, Set<Node>> target, Map<Integer, Set<Node>> source) {
-        for (Map.Entry<Integer, Set<Node>> e : source.entrySet()) {
+    private void mergeInto(Map<Integer, Set<Node>> target, Map<Integer, Set<Node>> source)
+    {
+        for (Map.Entry<Integer, Set<Node>> e : source.entrySet())
+        {
             target.computeIfAbsent(e.getKey(), k -> new HashSet<>()).addAll(e.getValue());
         }
     }
 
-    private Map<Integer, Set<Node>> deepCopy(Map<Integer, Set<Node>> source) {
+    private Map<Integer, Set<Node>> deepCopy(Map<Integer, Set<Node>> source)
+    {
         Map<Integer, Set<Node>> copy = new HashMap<>();
-        for (Map.Entry<Integer, Set<Node>> e : source.entrySet()) {
+        for (Map.Entry<Integer, Set<Node>> e : source.entrySet())
+        {
             copy.put(e.getKey(), new HashSet<>(e.getValue()));
         }
         return copy;
     }
 
-    private static final class SlotDef {
+    private static final class SlotDef
+    {
         final int slot;
         final Node node;
-        SlotDef(int slot, Node node) {
+        SlotDef(int slot, Node node)
+        {
             this.slot = slot;
             this.node = node;
         }
     }
 
-    /** The store def-node for a slot that the phi's result is stored into, or null. */
-    private Node storeDefForPhiResult(PhiInstruction phi) {
+    /**
+     * The store def-node for a slot that the phi's result is stored into, or null.
+     */
+    private Node storeDefForPhiResult(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
-        if (result == null) {
+        if (result == null)
+        {
             return null;
         }
         int homeSlot = slotFromPhiResultName(phi);
-        for (IRInstruction use : result.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 // Skip cross-slot copies of the phi result (e.g. `x = i`, where i is this loop
                 // phi): the phi belongs to its own slot, not a slot that merely copies its value.
                 // Such a store would otherwise make the phi adopt the copy target's web.
-                if (homeSlot >= 0 && ((StoreLocalInstruction) use).getLocalIndex() != homeSlot) {
+                if (homeSlot >= 0 && ((StoreLocalInstruction) use).getLocalIndex() != homeSlot)
+                {
                     continue;
                 }
                 Node node = defNode.get(use);
-                if (node != null) {
+                if (node != null)
+                {
                     return node;
                 }
             }
@@ -778,16 +962,21 @@ public class SlotVariablePartition {
         return null;
     }
 
-    private int localSlotOfPhi(PhiInstruction phi) {
+    private int localSlotOfPhi(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
-        if (result == null) {
+        if (result == null)
+        {
             return -1;
         }
         int homeSlot = slotFromPhiResultName(phi);
-        for (IRInstruction use : result.getUses()) {
-            if (use instanceof StoreLocalInstruction) {
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof StoreLocalInstruction)
+            {
                 int slot = ((StoreLocalInstruction) use).getLocalIndex();
-                if (homeSlot >= 0 && slot != homeSlot) {
+                if (homeSlot >= 0 && slot != homeSlot)
+                {
                     continue;
                 }
                 return slot;
@@ -801,27 +990,38 @@ public class SlotVariablePartition {
      * are named {@code phi_{slot}} or {@code v{slot}_{version}} (or {@code v{slot}}); the leading
      * number is the slot. Returns -1 when the name does not encode a slot.
      */
-    private int slotFromPhiResultName(PhiInstruction phi) {
+    private int slotFromPhiResultName(PhiInstruction phi)
+    {
         SSAValue result = phi.getResult();
-        if (result == null) {
+        if (result == null)
+        {
             return -1;
         }
         String name = result.getName();
-        if (name == null) {
+        if (name == null)
+        {
             return -1;
         }
-        if (name.startsWith("phi_")) {
-            try {
+        if (name.startsWith("phi_"))
+        {
+            try
+            {
                 return Integer.parseInt(name.substring(4));
-            } catch (NumberFormatException ignored) {
+            }
+            catch (NumberFormatException ignored)
+            {
             }
         }
-        if (name.matches("v\\d+(_\\d+)?")) {
+        if (name.matches("v\\d+(_\\d+)?"))
+        {
             int underscore = name.indexOf('_');
             String digits = underscore >= 0 ? name.substring(1, underscore) : name.substring(1);
-            try {
+            try
+            {
                 return Integer.parseInt(digits);
-            } catch (NumberFormatException ignored) {
+            }
+            catch (NumberFormatException ignored)
+            {
             }
         }
         return -1;

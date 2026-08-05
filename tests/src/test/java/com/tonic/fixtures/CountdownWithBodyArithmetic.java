@@ -1,6 +1,7 @@
 package com.tonic.fixtures;
 
-public class CountdownWithBodyArithmetic {
+public class CountdownWithBodyArithmetic
+{
     long base;
 
     /**
@@ -9,12 +10,15 @@ public class CountdownWithBodyArithmetic {
      * mistaken for the loop's induction increment: doing so routes the loop to the for-loop fallback
      * and drops the header's decrement, leaving an infinite {@code while (i >= 0)}.
      */
-    void freeAll(long stride, int length) {
-        for (int i = length; --i >= 0; ) {
+    void freeAll(long stride, int length)
+    {
+        for (int i = length; --i >= 0; )
+        {
             sink(base + i * stride);
         }
     }
 
-    void sink(long addr) {
+    void sink(long addr)
+    {
     }
 }

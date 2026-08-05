@@ -3,7 +3,12 @@ package com.tonic.analysis.pdg.edge;
 import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.ssa.value.SSAValue;
 
-public class PDGEdge {
+/**
+ * A directed dependence edge in a program dependence graph; identity is the
+ * source id, target id and dependence type, so parallel edges of one type collapse.
+ */
+public class PDGEdge
+{
 
     private final PDGNode source;
     private final PDGNode target;
@@ -14,20 +19,52 @@ public class PDGEdge {
 
     private boolean tainted;
 
-    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type) {
+    /**
+     * Creates an unlabelled edge that carries no value.
+     * @param source the depended-upon node
+     * @param target the dependent node
+     * @param type the dependence kind
+     */
+    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type)
+    {
         this(source, target, type, null, null, false);
     }
 
-    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type, SSAValue dependentValue) {
+    /**
+     * Creates an unlabelled edge that carries the value flowing along it.
+     * @param source the depended-upon node
+     * @param target the dependent node
+     * @param type the dependence kind
+     * @param dependentValue the value flowing from source to target
+     */
+    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type, SSAValue dependentValue)
+    {
         this(source, target, type, null, dependentValue, false);
     }
 
-    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type, String label) {
+    /**
+     * Creates a labelled edge that carries no value.
+     * @param source the depended-upon node
+     * @param target the dependent node
+     * @param type the dependence kind
+     * @param label text shown on the edge
+     */
+    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type, String label)
+    {
         this(source, target, type, label, null, false);
     }
 
-    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type,
-                   String label, SSAValue dependentValue, boolean branchCondition) {
+    /**
+     * Creates an edge with every attribute given explicitly.
+     * @param source the depended-upon node
+     * @param target the dependent node
+     * @param type the dependence kind
+     * @param label text shown on the edge, or null
+     * @param dependentValue the value flowing from source to target, or null
+     * @param branchCondition the branch outcome this control edge is taken on
+     */
+    public PDGEdge(PDGNode source, PDGNode target, PDGDependenceType type, String label, SSAValue dependentValue, boolean branchCondition)
+    {
         this.source = source;
         this.target = target;
         this.type = type;
@@ -36,80 +73,164 @@ public class PDGEdge {
         this.branchCondition = branchCondition;
     }
 
-    public PDGNode getSource() {
+    /**
+     * @return the source
+     */
+    public PDGNode getSource()
+    {
         return source;
     }
 
-    public PDGNode getTarget() {
+    /**
+     * @return the target
+     */
+    public PDGNode getTarget()
+    {
         return target;
     }
 
-    public PDGDependenceType getType() {
+    /**
+     * @return the type
+     */
+    public PDGDependenceType getType()
+    {
         return type;
     }
 
-    public String getLabel() {
+    /**
+     * @return the label
+     */
+    public String getLabel()
+    {
         return label;
     }
 
-    public SSAValue getDependentValue() {
+    /**
+     * @return the dependent value
+     */
+    public SSAValue getDependentValue()
+    {
         return dependentValue;
     }
 
-    public boolean isBranchCondition() {
+    /**
+     * @return whether branch condition
+     */
+    public boolean isBranchCondition()
+    {
         return branchCondition;
     }
 
-    public boolean isTainted() {
+    /**
+     * @return whether tainted
+     */
+    public boolean isTainted()
+    {
         return tainted;
     }
 
-    public void setTainted(boolean tainted) {
+    /**
+     * Marks whether tainted data travels along this edge.
+     * @param tainted true if the flow is tainted
+     */
+    public void setTainted(boolean tainted)
+    {
         this.tainted = tainted;
     }
 
-    public static PDGEdge controlEdge(PDGNode source, PDGNode target, boolean condition) {
+    /**
+     * Creates a control dependence edge for one outcome of a branch.
+     * @param source the branching node
+     * @param target the node controlled by the branch
+     * @param condition the branch outcome the target is reached on
+     * @return the control edge
+     */
+    public static PDGEdge controlEdge(PDGNode source, PDGNode target, boolean condition)
+    {
         PDGDependenceType edgeType = PDGDependenceType.forBranchCondition(condition);
         return new PDGEdge(source, target, edgeType, null, null, condition);
     }
 
-    public static PDGEdge dataEdge(PDGNode source, PDGNode target, SSAValue value) {
+    /**
+     * Creates a def-use data dependence edge.
+     * @param source the defining node
+     * @param target the using node
+     * @param value the value that flows
+     * @return the data edge
+     */
+    public static PDGEdge dataEdge(PDGNode source, PDGNode target, SSAValue value)
+    {
         return new PDGEdge(source, target, PDGDependenceType.DATA_DEF_USE, value);
     }
 
-    public static PDGEdge phiEdge(PDGNode source, PDGNode target, SSAValue value, String blockLabel) {
+    /**
+     * Creates a data dependence edge feeding one operand of a phi.
+     * @param source the node defining the incoming operand
+     * @param target the phi node
+     * @param value the incoming value
+     * @param blockLabel the predecessor block the operand arrives from
+     * @return the phi edge
+     */
+    public static PDGEdge phiEdge(PDGNode source, PDGNode target, SSAValue value, String blockLabel)
+    {
         return new PDGEdge(source, target, PDGDependenceType.DATA_PHI, blockLabel, value, false);
     }
 
-    public boolean isControlDependence() {
+    /**
+     * @return true if the dependence type is a control dependence
+     */
+    public boolean isControlDependence()
+    {
         return type.isControlDependence();
     }
 
-    public boolean isDataDependence() {
+    /**
+     * @return true if the dependence type is a data dependence
+     */
+    public boolean isDataDependence()
+    {
         return type.isDataDependence();
     }
 
-    public boolean isInterprocedural() {
+    /**
+     * @return true if the dependence type crosses a procedure boundary
+     */
+    public boolean isInterprocedural()
+    {
         return type.isInterproceduralEdge();
     }
 
-    public boolean hasDependentValue() {
+    /**
+     * @return true if a flowing value is attached to this edge
+     */
+    public boolean hasDependentValue()
+    {
         return dependentValue != null;
     }
 
-    public boolean hasLabel() {
+    /**
+     * @return true if a non-empty label is attached to this edge
+     */
+    public boolean hasLabel()
+    {
         return label != null && !label.isEmpty();
     }
 
-    public String getVariable() {
-        if (dependentValue != null) {
+    /**
+     * @return the name of the flowing value, or null if no value is attached
+     */
+    public String getVariable()
+    {
+        if (dependentValue != null)
+        {
             return dependentValue.getName();
         }
         return null;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PDGEdge pdgEdge = (PDGEdge) o;
@@ -119,7 +240,8 @@ public class PDGEdge {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         int result = source.getId();
         result = 31 * result + target.getId();
         result = 31 * result + type.hashCode();
@@ -127,16 +249,19 @@ public class PDGEdge {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("PDGEdge[");
         sb.append(source.getId());
         sb.append(" --[").append(type.getShortName()).append("]--> ");
         sb.append(target.getId());
-        if (hasLabel()) {
+        if (hasLabel())
+        {
             sb.append(" \"").append(label).append("\"");
         }
-        if (hasDependentValue()) {
+        if (hasDependentValue())
+        {
             sb.append(" via ").append(dependentValue.getName());
         }
         sb.append("]");

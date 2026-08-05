@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * implicit boundary, so the region stays single-entry and the merge is recovered as the continuation.
  * Asserts a round-trip fixed point and correct execution on the early-return, normal, and throwing paths.
  */
-class TryAfterBranchFidelityTest {
+class TryAfterBranchFidelityTest
+{
 
     private static final String SOURCE =
             "public class TryAfterBranch {\n"
@@ -55,14 +56,14 @@ class TryAfterBranchFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("try-after-branch");
         Path src = dir.resolve("TryAfterBranch.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("TryAfterBranch.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -74,14 +75,16 @@ class TryAfterBranchFidelityTest {
     }
 
     @Test
-    void tryAndContinuationArePreservedAndRoundTripFixed() {
+    void tryAndContinuationArePreservedAndRoundTripFixed()
+    {
         assertTrue(d1.contains("try") && d1.contains("catch"), "the try/catch must be preserved:\n" + d1);
         assertTrue(d1.contains("return this.state"), "the shared continuation must be preserved:\n" + d1);
         assertEquals(d1, d2, "a try/catch after a branch, with a shared continuation, must be a round-trip fixed point");
     }
 
     @Test
-    void allThreePathsExecuteEquivalently() throws Exception {
+    void allThreePathsExecuteEquivalently() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         assertEquals(-1, recompiledClass.getMethod("run", int.class).invoke(inst, -5),
                 "the early-return path returns -1");

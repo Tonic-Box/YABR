@@ -14,25 +14,29 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for the XrefDatabase API.
  * Covers building cross-reference database, finding references, and handling method/field accesses.
  */
-class XrefDatabaseTest {
+class XrefDatabaseTest
+{
 
     private XrefDatabase db;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         db = new XrefDatabase();
     }
 
-    // ========== Basic Construction Tests ==========
+    // Basic Construction Tests
 
     @Test
-    void newDatabaseIsEmpty() {
+    void newDatabaseIsEmpty()
+    {
         assertTrue(db.isEmpty());
         assertEquals(0, db.getTotalXrefCount());
     }
 
     @Test
-    void addXrefIncreasesCount() {
+    void addXrefIncreasesCount()
+    {
         Xref xref = Xref.builder()
             .sourceClass("com/test/Source")
             .sourceMethod("method", "()V")
@@ -48,7 +52,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void addAllXrefsAddsMultiple() {
+    void addAllXrefsAddsMultiple()
+    {
         Xref xref1 = createMethodCall("com/test/A", "method1", "com/test/B", "method2");
         Xref xref2 = createMethodCall("com/test/C", "method3", "com/test/D", "method4");
 
@@ -58,7 +63,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void clearRemovesAllXrefs() {
+    void clearRemovesAllXrefs()
+    {
         Xref xref = createMethodCall("com/test/A", "method", "com/test/B", "method");
         db.addXref(xref);
 
@@ -68,10 +74,11 @@ class XrefDatabaseTest {
         assertEquals(0, db.getTotalXrefCount());
     }
 
-    // ========== Class Reference Tests ==========
+    // Class Reference Tests
 
     @Test
-    void getRefsToClassReturnsEmpty() {
+    void getRefsToClassReturnsEmpty()
+    {
         List<Xref> refs = db.getRefsToClass("com/test/NonExistent");
 
         assertNotNull(refs);
@@ -79,7 +86,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsToClassFindsReferences() {
+    void getRefsToClassFindsReferences()
+    {
         Xref xref = createMethodCall("com/test/Caller", "method", "com/test/Target", "called");
         db.addXref(xref);
 
@@ -91,7 +99,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsFromClassReturnsEmpty() {
+    void getRefsFromClassReturnsEmpty()
+    {
         List<Xref> refs = db.getRefsFromClass("com/test/NonExistent");
 
         assertNotNull(refs);
@@ -99,7 +108,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsFromClassFindsReferences() {
+    void getRefsFromClassFindsReferences()
+    {
         Xref xref = createMethodCall("com/test/Caller", "method", "com/test/Target", "called");
         db.addXref(xref);
 
@@ -110,10 +120,11 @@ class XrefDatabaseTest {
         assertTrue(refs.contains(xref));
     }
 
-    // ========== Method Reference Tests ==========
+    // Method Reference Tests
 
     @Test
-    void getRefsToMethodReturnsEmpty() {
+    void getRefsToMethodReturnsEmpty()
+    {
         MethodReference ref = new MethodReference("com/test/Class", "method", "()V");
 
         List<Xref> refs = db.getRefsToMethod(ref);
@@ -123,7 +134,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsToMethodFindsCallers() {
+    void getRefsToMethodFindsCallers()
+    {
         Xref xref = createMethodCall("com/test/Caller", "caller", "com/test/Target", "target");
         db.addXref(xref);
 
@@ -136,7 +148,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsToMethodByComponents() {
+    void getRefsToMethodByComponents()
+    {
         Xref xref = createMethodCall("com/test/Caller", "caller", "com/test/Target", "target");
         db.addXref(xref);
 
@@ -147,7 +160,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsFromMethodReturnsEmpty() {
+    void getRefsFromMethodReturnsEmpty()
+    {
         MethodReference ref = new MethodReference("com/test/Class", "method", "()V");
 
         List<Xref> refs = db.getRefsFromMethod(ref);
@@ -157,7 +171,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsFromMethodFindsCallees() {
+    void getRefsFromMethodFindsCallees()
+    {
         Xref xref = createMethodCall("com/test/Caller", "caller", "com/test/Target", "target");
         db.addXref(xref);
 
@@ -170,7 +185,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsFromMethodByComponents() {
+    void getRefsFromMethodByComponents()
+    {
         Xref xref = createMethodCall("com/test/Caller", "caller", "com/test/Target", "target");
         db.addXref(xref);
 
@@ -180,10 +196,11 @@ class XrefDatabaseTest {
         assertFalse(refs.isEmpty());
     }
 
-    // ========== Field Reference Tests ==========
+    // Field Reference Tests
 
     @Test
-    void getRefsToFieldReturnsEmpty() {
+    void getRefsToFieldReturnsEmpty()
+    {
         FieldReference ref = new FieldReference("com/test/Class", "field", "I");
 
         List<Xref> refs = db.getRefsToField(ref);
@@ -193,7 +210,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsToFieldFindsAccesses() {
+    void getRefsToFieldFindsAccesses()
+    {
         Xref xref = createFieldRead("com/test/Reader", "method", "com/test/Owner", "field");
         db.addXref(xref);
 
@@ -206,7 +224,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsToFieldByComponents() {
+    void getRefsToFieldByComponents()
+    {
         Xref xref = createFieldRead("com/test/Reader", "method", "com/test/Owner", "field");
         db.addXref(xref);
 
@@ -216,10 +235,11 @@ class XrefDatabaseTest {
         assertFalse(refs.isEmpty());
     }
 
-    // ========== Type-Based Query Tests ==========
+    // Type-Based Query Tests
 
     @Test
-    void getRefsByTypeReturnsEmpty() {
+    void getRefsByTypeReturnsEmpty()
+    {
         List<Xref> refs = db.getRefsByType(XrefType.METHOD_CALL);
 
         assertNotNull(refs);
@@ -227,7 +247,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getRefsByTypeFindsMatches() {
+    void getRefsByTypeFindsMatches()
+    {
         Xref methodCall = createMethodCall("com/test/A", "m1", "com/test/B", "m2");
         Xref fieldRead = createFieldRead("com/test/A", "m1", "com/test/B", "field");
         db.addXref(methodCall);
@@ -243,7 +264,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getAllMethodCallsFiltersCorrectly() {
+    void getAllMethodCallsFiltersCorrectly()
+    {
         Xref methodCall = createMethodCall("com/test/A", "m1", "com/test/B", "m2");
         Xref fieldRead = createFieldRead("com/test/A", "m1", "com/test/B", "field");
         db.addXref(methodCall);
@@ -256,7 +278,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getAllFieldReadsFiltersCorrectly() {
+    void getAllFieldReadsFiltersCorrectly()
+    {
         Xref methodCall = createMethodCall("com/test/A", "m1", "com/test/B", "m2");
         Xref fieldRead = createFieldRead("com/test/A", "m1", "com/test/B", "field");
         db.addXref(methodCall);
@@ -269,7 +292,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getAllFieldWritesFiltersCorrectly() {
+    void getAllFieldWritesFiltersCorrectly()
+    {
         Xref fieldWrite = createFieldWrite("com/test/A", "m1", "com/test/B", "field");
         Xref fieldRead = createFieldRead("com/test/A", "m1", "com/test/B", "field");
         db.addXref(fieldWrite);
@@ -282,7 +306,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getAllInstantiationsFiltersCorrectly() {
+    void getAllInstantiationsFiltersCorrectly()
+    {
         Xref instantiation = createInstantiation("com/test/A", "method", "com/test/B");
         Xref methodCall = createMethodCall("com/test/A", "m1", "com/test/B", "m2");
         db.addXref(instantiation);
@@ -295,7 +320,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getAllXrefsReturnsUnmodifiable() {
+    void getAllXrefsReturnsUnmodifiable()
+    {
         Xref xref = createMethodCall("com/test/A", "m1", "com/test/B", "m2");
         db.addXref(xref);
 
@@ -305,10 +331,11 @@ class XrefDatabaseTest {
         assertEquals(1, all.size());
     }
 
-    // ========== Search Query Tests ==========
+    // Search Query Tests
 
     @Test
-    void searchIncomingRefsFindsByClassName() {
+    void searchIncomingRefsFindsByClassName()
+    {
         Xref xref = createMethodCall("com/test/Caller", "method", "com/test/Target", "called");
         db.addXref(xref);
 
@@ -320,7 +347,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void searchIncomingRefsFindsByMemberName() {
+    void searchIncomingRefsFindsByMemberName()
+    {
         Xref xref = createMethodCall("com/test/Caller", "method", "com/test/Target", "called");
         db.addXref(xref);
 
@@ -331,7 +359,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void searchOutgoingRefsFindsByClassName() {
+    void searchOutgoingRefsFindsByClassName()
+    {
         Xref xref = createMethodCall("com/test/Caller", "method", "com/test/Target", "called");
         db.addXref(xref);
 
@@ -343,7 +372,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void searchOutgoingRefsFindsByMethodName() {
+    void searchOutgoingRefsFindsByMethodName()
+    {
         Xref xref = createMethodCall("com/test/Caller", "method", "com/test/Target", "called");
         db.addXref(xref);
 
@@ -354,7 +384,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void findCallersOfMethodNamedFindsMatches() {
+    void findCallersOfMethodNamedFindsMatches()
+    {
         Xref xref1 = createMethodCall("com/test/A", "m1", "com/test/B", "target");
         Xref xref2 = createMethodCall("com/test/C", "m2", "com/test/D", "target");
         db.addXref(xref1);
@@ -368,7 +399,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void findRefsBetweenClassesFindsMatches() {
+    void findRefsBetweenClassesFindsMatches()
+    {
         Xref xref1 = createMethodCall("com/test/A", "m1", "com/test/B", "m2");
         Xref xref2 = createMethodCall("com/test/A", "m1", "com/test/C", "m3");
         db.addXref(xref1);
@@ -381,10 +413,11 @@ class XrefDatabaseTest {
         assertFalse(refs.contains(xref2));
     }
 
-    // ========== Grouping Tests ==========
+    // Grouping Tests
 
     @Test
-    void groupIncomingByTypeGroupsCorrectly() {
+    void groupIncomingByTypeGroupsCorrectly()
+    {
         Xref methodCall = createMethodCall("com/test/A", "m1", "com/test/Target", "m2");
         Xref fieldRead = createFieldRead("com/test/A", "m1", "com/test/Target", "field");
         db.addXref(methodCall);
@@ -398,7 +431,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void groupOutgoingByTypeGroupsCorrectly() {
+    void groupOutgoingByTypeGroupsCorrectly()
+    {
         Xref methodCall = createMethodCall("com/test/Source", "m1", "com/test/B", "m2");
         Xref fieldRead = createFieldRead("com/test/Source", "m1", "com/test/B", "field");
         db.addXref(methodCall);
@@ -412,7 +446,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getClassesReferencingClassFindsUnique() {
+    void getClassesReferencingClassFindsUnique()
+    {
         Xref xref1 = createMethodCall("com/test/A", "m1", "com/test/Target", "m2");
         Xref xref2 = createMethodCall("com/test/A", "m3", "com/test/Target", "m4");
         Xref xref3 = createMethodCall("com/test/B", "m5", "com/test/Target", "m6");
@@ -429,7 +464,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getClassesReferencedByClassFindsUnique() {
+    void getClassesReferencedByClassFindsUnique()
+    {
         Xref xref1 = createMethodCall("com/test/Source", "m1", "com/test/A", "m2");
         Xref xref2 = createMethodCall("com/test/Source", "m3", "com/test/A", "m4");
         Xref xref3 = createMethodCall("com/test/Source", "m5", "com/test/B", "m6");
@@ -445,15 +481,17 @@ class XrefDatabaseTest {
         assertEquals(2, classes.size());
     }
 
-    // ========== Statistics Tests ==========
+    // Statistics Tests
 
     @Test
-    void getTotalXrefCountReturnsZeroWhenEmpty() {
+    void getTotalXrefCountReturnsZeroWhenEmpty()
+    {
         assertEquals(0, db.getTotalXrefCount());
     }
 
     @Test
-    void getTotalXrefCountReturnsCorrectCount() {
+    void getTotalXrefCountReturnsCorrectCount()
+    {
         db.addXref(createMethodCall("A", "m1", "B", "m2"));
         db.addXref(createMethodCall("C", "m3", "D", "m4"));
 
@@ -461,7 +499,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getXrefCountByTypeCountsCorrectly() {
+    void getXrefCountByTypeCountsCorrectly()
+    {
         db.addXref(createMethodCall("A", "m1", "B", "m2"));
         db.addXref(createMethodCall("C", "m3", "D", "m4"));
         db.addXref(createFieldRead("A", "m1", "B", "field"));
@@ -474,7 +513,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getUniqueTargetClassCountReturnsCount() {
+    void getUniqueTargetClassCountReturnsCount()
+    {
         db.addXref(createMethodCall("A", "m1", "Target1", "m2"));
         db.addXref(createMethodCall("B", "m3", "Target2", "m4"));
 
@@ -482,7 +522,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getUniqueSourceClassCountReturnsCount() {
+    void getUniqueSourceClassCountReturnsCount()
+    {
         db.addXref(createMethodCall("Source1", "m1", "B", "m2"));
         db.addXref(createMethodCall("Source2", "m3", "D", "m4"));
 
@@ -490,7 +531,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getUniqueTargetMethodCountReturnsCount() {
+    void getUniqueTargetMethodCountReturnsCount()
+    {
         db.addXref(createMethodCall("A", "m1", "B", "target1"));
         db.addXref(createMethodCall("C", "m2", "D", "target2"));
 
@@ -498,7 +540,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getUniqueTargetFieldCountReturnsCount() {
+    void getUniqueTargetFieldCountReturnsCount()
+    {
         db.addXref(createFieldRead("A", "m1", "B", "field1"));
         db.addXref(createFieldRead("C", "m2", "D", "field2"));
 
@@ -506,28 +549,32 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void getBuildTimeReturnsSetValue() {
+    void getBuildTimeReturnsSetValue()
+    {
         db.setBuildTimeMs(1000);
 
         assertEquals(1000, db.getBuildTimeMs());
     }
 
     @Test
-    void getTotalClassesReturnsSetValue() {
+    void getTotalClassesReturnsSetValue()
+    {
         db.setTotalClasses(10);
 
         assertEquals(10, db.getTotalClasses());
     }
 
     @Test
-    void getTotalMethodsReturnsSetValue() {
+    void getTotalMethodsReturnsSetValue()
+    {
         db.setTotalMethods(50);
 
         assertEquals(50, db.getTotalMethods());
     }
 
     @Test
-    void getSummaryContainsInfo() {
+    void getSummaryContainsInfo()
+    {
         db.setTotalClasses(5);
         db.setTotalMethods(20);
         db.setBuildTimeMs(500);
@@ -541,20 +588,21 @@ class XrefDatabaseTest {
         assertTrue(summary.contains("500"));
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void handlesDuplicateXrefs() {
+    void handlesDuplicateXrefs()
+    {
         Xref xref = createMethodCall("A", "m1", "B", "m2");
         db.addXref(xref);
         db.addXref(xref);
 
-        // Should add both (duplicates allowed)
         assertEquals(2, db.getTotalXrefCount());
     }
 
     @Test
-    void handlesNullSourceMethod() {
+    void handlesNullSourceMethod()
+    {
         Xref xref = Xref.builder()
             .sourceClass("com/test/Source")
             .targetClass("com/test/Target")
@@ -567,7 +615,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void handlesNullTargetMember() {
+    void handlesNullTargetMember()
+    {
         Xref xref = Xref.builder()
             .sourceClass("com/test/Source")
             .sourceMethod("method", "()V")
@@ -581,7 +630,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void handlesMultipleXrefTypes() {
+    void handlesMultipleXrefTypes()
+    {
         db.addXref(createMethodCall("A", "m", "B", "m"));
         db.addXref(createFieldRead("A", "m", "B", "f"));
         db.addXref(createFieldWrite("A", "m", "B", "f"));
@@ -597,7 +647,8 @@ class XrefDatabaseTest {
     }
 
     @Test
-    void queriesReturnEmptyAfterClear() {
+    void queriesReturnEmptyAfterClear()
+    {
         db.addXref(createMethodCall("A", "m1", "B", "m2"));
         db.clear();
 
@@ -606,10 +657,10 @@ class XrefDatabaseTest {
         assertTrue(db.getAllMethodCalls().isEmpty());
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private Xref createMethodCall(String sourceClass, String sourceMethod,
-                                   String targetClass, String targetMethod) {
+    private Xref createMethodCall(String sourceClass, String sourceMethod, String targetClass, String targetMethod)
+    {
         return Xref.builder()
             .sourceClass(sourceClass)
             .sourceMethod(sourceMethod, "()V")
@@ -618,8 +669,8 @@ class XrefDatabaseTest {
             .build();
     }
 
-    private Xref createFieldRead(String sourceClass, String sourceMethod,
-                                  String targetClass, String field) {
+    private Xref createFieldRead(String sourceClass, String sourceMethod, String targetClass, String field)
+    {
         return Xref.builder()
             .sourceClass(sourceClass)
             .sourceMethod(sourceMethod, "()V")
@@ -628,8 +679,8 @@ class XrefDatabaseTest {
             .build();
     }
 
-    private Xref createFieldWrite(String sourceClass, String sourceMethod,
-                                   String targetClass, String field) {
+    private Xref createFieldWrite(String sourceClass, String sourceMethod, String targetClass, String field)
+    {
         return Xref.builder()
             .sourceClass(sourceClass)
             .sourceMethod(sourceMethod, "()V")
@@ -638,8 +689,8 @@ class XrefDatabaseTest {
             .build();
     }
 
-    private Xref createInstantiation(String sourceClass, String sourceMethod,
-                                      String targetClass) {
+    private Xref createInstantiation(String sourceClass, String sourceMethod, String targetClass)
+    {
         return Xref.builder()
             .sourceClass(sourceClass)
             .sourceMethod(sourceMethod, "()V")

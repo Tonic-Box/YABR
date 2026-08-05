@@ -32,7 +32,8 @@ Verifier verifier = Verifier.builder()
     .build();
 
 VerificationResult result = verifier.verify(cf);
-if (!result.isValid()) {
+if (!result.isValid())
+{
     System.out.println(result.formatReport());
 }
 ```
@@ -104,13 +105,17 @@ Verifier verifier = Verifier.builder().classPool(pool).config(config).build();
 `VerificationResult` separates errors from warnings and can format a human-readable report.
 
 ```java
-if (result.isValid()) {
+if (result.isValid())
+{
     System.out.println("OK");
-} else {
+}
+else
+{
     System.out.println(result.getErrorCount() + " error(s), "
             + result.getWarningCount() + " warning(s)");
 
-    for (VerificationError err : result.getErrors()) {
+    for (VerificationError err : result.getErrors())
+    {
         System.out.println(err.format());  // type, offset, message, location
     }
     System.out.println(result.formatReport());

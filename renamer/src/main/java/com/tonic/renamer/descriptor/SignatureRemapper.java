@@ -5,27 +5,29 @@ import java.util.function.Function;
 /**
  * Remaps class references within generic signatures.
  */
-public class SignatureRemapper {
+public class SignatureRemapper
+{
 
     private final Function<String, String> classMapper;
 
     /**
      * Creates a remapper with the given class name mapping function.
-     *
      * @param classMapper Function that maps old class names to new ones
      */
-    public SignatureRemapper(Function<String, String> classMapper) {
+    public SignatureRemapper(Function<String, String> classMapper)
+    {
         this.classMapper = classMapper;
     }
 
     /**
      * Remaps all class references in a generic signature.
-     *
      * @param signature The generic signature
      * @return The remapped signature, or null if signature was null
      */
-    public String remap(String signature) {
-        if (signature == null || signature.isEmpty()) {
+    public String remap(String signature)
+    {
+        if (signature == null || signature.isEmpty())
+        {
             return signature;
         }
         StringBuilder result = new StringBuilder(signature.length());
@@ -33,10 +35,13 @@ public class SignatureRemapper {
         return result.toString();
     }
 
-    private int remapSignature(String sig, int pos, StringBuilder out) {
-        while (pos < sig.length()) {
+    private int remapSignature(String sig, int pos, StringBuilder out)
+    {
+        while (pos < sig.length())
+        {
             char c = sig.charAt(pos);
-            switch (c) {
+            switch (c)
+            {
                 case '<':
                     // Start of formal type parameters or type arguments
                     out.append(c);
@@ -113,62 +118,77 @@ public class SignatureRemapper {
         return pos;
     }
 
-    private int remapTypeArguments(String sig, int pos, StringBuilder out) {
-        while (pos < sig.length()) {
+    private int remapTypeArguments(String sig, int pos, StringBuilder out)
+    {
+        while (pos < sig.length())
+        {
             char c = sig.charAt(pos);
-            if (c == '>') {
+            if (c == '>')
+            {
                 return pos; // Don't consume '>', let caller handle it
             }
             pos = remapSignature(sig, pos, out);
             if (pos >= sig.length()) break;
             c = sig.charAt(pos);
-            if (c == '>') {
+            if (c == '>')
+            {
                 return pos;
             }
         }
         return pos;
     }
 
-    private int remapClassType(String sig, int pos, StringBuilder out) {
+    private int remapClassType(String sig, int pos, StringBuilder out)
+    {
         // Lclassname; or Lclassname<typeargs>; or Lclassname.innerclass;
         int start = pos + 1; // Skip 'L'
         StringBuilder className = new StringBuilder();
         pos = start;
 
-        while (pos < sig.length()) {
+        while (pos < sig.length())
+        {
             char c = sig.charAt(pos);
-            if (c == ';') {
+            if (c == ';')
+            {
                 // End of class type
                 String original = className.toString();
                 String mapped = mapClassName(original);
                 out.append('L').append(mapped).append(';');
                 return pos + 1;
-            } else if (c == '<') {
+            }
+            else if (c == '<')
+            {
                 // Type arguments follow
                 String original = className.toString();
                 String mapped = mapClassName(original);
                 out.append('L').append(mapped).append('<');
                 pos++;
                 // Recursively handle type arguments
-                while (pos < sig.length() && sig.charAt(pos) != '>') {
+                while (pos < sig.length() && sig.charAt(pos) != '>')
+                {
                     pos = remapSignature(sig, pos, out);
                 }
-                if (pos < sig.length() && sig.charAt(pos) == '>') {
+                if (pos < sig.length() && sig.charAt(pos) == '>')
+                {
                     out.append('>');
                     pos++;
                 }
                 // Continue to handle remainder (might be .Inner or ;)
                 className = new StringBuilder();
-            } else if (c == '.') {
+            }
+            else if (c == '.')
+            {
                 // Inner class follows
                 String original = className.toString();
                 String mapped = mapClassName(original);
                 out.append('L').append(mapped).append('.');
                 pos++;
                 className = new StringBuilder();
-                while (pos < sig.length()) {
+                while (pos < sig.length())
+                {
                     c = sig.charAt(pos);
-                    if (c == ';' || c == '<' || c == '.') {
+                    if (c == ';' || c == '<' || c == '.')
+                    {
                         break;
                     }
                     className.append(c);
@@ -176,40 +196,49 @@ public class SignatureRemapper {
                 }
                 // Append inner class name (not remapped separately)
                 out.deleteCharAt(out.length() - 1);
-                if (className.length() > 0) {
+                if (className.length() > 0)
+                {
                     out.append('.').append(className);
                 }
                 className = new StringBuilder();
-            } else {
+            }
+            else
+            {
                 className.append(c);
                 pos++;
             }
         }
 
         // Malformed signature, output what we have
-        if (className.length() > 0) {
+        if (className.length() > 0)
+        {
             out.append('L').append(className);
         }
         return pos;
     }
 
-    private int remapTypeVariable(String sig, int pos, StringBuilder out) {
+    private int remapTypeVariable(String sig, int pos, StringBuilder out)
+    {
         // Tname;
         out.append('T');
         pos++; // Skip 'T'
-        while (pos < sig.length()) {
+        while (pos < sig.length())
+        {
             char c = sig.charAt(pos);
             out.append(c);
             pos++;
-            if (c == ';') {
+            if (c == ';')
+            {
                 break;
             }
         }
         return pos;
     }
 
-    private String mapClassName(String className) {
-        if (className == null || className.isEmpty()) {
+    private String mapClassName(String className)
+    {
+        if (className == null || className.isEmpty())
+        {
             return className;
         }
         String mapped = classMapper.apply(className);
@@ -218,12 +247,13 @@ public class SignatureRemapper {
 
     /**
      * Checks if a signature contains any class references that would be remapped.
-     *
      * @param signature The signature to check
      * @return true if the signature would change after remapping
      */
-    public boolean needsRemapping(String signature) {
-        if (signature == null || signature.isEmpty()) {
+    public boolean needsRemapping(String signature)
+    {
+        if (signature == null || signature.isEmpty())
+        {
             return false;
         }
         return !signature.equals(remap(signature));

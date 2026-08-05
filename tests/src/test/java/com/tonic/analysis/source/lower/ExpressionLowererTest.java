@@ -28,13 +28,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ExpressionLowerer.
  * Covers lowering of all AST expression types to IR instructions.
  */
-class ExpressionLowererTest {
+class ExpressionLowererTest
+{
 
     private LoweringContext ctx;
     private ExpressionLowerer lowerer;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = pool.createNewClass("com/test/ExpressionLowererTest", access);
@@ -54,10 +56,11 @@ class ExpressionLowererTest {
         lowerer = new ExpressionLowerer(ctx);
     }
 
-    // ========== Literal Tests ==========
+    // Literal Tests
 
     @Test
-    void lowerIntLiteral() {
+    void lowerIntLiteral()
+    {
         LiteralExpr lit = LiteralExpr.ofInt(42);
         Value result = lowerer.lower(lit);
 
@@ -74,7 +77,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerLongLiteral() {
+    void lowerLongLiteral()
+    {
         LiteralExpr lit = LiteralExpr.ofLong(123456789L);
         Value result = lowerer.lower(lit);
 
@@ -88,7 +92,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerFloatLiteral() {
+    void lowerFloatLiteral()
+    {
         LiteralExpr lit = LiteralExpr.ofFloat(3.14f);
         Value result = lowerer.lower(lit);
 
@@ -101,7 +106,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerDoubleLiteral() {
+    void lowerDoubleLiteral()
+    {
         LiteralExpr lit = LiteralExpr.ofDouble(2.718);
         Value result = lowerer.lower(lit);
 
@@ -114,7 +120,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBooleanLiteral() {
+    void lowerBooleanLiteral()
+    {
         LiteralExpr litTrue = LiteralExpr.ofBoolean(true);
         Value resultTrue = lowerer.lower(litTrue);
 
@@ -133,7 +140,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerStringLiteral() {
+    void lowerStringLiteral()
+    {
         LiteralExpr lit = LiteralExpr.ofString("Hello");
         Value result = lowerer.lower(lit);
 
@@ -144,7 +152,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerNullLiteral() {
+    void lowerNullLiteral()
+    {
         LiteralExpr lit = LiteralExpr.ofNull();
         Value result = lowerer.lower(lit);
 
@@ -153,10 +162,11 @@ class ExpressionLowererTest {
         assertEquals(NullConstant.INSTANCE, instr.getConstant());
     }
 
-    // ========== Variable Reference Tests ==========
+    // Variable Reference Tests
 
     @Test
-    void lowerVarRef() {
+    void lowerVarRef()
+    {
         SSAValue varValue = new SSAValue(PrimitiveType.INT);
         ctx.setVariable("x", varValue);
 
@@ -167,7 +177,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerVarRefWithSSAValue() {
+    void lowerVarRefWithSSAValue()
+    {
         SSAValue ssaValue = new SSAValue(PrimitiveType.INT);
         VarRefExpr varRef = new VarRefExpr("x", PrimitiveSourceType.INT, ssaValue);
         Value result = lowerer.lower(varRef);
@@ -176,15 +187,17 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerVarRefUndefinedThrowsException() {
+    void lowerVarRefUndefinedThrowsException()
+    {
         VarRefExpr varRef = new VarRefExpr("undefined", PrimitiveSourceType.INT);
         assertThrows(LoweringException.class, () -> lowerer.lower(varRef));
     }
 
-    // ========== Binary Expression Tests ==========
+    // Binary Expression Tests
 
     @Test
-    void lowerBinaryAdd() {
+    void lowerBinaryAdd()
+    {
         LiteralExpr left = LiteralExpr.ofInt(10);
         LiteralExpr right = LiteralExpr.ofInt(20);
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, left, right, PrimitiveSourceType.INT);
@@ -200,7 +213,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBinarySubtract() {
+    void lowerBinarySubtract()
+    {
         LiteralExpr left = LiteralExpr.ofInt(30);
         LiteralExpr right = LiteralExpr.ofInt(15);
         BinaryExpr sub = new BinaryExpr(BinaryOperator.SUB, left, right, PrimitiveSourceType.INT);
@@ -214,7 +228,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBinaryMultiply() {
+    void lowerBinaryMultiply()
+    {
         LiteralExpr left = LiteralExpr.ofInt(5);
         LiteralExpr right = LiteralExpr.ofInt(6);
         BinaryExpr mul = new BinaryExpr(BinaryOperator.MUL, left, right, PrimitiveSourceType.INT);
@@ -228,7 +243,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBinaryDivide() {
+    void lowerBinaryDivide()
+    {
         LiteralExpr left = LiteralExpr.ofInt(100);
         LiteralExpr right = LiteralExpr.ofInt(4);
         BinaryExpr div = new BinaryExpr(BinaryOperator.DIV, left, right, PrimitiveSourceType.INT);
@@ -242,7 +258,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBinaryModulo() {
+    void lowerBinaryModulo()
+    {
         LiteralExpr left = LiteralExpr.ofInt(17);
         LiteralExpr right = LiteralExpr.ofInt(5);
         BinaryExpr mod = new BinaryExpr(BinaryOperator.MOD, left, right, PrimitiveSourceType.INT);
@@ -256,7 +273,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBitwiseAnd() {
+    void lowerBitwiseAnd()
+    {
         LiteralExpr left = LiteralExpr.ofInt(15);
         LiteralExpr right = LiteralExpr.ofInt(7);
         BinaryExpr band = new BinaryExpr(BinaryOperator.BAND, left, right, PrimitiveSourceType.INT);
@@ -270,7 +288,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBitwiseOr() {
+    void lowerBitwiseOr()
+    {
         LiteralExpr left = LiteralExpr.ofInt(8);
         LiteralExpr right = LiteralExpr.ofInt(4);
         BinaryExpr bor = new BinaryExpr(BinaryOperator.BOR, left, right, PrimitiveSourceType.INT);
@@ -284,7 +303,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerBitwiseXor() {
+    void lowerBitwiseXor()
+    {
         LiteralExpr left = LiteralExpr.ofInt(12);
         LiteralExpr right = LiteralExpr.ofInt(10);
         BinaryExpr bxor = new BinaryExpr(BinaryOperator.BXOR, left, right, PrimitiveSourceType.INT);
@@ -298,7 +318,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerShiftLeft() {
+    void lowerShiftLeft()
+    {
         LiteralExpr left = LiteralExpr.ofInt(1);
         LiteralExpr right = LiteralExpr.ofInt(3);
         BinaryExpr shl = new BinaryExpr(BinaryOperator.SHL, left, right, PrimitiveSourceType.INT);
@@ -312,7 +333,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerShiftRight() {
+    void lowerShiftRight()
+    {
         LiteralExpr left = LiteralExpr.ofInt(16);
         LiteralExpr right = LiteralExpr.ofInt(2);
         BinaryExpr shr = new BinaryExpr(BinaryOperator.SHR, left, right, PrimitiveSourceType.INT);
@@ -326,7 +348,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerUnsignedShiftRight() {
+    void lowerUnsignedShiftRight()
+    {
         LiteralExpr left = LiteralExpr.ofInt(-1);
         LiteralExpr right = LiteralExpr.ofInt(1);
         BinaryExpr ushr = new BinaryExpr(BinaryOperator.USHR, left, right, PrimitiveSourceType.INT);
@@ -339,10 +362,11 @@ class ExpressionLowererTest {
                 ((BinaryOpInstruction) i).getOp() == BinaryOp.USHR));
     }
 
-    // ========== Assignment Tests ==========
+    // Assignment Tests
 
     @Test
-    void lowerSimpleAssignment() {
+    void lowerSimpleAssignment()
+    {
         ctx.declareLocal("x", PrimitiveType.INT, false);
         LiteralExpr value = LiteralExpr.ofInt(100);
         VarRefExpr var = new VarRefExpr("x", PrimitiveSourceType.INT);
@@ -356,7 +380,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void undeclaredAssignmentFailsLoudly() {
+    void undeclaredAssignmentFailsLoudly()
+    {
         LiteralExpr value = LiteralExpr.ofInt(100);
         VarRefExpr var = new VarRefExpr("neverDeclared", PrimitiveSourceType.INT);
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, var, value, PrimitiveSourceType.INT);
@@ -365,7 +390,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerCompoundAssignment() {
+    void lowerCompoundAssignment()
+    {
         SSAValue existingVar = new SSAValue(PrimitiveType.INT);
         ctx.setVariable("x", existingVar);
 
@@ -383,10 +409,11 @@ class ExpressionLowererTest {
                 ((BinaryOpInstruction) i).getOp() == BinaryOp.ADD));
     }
 
-    // ========== Comparison Tests ==========
+    // Comparison Tests
 
     @Test
-    void lowerIntComparison() {
+    void lowerIntComparison()
+    {
         LiteralExpr left = LiteralExpr.ofInt(10);
         LiteralExpr right = LiteralExpr.ofInt(20);
         BinaryExpr eq = new BinaryExpr(BinaryOperator.EQ, left, right, PrimitiveSourceType.INT);
@@ -399,7 +426,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerLongComparison() {
+    void lowerLongComparison()
+    {
         LiteralExpr left = LiteralExpr.ofLong(100L);
         LiteralExpr right = LiteralExpr.ofLong(200L);
         BinaryExpr lt = new BinaryExpr(BinaryOperator.LT, left, right, PrimitiveSourceType.INT);
@@ -414,10 +442,11 @@ class ExpressionLowererTest {
                 ((BinaryOpInstruction) i).getOp() == BinaryOp.LCMP));
     }
 
-    // ========== Short-Circuit Logic Tests ==========
+    // Short-Circuit Logic Tests
 
     @Test
-    void lowerLogicalAnd() {
+    void lowerLogicalAnd()
+    {
         LiteralExpr left = LiteralExpr.ofBoolean(true);
         LiteralExpr right = LiteralExpr.ofBoolean(false);
         BinaryExpr and = new BinaryExpr(BinaryOperator.AND, left, right, PrimitiveSourceType.INT);
@@ -430,7 +459,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerLogicalOr() {
+    void lowerLogicalOr()
+    {
         LiteralExpr left = LiteralExpr.ofBoolean(false);
         LiteralExpr right = LiteralExpr.ofBoolean(true);
         BinaryExpr or = new BinaryExpr(BinaryOperator.OR, left, right, PrimitiveSourceType.INT);
@@ -441,10 +471,11 @@ class ExpressionLowererTest {
         assertTrue(ctx.getIrMethod().getBlockCount() > 1);
     }
 
-    // ========== Unary Expression Tests ==========
+    // Unary Expression Tests
 
     @Test
-    void lowerUnaryNegate() {
+    void lowerUnaryNegate()
+    {
         LiteralExpr operand = LiteralExpr.ofInt(42);
         UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, operand, PrimitiveSourceType.INT);
 
@@ -457,7 +488,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerUnaryPlus() {
+    void lowerUnaryPlus()
+    {
         LiteralExpr operand = LiteralExpr.ofInt(42);
         UnaryExpr pos = new UnaryExpr(UnaryOperator.POS, operand, PrimitiveSourceType.INT);
 
@@ -466,7 +498,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerUnaryBitwiseNot() {
+    void lowerUnaryBitwiseNot()
+    {
         LiteralExpr operand = LiteralExpr.ofInt(0xFF);
         UnaryExpr bnot = new UnaryExpr(UnaryOperator.BNOT, operand, PrimitiveSourceType.INT);
 
@@ -479,7 +512,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerPreIncrement() {
+    void lowerPreIncrement()
+    {
         SSAValue var = new SSAValue(PrimitiveType.INT);
         ctx.setVariable("x", var);
 
@@ -495,7 +529,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerPostIncrement() {
+    void lowerPostIncrement()
+    {
         SSAValue var = new SSAValue(PrimitiveType.INT);
         ctx.setVariable("x", var);
 
@@ -508,10 +543,11 @@ class ExpressionLowererTest {
         assertEquals(var, result);
     }
 
-    // ========== Method Call Tests ==========
+    // Method Call Tests
 
     @Test
-    void lowerStaticMethodCall() {
+    void lowerStaticMethodCall()
+    {
         MethodCallExpr call = new MethodCallExpr(
             null, "add", "com/test/Math",
             List.of(LiteralExpr.ofInt(1), LiteralExpr.ofInt(2)),
@@ -527,7 +563,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerVirtualMethodCall() {
+    void lowerVirtualMethodCall()
+    {
         VarRefExpr receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
         SSAValue receiverValue = new SSAValue(new ReferenceType("java/lang/Object"));
         ctx.setVariable("obj", receiverValue);
@@ -547,14 +584,12 @@ class ExpressionLowererTest {
                 ((InvokeInstruction) i).getInvokeType() == InvokeType.VIRTUAL));
     }
 
-    // ========== Field Access Tests ==========
+    // Field Access Tests
 
     @Test
-    void lowerStaticFieldAccess() {
-        FieldAccessExpr field = new FieldAccessExpr(
-            null, "VERSION", "com/test/Config",
-            true, PrimitiveSourceType.INT
-        );
+    void lowerStaticFieldAccess()
+    {
+        FieldAccessExpr field = new FieldAccessExpr(null, "VERSION", "com/test/Config", true, PrimitiveSourceType.INT);
 
         Value result = lowerer.lower(field);
 
@@ -564,15 +599,13 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerInstanceFieldAccess() {
+    void lowerInstanceFieldAccess()
+    {
         VarRefExpr receiver = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
         SSAValue receiverValue = new SSAValue(new ReferenceType("com/test/Test"));
         ctx.setVariable("obj", receiverValue);
 
-        FieldAccessExpr field = new FieldAccessExpr(
-            receiver, "count", "com/test/Test",
-            false, PrimitiveSourceType.INT
-        );
+        FieldAccessExpr field = new FieldAccessExpr(receiver, "count", "com/test/Test", false, PrimitiveSourceType.INT);
 
         Value result = lowerer.lower(field);
 
@@ -581,10 +614,11 @@ class ExpressionLowererTest {
             .anyMatch(i -> i instanceof FieldAccessInstruction && ((FieldAccessInstruction) i).isLoad()));
     }
 
-    // ========== Array Operations Tests ==========
+    // Array Operations Tests
 
     @Test
-    void lowerArrayAccess() {
+    void lowerArrayAccess()
+    {
         VarRefExpr array = new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT, 1));
         SSAValue arrayValue = new SSAValue(new ArrayType(PrimitiveType.INT, 1));
         ctx.setVariable("arr", arrayValue);
@@ -600,7 +634,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerArrayAssignment() {
+    void lowerArrayAssignment()
+    {
         VarRefExpr array = new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT, 1));
         SSAValue arrayValue = new SSAValue(new ArrayType(PrimitiveType.INT, 1));
         ctx.setVariable("arr", arrayValue);
@@ -618,38 +653,39 @@ class ExpressionLowererTest {
             .anyMatch(i -> i instanceof ArrayAccessInstruction && ((ArrayAccessInstruction) i).isStore()));
     }
 
-    // ========== Object Creation Tests ==========
+    // Object Creation Tests
 
     @Test
-    void lowerNewObject() {
+    void lowerNewObject()
+    {
         NewExpr newExpr = new NewExpr("java/lang/Object", List.of(), ReferenceSourceType.OBJECT);
 
         Value result = lowerer.lower(newExpr);
 
         assertNotNull(result);
-        assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof NewInstruction));
+        assertTrue(ctx.getCurrentBlock().getInstructions().stream() .anyMatch(i -> i instanceof NewInstruction));
         assertTrue(ctx.getCurrentBlock().getInstructions().stream()
             .anyMatch(i -> i instanceof InvokeInstruction &&
                 "<init>".equals(((InvokeInstruction) i).getName())));
     }
 
     @Test
-    void lowerNewArray() {
+    void lowerNewArray()
+    {
         List<Expression> dims = List.of(LiteralExpr.ofInt(10));
         NewArrayExpr newArr = new NewArrayExpr(PrimitiveSourceType.INT, dims);
 
         Value result = lowerer.lower(newArr);
 
         assertNotNull(result);
-        assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof NewArrayInstruction));
+        assertTrue(ctx.getCurrentBlock().getInstructions().stream() .anyMatch(i -> i instanceof NewArrayInstruction));
     }
 
-    // ========== Cast Tests ==========
+    // Cast Tests
 
     @Test
-    void lowerPrimitiveCast() {
+    void lowerPrimitiveCast()
+    {
         LiteralExpr expr = LiteralExpr.ofInt(42);
         CastExpr cast = new CastExpr(PrimitiveSourceType.LONG, expr);
 
@@ -662,7 +698,8 @@ class ExpressionLowererTest {
     }
 
     @Test
-    void lowerReferenceCast() {
+    void lowerReferenceCast()
+    {
         VarRefExpr expr = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
         SSAValue objValue = new SSAValue(new ReferenceType("java/lang/Object"));
         ctx.setVariable("obj", objValue);
@@ -676,10 +713,11 @@ class ExpressionLowererTest {
             .anyMatch(i -> i instanceof TypeCheckInstruction && ((TypeCheckInstruction) i).isCast()));
     }
 
-    // ========== Ternary Tests ==========
+    // Ternary Tests
 
     @Test
-    void lowerTernary() {
+    void lowerTernary()
+    {
         LiteralExpr condition = LiteralExpr.ofBoolean(true);
         LiteralExpr thenExpr = LiteralExpr.ofInt(10);
         LiteralExpr elseExpr = LiteralExpr.ofInt(20);
@@ -692,10 +730,11 @@ class ExpressionLowererTest {
         assertTrue(ctx.getIrMethod().getBlockCount() > 1);
     }
 
-    // ========== InstanceOf Tests ==========
+    // InstanceOf Tests
 
     @Test
-    void lowerInstanceOf() {
+    void lowerInstanceOf()
+    {
         VarRefExpr expr = new VarRefExpr("obj", ReferenceSourceType.OBJECT);
         SSAValue objValue = new SSAValue(new ReferenceType("java/lang/Object"));
         ctx.setVariable("obj", objValue);
@@ -709,10 +748,11 @@ class ExpressionLowererTest {
             .anyMatch(i -> i instanceof TypeCheckInstruction && ((TypeCheckInstruction) i).isInstanceOf()));
     }
 
-    // ========== This Tests ==========
+    // This Tests
 
     @Test
-    void lowerThis() {
+    void lowerThis()
+    {
         SSAValue thisValue = new SSAValue(new ReferenceType("com/test/Test"));
         ctx.setVariable("this", thisValue);
 
@@ -723,25 +763,18 @@ class ExpressionLowererTest {
         assertEquals(thisValue, result);
     }
 
-    // ========== Array Initializer Tests ==========
+    // Array Initializer Tests
 
     @Test
-    void lowerArrayInit() {
-        List<Expression> elements = List.of(
-            LiteralExpr.ofInt(1),
-            LiteralExpr.ofInt(2),
-            LiteralExpr.ofInt(3)
-        );
+    void lowerArrayInit()
+    {
+        List<Expression> elements = List.of(LiteralExpr.ofInt(1), LiteralExpr.ofInt(2), LiteralExpr.ofInt(3));
 
-        ArrayInitExpr arrayInit = new ArrayInitExpr(
-            elements,
-            new ArraySourceType(PrimitiveSourceType.INT, 1)
-        );
+        ArrayInitExpr arrayInit = new ArrayInitExpr(elements, new ArraySourceType(PrimitiveSourceType.INT, 1));
 
         Value result = lowerer.lower(arrayInit);
 
         assertNotNull(result);
-        assertTrue(ctx.getCurrentBlock().getInstructions().stream()
-            .anyMatch(i -> i instanceof NewArrayInstruction));
+        assertTrue(ctx.getCurrentBlock().getInstructions().stream() .anyMatch(i -> i instanceof NewArrayInstruction));
     }
 }

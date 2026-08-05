@@ -3,12 +3,10 @@ package com.tonic.analysis.simulation.metrics;
 import com.tonic.analysis.simulation.listener.StackOperationListener;
 
 /**
- * Metrics container for stack operations.
- *
- * <p>This class provides a clean interface to stack operation statistics
- * collected during simulation.
+ * Immutable operand stack operation counts collected during simulation.
  */
-public class StackMetrics {
+public class StackMetrics
+{
 
     private final int pushCount;
     private final int popCount;
@@ -16,7 +14,8 @@ public class StackMetrics {
     private final int swapCount;
     private final int maxDepth;
 
-    private StackMetrics(int pushCount, int popCount, int dupCount, int swapCount, int maxDepth) {
+    private StackMetrics(int pushCount, int popCount, int dupCount, int swapCount, int maxDepth)
+    {
         this.pushCount = pushCount;
         this.popCount = popCount;
         this.dupCount = dupCount;
@@ -25,9 +24,13 @@ public class StackMetrics {
     }
 
     /**
-     * Creates metrics from a StackOperationListener.
+     * Snapshots the counts a listener accumulated.
+     *
+     * @param listener the listener to read counts from
+     * @return metrics holding that listener's counts
      */
-    public static StackMetrics from(StackOperationListener listener) {
+    public static StackMetrics from(StackOperationListener listener)
+    {
         return new StackMetrics(
             listener.getPushCount(),
             listener.getPopCount(),
@@ -38,72 +41,87 @@ public class StackMetrics {
     }
 
     /**
-     * Creates empty metrics.
+     * Creates metrics with every count at zero.
+     *
+     * @return all-zero metrics
      */
-    public static StackMetrics empty() {
+    public static StackMetrics empty()
+    {
         return new StackMetrics(0, 0, 0, 0, 0);
     }
 
     /**
-     * Gets the total number of push operations.
+     * @return the number of pushes
      */
-    public int getPushCount() {
+    public int getPushCount()
+    {
         return pushCount;
     }
 
     /**
-     * Gets the total number of pop operations.
+     * @return the number of pops
      */
-    public int getPopCount() {
+    public int getPopCount()
+    {
         return popCount;
     }
 
     /**
-     * Gets the total number of dup operations.
+     * @return the number of dup operations
      */
-    public int getDupCount() {
+    public int getDupCount()
+    {
         return dupCount;
     }
 
     /**
-     * Gets the total number of swap operations.
+     * @return the number of swap operations
      */
-    public int getSwapCount() {
+    public int getSwapCount()
+    {
         return swapCount;
     }
 
     /**
-     * Gets the maximum stack depth observed.
+     * @return the deepest stack observed
      */
-    public int getMaxDepth() {
+    public int getMaxDepth()
+    {
         return maxDepth;
     }
 
     /**
-     * Gets the total number of stack operations.
+     * @return pushes, pops, dups and swaps summed
      */
-    public int getTotalOperations() {
+    public int getTotalOperations()
+    {
         return pushCount + popCount + dupCount + swapCount;
     }
 
     /**
-     * Gets the net stack change (pushes - pops).
+     * @return pushes minus pops
      */
-    public int getNetChange() {
+    public int getNetChange()
+    {
         return pushCount - popCount;
     }
 
     /**
-     * Returns true if more pushes than pops occurred.
+     * @return true when more pushes than pops were counted
      */
-    public boolean hasStackGrowth() {
+    public boolean hasStackGrowth()
+    {
         return pushCount > popCount;
     }
 
     /**
-     * Combines this metrics with another.
+     * Sums the operation counts of both metrics and keeps the deeper maximum depth.
+     *
+     * @param other the metrics to add
+     * @return the combined metrics
      */
-    public StackMetrics combine(StackMetrics other) {
+    public StackMetrics combine(StackMetrics other)
+    {
         return new StackMetrics(
             this.pushCount + other.pushCount,
             this.popCount + other.popCount,
@@ -114,7 +132,8 @@ public class StackMetrics {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "StackMetrics[pushes=" + pushCount +
             ", pops=" + popCount +
             ", dups=" + dupCount +

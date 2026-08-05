@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * so only the synthetic machinery (constructors with their name/ordinal prefix, {@code <clinit>},
  * {@code $VALUES}) keeps its original bytecode.
  */
-class EnumRecompileTest {
+class EnumRecompileTest
+{
 
     private static final String[] LINES = {
             "public enum Signal {",
@@ -46,14 +47,14 @@ class EnumRecompileTest {
     };
 
     @Test
-    void anEnumsMethodBodiesRelower() throws Exception {
+    void anEnumsMethodBodiesRelower() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("enum-recompile");
         Path src = dir.resolve("Signal.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("Signal.class")));
@@ -61,8 +62,7 @@ class EnumRecompileTest {
         assertEquals("OFF0LOW6HIGH10", original, "the fixture itself must cap the doubled level");
 
         String d1 = ClassDecompiler.decompile(cf);
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Signal"),
-                "an enum must recompile:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "Signal"), "an enum must recompile:\n" + d1);
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped enum must behave the same");
     }

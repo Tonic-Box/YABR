@@ -10,10 +10,12 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ResolvedMethodTest {
+class ResolvedMethodTest
+{
 
     @Test
-    void constructor_shouldInitializeAllFields() throws IOException {
+    void constructor_shouldInitializeAllFields() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Test")
             .publicMethod("example", "()V")
                 .vreturn()
@@ -32,7 +34,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void getMethod_shouldReturnCorrectMethodEntry() throws IOException {
+    void getMethod_shouldReturnCorrectMethodEntry() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Calculator")
             .publicStaticMethod("add", "(II)I")
                 .iload(0)
@@ -51,7 +54,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void getDeclaringClass_shouldReturnCorrectClassFile() throws IOException {
+    void getDeclaringClass_shouldReturnCorrectClassFile() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Service")
             .publicMethod("process", "()V")
                 .vreturn()
@@ -68,7 +72,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void getKind_shouldReturnStaticForStaticInvoke() throws IOException {
+    void getKind_shouldReturnStaticForStaticInvoke() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Utils")
             .publicStaticMethod("helper", "()V")
                 .vreturn()
@@ -84,7 +89,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void getKind_shouldReturnVirtualForVirtualInvoke() throws IOException {
+    void getKind_shouldReturnVirtualForVirtualInvoke() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Bean")
             .publicMethod("getValue", "()I")
                 .iconst(42)
@@ -101,7 +107,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void getKind_shouldReturnSpecialForSpecialInvoke() throws IOException {
+    void getKind_shouldReturnSpecialForSpecialInvoke() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Constructor")
             .publicMethod("<init>", "()V")
                 .vreturn()
@@ -117,7 +124,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void getKind_shouldReturnInterfaceForInterfaceInvoke() throws IOException {
+    void getKind_shouldReturnInterfaceForInterfaceInvoke() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/MyInterface")
             .publicMethod("doSomething", "()V")
                 .vreturn()
@@ -133,7 +141,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void isStatic_shouldReturnTrueForStaticMethod() throws IOException {
+    void isStatic_shouldReturnTrueForStaticMethod() throws IOException
+    {
         int staticAccess = new AccessBuilder().setPublic().setStatic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/StaticTest")
             .method(staticAccess, "staticMethod", "()V")
@@ -150,7 +159,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void isStatic_shouldReturnFalseForInstanceMethod() throws IOException {
+    void isStatic_shouldReturnFalseForInstanceMethod() throws IOException
+    {
         int instanceAccess = new AccessBuilder().setPublic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/InstanceTest")
             .method(instanceAccess, "instanceMethod", "()V")
@@ -167,7 +177,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void isNative_shouldReturnTrueForNativeMethod() throws IOException {
+    void isNative_shouldReturnTrueForNativeMethod() throws IOException
+    {
         int nativeAccess = new AccessBuilder().setPublic().setNative().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/NativeTest").build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(nativeAccess, "nativeMethod", "()V");
@@ -178,7 +189,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void isNative_shouldReturnFalseForNonNativeMethod() throws IOException {
+    void isNative_shouldReturnFalseForNonNativeMethod() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/RegularTest")
             .publicMethod("regularMethod", "()V")
                 .vreturn()
@@ -194,7 +206,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void isAbstract_shouldReturnTrueForAbstractMethod() throws IOException {
+    void isAbstract_shouldReturnTrueForAbstractMethod() throws IOException
+    {
         int abstractAccess = new AccessBuilder().setPublic().setAbstract().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/AbstractTest").build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(abstractAccess, "abstractMethod", "()V");
@@ -205,7 +218,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void isAbstract_shouldReturnFalseForConcreteMethod() throws IOException {
+    void isAbstract_shouldReturnFalseForConcreteMethod() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/ConcreteTest")
             .publicMethod("concreteMethod", "()V")
                 .vreturn()
@@ -221,7 +235,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void toString_shouldIncludeMethodInfoAndKind() throws IOException {
+    void toString_shouldIncludeMethodInfoAndKind() throws IOException
+    {
         ClassFile classFile = BytecodeBuilder.forClass("com/example/ToStringTest")
             .publicMethod("testMethod", "(I)Ljava/lang/String;")
                 .aconst_null()
@@ -244,7 +259,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void invokeKindEnum_shouldHaveAllExpectedValues() {
+    void invokeKindEnum_shouldHaveAllExpectedValues()
+    {
         ResolvedMethod.InvokeKind[] kinds = ResolvedMethod.InvokeKind.values();
 
         assertEquals(4, kinds.length);
@@ -260,7 +276,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void invokeKindEnum_shouldSupportValueOf() {
+    void invokeKindEnum_shouldSupportValueOf()
+    {
         assertEquals(ResolvedMethod.InvokeKind.STATIC, ResolvedMethod.InvokeKind.valueOf("STATIC"));
         assertEquals(ResolvedMethod.InvokeKind.VIRTUAL, ResolvedMethod.InvokeKind.valueOf("VIRTUAL"));
         assertEquals(ResolvedMethod.InvokeKind.SPECIAL, ResolvedMethod.InvokeKind.valueOf("SPECIAL"));
@@ -268,7 +285,8 @@ class ResolvedMethodTest {
     }
 
     @Test
-    void accessFlagCombinations_shouldWorkCorrectly() throws IOException {
+    void accessFlagCombinations_shouldWorkCorrectly() throws IOException
+    {
         int combinedAccess = new AccessBuilder()
             .setPublic()
             .setStatic()

@@ -30,13 +30,16 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@link #KNOWN_BROKEN}: the harness asserts they still fail (a silent fix or a new break of the
  * documentation both surface) without failing the suite.
  */
-class StressCorpusTest {
+class StressCorpusTest
+{
 
-    private static final class Fixture {
+    private static final class Fixture
+    {
         final String name;
         final String source;
 
-        Fixture(String name, String source) {
+        Fixture(String name, String source)
+        {
             this.name = name;
             this.source = source;
         }
@@ -809,17 +812,20 @@ class StressCorpusTest {
     );
 
     @TestFactory
-    List<DynamicTest> stressCorpus() {
+    List<DynamicTest> stressCorpus()
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         List<DynamicTest> tests = new ArrayList<>();
-        for (Fixture f : FIXTURES) {
+        for (Fixture f : FIXTURES)
+        {
             tests.add(DynamicTest.dynamicTest(f.name, () -> runFixture(compiler, f)));
         }
         return tests;
     }
 
-    private void runFixture(JavaCompiler compiler, Fixture f) throws Exception {
+    private void runFixture(JavaCompiler compiler, Fixture f) throws Exception
+    {
         Path dir = Files.createTempDirectory("stress-" + f.name);
         Path src = dir.resolve(f.name + ".java");
         Files.writeString(src, f.source);
@@ -827,34 +833,38 @@ class StressCorpusTest {
                 f.name + " fixture compiled");
 
         Object original;
-        try (URLClassLoader origLoader = new URLClassLoader(new java.net.URL[]{dir.toUri().toURL()}, null)) {
+        try (URLClassLoader origLoader = new URLClassLoader(new java.net.URL[]{dir.toUri().toURL()}, null))
+        {
             original = origLoader.loadClass(f.name).getMethod("check").invoke(null);
         }
 
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve(f.name + ".class")));
         String d1 = ClassDecompiler.decompile(cf);
-        assertFalse(d1.contains("Failed to decompile"),
-                f.name + " must decompile every method:\n" + d1);
+        assertFalse(d1.contains("Failed to decompile"), f.name + " must decompile every method:\n" + d1);
 
         boolean expectBroken = KNOWN_BROKEN.contains(f.name);
         Object roundTripped;
-        try {
+        try
+        {
             ClassFile recovered = Recompile.recompiledClone(cf, pool);
             assertNotNull(recovered, f.name + " must be recompilable");
             roundTripped = TestUtils.loadAndVerify(recovered).getMethod("check").invoke(null);
-        } catch (Throwable t) {
-            if (expectBroken) {
+        }
+        catch (Throwable t)
+        {
+            if (expectBroken)
+            {
                 return;
             }
             throw new AssertionError(f.name + " round trip failed to load/run: " + t + "\n" + d1, t);
         }
-        if (expectBroken) {
+        if (expectBroken)
+        {
             assertNotEquals(original, roundTripped, f.name + " is documented KNOWN_BROKEN but now round-trips equal (" + original
                     + ") - promote it to a passing fixture and update the memory notes");
             return;
         }
-        assertEquals(original, roundTripped,
-                f.name + " original and round-tripped check() must agree:\n" + d1);
+        assertEquals(original, roundTripped, f.name + " original and round-tripped check() must agree:\n" + d1);
     }
 }

@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@code Object[]} under a {@code String[]} signature - which does not verify, so the class fell out of the
  * recompile gates entirely rather than failing loudly.
  */
-class ArrayCastLoweringTest {
+class ArrayCastLoweringTest
+{
 
     private static final String[] LINES = {
             "public class CastReturn {",
@@ -47,14 +48,14 @@ class ArrayCastLoweringTest {
     };
 
     @Test
-    void aCastToAnArrayTypeSurvivesRelowering() throws Exception {
+    void aCastToAnArrayTypeSurvivesRelowering() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("array-cast");
         Path src = dir.resolve("CastReturn.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("CastReturn.class")));
@@ -65,8 +66,7 @@ class ArrayCastLoweringTest {
         assertTrue(d1.replaceAll("\\s+", " ").contains("return (String[]) this.items;"),
                 "the array cast must be recovered:\n" + d1);
 
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "CastReturn"),
-                "the decompiled source must recompile");
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "CastReturn"), "the decompiled source must recompile");
         assertTrue(TestUtils.verifies(cf, pool),
                 "the re-lowered class must verify - without the cast the return type does not match");
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),

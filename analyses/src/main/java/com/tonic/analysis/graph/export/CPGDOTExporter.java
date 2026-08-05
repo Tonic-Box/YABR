@@ -10,25 +10,50 @@ import java.io.Writer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
+/**
+ * Renders a code property graph as Graphviz DOT, with a filter selecting which edge types appear.
+ */
+public class CPGDOTExporter extends DOTExporter<CodePropertyGraph>
+{
 
     private Set<CPGEdgeType> includedEdgeTypes;
 
-    public CPGDOTExporter() {
+    /**
+     * Creates an exporter with the default configuration and every edge type enabled.
+     */
+    public CPGDOTExporter()
+    {
         this(DOTExporterConfig.defaults());
     }
 
-    public CPGDOTExporter(DOTExporterConfig config) {
+    /**
+     * Creates an exporter that emits every edge type.
+     * @param config rendering options
+     */
+    public CPGDOTExporter(DOTExporterConfig config)
+    {
         super(config);
         this.includedEdgeTypes = EnumSet.allOf(CPGEdgeType.class);
     }
 
-    public CPGDOTExporter includeEdgeTypes(CPGEdgeType... types) {
+    /**
+     * Replaces the emitted edge set with exactly the given types.
+     * @param types edge types to emit; must not be empty
+     * @return this exporter
+     * @throws IllegalArgumentException if no types are given
+     */
+    public CPGDOTExporter includeEdgeTypes(CPGEdgeType... types)
+    {
         this.includedEdgeTypes = EnumSet.copyOf(Arrays.asList(types));
         return this;
     }
 
-    public CPGDOTExporter cfgOnly() {
+    /**
+     * Restricts output to control-flow edges plus containment.
+     * @return this exporter
+     */
+    public CPGDOTExporter cfgOnly()
+    {
         this.includedEdgeTypes = EnumSet.of(
             CPGEdgeType.CFG_NEXT,
             CPGEdgeType.CFG_TRUE,
@@ -40,7 +65,12 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         return this;
     }
 
-    public CPGDOTExporter dataFlowOnly() {
+    /**
+     * Restricts output to def, use and reaching-def edges plus containment.
+     * @return this exporter
+     */
+    public CPGDOTExporter dataFlowOnly()
+    {
         this.includedEdgeTypes = EnumSet.of(
             CPGEdgeType.DATA_DEF,
             CPGEdgeType.DATA_USE,
@@ -50,7 +80,12 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         return this;
     }
 
-    public CPGDOTExporter callGraphOnly() {
+    /**
+     * Restricts output to call, parameter and return-value edges.
+     * @return this exporter
+     */
+    public CPGDOTExporter callGraphOnly()
+    {
         this.includedEdgeTypes = EnumSet.of(
             CPGEdgeType.CALL,
             CPGEdgeType.PARAM_IN,
@@ -61,36 +96,46 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
     }
 
     @Override
-    public void export(CodePropertyGraph cpg, Writer output) {
-        try {
+    public void export(CodePropertyGraph cpg, Writer output)
+    {
+        try
+        {
             writeHeader(output);
 
-            if (config.isClusterByMethod()) {
+            if (config.isClusterByMethod())
+            {
                 exportClustered(cpg, output);
-            } else {
+            }
+            else
+            {
                 exportFlat(cpg, output);
             }
 
             output.write("\n");
             exportEdges(cpg, output);
 
-            if (config.isIncludeLegend()) {
+            if (config.isIncludeLegend())
+            {
                 output.write("\n");
                 writeCPGLegend(output);
             }
 
             writeFooter(output);
             output.flush();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException("Failed to export CPG to DOT", e);
         }
     }
 
-    private void exportClustered(CodePropertyGraph cpg, Writer w) throws IOException {
+    private void exportClustered(CodePropertyGraph cpg, Writer w) throws IOException
+    {
         List<MethodNode> methods = cpg.nodes(MethodNode.class).collect(Collectors.toList());
 
         int clusterIdx = 0;
-        for (MethodNode method : methods) {
+        for (MethodNode method : methods)
+        {
             String clusterName = "method_" + clusterIdx++;
             String clusterLabel = method.getName() + method.getDescriptor();
 
@@ -104,7 +149,8 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
                 .map(n -> (BlockNode) n)
                 .collect(Collectors.toList());
 
-            for (BlockNode block : blocks) {
+            for (BlockNode block : blocks)
+            {
                 writeNodeDOT(w, block, "    ");
 
                 List<InstructionNode> instrs = block.getOutgoingEdges().stream()
@@ -114,7 +160,8 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
                     .map(n -> (InstructionNode) n)
                     .collect(Collectors.toList());
 
-                for (InstructionNode instr : instrs) {
+                for (InstructionNode instr : instrs)
+                {
                     writeNodeDOT(w, instr, "    ");
                 }
             }
@@ -122,18 +169,22 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
             endCluster(w);
         }
 
-        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList())) {
+        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList()))
+        {
             writeNodeDOT(w, callSite, "  ");
         }
     }
 
-    private void exportFlat(CodePropertyGraph cpg, Writer w) throws IOException {
-        for (CPGNode node : cpg.getAllNodes()) {
+    private void exportFlat(CodePropertyGraph cpg, Writer w) throws IOException
+    {
+        for (CPGNode node : cpg.getAllNodes())
+        {
             writeNodeDOT(w, node, "  ");
         }
     }
 
-    private void writeNodeDOT(Writer w, CPGNode node, String indent) throws IOException {
+    private void writeNodeDOT(Writer w, CPGNode node, String indent) throws IOException
+    {
         String id = "n" + node.getId();
         String label = getNodeLabel(node);
         String shape = getNodeShape(node);
@@ -147,36 +198,49 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         w.write("];\n");
     }
 
-    private String getNodeLabel(CPGNode node) {
+    private String getNodeLabel(CPGNode node)
+    {
         StringBuilder sb = new StringBuilder();
 
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             sb.append(node.getId()).append(": ");
         }
 
-        if (node instanceof MethodNode) {
+        if (node instanceof MethodNode)
+        {
             MethodNode method = (MethodNode) node;
             sb.append(method.getName());
-        } else if (node instanceof BlockNode) {
+        }
+        else if (node instanceof BlockNode)
+        {
             BlockNode block = (BlockNode) node;
             sb.append("B").append(block.getBlockId());
             if (block.isEntryBlock()) sb.append(" (entry)");
             if (block.isExitBlock()) sb.append(" (exit)");
-        } else if (node instanceof InstructionNode) {
+        }
+        else if (node instanceof InstructionNode)
+        {
             InstructionNode instr = (InstructionNode) node;
             sb.append(instr.getLabel());
-        } else if (node instanceof CallSiteNode) {
+        }
+        else if (node instanceof CallSiteNode)
+        {
             CallSiteNode call = (CallSiteNode) node;
             sb.append("CALL: ").append(call.getTargetName());
-        } else {
+        }
+        else
+        {
             sb.append(node.getLabel());
         }
 
         return sb.toString();
     }
 
-    private String getNodeShape(CPGNode node) {
-        switch (node.getNodeType()) {
+    private String getNodeShape(CPGNode node)
+    {
+        switch (node.getNodeType())
+        {
             case METHOD:
                 return "house";
             case BLOCK:
@@ -190,8 +254,10 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         }
     }
 
-    private String getNodeFillColor(CPGNode node) {
-        switch (node.getNodeType()) {
+    private String getNodeFillColor(CPGNode node)
+    {
+        switch (node.getNodeType())
+        {
             case METHOD:
                 return "#90EE90";
             case BLOCK:
@@ -205,27 +271,33 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         }
     }
 
-    private void exportEdges(CodePropertyGraph cpg, Writer w) throws IOException {
+    private void exportEdges(CodePropertyGraph cpg, Writer w) throws IOException
+    {
         Map<CPGEdgeType, List<CPGEdge>> edgesByType = new EnumMap<>(CPGEdgeType.class);
 
-        for (CPGEdge edge : cpg.getAllEdges()) {
-            if (includedEdgeTypes.contains(edge.getType())) {
+        for (CPGEdge edge : cpg.getAllEdges())
+        {
+            if (includedEdgeTypes.contains(edge.getType()))
+            {
                 edgesByType.computeIfAbsent(edge.getType(), k -> new ArrayList<>()).add(edge);
             }
         }
 
-        for (Map.Entry<CPGEdgeType, List<CPGEdge>> entry : edgesByType.entrySet()) {
+        for (Map.Entry<CPGEdgeType, List<CPGEdge>> entry : edgesByType.entrySet())
+        {
             CPGEdgeType type = entry.getKey();
             w.write("  // " + type.name() + " edges\n");
 
-            for (CPGEdge edge : entry.getValue()) {
+            for (CPGEdge edge : entry.getValue())
+            {
                 writeEdgeDOT(w, edge);
             }
             w.write("\n");
         }
     }
 
-    private void writeEdgeDOT(Writer w, CPGEdge edge) throws IOException {
+    private void writeEdgeDOT(Writer w, CPGEdge edge) throws IOException
+    {
         String source = "n" + edge.getSource().getId();
         String target = "n" + edge.getTarget().getId();
 
@@ -233,20 +305,25 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         attrs.put("color", getEdgeColor(edge.getType()));
         attrs.put("style", getEdgeStyle(edge.getType()));
 
-        if (edge.getType().isCFGEdge()) {
+        if (edge.getType().isCFGEdge())
+        {
             attrs.put("weight", "10");
         }
 
-        if (edge.getType() == CPGEdgeType.CFG_BACK) {
+        if (edge.getType() == CPGEdgeType.CFG_BACK)
+        {
             attrs.put("constraint", "false");
         }
 
         writeEdge(w, source, target, attrs);
     }
 
-    private String getEdgeColor(CPGEdgeType type) {
-        if (type.isCFGEdge()) {
-            switch (type) {
+    private String getEdgeColor(CPGEdgeType type)
+    {
+        if (type.isCFGEdge())
+        {
+            switch (type)
+            {
                 case CFG_TRUE:
                     return "#00aa00";
                 case CFG_FALSE:
@@ -260,15 +337,18 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
             }
         }
 
-        if (type.isDataFlowEdge()) {
+        if (type.isDataFlowEdge())
+        {
             return "#0000cc";
         }
 
-        if (type.isControlDependenceEdge()) {
+        if (type.isControlDependenceEdge())
+        {
             return "#006600";
         }
 
-        switch (type) {
+        switch (type)
+        {
             case CALL:
                 return "#9932CC";
             case PARAM_IN:
@@ -285,20 +365,25 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph> {
         }
     }
 
-    private String getEdgeStyle(CPGEdgeType type) {
-        if (type.isControlDependenceEdge()) {
+    private String getEdgeStyle(CPGEdgeType type)
+    {
+        if (type.isControlDependenceEdge())
+        {
             return "dashed";
         }
-        if (type == CPGEdgeType.CONTAINS) {
+        if (type == CPGEdgeType.CONTAINS)
+        {
             return "dotted";
         }
-        if (type == CPGEdgeType.CFG_BACK) {
+        if (type == CPGEdgeType.CFG_BACK)
+        {
             return "dashed";
         }
         return "solid";
     }
 
-    private void writeCPGLegend(Writer w) throws IOException {
+    private void writeCPGLegend(Writer w) throws IOException
+    {
         w.write("  subgraph cluster_legend {\n");
         w.write("    label=\"Legend\";\n");
         w.write("    style=rounded;\n");

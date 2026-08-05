@@ -17,7 +17,8 @@ import java.util.List;
  * Main entry point for SSA-form IR operations.
  * Provides methods for lifting bytecode to SSA and lowering back to bytecode.
  */
-public class SSA {
+public class SSA
+{
 
     private static final int EXPENSIVE_TRANSFORM_THRESHOLD = 200;
 
@@ -29,10 +30,10 @@ public class SSA {
 
     /**
      * Creates a new SSA processor.
-     *
      * @param constPool the constant pool for the class being processed
      */
-    public SSA(ConstPool constPool) {
+    public SSA(ConstPool constPool)
+    {
         this.constPool = constPool;
         this.transforms = new ArrayList<>();
         this.classTransforms = new ArrayList<>();
@@ -40,10 +41,10 @@ public class SSA {
 
     /**
      * Gets the constant pool associated with this SSA processor.
-     *
      * @return the constant pool
      */
-    public ConstPool getConstPool() {
+    public ConstPool getConstPool()
+    {
         return constPool;
     }
 
@@ -53,13 +54,13 @@ public class SSA {
      * defs) into the handler, then the edges are removed. This is needed when the IR is lowered back to
      * bytecode (e.g. deobfuscation) so a handler that uses such a local does not read a never-written slot.
      *
-     * <p>It is OFF by default because it adds handler phis that change control-flow shape, which the
+     *It is OFF by default because it adds handler phis that change control-flow shape, which the
      * source-recovery decompiler's finally/try-catch reconstruction is sensitive to. Opt in only on paths that
-     * lift→optimize→lower.
-     *
+     * lift-&gt;optimize-&gt;lower.
      * @return this for fluent chaining
      */
-    public SSA withExceptionLocalResolution() {
+    public SSA withExceptionLocalResolution()
+    {
         this.resolveExceptionLocals = true;
         return this;
     }
@@ -67,27 +68,28 @@ public class SSA {
     /**
      * Disables LocalVariableTable emission when lowering back to bytecode. Emission is ON by default so
      * recompiled source carries real local-variable debug names; opt out for size-sensitive or debug-free
-     * output. IR with no source-local model (e.g. the lift→lower deobfuscation path) emits no table either way,
+     * output. IR with no source-local model (e.g. the lift-&gt;lower deobfuscation path) emits no table either way,
      * so this only affects the source-compile path.
-     *
      * @return this for fluent chaining
      */
-    public SSA withoutLocalVariableTable() {
+    public SSA withoutLocalVariableTable()
+    {
         this.emitLocalVariableTable = false;
         return this;
     }
 
     /**
      * Lifts a method from bytecode to SSA-form IR.
-     *
      * @param method the method to lift
      * @return the SSA-form IR representation
      */
-    public IRMethod lift(MethodEntry method) {
+    public IRMethod lift(MethodEntry method)
+    {
         BytecodeLifter lifter = new BytecodeLifter(constPool);
         IRMethod irMethod = lifter.lift(method);
 
-        if (irMethod.getEntryBlock() != null) {
+        if (irMethod.getEntryBlock() != null)
+        {
             // Connect protected blocks to their handlers ONLY for SSA construction (opt-in): this makes handlers
             // reachable in the dominator tree so phi insertion + renaming propagate locals that are live across
             // the exception edge (params and try-body defs) into the handler. The edges are removed below so the
@@ -108,7 +110,8 @@ public class SSA {
 
             BytecodeLifter.refinePhiTypes(irMethod);
 
-            if (exceptionEdges != null) {
+            if (exceptionEdges != null)
+            {
                 BytecodeLifter.removeExceptionEdges(exceptionEdges);
             }
         }
@@ -118,11 +121,11 @@ public class SSA {
 
     /**
      * Lowers an SSA-form IR method back to bytecode.
-     *
      * @param irMethod the IR method to lower
      * @param targetMethod the target method to write bytecode into
      */
-    public void lower(IRMethod irMethod, MethodEntry targetMethod) {
+    public void lower(IRMethod irMethod, MethodEntry targetMethod)
+    {
         BytecodeLowerer lowerer = new BytecodeLowerer(constPool, emitLocalVariableTable);
         lowerer.lower(irMethod, targetMethod);
     }
@@ -130,146 +133,146 @@ public class SSA {
     /**
      * Lowers an SSA-form IR method to textual LLVM IR (computational subset). Convenience delegate
      * to {@link com.tonic.analysis.ssa.llvm.LlvmLowering}.
-     *
      * @param irMethod the IR method to lower
      * @return the LLVM IR module text
      */
-    public String toLlvm(IRMethod irMethod) {
+    public String toLlvm(IRMethod irMethod)
+    {
         return new LlvmLowering().lower(irMethod);
     }
 
     /**
      * Adds an optimization transform to be applied.
-     *
      * @param transform the transform to add
      * @return this SSA instance for chaining
      */
-    public SSA addTransform(IRTransform transform) {
+    public SSA addTransform(IRTransform transform)
+    {
         transforms.add(transform);
         return this;
     }
 
     /**
      * Enables dead code elimination optimization.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withDeadCodeElimination() {
+    public SSA withDeadCodeElimination()
+    {
         return addTransform(new DeadCodeElimination());
     }
 
     /**
      * Enables copy propagation optimization.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withCopyPropagation() {
+    public SSA withCopyPropagation()
+    {
         return addTransform(new CopyPropagation());
     }
 
     /**
      * Enables constant folding optimization.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withConstantFolding() {
+    public SSA withConstantFolding()
+    {
         return addTransform(new ConstantFolding());
     }
 
     /**
      * Enables strength reduction optimization.
      * Replaces expensive operations with cheaper equivalents:
-     * - x * 2^n -> x << n
-     * - x / 2^n -> x >> n
-     * - x % 2^n -> x & (2^n - 1)
-     *
+     * - x * 2^n -&gt; x &lt;&lt; n
+     * - x / 2^n -&gt; x &gt;&gt; n
+     * - x % 2^n -&gt; x &amp; (2^n - 1)
      * @return this SSA instance for chaining
      */
-    public SSA withStrengthReduction() {
+    public SSA withStrengthReduction()
+    {
         return addTransform(new StrengthReduction());
     }
 
     /**
      * Enables algebraic simplification optimization.
      * Applies mathematical identities:
-     * - x + 0 -> x, x * 1 -> x, x * 0 -> 0
-     * - x - x -> 0, x ^ x -> 0
-     * - x & 0 -> 0, x | 0 -> x
-     *
+     * - x + 0 -&gt; x, x * 1 -&gt; x, x * 0 -&gt; 0
+     * - x - x -&gt; 0, x ^ x -&gt; 0
+     * - x &amp; 0 -&gt; 0, x | 0 -&gt; x
      * @return this SSA instance for chaining
      */
-    public SSA withAlgebraicSimplification() {
+    public SSA withAlgebraicSimplification()
+    {
         return addTransform(new AlgebraicSimplification());
     }
 
     /**
      * Enables reassociation optimization.
      * Reorders commutative operations to group constants together for folding.
-     * Example: (x + 5) + 10 -> x + (5 + 10) -> x + 15
-     *
+     * Example: (x + 5) + 10 -&gt; x + (5 + 10) -&gt; x + 15
      * @return this SSA instance for chaining
      */
-    public SSA withReassociate() {
+    public SSA withReassociate()
+    {
         return addTransform(new Reassociate());
     }
 
     /**
      * Enables phi constant propagation optimization.
      * Simplifies phi nodes when all incoming values are identical.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withPhiConstantPropagation() {
+    public SSA withPhiConstantPropagation()
+    {
         return addTransform(new PhiConstantPropagation());
     }
 
     /**
      * Enables peephole optimizations.
      * Applies small pattern-based optimizations like double negation removal.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withPeepholeOptimizations() {
+    public SSA withPeepholeOptimizations()
+    {
         return addTransform(new PeepholeOptimizations());
     }
 
     /**
      * Enables common subexpression elimination.
      * Identifies identical expressions and reuses the first computed result.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withCommonSubexpressionElimination() {
+    public SSA withCommonSubexpressionElimination()
+    {
         return addTransform(new CommonSubexpressionElimination());
     }
 
     /**
      * Enables null check elimination optimization.
      * Removes redundant null checks when an object is provably non-null.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withNullCheckElimination() {
+    public SSA withNullCheckElimination()
+    {
         return addTransform(new NullCheckElimination());
     }
 
     /**
      * Enables conditional constant propagation optimization.
      * Propagates constants through conditional branches, eliminating unreachable code.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withConditionalConstantPropagation() {
+    public SSA withConditionalConstantPropagation()
+    {
         return addTransform(new ConditionalConstantPropagation());
     }
 
     /**
      * Enables loop-invariant code motion optimization.
      * Moves loop-invariant computations outside the loop.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withLoopInvariantCodeMotion() {
+    public SSA withLoopInvariantCodeMotion()
+    {
         return addTransform(new LoopInvariantCodeMotion());
     }
 
@@ -277,31 +280,31 @@ public class SSA {
      * Enables loop predication optimization.
      * Converts loop-variant guards into loop-invariant predicates.
      * Eliminates guards that can be proven always true for all iterations.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withLoopPredication() {
+    public SSA withLoopPredication()
+    {
         return addTransform(new LoopPredication());
     }
 
     /**
      * Enables induction variable simplification optimization.
      * Simplifies loop counters and derived induction variables.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withInductionVariableSimplification() {
+    public SSA withInductionVariableSimplification()
+    {
         return addTransform(new InductionVariableSimplification());
     }
 
     /**
      * Enables jump threading optimization.
      * Eliminates redundant jump chains by threading through empty goto blocks.
-     * For example: goto A; A: goto B -> goto B
-     *
+     * For example: goto A; A: goto B -&gt; goto B
      * @return this SSA instance for chaining
      */
-    public SSA withJumpThreading() {
+    public SSA withJumpThreading()
+    {
         return addTransform(new JumpThreading());
     }
 
@@ -309,10 +312,10 @@ public class SSA {
      * Enables block merging optimization.
      * Merges blocks with a single predecessor/successor relationship
      * where no phi instructions are present.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withBlockMerging() {
+    public SSA withBlockMerging()
+    {
         return addTransform(new BlockMerging());
     }
 
@@ -320,10 +323,10 @@ public class SSA {
      * Enables control flow reducibility transformation.
      * Converts irreducible control flow to reducible form using node splitting,
      * allowing the decompiler to emit structured Java code.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withControlFlowReducibility() {
+    public SSA withControlFlowReducibility()
+    {
         return addTransform(new ControlFlowReducibility());
     }
 
@@ -331,10 +334,10 @@ public class SSA {
      * Enables duplicate block merging optimization.
      * Merges duplicate blocks created by node splitting while preserving reducibility.
      * Use after withControlFlowReducibility() to clean up duplicated code.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withDuplicateBlockMerging() {
+    public SSA withDuplicateBlockMerging()
+    {
         return addTransform(new DuplicateBlockMerging());
     }
 
@@ -342,11 +345,11 @@ public class SSA {
      * Enables duplicate block merging optimization with configurable aggression.
      * Conservative mode (false): only merge when one predecessor dominates all others.
      * Aggressive mode (true): also merge when no loop entry conflict would be created.
-     *
      * @param aggressive true for aggressive merging, false for conservative
      * @return this SSA instance for chaining
      */
-    public SSA withDuplicateBlockMerging(boolean aggressive) {
+    public SSA withDuplicateBlockMerging(boolean aggressive)
+    {
         return addTransform(new DuplicateBlockMerging(aggressive));
     }
 
@@ -354,10 +357,10 @@ public class SSA {
      * Enables redundant copy elimination optimization.
      * Removes identity copies (x = x), redundant load-store sequences,
      * and propagates copy chains to their ultimate sources.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withRedundantCopyElimination() {
+    public SSA withRedundantCopyElimination()
+    {
         return addTransform(new RedundantCopyElimination());
     }
 
@@ -365,31 +368,31 @@ public class SSA {
      * Enables bit-tracking dead code elimination.
      * Tracks which bits of a value are actually used downstream and
      * eliminates operations on bits that are never used.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withBitTrackingDCE() {
+    public SSA withBitTrackingDCE()
+    {
         return addTransform(new BitTrackingDCE());
     }
 
     /**
      * Enables correlated value propagation optimization.
      * Uses control flow to derive facts about values - when passing a branch
-     * like if (x < 10), CVP knows x is in range [MIN, 9] in the true branch.
-     *
+     * like if (x &lt; 10), CVP knows x is in range [MIN, 9] in the true branch.
      * @return this SSA instance for chaining
      */
-    public SSA withCorrelatedValuePropagation() {
+    public SSA withCorrelatedValuePropagation()
+    {
         return addTransform(new CorrelatedValuePropagation());
     }
 
     /**
      * Adds a class-level transform to be applied.
-     *
      * @param transform the class transform to add
      * @return this SSA instance for chaining
      */
-    public SSA addClassTransform(ClassTransform transform) {
+    public SSA addClassTransform(ClassTransform transform)
+    {
         classTransforms.add(transform);
         return this;
     }
@@ -398,29 +401,29 @@ public class SSA {
      * Enables method inlining optimization.
      * Replaces method calls with the body of the called method for
      * private, final, and static methods within the same class.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withMethodInlining() {
+    public SSA withMethodInlining()
+    {
         return addClassTransform(new MethodInlining());
     }
 
     /**
      * Enables dead method elimination.
      * Removes private methods that are never called after inlining.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withDeadMethodElimination() {
+    public SSA withDeadMethodElimination()
+    {
         return addClassTransform(new DeadMethodElimination());
     }
 
     /**
      * Enables the standard set of optimizations.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withStandardOptimizations() {
+    public SSA withStandardOptimizations()
+    {
         return withConstantFolding()
                 .withCopyPropagation()
                 .withDeadCodeElimination();
@@ -429,10 +432,10 @@ public class SSA {
     /**
      * Enables all available optimizations.
      * Transforms are applied in optimal order for best results.
-     *
      * @return this SSA instance for chaining
      */
-    public SSA withAllOptimizations() {
+    public SSA withAllOptimizations()
+    {
         return withReassociate()
                 .withConstantFolding()
                 .withPhiConstantPropagation()
@@ -456,10 +459,10 @@ public class SSA {
 
     /**
      * Runs all registered transforms on a method until a fixed point is reached.
-     *
      * @param method the method to optimize
      */
-    public void runTransforms(IRMethod method) {
+    public void runTransforms(IRMethod method)
+    {
         boolean changed = true;
         int iterations = 0;
         int maxIterations = 3;
@@ -467,13 +470,17 @@ public class SSA {
         int blockCount = method.getBlocks().size();
         boolean skipExpensive = blockCount > EXPENSIVE_TRANSFORM_THRESHOLD;
 
-        while (changed && iterations < maxIterations) {
+        while (changed && iterations < maxIterations)
+        {
             changed = false;
-            for (IRTransform transform : transforms) {
-                if (skipExpensive && isExpensiveTransform(transform)) {
+            for (IRTransform transform : transforms)
+            {
+                if (skipExpensive && isExpensiveTransform(transform))
+                {
                     continue;
                 }
-                if (transform.run(method)) {
+                if (transform.run(method))
+                {
                     changed = true;
                 }
             }
@@ -481,18 +488,19 @@ public class SSA {
         }
     }
 
-    private boolean isExpensiveTransform(IRTransform transform) {
+    private boolean isExpensiveTransform(IRTransform transform)
+    {
         String name = transform.getName();
         return "DuplicateBlockMerging".equals(name) || "ControlFlowReducibility".equals(name);
     }
 
     /**
      * Computes the dominator tree for a method.
-     *
      * @param method the method to analyze
      * @return the computed dominator tree
      */
-    public DominatorTree computeDominators(IRMethod method) {
+    public DominatorTree computeDominators(IRMethod method)
+    {
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
         return domTree;
@@ -500,11 +508,11 @@ public class SSA {
 
     /**
      * Computes liveness information for a method.
-     *
      * @param method the method to analyze
      * @return the computed liveness analysis
      */
-    public LivenessAnalysis computeLiveness(IRMethod method) {
+    public LivenessAnalysis computeLiveness(IRMethod method)
+    {
         LivenessAnalysis liveness = new LivenessAnalysis(method);
         liveness.compute();
         return liveness;
@@ -512,11 +520,11 @@ public class SSA {
 
     /**
      * Computes def-use chains for a method.
-     *
      * @param method the method to analyze
      * @return the computed def-use chains
      */
-    public DefUseChains computeDefUse(IRMethod method) {
+    public DefUseChains computeDefUse(IRMethod method)
+    {
         DefUseChains defUse = new DefUseChains(method);
         defUse.compute();
         return defUse;
@@ -524,11 +532,11 @@ public class SSA {
 
     /**
      * Computes loop information for a method.
-     *
      * @param method the method to analyze
      * @return the computed loop analysis
      */
-    public LoopAnalysis computeLoops(IRMethod method) {
+    public LoopAnalysis computeLoops(IRMethod method)
+    {
         DominatorTree domTree = computeDominators(method);
         LoopAnalysis loops = new LoopAnalysis(method, domTree);
         loops.compute();
@@ -537,11 +545,11 @@ public class SSA {
 
     /**
      * Lifts a method to SSA form and applies all registered optimizations.
-     *
      * @param method the method to lift and optimize
      * @return the optimized IR method
      */
-    public IRMethod liftAndOptimize(MethodEntry method) {
+    public IRMethod liftAndOptimize(MethodEntry method)
+    {
         IRMethod irMethod = lift(method);
         runTransforms(irMethod);
         return irMethod;
@@ -549,21 +557,21 @@ public class SSA {
 
     /**
      * Optimizes an IR method and lowers it back to bytecode.
-     *
      * @param irMethod the IR method to optimize
      * @param targetMethod the target method to write bytecode into
      */
-    public void optimizeAndLower(IRMethod irMethod, MethodEntry targetMethod) {
+    public void optimizeAndLower(IRMethod irMethod, MethodEntry targetMethod)
+    {
         runTransforms(irMethod);
         lower(irMethod, targetMethod);
     }
 
     /**
      * Performs a complete transformation: lift, optimize, and lower.
-     *
      * @param method the method to transform
      */
-    public void transform(MethodEntry method) {
+    public void transform(MethodEntry method)
+    {
         IRMethod irMethod = liftAndOptimize(method);
         lower(irMethod, method);
     }
@@ -572,14 +580,16 @@ public class SSA {
      * Runs all registered class-level transforms on a class file.
      * Class transforms (like method inlining) have access to the entire class
      * and can perform cross-method optimizations.
-     *
      * @param classFile the class file to transform
      * @return true if any transform modified the class
      */
-    public boolean runClassTransforms(ClassFile classFile) {
+    public boolean runClassTransforms(ClassFile classFile)
+    {
         boolean changed = false;
-        for (ClassTransform transform : classTransforms) {
-            if (transform.run(classFile, this)) {
+        for (ClassTransform transform : classTransforms)
+        {
+            if (transform.run(classFile, this))
+            {
                 changed = true;
             }
         }
@@ -590,13 +600,14 @@ public class SSA {
      * Transforms an entire class file with all registered transforms.
      * First runs class-level transforms (like inlining), then runs
      * method-level transforms on each method.
-     *
      * @param classFile the class file to transform
      */
-    public void transformClass(ClassFile classFile) {
+    public void transformClass(ClassFile classFile)
+    {
         runClassTransforms(classFile);
 
-        for (MethodEntry method : classFile.getMethods()) {
+        for (MethodEntry method : classFile.getMethods())
+        {
             if (method.getCodeAttribute() == null) continue;
             if (method.getName().startsWith("<")) continue;
 
@@ -608,10 +619,10 @@ public class SSA {
 
     /**
      * Gets the list of registered class-level transforms.
-     *
      * @return unmodifiable list of class transforms
      */
-    public List<ClassTransform> getClassTransforms() {
+    public List<ClassTransform> getClassTransforms()
+    {
         return java.util.Collections.unmodifiableList(classTransforms);
     }
 }

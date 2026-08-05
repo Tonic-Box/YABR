@@ -26,7 +26,12 @@ import com.tonic.analysis.ssa.ir.PhiInstruction;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CPGBuilder {
+/**
+ * Builder that lifts every method in a class pool to SSA IR and assembles a {@link CodePropertyGraph}
+ * with optional call-graph, PDG, and SDG edge layers.
+ */
+public class CPGBuilder
+{
 
     private final ClassPool classPool;
     private CodePropertyGraph cpg;
@@ -40,144 +45,247 @@ public class CPGBuilder {
     private final Map<IRBlock, BlockNode> blockNodes = new HashMap<>();
     private final Map<MethodReference, MethodNode> methodNodes = new HashMap<>();
 
-    public CPGBuilder(ClassPool classPool) {
+    /**
+     * Creates a builder over the given class pool.
+     * @param classPool the classes whose methods populate the graph
+     */
+    public CPGBuilder(ClassPool classPool)
+    {
         this.classPool = classPool;
     }
 
-    public ClassPool getClassPool() {
+    /**
+     * @return the class pool
+     */
+    public ClassPool getClassPool()
+    {
         return classPool;
     }
 
-    public CodePropertyGraph getCpg() {
+    /**
+     * @return the cpg
+     */
+    public CodePropertyGraph getCpg()
+    {
         return cpg;
     }
 
-    public CallGraph getCallGraph() {
+    /**
+     * @return the call graph
+     */
+    public CallGraph getCallGraph()
+    {
         return callGraph;
     }
 
-    public boolean isIncludeCallGraph() {
+    /**
+     * @return whether call-graph edges will be built
+     */
+    public boolean isIncludeCallGraph()
+    {
         return includeCallGraph;
     }
 
-    public boolean isIncludePDG() {
+    /**
+     * @return whether PDG edges will be built
+     */
+    public boolean isIncludePDG()
+    {
         return includePDG;
     }
 
-    public boolean isIncludeSDG() {
+    /**
+     * @return whether SDG edges will be built
+     */
+    public boolean isIncludeSDG()
+    {
         return includeSDG;
     }
 
-    public Map<MethodReference, IRMethod> getIrMethods() {
+    /**
+     * @return the ir methods
+     */
+    public Map<MethodReference, IRMethod> getIrMethods()
+    {
         return irMethods;
     }
 
-    public Map<IRInstruction, InstructionNode> getInstructionNodes() {
+    /**
+     * @return the instruction nodes
+     */
+    public Map<IRInstruction, InstructionNode> getInstructionNodes()
+    {
         return instructionNodes;
     }
 
-    public Map<IRBlock, BlockNode> getBlockNodes() {
+    /**
+     * @return the block nodes
+     */
+    public Map<IRBlock, BlockNode> getBlockNodes()
+    {
         return blockNodes;
     }
 
-    public Map<MethodReference, MethodNode> getMethodNodes() {
+    /**
+     * @return the method nodes
+     */
+    public Map<MethodReference, MethodNode> getMethodNodes()
+    {
         return methodNodes;
     }
 
-    public static CPGBuilder forClassPool(ClassPool pool) {
+    /**
+     * Creates a builder over the given class pool.
+     * @param pool the classes whose methods populate the graph
+     * @return a new builder
+     */
+    public static CPGBuilder forClassPool(ClassPool pool)
+    {
         return new CPGBuilder(pool);
     }
 
-    public CPGBuilder withCallGraph(CallGraph callGraph) {
+    /**
+     * Reuses a prebuilt call graph and enables call edges.
+     * @param callGraph the call graph to reuse
+     * @return this builder
+     */
+    public CPGBuilder withCallGraph(CallGraph callGraph)
+    {
         this.callGraph = callGraph;
         this.includeCallGraph = true;
         return this;
     }
 
-    public CPGBuilder withCallGraph() {
+    /**
+     * Builds a call graph from the class pool and enables call edges.
+     * @return this builder
+     */
+    public CPGBuilder withCallGraph()
+    {
         this.callGraph = CallGraph.build(classPool);
         this.includeCallGraph = true;
         return this;
     }
 
-    public CPGBuilder withPDG() {
+    /**
+     * Enables intraprocedural dependence (PDG) edges.
+     * @return this builder
+     */
+    public CPGBuilder withPDG()
+    {
         this.includePDG = true;
         return this;
     }
 
-    public CPGBuilder withSDG() {
+    /**
+     * Enables interprocedural (SDG) edges; implies PDG edges.
+     * @return this builder
+     */
+    public CPGBuilder withSDG()
+    {
         this.includeSDG = true;
         this.includePDG = true;
         return this;
     }
 
-    public CPGBuilder withoutCallGraph() {
+    /**
+     * Disables call-graph edges.
+     * @return this builder
+     */
+    public CPGBuilder withoutCallGraph()
+    {
         this.includeCallGraph = false;
         return this;
     }
 
-    public CPGBuilder withoutPDG() {
+    /**
+     * Disables PDG edges.
+     * @return this builder
+     */
+    public CPGBuilder withoutPDG()
+    {
         this.includePDG = false;
         return this;
     }
 
-    public CodePropertyGraph build() {
+    /**
+     * Lifts all methods and assembles the graph with the configured edge layers.
+     * @return the completed code property graph
+     */
+    public CodePropertyGraph build()
+    {
         cpg = new CodePropertyGraph(classPool);
 
         liftAllMethods();
         buildMethodNodes();
         buildCFGEdges();
 
-        if (includeCallGraph) {
-            if (callGraph == null) {
+        if (includeCallGraph)
+        {
+            if (callGraph == null)
+            {
                 callGraph = CallGraph.build(classPool);
             }
             buildCallGraphEdges();
         }
 
-        if (includePDG) {
+        if (includePDG)
+        {
             buildPDGEdges();
         }
 
-        if (includeSDG && callGraph != null) {
+        if (includeSDG && callGraph != null)
+        {
             buildSDGEdges();
         }
 
         return cpg;
     }
 
-    private void liftAllMethods() {
-        for (ClassFile cf : getClassFiles()) {
-            for (MethodEntry method : cf.getMethods()) {
+    private void liftAllMethods()
+    {
+        for (ClassFile cf : getClassFiles())
+        {
+            for (MethodEntry method : cf.getMethods())
+            {
                 if (method.getCodeAttribute() == null) continue;
 
-                try {
+                try
+                {
                     SSA ssa = new SSA(cf.getConstPool());
                     IRMethod irMethod = ssa.lift(method);
-                    if (irMethod != null) {
+                    if (irMethod != null)
+                    {
                         MethodReference ref = new MethodReference(
                             cf.getClassName(), method.getName(), method.getDesc());
                         irMethods.put(ref, irMethod);
                     }
-                } catch (Exception ignored) {
+                }
+                catch (Exception ignored)
+                {
                 }
             }
         }
     }
 
-    private Collection<ClassFile> getClassFiles() {
+    private Collection<ClassFile> getClassFiles()
+    {
         List<ClassFile> result = new ArrayList<>();
-        for (ClassFile cf : classPool.getClasses()) {
+        for (ClassFile cf : classPool.getClasses())
+        {
             String className = cf.getClassName();
-            if (!className.startsWith("java/")) {
+            if (!className.startsWith("java/"))
+            {
                 result.add(cf);
             }
         }
         return result;
     }
 
-    private void buildMethodNodes() {
-        for (Map.Entry<MethodReference, IRMethod> entry : irMethods.entrySet()) {
+    private void buildMethodNodes()
+    {
+        for (Map.Entry<MethodReference, IRMethod> entry : irMethods.entrySet())
+        {
             MethodReference ref = entry.getKey();
             IRMethod irMethod = entry.getValue();
 
@@ -190,8 +298,10 @@ public class CPGBuilder {
         }
     }
 
-    private void buildBlockNodes(MethodNode methodNode, IRMethod irMethod) {
-        for (IRBlock block : irMethod.getBlocks()) {
+    private void buildBlockNodes(MethodNode methodNode, IRMethod irMethod)
+    {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             BlockNode blockNode = new BlockNode(cpg.allocateNodeId(), block);
             cpg.addNode(blockNode);
             blockNodes.put(block, blockNode);
@@ -200,27 +310,31 @@ public class CPGBuilder {
         }
     }
 
-    private void buildInstructionNodes(IRMethod irMethod) {
-        for (IRBlock block : irMethod.getBlocks()) {
+    private void buildInstructionNodes(IRMethod irMethod)
+    {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             BlockNode blockNode = blockNodes.get(block);
             int instrIndex = 0;
 
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                InstructionNode instrNode = new InstructionNode(
-                    cpg.allocateNodeId(), phi, block.getId(), instrIndex++);
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                InstructionNode instrNode = new InstructionNode(cpg.allocateNodeId(), phi, block.getId(), instrIndex++);
                 cpg.addNode(instrNode);
                 instructionNodes.put(phi, instrNode);
                 cpg.addEdge(blockNode, instrNode, CPGEdgeType.CONTAINS);
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 InstructionNode instrNode = new InstructionNode(
                     cpg.allocateNodeId(), instr, block.getId(), instrIndex++);
                 cpg.addNode(instrNode);
                 instructionNodes.put(instr, instrNode);
                 cpg.addEdge(blockNode, instrNode, CPGEdgeType.CONTAINS);
 
-                if (instr instanceof InvokeInstruction) {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction invoke = (InvokeInstruction) instr;
                     CallSiteNode callSite = new CallSiteNode(cpg.allocateNodeId(), invoke);
                     cpg.addNode(callSite);
@@ -230,13 +344,17 @@ public class CPGBuilder {
         }
     }
 
-    private void buildCFGEdges() {
-        for (IRMethod irMethod : irMethods.values()) {
-            for (IRBlock block : irMethod.getBlocks()) {
+    private void buildCFGEdges()
+    {
+        for (IRMethod irMethod : irMethods.values())
+        {
+            for (IRBlock block : irMethod.getBlocks())
+            {
                 BlockNode sourceBlock = blockNodes.get(block);
                 if (sourceBlock == null) continue;
 
-                for (IRBlock succ : block.getSuccessors()) {
+                for (IRBlock succ : block.getSuccessors())
+                {
                     BlockNode targetBlock = blockNodes.get(succ);
                     if (targetBlock == null) continue;
 
@@ -250,37 +368,48 @@ public class CPGBuilder {
         }
     }
 
-    private void buildIntraBlockCFGEdges(IRMethod irMethod) {
-        for (IRBlock block : irMethod.getBlocks()) {
+    private void buildIntraBlockCFGEdges(IRMethod irMethod)
+    {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             List<IRInstruction> allInstrs = new ArrayList<>();
             allInstrs.addAll(block.getPhiInstructions());
             allInstrs.addAll(block.getInstructions());
 
-            for (int i = 0; i < allInstrs.size() - 1; i++) {
+            for (int i = 0; i < allInstrs.size() - 1; i++)
+            {
                 InstructionNode source = instructionNodes.get(allInstrs.get(i));
                 InstructionNode target = instructionNodes.get(allInstrs.get(i + 1));
-                if (source != null && target != null) {
+                if (source != null && target != null)
+                {
                     cpg.addEdge(source, target, CPGEdgeType.CFG_NEXT);
                 }
             }
         }
     }
 
-    private CPGEdgeType mapEdgeType(EdgeType edgeType, IRBlock source, IRBlock target) {
-        if (edgeType == EdgeType.EXCEPTION) {
+    private CPGEdgeType mapEdgeType(EdgeType edgeType, IRBlock source, IRBlock target)
+    {
+        if (edgeType == EdgeType.EXCEPTION)
+        {
             return CPGEdgeType.CFG_EXCEPTION;
         }
-        if (edgeType == EdgeType.BACK) {
+        if (edgeType == EdgeType.BACK)
+        {
             return CPGEdgeType.CFG_BACK;
         }
 
         IRInstruction terminator = source.getTerminator();
-        if (terminator instanceof BranchInstruction) {
+        if (terminator instanceof BranchInstruction)
+        {
             BranchInstruction branch =
                 (BranchInstruction) terminator;
-            if (target == branch.getTrueTarget()) {
+            if (target == branch.getTrueTarget())
+            {
                 return CPGEdgeType.CFG_TRUE;
-            } else {
+            }
+            else
+            {
                 return CPGEdgeType.CFG_FALSE;
             }
         }
@@ -288,34 +417,44 @@ public class CPGBuilder {
         return CPGEdgeType.CFG_NEXT;
     }
 
-    private void buildCallGraphEdges() {
-        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList())) {
+    private void buildCallGraphEdges()
+    {
+        for (CallSiteNode callSite : cpg.nodes(CallSiteNode.class).collect(Collectors.toList()))
+        {
             MethodReference targetRef = new MethodReference(
                 callSite.getTargetOwner(),
                 callSite.getTargetName(),
                 callSite.getTargetDescriptor());
 
             MethodNode targetMethod = methodNodes.get(targetRef);
-            if (targetMethod != null) {
+            if (targetMethod != null)
+            {
                 cpg.addEdge(callSite, targetMethod, CPGEdgeType.CALL);
             }
         }
     }
 
-    private void buildPDGEdges() {
-        for (Map.Entry<MethodReference, IRMethod> entry : irMethods.entrySet()) {
+    private void buildPDGEdges()
+    {
+        for (Map.Entry<MethodReference, IRMethod> entry : irMethods.entrySet())
+        {
             IRMethod irMethod = entry.getValue();
 
-            try {
+            try
+            {
                 PDG pdg = PDGBuilder.build(irMethod);
                 addPDGEdgesToCPG(pdg);
-            } catch (Exception ignored) {
+            }
+            catch (Exception ignored)
+            {
             }
         }
     }
 
-    private void addPDGEdgesToCPG(PDG pdg) {
-        for (PDGEdge pdgEdge : pdg.getEdges()) {
+    private void addPDGEdgesToCPG(PDG pdg)
+    {
+        for (PDGEdge pdgEdge : pdg.getEdges())
+        {
             CPGNode source = mapPDGNode(pdgEdge.getSource());
             CPGNode target = mapPDGNode(pdgEdge.getTarget());
 
@@ -326,16 +465,20 @@ public class CPGBuilder {
         }
     }
 
-    private CPGNode mapPDGNode(PDGNode pdgNode) {
-        if (pdgNode instanceof PDGInstructionNode) {
+    private CPGNode mapPDGNode(PDGNode pdgNode)
+    {
+        if (pdgNode instanceof PDGInstructionNode)
+        {
             PDGInstructionNode instrNode = (PDGInstructionNode) pdgNode;
             return instructionNodes.get(instrNode.getInstruction());
         }
         return null;
     }
 
-    private CPGEdgeType mapPDGEdgeType(PDGEdge pdgEdge) {
-        switch (pdgEdge.getType()) {
+    private CPGEdgeType mapPDGEdgeType(PDGEdge pdgEdge)
+    {
+        switch (pdgEdge.getType())
+        {
             case CONTROL_TRUE:
                 return CPGEdgeType.CONTROL_DEP_TRUE;
             case CONTROL_FALSE:
@@ -352,39 +495,48 @@ public class CPGBuilder {
         }
     }
 
-    private void buildSDGEdges() {
+    private void buildSDGEdges()
+    {
         SDG sdg = SDGBuilder.build(callGraph, irMethods);
 
-        for (PDGEdge edge : sdg.getParameterEdges()) {
+        for (PDGEdge edge : sdg.getParameterEdges())
+        {
             CPGNode source = mapSDGNode(edge.getSource());
             CPGNode target = mapSDGNode(edge.getTarget());
 
-            if (source != null && target != null) {
+            if (source != null && target != null)
+            {
                 CPGEdgeType edgeType = mapSDGEdgeType(edge);
                 cpg.addEdge(source, target, edgeType);
             }
         }
 
-        for (PDGEdge edge : sdg.getSummaryEdges()) {
+        for (PDGEdge edge : sdg.getSummaryEdges())
+        {
             CPGNode source = mapSDGNode(edge.getSource());
             CPGNode target = mapSDGNode(edge.getTarget());
 
-            if (source != null && target != null) {
+            if (source != null && target != null)
+            {
                 cpg.addEdge(source, target, CPGEdgeType.SUMMARY);
             }
         }
     }
 
-    private CPGNode mapSDGNode(PDGNode pdgNode) {
-        if (pdgNode instanceof PDGInstructionNode) {
+    private CPGNode mapSDGNode(PDGNode pdgNode)
+    {
+        if (pdgNode instanceof PDGInstructionNode)
+        {
             PDGInstructionNode instrNode = (PDGInstructionNode) pdgNode;
             return instructionNodes.get(instrNode.getInstruction());
         }
         return null;
     }
 
-    private CPGEdgeType mapSDGEdgeType(PDGEdge edge) {
-        switch (edge.getType()) {
+    private CPGEdgeType mapSDGEdgeType(PDGEdge edge)
+    {
+        switch (edge.getType())
+        {
             case PARAMETER_IN:
                 return CPGEdgeType.PARAM_IN;
             case PARAMETER_OUT:

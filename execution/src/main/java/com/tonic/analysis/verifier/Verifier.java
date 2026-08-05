@@ -13,36 +13,63 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public final class Verifier {
+/**
+ * Bytecode verifier that runs the configured structural, type, control-flow, and stack-map passes
+ * over methods, classes, or whole pools.
+ */
+public final class Verifier
+{
     private final VerifierConfig config;
     private final ClassPool classPool;
 
-    private Verifier(Builder builder) {
+    private Verifier(Builder builder)
+    {
         this.config = builder.config != null ? builder.config : VerifierConfig.defaults();
         this.classPool = builder.classPool;
     }
 
-    public VerifierConfig getConfig() {
+    /**
+     * @return the config
+     */
+    public VerifierConfig getConfig()
+    {
         return config;
     }
 
-    public ClassPool getClassPool() {
+    /**
+     * @return the class pool
+     */
+    public ClassPool getClassPool()
+    {
         return classPool;
     }
 
-    public static Builder builder() {
+    /**
+     * Creates a builder for a verifier.
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public VerificationResult verify(ClassFile classFile) {
+    /**
+     * Verifies every method of a class, honoring the configured error mode.
+     * @param classFile the class to verify
+     * @return the combined result for the class
+     */
+    public VerificationResult verify(ClassFile classFile)
+    {
         Objects.requireNonNull(classFile, "classFile");
 
         String className = classFile.getClassName();
         ErrorCollector collector = ErrorCollector.forConfig(config);
         List<VerificationResult> methodResults = new ArrayList<>();
 
-        for (MethodEntry method : classFile.getMethods()) {
-            if (collector.shouldStop()) {
+        for (MethodEntry method : classFile.getMethods())
+        {
+            if (collector.shouldStop())
+            {
                 break;
             }
 
@@ -53,7 +80,8 @@ public final class Verifier {
         List<VerificationError> allErrors = new ArrayList<>(collector.getErrors());
         List<VerificationError> allWarnings = new ArrayList<>(collector.getWarnings());
 
-        for (VerificationResult mr : methodResults) {
+        for (VerificationResult mr : methodResults)
+        {
             allErrors.addAll(mr.getErrors());
             allWarnings.addAll(mr.getWarnings());
         }
@@ -61,36 +89,48 @@ public final class Verifier {
         List<VerificationError> combined = new ArrayList<>(allErrors);
         combined.addAll(allWarnings);
 
-        if (combined.isEmpty()) {
+        if (combined.isEmpty())
+        {
             return VerificationResult.success(className);
         }
         return VerificationResult.failure(combined, className);
     }
 
-    public VerificationResult verify(MethodEntry method) {
+    /**
+     * Verifies a single method without an enclosing class file.
+     * @param method the method to verify
+     * @return the method's result
+     */
+    public VerificationResult verify(MethodEntry method)
+    {
         Objects.requireNonNull(method, "method");
         return verify(method, null, ErrorCollector.forConfig(config));
     }
 
-    private VerificationResult verify(MethodEntry method, ClassFile classFile, ErrorCollector collector) {
+    private VerificationResult verify(MethodEntry method, ClassFile classFile, ErrorCollector collector)
+    {
         String className = classFile != null ? classFile.getClassName() : "unknown";
         String methodName = method.getName() + method.getDesc();
 
-        if (method.getCodeAttribute() == null) {
+        if (method.getCodeAttribute() == null)
+        {
             return VerificationResult.success(className, methodName);
         }
 
-        if (config.isVerifyStructure() && !collector.shouldStop()) {
+        if (config.isVerifyStructure() && !collector.shouldStop())
+        {
             StructuralVerifier structural = new StructuralVerifier(classFile);
             structural.verify(method, collector);
         }
 
-        if (config.isStrictTypeChecking() && !collector.shouldStop()) {
+        if (config.isStrictTypeChecking() && !collector.shouldStop())
+        {
             TypeVerifier typeVerifier = new TypeVerifier(classFile, classPool);
             typeVerifier.verify(method, collector);
         }
 
-        if (config.isVerifyControlFlow() && !collector.shouldStop()) {
+        if (config.isVerifyControlFlow() && !collector.shouldStop())
+        {
             ControlFlowVerifier cfVerifier = new ControlFlowVerifier();
             cfVerifier.verify(method, collector);
 
@@ -98,7 +138,8 @@ public final class Verifier {
             exVerifier.verify(method, collector);
         }
 
-        if (config.isVerifyStackMapTable() && !collector.shouldStop()) {
+        if (config.isVerifyStackMapTable() && !collector.shouldStop())
+        {
             StackMapVerifier stackMapVerifier = new StackMapVerifier(classFile);
             stackMapVerifier.verify(method, collector);
         }
@@ -107,32 +148,43 @@ public final class Verifier {
         allIssues.addAll(collector.getWarnings());
 
         List<VerificationError> locatedIssues = new ArrayList<>();
-        for (VerificationError e : allIssues) {
+        for (VerificationError e : allIssues)
+        {
             locatedIssues.add(e.withLocation(className, methodName));
         }
 
-        if (locatedIssues.isEmpty()) {
+        if (locatedIssues.isEmpty())
+        {
             return VerificationResult.success(className, methodName);
         }
         return VerificationResult.failure(locatedIssues, className, methodName);
     }
 
-    public VerificationResult verifyAll(ClassPool pool) {
+    /**
+     * Verifies every class in a pool, stopping early on the first invalid class in fail-fast mode.
+     * @param pool the classes to verify
+     * @return the combined result across all classes
+     */
+    public VerificationResult verifyAll(ClassPool pool)
+    {
         Objects.requireNonNull(pool, "pool");
 
         List<VerificationError> allErrors = new ArrayList<>();
         List<VerificationError> allWarnings = new ArrayList<>();
         boolean allValid = true;
 
-        for (ClassFile cf : pool.getClasses()) {
+        for (ClassFile cf : pool.getClasses())
+        {
             VerificationResult result = verify(cf);
             allErrors.addAll(result.getErrors());
             allWarnings.addAll(result.getWarnings());
-            if (!result.isValid()) {
+            if (!result.isValid())
+            {
                 allValid = false;
             }
 
-            if (config.isFailFast() && !allValid) {
+            if (config.isFailFast() && !allValid)
+            {
                 break;
             }
         }
@@ -140,30 +192,56 @@ public final class Verifier {
         List<VerificationError> combined = new ArrayList<>(allErrors);
         combined.addAll(allWarnings);
 
-        if (combined.isEmpty()) {
+        if (combined.isEmpty())
+        {
             return VerificationResult.success();
         }
         return VerificationResult.failure(combined);
     }
 
-    public static final class Builder {
+    /**
+     * Builder for a {@link Verifier}.
+     */
+    public static final class Builder
+    {
         private VerifierConfig config;
         private ClassPool classPool;
 
-        public Builder config(VerifierConfig config) {
+        /**
+         * Sets the full verifier configuration.
+         * @param config the configuration
+         * @return this builder
+         */
+        public Builder config(VerifierConfig config)
+        {
             this.config = config;
             return this;
         }
 
-        public Builder classPool(ClassPool classPool) {
+        /**
+         * Sets the class pool used for cross-class type checks.
+         * @param classPool the class pool
+         * @return this builder
+         */
+        public Builder classPool(ClassPool classPool)
+        {
             this.classPool = classPool;
             return this;
         }
 
-        public Builder errorMode(VerifierConfig.ErrorMode mode) {
-            if (this.config == null) {
+        /**
+         * Sets the error mode, rebuilding the config to keep any other settings already chosen.
+         * @param mode the error mode
+         * @return this builder
+         */
+        public Builder errorMode(VerifierConfig.ErrorMode mode)
+        {
+            if (this.config == null)
+            {
                 this.config = VerifierConfig.builder().errorMode(mode).build();
-            } else {
+            }
+            else
+            {
                 this.config = VerifierConfig.builder()
                         .errorMode(mode)
                         .verifyStackMapTable(config.isVerifyStackMapTable())
@@ -177,15 +255,30 @@ public final class Verifier {
             return this;
         }
 
-        public Builder failFast() {
+        /**
+         * Selects FAIL_FAST error mode.
+         * @return this builder
+         */
+        public Builder failFast()
+        {
             return errorMode(VerifierConfig.ErrorMode.FAIL_FAST);
         }
 
-        public Builder collectAll() {
+        /**
+         * Selects COLLECT_ALL error mode.
+         * @return this builder
+         */
+        public Builder collectAll()
+        {
             return errorMode(VerifierConfig.ErrorMode.COLLECT_ALL);
         }
 
-        public Verifier build() {
+        /**
+         * Builds the verifier, defaulting to {@link VerifierConfig#defaults()} when no config was set.
+         * @return the verifier
+         */
+        public Verifier build()
+        {
             return new Verifier(this);
         }
     }

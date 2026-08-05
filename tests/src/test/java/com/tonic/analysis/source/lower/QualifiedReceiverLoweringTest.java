@@ -21,16 +21,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Two receiver misclassifications that failed whole classes:
- * <ul>
- * <li>A STATIC ARRAY FIELD used as a receiver ({@code axisNames.length}, {@code axisNames[i]}) was taken
+ * - A STATIC ARRAY FIELD used as a receiver ({@code axisNames.length}, {@code axisNames[i]}) was taken
  *     for a class name - the class-name test required the field to be reference-typed, so an array-typed
- *     field failed it and {@code length} resolved as a field on a class that does not exist.</li>
- * <li>A fully qualified NESTED-CLASS chain ({@code pkg.Outer.Inner.create(...)}) parses as nested field
+ *     field failed it and {@code length} resolved as a field on a class that does not exist.
+ * - A fully qualified NESTED-CLASS chain ({@code pkg.Outer.Inner.create(...)}) parses as nested field
  *     accesses; the call lowered it as a value receiver and died resolving {@code Inner} as a field of
- *     {@code Outer}. Such a chain is a static call on {@code Outer$Inner}.</li>
- * </ul>
+ *     {@code Outer}. Such a chain is a static call on {@code Outer$Inner}.
  */
-class QualifiedReceiverLoweringTest {
+class QualifiedReceiverLoweringTest
+{
 
     private static final String[] HELPER_LINES = {
             "public class OuterHost {",
@@ -59,7 +58,8 @@ class QualifiedReceiverLoweringTest {
     };
 
     @Test
-    void arrayFieldsAndNestedClassChainsLowerAsWritten() throws Exception {
+    void arrayFieldsAndNestedClassChainsLowerAsWritten() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("qualified-recv");
@@ -74,13 +74,18 @@ class QualifiedReceiverLoweringTest {
         ClassFile target = null;
         List<byte[]> siblings = new ArrayList<>();
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class")) {
-            for (Path p : stream) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class"))
+        {
+            for (Path p : stream)
+            {
                 byte[] bytes = Files.readAllBytes(p);
                 ClassFile cf = pool.loadClass(bytes);
-                if (cf.getClassName().equals("QualifiedUse")) {
+                if (cf.getClassName().equals("QualifiedUse"))
+                {
                     target = cf;
-                } else {
+                }
+                else
+                {
                     siblings.add(bytes);
                     names.add(cf.getClassName().replace('/', '.'));
                 }
@@ -99,9 +104,11 @@ class QualifiedReceiverLoweringTest {
     }
 
     private static Object invokeCheck(byte[] targetBytes, List<byte[]> siblings, List<String> names)
-            throws Exception {
+            throws Exception
+            {
         TestClassLoader loader = new TestClassLoader();
-        for (int i = 0; i < siblings.size(); i++) {
+        for (int i = 0; i < siblings.size(); i++)
+        {
             loader.defineClass(names.get(i), siblings.get(i));
         }
         Class<?> clazz = loader.defineClass("QualifiedUse", targetBytes);

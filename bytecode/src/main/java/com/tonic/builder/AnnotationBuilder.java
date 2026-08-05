@@ -16,26 +16,28 @@ import java.util.List;
  * Fluent builder for a single annotation. Accumulates element-value pairs and materializes a
  * {@link Annotation} against a constant pool, hiding the element-value tag rules and index
  * bookkeeping the class-file format requires.
- *
- * <p>Use {@link #of(String)} to build one standalone (for a nested value or to
+ * Use {@link #of(String)} to build one standalone (for a nested value or to
  * {@link #attachTo(MemberEntry, ConstPool) attach} to an already-loaded member), or obtain one
  * bound to a parent via the {@code annotate(...)} method on {@link ClassBuilder},
  * {@link FieldBuilder}, or {@link MethodBuilder}; {@link #end()} returns to that parent.
- *
  * @param <P> the parent builder type returned by {@link #end()} ({@link Void} when standalone)
  */
-public class AnnotationBuilder<P> {
+public class AnnotationBuilder<P>
+{
 
     @FunctionalInterface
-    private interface ValueFactory {
+    private interface ValueFactory
+    {
         ElementValue create(ConstPool pool);
     }
 
-    private static final class Element {
+    private static final class Element
+    {
         final String name;
         final ValueFactory factory;
 
-        Element(String name, ValueFactory factory) {
+        Element(String name, ValueFactory factory)
+        {
             this.name = name;
             this.factory = factory;
         }
@@ -46,183 +48,380 @@ public class AnnotationBuilder<P> {
     private boolean visible = true;
     private final List<Element> elements = new ArrayList<>();
 
-    private AnnotationBuilder(P parent, String type) {
+    private AnnotationBuilder(P parent, String type)
+    {
         this.parent = parent;
         this.typeDescriptor = toTypeDescriptor(type);
     }
 
     /**
-     * Starts a standalone annotation of the given type. The type may be an internal name
-     * ({@code com/example/Foo}), a dotted name ({@code com.example.Foo}), or a field descriptor
-     * ({@code Lcom/example/Foo;}).
+     * Starts a standalone annotation of the given type.
+     * @param type the annotation type as an internal name ({@code com/example/Foo}), dotted name,
+     *             or field descriptor ({@code Lcom/example/Foo;})
+     * @return a new standalone builder
      */
-    public static AnnotationBuilder<Void> of(String type) {
+    public static AnnotationBuilder<Void> of(String type)
+    {
         return new AnnotationBuilder<>(null, type);
     }
 
-    static <P> AnnotationBuilder<P> forParent(P parent, String type) {
+    static <P> AnnotationBuilder<P> forParent(P parent, String type)
+    {
         return new AnnotationBuilder<>(parent, type);
     }
 
-    /** Marks this annotation runtime-visible (default) or invisible. */
-    public AnnotationBuilder<P> visible(boolean visible) {
+    /**
+     * Marks this annotation runtime-visible (default) or invisible.
+     * @param visible true for RuntimeVisibleAnnotations, false for RuntimeInvisibleAnnotations
+     * @return this builder
+     */
+    public AnnotationBuilder<P> visible(boolean visible)
+    {
         this.visible = visible;
         return this;
     }
 
-    public boolean isVisible() {
+    /**
+     * @return whether visible
+     */
+    public boolean isVisible()
+    {
         return visible;
     }
 
-    /** Returns the parent builder this annotation was opened from ({@code null} when standalone). */
-    public P end() {
+    /**
+     * @return the parent builder this annotation was opened from, or null when standalone
+     */
+    public P end()
+    {
         return parent;
     }
 
     // Scalar values -------------------------------------------------------------------------------
 
-    public AnnotationBuilder<P> value(String name, int v) {
+    /**
+     * Adds an int element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> value(String name, int v)
+    {
         return add(name, intFactory('I', v));
     }
 
-    public AnnotationBuilder<P> value(String name, boolean v) {
+    /**
+     * Adds a boolean element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> value(String name, boolean v)
+    {
         return add(name, intFactory('Z', v ? 1 : 0));
     }
 
-    public AnnotationBuilder<P> value(String name, long v) {
+    /**
+     * Adds a long element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> value(String name, long v)
+    {
         return add(name, longFactory(v));
     }
 
-    public AnnotationBuilder<P> value(String name, float v) {
+    /**
+     * Adds a float element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> value(String name, float v)
+    {
         return add(name, floatFactory(v));
     }
 
-    public AnnotationBuilder<P> value(String name, double v) {
+    /**
+     * Adds a double element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> value(String name, double v)
+    {
         return add(name, doubleFactory(v));
     }
 
-    public AnnotationBuilder<P> byteValue(String name, byte v) {
+    /**
+     * Adds a byte element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> byteValue(String name, byte v)
+    {
         return add(name, intFactory('B', v));
     }
 
-    public AnnotationBuilder<P> charValue(String name, char v) {
+    /**
+     * Adds a char element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> charValue(String name, char v)
+    {
         return add(name, intFactory('C', v));
     }
 
-    public AnnotationBuilder<P> shortValue(String name, short v) {
+    /**
+     * Adds a short element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> shortValue(String name, short v)
+    {
         return add(name, intFactory('S', v));
     }
 
-    public AnnotationBuilder<P> stringValue(String name, String v) {
+    /**
+     * Adds a String element.
+     * @param name the element name
+     * @param v the value
+     * @return this builder
+     */
+    public AnnotationBuilder<P> stringValue(String name, String v)
+    {
         return add(name, stringFactory(v));
     }
 
-    /** A class literal value; accepts a class name (internal or dotted) or a raw type descriptor. */
-    public AnnotationBuilder<P> classValue(String name, String type) {
+    /**
+     * Adds a class-literal element.
+     * @param name the element name
+     * @param type a class name (internal or dotted) or a raw type descriptor
+     * @return this builder
+     */
+    public AnnotationBuilder<P> classValue(String name, String type)
+    {
         return add(name, classFactory(type));
     }
 
-    public AnnotationBuilder<P> enumValue(String name, String enumType, String constant) {
+    /**
+     * Adds an enum-constant element.
+     * @param name the element name
+     * @param enumType the enum type (internal or dotted name, or field descriptor)
+     * @param constant the enum constant's name
+     * @return this builder
+     */
+    public AnnotationBuilder<P> enumValue(String name, String enumType, String constant)
+    {
         return add(name, enumFactory(enumType, constant));
     }
 
-    public AnnotationBuilder<P> annotationValue(String name, AnnotationBuilder<?> annotation) {
+    /**
+     * Adds a nested-annotation element.
+     * @param name the element name
+     * @param annotation the nested annotation's builder, materialized when this one builds
+     * @return this builder
+     */
+    public AnnotationBuilder<P> annotationValue(String name, AnnotationBuilder<?> annotation)
+    {
         return add(name, annotationFactory(annotation));
     }
 
     // Array values --------------------------------------------------------------------------------
 
-    public AnnotationBuilder<P> intArray(String name, int... values) {
+    /**
+     * Adds an int-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> intArray(String name, int... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (int v : values) {
+        for (int v : values)
+        {
             items.add(intFactory('I', v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> booleanArray(String name, boolean... values) {
+    /**
+     * Adds a boolean-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> booleanArray(String name, boolean... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (boolean v : values) {
+        for (boolean v : values)
+        {
             items.add(intFactory('Z', v ? 1 : 0));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> byteArray(String name, byte... values) {
+    /**
+     * Adds a byte-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> byteArray(String name, byte... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (byte v : values) {
+        for (byte v : values)
+        {
             items.add(intFactory('B', v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> charArray(String name, char... values) {
+    /**
+     * Adds a char-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> charArray(String name, char... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (char v : values) {
+        for (char v : values)
+        {
             items.add(intFactory('C', v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> shortArray(String name, short... values) {
+    /**
+     * Adds a short-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> shortArray(String name, short... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (short v : values) {
+        for (short v : values)
+        {
             items.add(intFactory('S', v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> longArray(String name, long... values) {
+    /**
+     * Adds a long-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> longArray(String name, long... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (long v : values) {
+        for (long v : values)
+        {
             items.add(longFactory(v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> floatArray(String name, float... values) {
+    /**
+     * Adds a float-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> floatArray(String name, float... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (float v : values) {
+        for (float v : values)
+        {
             items.add(floatFactory(v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> doubleArray(String name, double... values) {
+    /**
+     * Adds a double-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> doubleArray(String name, double... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (double v : values) {
+        for (double v : values)
+        {
             items.add(doubleFactory(v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> stringArray(String name, String... values) {
+    /**
+     * Adds a String-array element.
+     * @param name the element name
+     * @param values the array values
+     * @return this builder
+     */
+    public AnnotationBuilder<P> stringArray(String name, String... values)
+    {
         List<ValueFactory> items = new ArrayList<>(values.length);
-        for (String v : values) {
+        for (String v : values)
+        {
             items.add(stringFactory(v));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> classArray(String name, String... types) {
+    /**
+     * Adds a class-literal-array element.
+     * @param name the element name
+     * @param types class names (internal or dotted) or raw type descriptors
+     * @return this builder
+     */
+    public AnnotationBuilder<P> classArray(String name, String... types)
+    {
         List<ValueFactory> items = new ArrayList<>(types.length);
-        for (String t : types) {
+        for (String t : types)
+        {
             items.add(classFactory(t));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> enumArray(String name, String enumType, String... constants) {
+    /**
+     * Adds an enum-constant-array element with all constants from one enum type.
+     * @param name the element name
+     * @param enumType the enum type (internal or dotted name, or field descriptor)
+     * @param constants the enum constants' names
+     * @return this builder
+     */
+    public AnnotationBuilder<P> enumArray(String name, String enumType, String... constants)
+    {
         List<ValueFactory> items = new ArrayList<>(constants.length);
-        for (String c : constants) {
+        for (String c : constants)
+        {
             items.add(enumFactory(enumType, c));
         }
         return add(name, arrayFactory(items));
     }
 
-    public AnnotationBuilder<P> annotationArray(String name, AnnotationBuilder<?>... annotations) {
+    /**
+     * Adds a nested-annotation-array element.
+     * @param name the element name
+     * @param annotations the nested annotations' builders, materialized when this one builds
+     * @return this builder
+     */
+    public AnnotationBuilder<P> annotationArray(String name, AnnotationBuilder<?>... annotations)
+    {
         List<ValueFactory> items = new ArrayList<>(annotations.length);
-        for (AnnotationBuilder<?> a : annotations) {
+        for (AnnotationBuilder<?> a : annotations)
+        {
             items.add(annotationFactory(a));
         }
         return add(name, arrayFactory(items));
@@ -230,11 +429,17 @@ public class AnnotationBuilder<P> {
 
     // Materialization -----------------------------------------------------------------------------
 
-    /** Materializes this specification into an {@link Annotation}, adding entries to {@code pool}. */
-    public Annotation build(ConstPool pool) {
+    /**
+     * Materializes this specification into an {@link Annotation}, interning entries as needed.
+     * @param pool the constant pool to intern type, name, and value entries into
+     * @return the materialized annotation
+     */
+    public Annotation build(ConstPool pool)
+    {
         int typeIndex = pool.utf8Index(typeDescriptor);
         List<ElementValuePair> pairs = new ArrayList<>(elements.size());
-        for (Element element : elements) {
+        for (Element element : elements)
+        {
             int nameIndex = pool.utf8Index(element.name);
             ElementValue value = element.factory.create(pool);
             pairs.add(new ElementValuePair(nameIndex, element.name, value));
@@ -246,49 +451,65 @@ public class AnnotationBuilder<P> {
      * Attaches this annotation to a field or method, appending to the existing
      * {@code Runtime[In]VisibleAnnotations} attribute of matching visibility when present, or
      * creating one otherwise.
+     * @param member the field or method to annotate
+     * @param pool the constant pool to intern entries into
      */
-    public void attachTo(MemberEntry member, ConstPool pool) {
+    public void attachTo(MemberEntry member, ConstPool pool)
+    {
         AnnotationSupport.appendAnnotation(member, pool, build(pool), visible);
     }
 
-    /** Attaches this annotation to a class. */
-    public void attachTo(ClassFile classFile, ConstPool pool) {
+    /**
+     * Attaches this annotation to a class.
+     * @param classFile the class to annotate
+     * @param pool the constant pool to intern entries into
+     */
+    public void attachTo(ClassFile classFile, ConstPool pool)
+    {
         AnnotationSupport.appendAnnotation(classFile, pool, build(pool), visible);
     }
 
     // Internals -----------------------------------------------------------------------------------
 
-    private AnnotationBuilder<P> add(String name, ValueFactory factory) {
+    private AnnotationBuilder<P> add(String name, ValueFactory factory)
+    {
         elements.add(new Element(name, factory));
         return this;
     }
 
-    private static ValueFactory intFactory(char tag, int v) {
+    private static ValueFactory intFactory(char tag, int v)
+    {
         return pool -> new ElementValue(tag, pool.getIndexOf(pool.findOrAddInteger(v)));
     }
 
-    private static ValueFactory longFactory(long v) {
+    private static ValueFactory longFactory(long v)
+    {
         return pool -> new ElementValue('J', pool.getIndexOf(pool.findOrAddLong(v)));
     }
 
-    private static ValueFactory floatFactory(float v) {
+    private static ValueFactory floatFactory(float v)
+    {
         return pool -> new ElementValue('F', pool.getIndexOf(pool.findOrAddFloat(v)));
     }
 
-    private static ValueFactory doubleFactory(double v) {
+    private static ValueFactory doubleFactory(double v)
+    {
         return pool -> new ElementValue('D', pool.getIndexOf(pool.findOrAddDouble(v)));
     }
 
-    private static ValueFactory stringFactory(String v) {
+    private static ValueFactory stringFactory(String v)
+    {
         return pool -> new ElementValue('s', pool.utf8Index(v));
     }
 
-    private static ValueFactory classFactory(String type) {
+    private static ValueFactory classFactory(String type)
+    {
         String descriptor = toClassDescriptor(type);
         return pool -> new ElementValue('c', pool.utf8Index(descriptor));
     }
 
-    private static ValueFactory enumFactory(String enumType, String constant) {
+    private static ValueFactory enumFactory(String enumType, String constant)
+    {
         String descriptor = toTypeDescriptor(enumType);
         return pool -> {
             int typeNameIndex = pool.utf8Index(descriptor);
@@ -297,23 +518,30 @@ public class AnnotationBuilder<P> {
         };
     }
 
-    private static ValueFactory annotationFactory(AnnotationBuilder<?> annotation) {
+    private static ValueFactory annotationFactory(AnnotationBuilder<?> annotation)
+    {
         return pool -> new ElementValue('@', annotation.build(pool));
     }
 
-    private static ValueFactory arrayFactory(List<ValueFactory> items) {
+    private static ValueFactory arrayFactory(List<ValueFactory> items)
+    {
         return pool -> {
             List<ElementValue> values = new ArrayList<>(items.size());
-            for (ValueFactory item : items) {
+            for (ValueFactory item : items)
+            {
                 values.add(item.create(pool));
             }
             return new ElementValue('[', values);
         };
     }
 
-    /** Normalizes an annotation/enum type to a field descriptor ({@code Lcom/example/Foo;}). */
-    private static String toTypeDescriptor(String type) {
-        if (type.length() >= 2 && type.charAt(0) == 'L' && type.charAt(type.length() - 1) == ';') {
+    /**
+     * Normalizes an annotation/enum type to a field descriptor ({@code Lcom/example/Foo;}).
+     */
+    private static String toTypeDescriptor(String type)
+    {
+        if (type.length() >= 2 && type.charAt(0) == 'L' && type.charAt(type.length() - 1) == ';')
+        {
             return type;
         }
         return DescriptorUtil.toObjectDescriptor(type.replace('.', '/'));
@@ -324,18 +552,23 @@ public class AnnotationBuilder<P> {
      * primitive/{@code void} single letters, or an object {@code L...;}) pass through; anything else
      * is treated as a class name.
      */
-    private static String toClassDescriptor(String type) {
-        if (type.isEmpty()) {
+    private static String toClassDescriptor(String type)
+    {
+        if (type.isEmpty())
+        {
             return type;
         }
         char first = type.charAt(0);
-        if (first == '[') {
+        if (first == '[')
+        {
             return type;
         }
-        if (type.length() == 1 && "VZBCSIJFD".indexOf(first) >= 0) {
+        if (type.length() == 1 && "VZBCSIJFD".indexOf(first) >= 0)
+        {
             return type;
         }
-        if (first == 'L' && type.charAt(type.length() - 1) == ';') {
+        if (first == 'L' && type.charAt(type.length() - 1) == ';')
+        {
             return type;
         }
         return DescriptorUtil.toObjectDescriptor(type.replace('.', '/'));

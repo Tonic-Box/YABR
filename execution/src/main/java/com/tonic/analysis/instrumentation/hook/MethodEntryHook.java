@@ -11,7 +11,8 @@ import java.util.List;
  * Configuration for method entry instrumentation.
  * Hooks are called at the beginning of methods, before any user code executes.
  */
-public class MethodEntryHook implements Hook {
+public class MethodEntryHook implements Hook
+{
 
     private final HookDescriptor hookDescriptor;
     private final List<InstrumentationFilter> filters;
@@ -23,7 +24,8 @@ public class MethodEntryHook implements Hook {
     private final boolean passAllParameters;
     private final List<Integer> parameterIndices;
 
-    private MethodEntryHook(Builder builder) {
+    private MethodEntryHook(Builder builder)
+    {
         this.hookDescriptor = builder.hookDescriptor;
         this.filters = builder.filters;
         this.enabled = builder.enabled;
@@ -35,66 +37,111 @@ public class MethodEntryHook implements Hook {
         this.parameterIndices = builder.parameterIndices;
     }
 
-    public HookDescriptor getHookDescriptor() {
+    /**
+     * @return the hook descriptor
+     */
+    public HookDescriptor getHookDescriptor()
+    {
         return hookDescriptor;
     }
 
-    public List<InstrumentationFilter> getFilters() {
+    /**
+     * @return the filters
+     */
+    public List<InstrumentationFilter> getFilters()
+    {
         return filters;
     }
 
-    public boolean isEnabled() {
+    /**
+     * @return whether enabled
+     */
+    public boolean isEnabled()
+    {
         return enabled;
     }
 
-    public int getPriority() {
+    /**
+     * @return the priority
+     */
+    public int getPriority()
+    {
         return priority;
     }
 
-    /** Returns whether the {@code this} reference (null for static methods) is passed to the hook. */
-    public boolean isPassThis() {
+    /**
+     * @return true if the receiver, null for static methods, is passed to the hook
+     */
+    public boolean isPassThis()
+    {
         return passThis;
     }
 
-    /** Returns whether the method name is passed to the hook. */
-    public boolean isPassMethodName() {
+    /**
+     * @return true if the instrumented method's name is passed to the hook
+     */
+    public boolean isPassMethodName()
+    {
         return passMethodName;
     }
 
-    /** Returns whether the class name is passed to the hook. */
-    public boolean isPassClassName() {
+    /**
+     * @return true if the instrumented class's name is passed to the hook
+     */
+    public boolean isPassClassName()
+    {
         return passClassName;
     }
 
-    /** Returns whether all parameters are passed to the hook as an {@code Object[]}. */
-    public boolean isPassAllParameters() {
+    /**
+     * @return true if every parameter is passed to the hook as one Object array
+     */
+    public boolean isPassAllParameters()
+    {
         return passAllParameters;
     }
 
-    /** Returns the specific parameter indices to pass (boxed if primitive). */
-    public List<Integer> getParameterIndices() {
+    /**
+     * @return the individual parameter positions to pass, boxed when primitive
+     */
+    public List<Integer> getParameterIndices()
+    {
         return parameterIndices;
     }
 
     @Override
-    public InstrumentationTarget getTarget() {
+    public InstrumentationTarget getTarget()
+    {
         return InstrumentationTarget.METHOD_ENTRY;
     }
 
     /**
-     * Creates a simple method entry hook that calls the specified static method.
+     * Creates a hook that calls a static method with no filters and no extra arguments.
+     * @param hookOwner the internal name of the class declaring the hook method
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the configured hook
      */
-    public static MethodEntryHook simple(String hookOwner, String hookName, String hookDescriptor) {
+    public static MethodEntryHook simple(String hookOwner, String hookName, String hookDescriptor)
+    {
         return MethodEntryHook.builder()
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * @return a new builder with default settings
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Fluent builder for a method entry hook; every setting has a default except the hook descriptor.
+     */
+    public static class Builder
+    {
         private HookDescriptor hookDescriptor;
         private List<InstrumentationFilter> filters = new ArrayList<>();
         private boolean enabled = true;
@@ -105,52 +152,110 @@ public class MethodEntryHook implements Hook {
         private boolean passAllParameters = false;
         private List<Integer> parameterIndices = new ArrayList<>();
 
-        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+        /**
+         * Sets the static method the hook calls.
+         * @param hookDescriptor the target hook method
+         * @return this builder
+         */
+        public Builder hookDescriptor(HookDescriptor hookDescriptor)
+        {
             this.hookDescriptor = hookDescriptor;
             return this;
         }
 
-        public Builder filters(List<InstrumentationFilter> filters) {
+        /**
+         * Sets the filters deciding which methods get instrumented.
+         * @param filters the filter list, replacing the current one
+         * @return this builder
+         */
+        public Builder filters(List<InstrumentationFilter> filters)
+        {
             this.filters = filters;
             return this;
         }
 
-        public Builder enabled(boolean enabled) {
+        /**
+         * Sets whether the hook is applied at all; defaults to true.
+         * @param enabled true to apply the hook
+         * @return this builder
+         */
+        public Builder enabled(boolean enabled)
+        {
             this.enabled = enabled;
             return this;
         }
 
-        public Builder priority(int priority) {
+        /**
+         * Sets the ordering priority among hooks; defaults to 100.
+         * @param priority the priority value
+         * @return this builder
+         */
+        public Builder priority(int priority)
+        {
             this.priority = priority;
             return this;
         }
 
-        public Builder passThis(boolean passThis) {
+        /**
+         * Sets whether the receiver is passed to the hook, null for static methods.
+         * @param passThis true to pass the receiver
+         * @return this builder
+         */
+        public Builder passThis(boolean passThis)
+        {
             this.passThis = passThis;
             return this;
         }
 
-        public Builder passMethodName(boolean passMethodName) {
+        /**
+         * Sets whether the instrumented method's name is passed to the hook.
+         * @param passMethodName true to pass the method name
+         * @return this builder
+         */
+        public Builder passMethodName(boolean passMethodName)
+        {
             this.passMethodName = passMethodName;
             return this;
         }
 
-        public Builder passClassName(boolean passClassName) {
+        /**
+         * Sets whether the instrumented class's name is passed to the hook.
+         * @param passClassName true to pass the class name
+         * @return this builder
+         */
+        public Builder passClassName(boolean passClassName)
+        {
             this.passClassName = passClassName;
             return this;
         }
 
-        public Builder passAllParameters(boolean passAllParameters) {
+        /**
+         * Sets whether all parameters are passed as one Object array.
+         * @param passAllParameters true to pass every parameter
+         * @return this builder
+         */
+        public Builder passAllParameters(boolean passAllParameters)
+        {
             this.passAllParameters = passAllParameters;
             return this;
         }
 
-        public Builder parameterIndices(List<Integer> parameterIndices) {
+        /**
+         * Sets the individual parameter positions to pass, boxed when primitive.
+         * @param parameterIndices the parameter indices, replacing the current list
+         * @return this builder
+         */
+        public Builder parameterIndices(List<Integer> parameterIndices)
+        {
             this.parameterIndices = parameterIndices;
             return this;
         }
 
-        public MethodEntryHook build() {
+        /**
+         * @return a hook with the configured settings
+         */
+        public MethodEntryHook build()
+        {
             return new MethodEntryHook(this);
         }
     }

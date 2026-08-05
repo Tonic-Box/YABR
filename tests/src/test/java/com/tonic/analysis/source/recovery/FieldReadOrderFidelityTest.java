@@ -18,16 +18,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * A field read keeps its place relative to the calls around it, and a floating-point guard keeps its
  * written polarity. Two round-trip defects, one fixture:
- * <ul>
- * <li>{@code double a = g.time; g.setTime(x); use(a)} re-read the field at the use - a single-use load
+ * - {@code double a = g.time; g.setTime(x); use(a)} re-read the field at the use - a single-use load
  *     is only inlinable while nothing effectful sits between; a field read is order-sensitive even though
- *     it has no effect of its own.</li>
- * <li>{@code if (t >= 0.0) A else B} oscillated with its negated twin every simplifier pass: negating a
+ *     it has no effect of its own.
+ * - {@code if (t >= 0.0) A else B} oscillated with its negated twin every simplifier pass: negating a
  *     float relational cannot flip the operator (NaN), so it WRAPS a {@code !} - orienting on such a
- *     condition turns the positive form negative and the next pass swaps straight back.</li>
- * </ul>
+ *     condition turns the positive form negative and the next pass swaps straight back.
  */
-class FieldReadOrderFidelityTest {
+class FieldReadOrderFidelityTest
+{
 
     private static final String[] LINES = {
             "public class FieldOrder {",
@@ -52,14 +51,14 @@ class FieldReadOrderFidelityTest {
     };
 
     @Test
-    void aFieldReadKeepsItsPlaceAndAFloatGuardItsPolarity() throws Exception {
+    void aFieldReadKeepsItsPlaceAndAFloatGuardItsPolarity() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("field-order");
         Path src = dir.resolve("FieldOrder.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("FieldOrder.class")));

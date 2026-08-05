@@ -13,7 +13,8 @@ import java.util.Objects;
 /**
  * Represents a try-catch statement with optional finally block and resources (try-with-resources).
  */
-public final class TryCatchStmt implements Statement {
+public final class TryCatchStmt implements Statement
+{
 
     private Statement tryBlock;
     private final List<CatchClause> catches;
@@ -22,8 +23,18 @@ public final class TryCatchStmt implements Statement {
     private SourceLocation location;
     private ASTNode parent;
 
-    public TryCatchStmt(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock,
-                        List<Expression> resources, SourceLocation location) {
+    /**
+     * Creates a try statement, adopting the try block, catch bodies, finally block and
+     * resources as children.
+     * @param tryBlock the guarded block
+     * @param catches the catch clauses, may be null for none
+     * @param finallyBlock the finally block, or null
+     * @param resources the try-with-resources expressions, may be null for none
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if the try block is null
+     */
+    public TryCatchStmt(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock, List<Expression> resources, SourceLocation location)
+    {
         this.resources = new NodeList<>(this);
         this.tryBlock = Objects.requireNonNull(tryBlock, "tryBlock cannot be null");
         this.catches = new ArrayList<>(catches != null ? catches : List.of());
@@ -31,109 +42,192 @@ public final class TryCatchStmt implements Statement {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
         tryBlock.setParent(this);
-        if (finallyBlock != null) {
+        if (finallyBlock != null)
+        {
             finallyBlock.setParent(this);
         }
-        if (resources != null) {
+        if (resources != null)
+        {
             this.resources.addAll(resources);
         }
-        for (CatchClause clause : this.catches) {
+        for (CatchClause clause : this.catches)
+        {
             clause.body().setParent(this);
         }
     }
 
-    public TryCatchStmt(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock) {
+    /**
+     * Creates a try statement with no resources and an unknown location.
+     * @param tryBlock the guarded block
+     * @param catches the catch clauses, may be null for none
+     * @param finallyBlock the finally block, or null
+     * @throws NullPointerException if the try block is null
+     */
+    public TryCatchStmt(Statement tryBlock, List<CatchClause> catches, Statement finallyBlock)
+    {
         this(tryBlock, catches, finallyBlock, List.of(), SourceLocation.UNKNOWN);
     }
 
-    public TryCatchStmt(Statement tryBlock, List<CatchClause> catches) {
+    /**
+     * Creates a try statement with no finally block, no resources and an unknown location.
+     * @param tryBlock the guarded block
+     * @param catches the catch clauses, may be null for none
+     * @throws NullPointerException if the try block is null
+     */
+    public TryCatchStmt(Statement tryBlock, List<CatchClause> catches)
+    {
         this(tryBlock, catches, null, List.of(), SourceLocation.UNKNOWN);
     }
 
-    public Statement getTryBlock() {
+    /**
+     * @return the try block
+     */
+    public Statement getTryBlock()
+    {
         return tryBlock;
     }
 
-    public void setTryBlock(Statement tryBlock) {
+    /**
+     * Replaces the guarded block, reparenting it and releasing the previous one.
+     * @param tryBlock the new try block
+     */
+    public void setTryBlock(Statement tryBlock)
+    {
         withTryBlock(tryBlock);
     }
 
-    public List<CatchClause> getCatches() {
+    /**
+     * @return the catches
+     */
+    public List<CatchClause> getCatches()
+    {
         return catches;
     }
 
-    public Statement getFinallyBlock() {
+    /**
+     * @return the finally block
+     */
+    public Statement getFinallyBlock()
+    {
         return finallyBlock;
     }
 
-      public void setFinallyBlock(Statement finallyBlock) {
+      /**
+       * Replaces the finally block, reparenting it and releasing the previous one.
+       * @param finallyBlock the new finally block, or null to drop it
+       */
+      public void setFinallyBlock(Statement finallyBlock)
+      {
         withFinallyBlock(finallyBlock);
-    }    public NodeList<Expression> getResources() {
+    }
+
+    /**
+     * @return the try-with-resources declarations, empty when there are none
+     */
+    public NodeList<Expression> getResources()
+    {
         return resources;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the node this statement hangs from.
+     * @param parent the enclosing node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Adds a catch clause.
+     * Appends a catch clause and adopts its body.
+     *
+     * @param clause the clause to add
      */
-    public void addCatch(CatchClause clause) {
+    public void addCatch(CatchClause clause)
+    {
         clause.body().setParent(this);
         catches.add(clause);
     }
 
     /**
-     * Adds a resource for try-with-resources.
+     * Appends a try-with-resources resource.
+     *
+     * @param resource the resource expression
      */
-    public void addResource(Expression resource) {
+    public void addResource(Expression resource)
+    {
         resources.add(resource);
     }
 
     /**
-     * Checks if this is a try-with-resources statement.
+     * @return whether this is a try-with-resources statement
      */
-    public boolean hasResources() {
+    public boolean hasResources()
+    {
         return !resources.isEmpty();
     }
 
     /**
-     * Checks if this try statement has a finally block.
+     * @return whether a finally block is present
      */
-    public boolean hasFinally() {
+    public boolean hasFinally()
+    {
         return finallyBlock != null;
     }
 
     /**
-     * Checks if this try statement has any catch clauses.
+     * @return whether any catch clause is present
      */
-    public boolean hasCatch() {
+    public boolean hasCatch()
+    {
         return !catches.isEmpty();
     }
 
-    public TryCatchStmt withTryBlock(Statement tryBlock) {
+    /**
+     * Replaces the guarded block in place, reparenting it and releasing the previous one.
+     * @param tryBlock the new try block, may be null
+     * @return this statement
+     */
+    public TryCatchStmt withTryBlock(Statement tryBlock)
+    {
         ASTNode previous = this.tryBlock;
         this.tryBlock = tryBlock;
-        if (tryBlock != null) {
+        if (tryBlock != null)
+        {
             tryBlock.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public TryCatchStmt withFinallyBlock(Statement finallyBlock) {
+    /**
+     * Replaces the finally block in place, reparenting it and releasing the previous one.
+     *
+     * @param finallyBlock the new finally block, or null to drop it
+     * @return this statement
+     */
+    public TryCatchStmt withFinallyBlock(Statement finallyBlock)
+    {
         ASTNode previous = this.finallyBlock;
         this.finallyBlock = finallyBlock;
-        if (finallyBlock != null) {
+        if (finallyBlock != null)
+        {
             finallyBlock.setParent(this);
         }
         ASTNode.releaseFormerChild(previous, this);
@@ -141,10 +235,12 @@ public final class TryCatchStmt implements Statement {
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>(resources);
         if (tryBlock != null) children.add(tryBlock);
-        for (CatchClause clause : catches) {
+        for (CatchClause clause : catches)
+        {
             children.add(clause.body());
         }
         if (finallyBlock != null) children.add(finallyBlock);
@@ -152,28 +248,34 @@ public final class TryCatchStmt implements Statement {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitTryCatch(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("try");
-        if (hasResources()) {
+        if (hasResources())
+        {
             sb.append(" (").append(resources.size()).append(" resources)");
         }
         sb.append(" { ... }");
-        if (hasCatch()) {
+        if (hasCatch())
+        {
             sb.append(" catch (").append(catches.size()).append(" handlers)");
         }
-        if (hasFinally()) {
+        if (hasFinally())
+        {
             sb.append(" finally { ... }");
         }
         return sb.toString();
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

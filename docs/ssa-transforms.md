@@ -337,7 +337,8 @@ Uses control flow to derive facts about values. When passing a branch condition,
 
 ```java
 // Before
-if (x < 10) {
+if (x < 10)
+{
     if (x < 20) {     // x is [MIN, 9], so this is always true
         return x + 1;
     }
@@ -346,7 +347,8 @@ if (x < 10) {
 return x;
 
 // After CVP
-if (x < 10) {
+if (x < 10)
+{
     return x + 1;     // Redundant check eliminated
 }
 return x;
@@ -382,14 +384,16 @@ Moves computations that produce the same result in every loop iteration to the l
 
 ```java
 // Before
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < n; i++)
+{
     int k = a * b;     // a and b don't change in loop
     sum += k;
 }
 
 // After
 int k = a * b;         // Hoisted to preheader
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < n; i++)
+{
     sum += k;
 }
 ```
@@ -412,13 +416,15 @@ Identifies and simplifies induction variables in loops.
 
 ```java
 // Before
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < n; i++)
+{
     sum += i * 4;      // Derived induction variable
 }
 
 // After
 int stride = 0;
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < n; i++)
+{
     sum += stride;     // Use derived variable directly
     stride += 4;       // Increment by stride
 }
@@ -441,14 +447,16 @@ Converts loop-variant guards into loop-invariant predicates. Eliminates guards t
 
 ```java
 // Before
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < n; i++)
+{
     if (i < limit) {     // Guard checked every iteration
         sum += i;
     }
 }
 
 // After (when n <= limit is provable)
-for (int i = 0; i < n; i++) {
+for (int i = 0; i < n; i++)
+{
     sum += i;            // Guard eliminated - always true
 }
 ```
@@ -702,16 +710,19 @@ Replaces method calls with the body of the called method, eliminating call overh
 
 ```java
 // Before
-public int compute(int x) {
+public int compute(int x)
+{
     return helper(x) + 10;
 }
 
-private static int helper(int y) {
+private static int helper(int y)
+{
     return y * 2;
 }
 
 // After inlining helper into compute
-public int compute(int x) {
+public int compute(int x)
+{
     return (x * 2) + 10;  // helper body inlined
 }
 ```
@@ -748,7 +759,8 @@ Removes private methods that are never called after inlining.
 
 ```java
 // Before (after inlining helper into compute)
-public int compute(int x) {
+public int compute(int x)
+{
     return (x * 2) + 10;
 }
 
@@ -757,7 +769,8 @@ private static int helper(int y) {  // No longer called
 }
 
 // After dead method elimination
-public int compute(int x) {
+public int compute(int x)
+{
     return (x * 2) + 10;
 }
 // helper method removed
@@ -800,7 +813,8 @@ boolean classModified = ssa.runClassTransforms(classFile);
 
 // Optionally run method-level transforms after
 ssa.withAllOptimizations();
-for (MethodEntry method : classFile.getMethods()) {
+for (MethodEntry method : classFile.getMethods())
+{
     if (method.getCodeAttribute() == null) continue;
     ssa.transform(method);
 }
@@ -819,20 +833,25 @@ import com.tonic.analysis.ssa.transform.ClassTransform;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.parser.ClassFile;
 
-public class MyClassTransform implements ClassTransform {
+public class MyClassTransform implements ClassTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "MyClassTransform";
     }
 
     @Override
-    public boolean run(ClassFile classFile, SSA ssa) {
+    public boolean run(ClassFile classFile, SSA ssa)
+    {
         boolean changed = false;
 
-        for (MethodEntry method : classFile.getMethods()) {
+        for (MethodEntry method : classFile.getMethods())
+        {
             // Process each method with access to the full class
-            if (processMethod(classFile, method, ssa)) {
+            if (processMethod(classFile, method, ssa))
+            {
                 changed = true;
             }
         }
@@ -840,7 +859,8 @@ public class MyClassTransform implements ClassTransform {
         return changed;
     }
 
-    private boolean processMethod(ClassFile classFile, MethodEntry method, SSA ssa) {
+    private boolean processMethod(ClassFile classFile, MethodEntry method, SSA ssa)
+    {
         // Your transformation logic here
         return false;
     }
@@ -964,15 +984,20 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 
-public class MyTransform implements IRTransform {
+public class MyTransform implements IRTransform
+{
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (IRInstruction instr : new ArrayList<>(block.getInstructions())) {
-                if (shouldOptimize(instr)) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : new ArrayList<>(block.getInstructions()))
+            {
+                if (shouldOptimize(instr))
+                {
                     optimize(block, instr);
                     changed = true;
                 }
@@ -982,12 +1007,14 @@ public class MyTransform implements IRTransform {
         return changed;  // Return true if any changes were made
     }
 
-    private boolean shouldOptimize(IRInstruction instr) {
+    private boolean shouldOptimize(IRInstruction instr)
+    {
         // Check if instruction can be optimized
         return false;
     }
 
-    private void optimize(IRBlock block, IRInstruction instr) {
+    private void optimize(IRBlock block, IRInstruction instr)
+    {
         // Perform optimization
     }
 }
@@ -1028,14 +1055,16 @@ The lowerer handles:
 ## Complete Example
 
 ```java
-public void optimizeClass(ClassFile classFile) {
+public void optimizeClass(ClassFile classFile)
+{
     ConstPool cp = classFile.getConstPool();
 
     // Configure optimizations - use all available transforms
     SSA ssa = new SSA(cp).withAllOptimizations();
 
     // Process each method
-    for (MethodEntry method : classFile.getMethods()) {
+    for (MethodEntry method : classFile.getMethods())
+    {
         if (method.getCodeAttribute() == null) continue;
         if (method.getName().startsWith("<")) continue;  // Skip init
 

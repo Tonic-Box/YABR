@@ -1,6 +1,7 @@
 package com.tonic.fixtures;
 
-public class AndConditionElseTail {
+public class AndConditionElseTail
+{
 
     /**
      * A short-circuit `a && b` guarding an if/else, followed by a shared tail, inside a loop (so no
@@ -8,12 +9,17 @@ public class AndConditionElseTail {
      * `if (a && b) { .. } else { .. }` with the tail emitted once - not split into nested ifs with the
      * else hoisted out and the tail duplicated (which would run the tail twice per iteration).
      */
-    void loop(boolean a, boolean b, int n, StringBuilder sb) {
-        for (int i = 0; i < n; i++) {
+    void loop(boolean a, boolean b, int n, StringBuilder sb)
+    {
+        for (int i = 0; i < n; i++)
+        {
             sb.append("x");
-            if (a && b) {
+            if (a && b)
+            {
                 sb.append("T");
-            } else {
+            }
+            else
+            {
                 sb.append("F");
             }
             sb.append("\n");

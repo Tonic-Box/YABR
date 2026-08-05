@@ -12,9 +12,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugLoopDetection {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+/**
+ * Debug demo showing which natural loops are detected in one method of a class file.
+ */
+public class DebugLoopDetection
+{
+    /**
+     * Lifts the named method to IR and prints the detected loops.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugLoopDetection <classfile> <methodName>");
             return;
         }
@@ -23,8 +34,10 @@ public class DebugLoopDetection {
         ConstPool constPool = cf.getConstPool();
         String methodName = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
 
                 SSA ssa = new SSA(constPool);
@@ -37,19 +50,23 @@ public class DebugLoopDetection {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Loops ===");
-                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops())
+                {
                     IRBlock header = loop.getHeader();
                     System.out.println("Loop header: " + header.getName());
                     System.out.println("  Blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                     System.out.println("  Header predecessors: " + header.getPredecessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                     
-                    // Check isDoWhilePattern logic
                     boolean hasExternalPred = false;
-                    for (IRBlock pred : header.getPredecessors()) {
-                        if (!loop.contains(pred)) {
+                    for (IRBlock pred : header.getPredecessors())
+                    {
+                        if (!loop.contains(pred))
+                        {
                             System.out.println("    Pred " + pred.getName() + " is OUTSIDE loop");
                             hasExternalPred = true;
-                        } else {
+                        }
+                        else
+                        {
                             System.out.println("    Pred " + pred.getName() + " is INSIDE loop");
                         }
                     }

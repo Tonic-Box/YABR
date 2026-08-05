@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the legacy walk. Retired handler scaffolding is handler code: its text lives in the recovered
  * clauses, which fall through to the join exactly like a live catch.
  *
- * <p>Only the decompiled shape is asserted here. Executing the round-tripped method is blocked on a
+ *Only the decompiled shape is asserted here. Executing the round-tripped method is blocked on a
  * pre-existing clause-nesting defect for this fixture's SPLIT-RANGE layout (modern javac fragments
  * the catch and finally ranges around the unprotected inlined copies): the user catch is emitted
  * OUTSIDE the finally construct, doubling the finally's effect on the exception path, and the
@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * (VerifyError). The full execution reproducer is preserved in the catch+finally double-effect
  * notes; once the clause nesting is fixed, the three execution-path checks belong here.
  */
-class RetiredGuardSharedReturnFidelityTest {
+class RetiredGuardSharedReturnFidelityTest
+{
 
     private static final String SOURCE =
             "import java.io.IOException;\n"
@@ -70,14 +71,14 @@ class RetiredGuardSharedReturnFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("retired-guard");
         Path src = dir.resolve("RetiredGuard.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("RetiredGuard.class")));
         d1 = ClassDecompiler.decompile(cf);
@@ -87,10 +88,10 @@ class RetiredGuardSharedReturnFidelityTest {
     }
 
     @Test
-    void decompiledShapeKeepsClauseAndSharedReturn() {
+    void decompiledShapeKeepsClauseAndSharedReturn()
+    {
         assertTrue(d1.contains("finally"), "the finally clause must survive:\n" + d1);
-        assertTrue(d1.contains("catch (IllegalStateException"),
-                "the user catch must survive:\n" + d1);
+        assertTrue(d1.contains("catch (IllegalStateException"), "the user catch must survive:\n" + d1);
         assertTrue(d1.contains("return result") || d1.contains("return local"),
                 "the shared trailing return must survive:\n" + d1);
     }

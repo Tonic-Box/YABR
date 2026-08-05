@@ -11,7 +11,8 @@ import java.util.List;
  * Configuration for method call interception.
  * Hooks can be called before or after calls to specific methods.
  */
-public class MethodCallHook implements Hook {
+public class MethodCallHook implements Hook
+{
 
     private final HookDescriptor hookDescriptor;
     private final List<InstrumentationFilter> filters;
@@ -27,7 +28,8 @@ public class MethodCallHook implements Hook {
     private final boolean passResult;
     private final boolean passMethodName;
 
-    private MethodCallHook(Builder builder) {
+    private MethodCallHook(Builder builder)
+    {
         this.hookDescriptor = builder.hookDescriptor;
         this.filters = builder.filters;
         this.enabled = builder.enabled;
@@ -43,79 +45,129 @@ public class MethodCallHook implements Hook {
         this.passMethodName = builder.passMethodName;
     }
 
-    public HookDescriptor getHookDescriptor() {
+    /**
+     * @return the hook descriptor
+     */
+    public HookDescriptor getHookDescriptor()
+    {
         return hookDescriptor;
     }
 
-    public List<InstrumentationFilter> getFilters() {
+    /**
+     * @return the filters
+     */
+    public List<InstrumentationFilter> getFilters()
+    {
         return filters;
     }
 
-    public boolean isEnabled() {
+    /**
+     * @return whether enabled
+     */
+    public boolean isEnabled()
+    {
         return enabled;
     }
 
-    public int getPriority() {
+    /**
+     * @return the priority
+     */
+    public int getPriority()
+    {
         return priority;
     }
 
-    /** Returns the target class being called (internal name), or null for any class. */
-    public String getTargetClass() {
+    /**
+     * @return the target class being called (internal name), or null for any class
+     */
+    public String getTargetClass()
+    {
         return targetClass;
     }
 
-    /** Returns the target method being called, or null for any method on the target class. */
-    public String getTargetMethod() {
+    /**
+     * @return the target method being called, or null for any method on the target class
+     */
+    public String getTargetMethod()
+    {
         return targetMethod;
     }
 
-    /** Returns the target method descriptor, or null for any descriptor. */
-    public String getTargetDescriptor() {
+    /**
+     * @return the target method descriptor, or null for any descriptor
+     */
+    public String getTargetDescriptor()
+    {
         return targetDescriptor;
     }
 
-    /** Returns whether the hook runs before the call. */
-    public boolean isBefore() {
+    /**
+     * @return whether the hook runs before the call
+     */
+    public boolean isBefore()
+    {
         return before;
     }
 
-    /** Returns whether the hook runs after the call. */
-    public boolean isAfter() {
+    /**
+     * @return whether the hook runs after the call
+     */
+    public boolean isAfter()
+    {
         return after;
     }
 
-    /** Returns whether the receiver object is passed to the hook. */
-    public boolean isPassReceiver() {
+    /**
+     * @return whether the receiver object is passed to the hook
+     */
+    public boolean isPassReceiver()
+    {
         return passReceiver;
     }
 
-    /** Returns whether all call arguments are passed to the hook as an {@code Object[]}. */
-    public boolean isPassArguments() {
+    /**
+     * @return whether all call arguments are passed to the hook as an {@code Object[]}
+     */
+    public boolean isPassArguments()
+    {
         return passArguments;
     }
 
-    /** Returns whether the call result is passed to the hook (after-hooks only). */
-    public boolean isPassResult() {
+    /**
+     * @return whether the call result is passed to the hook (after-hooks only)
+     */
+    public boolean isPassResult()
+    {
         return passResult;
     }
 
-    /** Returns whether the target method name is passed to the hook. */
-    public boolean isPassMethodName() {
+    /**
+     * @return whether the target method name is passed to the hook
+     */
+    public boolean isPassMethodName()
+    {
         return passMethodName;
     }
 
     @Override
-    public InstrumentationTarget getTarget() {
+    public InstrumentationTarget getTarget()
+    {
         if (before && !after) return InstrumentationTarget.METHOD_CALL_BEFORE;
         if (!before && after) return InstrumentationTarget.METHOD_CALL_AFTER;
         return InstrumentationTarget.METHOD_CALL_BEFORE;  // Default to before if both
     }
 
     /**
-     * Creates a simple before-call hook.
+     * Creates a hook that runs before calls to a named method.
+     * @param targetClass internal name of the class whose calls are intercepted
+     * @param targetMethod the intercepted method name
+     * @param hookOwner internal name of the class declaring the hook method
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the configured hook
      */
-    public static MethodCallHook beforeCall(String targetClass, String targetMethod,
-                                            String hookOwner, String hookName, String hookDescriptor) {
+    public static MethodCallHook beforeCall(String targetClass, String targetMethod, String hookOwner, String hookName, String hookDescriptor)
+    {
         return MethodCallHook.builder()
                 .targetClass(targetClass)
                 .targetMethod(targetMethod)
@@ -126,10 +178,16 @@ public class MethodCallHook implements Hook {
     }
 
     /**
-     * Creates a simple after-call hook.
+     * Creates a hook that runs after calls to a named method.
+     * @param targetClass internal name of the class whose calls are intercepted
+     * @param targetMethod the intercepted method name
+     * @param hookOwner internal name of the class declaring the hook method
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the configured hook
      */
-    public static MethodCallHook afterCall(String targetClass, String targetMethod,
-                                           String hookOwner, String hookName, String hookDescriptor) {
+    public static MethodCallHook afterCall(String targetClass, String targetMethod, String hookOwner, String hookName, String hookDescriptor)
+    {
         return MethodCallHook.builder()
                 .targetClass(targetClass)
                 .targetMethod(targetMethod)
@@ -139,11 +197,20 @@ public class MethodCallHook implements Hook {
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Builder for {@link MethodCallHook}, defaulting to enabled, priority 100, before-call
+     * placement, an unrestricted target and no values passed.
+     */
+    public static class Builder
+    {
         private HookDescriptor hookDescriptor;
         private List<InstrumentationFilter> filters = new ArrayList<>();
         private boolean enabled = true;
@@ -158,72 +225,154 @@ public class MethodCallHook implements Hook {
         private boolean passResult = false;
         private boolean passMethodName = false;
 
-        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+        /**
+         * Sets the method the instrumentation will call.
+         * @param hookDescriptor the hook method descriptor
+         * @return this builder
+         */
+        public Builder hookDescriptor(HookDescriptor hookDescriptor)
+        {
             this.hookDescriptor = hookDescriptor;
             return this;
         }
 
-        public Builder filters(List<InstrumentationFilter> filters) {
+        /**
+         * Replaces the filters deciding which call sites are instrumented.
+         * @param filters the filter list
+         * @return this builder
+         */
+        public Builder filters(List<InstrumentationFilter> filters)
+        {
             this.filters = filters;
             return this;
         }
 
-        public Builder enabled(boolean enabled) {
+        /**
+         * Sets whether the hook is applied at all.
+         * @param enabled whether the hook is active
+         * @return this builder
+         */
+        public Builder enabled(boolean enabled)
+        {
             this.enabled = enabled;
             return this;
         }
 
-        public Builder priority(int priority) {
+        /**
+         * Sets the ordering weight against other hooks on the same site.
+         * @param priority the priority value
+         * @return this builder
+         */
+        public Builder priority(int priority)
+        {
             this.priority = priority;
             return this;
         }
 
-        public Builder targetClass(String targetClass) {
+        /**
+         * Restricts interception to calls on one class.
+         * @param targetClass internal name of the class, or null for any class
+         * @return this builder
+         */
+        public Builder targetClass(String targetClass)
+        {
             this.targetClass = targetClass;
             return this;
         }
 
-        public Builder targetMethod(String targetMethod) {
+        /**
+         * Restricts interception to one method name.
+         * @param targetMethod the method name, or null for any method
+         * @return this builder
+         */
+        public Builder targetMethod(String targetMethod)
+        {
             this.targetMethod = targetMethod;
             return this;
         }
 
-        public Builder targetDescriptor(String targetDescriptor) {
+        /**
+         * Restricts interception to one overload.
+         * @param targetDescriptor the method descriptor, or null for any descriptor
+         * @return this builder
+         */
+        public Builder targetDescriptor(String targetDescriptor)
+        {
             this.targetDescriptor = targetDescriptor;
             return this;
         }
 
-        public Builder before(boolean before) {
+        /**
+         * Sets whether the hook runs before the call.
+         * @param before whether to hook the call site entry
+         * @return this builder
+         */
+        public Builder before(boolean before)
+        {
             this.before = before;
             return this;
         }
 
-        public Builder after(boolean after) {
+        /**
+         * Sets whether the hook runs after the call.
+         * @param after whether to hook the call site exit
+         * @return this builder
+         */
+        public Builder after(boolean after)
+        {
             this.after = after;
             return this;
         }
 
-        public Builder passReceiver(boolean passReceiver) {
+        /**
+         * Sets whether the call receiver is passed to the hook.
+         * @param passReceiver whether to pass the receiver
+         * @return this builder
+         */
+        public Builder passReceiver(boolean passReceiver)
+        {
             this.passReceiver = passReceiver;
             return this;
         }
 
-        public Builder passArguments(boolean passArguments) {
+        /**
+         * Sets whether the call arguments are passed to the hook as an object array.
+         * @param passArguments whether to pass the arguments
+         * @return this builder
+         */
+        public Builder passArguments(boolean passArguments)
+        {
             this.passArguments = passArguments;
             return this;
         }
 
-        public Builder passResult(boolean passResult) {
+        /**
+         * Sets whether the call result is passed to the hook; only meaningful for after-hooks.
+         * @param passResult whether to pass the result
+         * @return this builder
+         */
+        public Builder passResult(boolean passResult)
+        {
             this.passResult = passResult;
             return this;
         }
 
-        public Builder passMethodName(boolean passMethodName) {
+        /**
+         * Sets whether the intercepted method name is passed to the hook.
+         * @param passMethodName whether to pass the method name
+         * @return this builder
+         */
+        public Builder passMethodName(boolean passMethodName)
+        {
             this.passMethodName = passMethodName;
             return this;
         }
 
-        public MethodCallHook build() {
+        /**
+         * @return the configured hook
+         */
+        public MethodCallHook build()
+        {
             return new MethodCallHook(this);
         }
     }

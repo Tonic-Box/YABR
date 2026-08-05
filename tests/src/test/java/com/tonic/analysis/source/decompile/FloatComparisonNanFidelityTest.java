@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * versus {@code dcmpl}) precisely to keep them apart. A round trip that renders one as the other, or lowers
  * both to the same opcode, silently changes what the method answers for NaN.
  */
-class FloatComparisonNanFidelityTest {
+class FloatComparisonNanFidelityTest
+{
 
     private static final String[] LINES = {
             "public class NanCompare {",
@@ -58,20 +59,19 @@ class FloatComparisonNanFidelityTest {
     };
 
     @Test
-    void aNegatedFloatComparisonKeepsItsNanAnswer() throws Exception {
+    void aNegatedFloatComparisonKeepsItsNanAnswer() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("nan-compare");
         Path src = dir.resolve("NanCompare.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("NanCompare.class")));
         Object original = TestUtils.loadAndVerify(cf).getMethod("check").invoke(null);
-        assertEquals(42, original,
-                "the fixture itself must distinguish each comparison from its negation");
+        assertEquals(42, original, "the fixture itself must distinguish each comparison from its negation");
 
         String d1 = ClassDecompiler.decompile(cf);
         assertTrue(TestUtils.recompileSource(cf, pool, d1, "NanCompare"),

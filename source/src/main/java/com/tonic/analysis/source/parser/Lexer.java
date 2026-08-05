@@ -5,7 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class Lexer {
+/**
+ * Hand-written Java tokenizer with unbounded lookahead, backed by a buffer of already-scanned
+ * tokens.
+ */
+public final class Lexer
+{
     private final String source;
     private int pos;
     private int line;
@@ -19,7 +24,8 @@ public final class Lexer {
 
     private static final Map<String, TokenType> KEYWORDS = new HashMap<>();
 
-    static {
+    static
+    {
         KEYWORDS.put("abstract", TokenType.ABSTRACT);
         KEYWORDS.put("assert", TokenType.ASSERT);
         KEYWORDS.put("boolean", TokenType.BOOLEAN);
@@ -76,15 +82,28 @@ public final class Lexer {
         KEYWORDS.put("null", TokenType.NULL);
     }
 
-    public Lexer(String source) {
+    /**
+     * Creates a lexer positioned at line 1, column 1 of the source.
+     *
+     * @param source Java source text to tokenize
+     */
+    public Lexer(String source)
+    {
         this.source = source;
         this.pos = 0;
         this.line = 1;
         this.column = 1;
     }
 
-    public Token nextToken() {
-        if (!lookaheadBuffer.isEmpty()) {
+    /**
+     * Consumes the next token, taking it from the lookahead buffer if one is queued.
+     *
+     * @return the consumed token, EOF once the source is exhausted
+     */
+    public Token nextToken()
+    {
+        if (!lookaheadBuffer.isEmpty())
+        {
             current = lookaheadBuffer.remove(0);
             return current;
         }
@@ -92,44 +111,69 @@ public final class Lexer {
         return current;
     }
 
-    public Token peek() {
+    /**
+     * @return the next token without consuming it
+     */
+    public Token peek()
+    {
         return peekAhead(0);
     }
 
-    public Token peekAhead(int offset) {
-        while (lookaheadBuffer.size() <= offset) {
+    /**
+     * Looks past the current token, scanning into the lookahead buffer as needed.
+     *
+     * @param offset how many tokens ahead to look, 0 being the next one
+     * @return the token at that distance
+     */
+    public Token peekAhead(int offset)
+    {
+        while (lookaheadBuffer.size() <= offset)
+        {
             lookaheadBuffer.add(scanToken());
         }
         return lookaheadBuffer.get(offset);
     }
 
-    public Token current() {
+    /**
+     * @return the token last returned by nextToken, or null before the first call
+     */
+    public Token current()
+    {
         return current;
     }
 
-    public SourcePosition currentPosition() {
+    /**
+     * @return the line, column and offset of the scanner head, which is past any buffered lookahead
+     */
+    public SourcePosition currentPosition()
+    {
         return SourcePosition.of(line, column, pos);
     }
 
-    private Token scanToken() {
+    private Token scanToken()
+    {
         skipWhitespaceAndComments();
 
-        if (isAtEnd()) {
+        if (isAtEnd())
+        {
             return makeToken(TokenType.EOF, "");
         }
 
         markTokenStart();
         char c = advance();
 
-        if (isDigit(c)) {
+        if (isDigit(c))
+        {
             return scanNumber();
         }
 
-        if (isIdentifierStart(c)) {
+        if (isIdentifierStart(c))
+        {
             return scanIdentifierOrKeyword();
         }
 
-        switch (c) {
+        switch (c)
+        {
             case '(': return makeToken(TokenType.LPAREN);
             case ')': return makeToken(TokenType.RPAREN);
             case '{': return makeToken(TokenType.LBRACE);
@@ -143,16 +187,19 @@ public final class Lexer {
             case '@': return makeToken(TokenType.AT);
 
             case '.':
-                if (match('.') && match('.')) {
+                if (match('.') && match('.'))
+                {
                     return makeToken(TokenType.ELLIPSIS);
                 }
-                if (isDigit(peek(0))) {
+                if (isDigit(peek(0)))
+                {
                     return scanNumber();
                 }
                 return makeToken(TokenType.DOT);
 
             case ':':
-                if (match(':')) {
+                if (match(':'))
+                {
                     return makeToken(TokenType.DOUBLE_COLON);
                 }
                 return makeToken(TokenType.COLON);
@@ -203,7 +250,8 @@ public final class Lexer {
                 return makeToken(TokenType.EQ);
 
             case '<':
-                if (match('<')) {
+                if (match('<'))
+                {
                     if (match('=')) return makeToken(TokenType.LT_LT_EQ);
                     return makeToken(TokenType.LT_LT);
                 }
@@ -211,8 +259,10 @@ public final class Lexer {
                 return makeToken(TokenType.LT);
 
             case '>':
-                if (match('>')) {
-                    if (match('>')) {
+                if (match('>'))
+                {
+                    if (match('>'))
+                    {
                         if (match('=')) return makeToken(TokenType.GT_GT_GT_EQ);
                         return makeToken(TokenType.GT_GT_GT);
                     }
@@ -232,7 +282,8 @@ public final class Lexer {
         }
     }
 
-    private Token scanNumber() {
+    private Token scanNumber()
+    {
         boolean isFloat = false;
         boolean isLong = false;
         boolean isHex = false;
@@ -241,35 +292,45 @@ public final class Lexer {
 
         char first = source.charAt(tokenStart);
 
-        if (first == '0' && pos < source.length()) {
+        if (first == '0' && pos < source.length())
+        {
             char second = peek(0);
-            if (second == 'x' || second == 'X') {
+            if (second == 'x' || second == 'X')
+            {
                 advance();
                 isHex = true;
                 scanHexDigits();
-            } else if (second == 'b' || second == 'B') {
+            }
+            else if (second == 'b' || second == 'B')
+            {
                 advance();
                 isBinary = true;
                 scanBinaryDigits();
-            } else if (isDigit(second)) {
+            }
+            else if (isDigit(second))
+            {
                 isOctal = true;
                 scanOctalDigits();
             }
         }
 
-        if (!isHex && !isBinary && !isOctal) {
+        if (!isHex && !isBinary && !isOctal)
+        {
             scanDecimalDigits();
 
-            if (peek(0) == '.' && isDigit(peek(1))) {
+            if (peek(0) == '.' && isDigit(peek(1)))
+            {
                 isFloat = true;
                 advance();
                 scanDecimalDigits();
             }
 
-            if (peek(0) == 'e' || peek(0) == 'E') {
+            if (peek(0) == 'e' || peek(0) == 'E')
+            {
                 isFloat = true;
                 advance();
-                if (peek(0) == '+' || peek(0) == '-') {
+                if (peek(0) == '+' || peek(0) == '-')
+                {
                     advance();
                 }
                 scanDecimalDigits();
@@ -278,64 +339,88 @@ public final class Lexer {
 
         char suffix = peek(0);
 
-        if (suffix == 'l' || suffix == 'L') {
+        if (suffix == 'l' || suffix == 'L')
+        {
             isLong = true;
             advance();
-        } else if (suffix == 'f' || suffix == 'F') {
+        }
+        else if (suffix == 'f' || suffix == 'F')
+        {
             isFloat = true;
             advance();
             return makeNumberToken(TokenType.FLOAT_LITERAL);
-        } else if (suffix == 'd' || suffix == 'D') {
+        }
+        else if (suffix == 'd' || suffix == 'D')
+        {
             isFloat = true;
             advance();
             return makeNumberToken(TokenType.DOUBLE_LITERAL);
         }
 
-        if (isFloat) {
+        if (isFloat)
+        {
             return makeNumberToken(TokenType.DOUBLE_LITERAL);
-        } else if (isLong) {
+        }
+        else if (isLong)
+        {
             return makeNumberToken(TokenType.LONG_LITERAL);
-        } else {
+        }
+        else
+        {
             return makeNumberToken(TokenType.INTEGER_LITERAL);
         }
     }
 
-    private void scanDecimalDigits() {
-        while (isDigit(peek(0)) || peek(0) == '_') {
+    private void scanDecimalDigits()
+    {
+        while (isDigit(peek(0)) || peek(0) == '_')
+        {
             advance();
         }
     }
 
-    private void scanHexDigits() {
-        while (isHexDigit(peek(0)) || peek(0) == '_') {
+    private void scanHexDigits()
+    {
+        while (isHexDigit(peek(0)) || peek(0) == '_')
+        {
             advance();
         }
     }
 
-    private void scanBinaryDigits() {
-        while (peek(0) == '0' || peek(0) == '1' || peek(0) == '_') {
+    private void scanBinaryDigits()
+    {
+        while (peek(0) == '0' || peek(0) == '1' || peek(0) == '_')
+        {
             advance();
         }
     }
 
-    private void scanOctalDigits() {
-        while (isOctalDigit(peek(0)) || peek(0) == '_') {
+    private void scanOctalDigits()
+    {
+        while (isOctalDigit(peek(0)) || peek(0) == '_')
+        {
             advance();
         }
     }
 
-    private Token makeNumberToken(TokenType type) {
+    private Token makeNumberToken(TokenType type)
+    {
         String text = currentTokenText();
         String cleaned = text.replace("_", "");
 
         Object value;
         TokenType resultType = type;
-        try {
-            switch (type) {
+        try
+        {
+            switch (type)
+            {
                 case INTEGER_LITERAL:
-                    try {
+                    try
+                    {
                         value = parseInteger(cleaned);
-                    } catch (NumberFormatException intOverflow) {
+                    }
+                    catch (NumberFormatException intOverflow)
+                    {
                         value = parseLong(cleaned);
                         resultType = TokenType.LONG_LITERAL;
                     }
@@ -352,91 +437,125 @@ public final class Lexer {
                 default:
                     value = null;
             }
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e)
+        {
             return makeErrorToken("Invalid number format: " + text);
         }
 
         return new Token(resultType, text, value, tokenStartPosition());
     }
 
-    private int parseInteger(String s) {
-        if (s.startsWith("0x") || s.startsWith("0X")) {
+    private int parseInteger(String s)
+    {
+        if (s.startsWith("0x") || s.startsWith("0X"))
+        {
             return Integer.parseUnsignedInt(s.substring(2), 16);
-        } else if (s.startsWith("0b") || s.startsWith("0B")) {
+        }
+        else if (s.startsWith("0b") || s.startsWith("0B"))
+        {
             return Integer.parseUnsignedInt(s.substring(2), 2);
-        } else if (s.length() > 1 && s.startsWith("0") && !s.contains(".")) {
+        }
+        else if (s.length() > 1 && s.startsWith("0") && !s.contains("."))
+        {
             return Integer.parseUnsignedInt(s.substring(1), 8);
         }
         return Integer.parseInt(s);
     }
 
-    private long parseLong(String s) {
+    private long parseLong(String s)
+    {
         s = s.replaceAll("[lL]$", "");
-        if (s.startsWith("0x") || s.startsWith("0X")) {
+        if (s.startsWith("0x") || s.startsWith("0X"))
+        {
             return Long.parseUnsignedLong(s.substring(2), 16);
-        } else if (s.startsWith("0b") || s.startsWith("0B")) {
+        }
+        else if (s.startsWith("0b") || s.startsWith("0B"))
+        {
             return Long.parseUnsignedLong(s.substring(2), 2);
-        } else if (s.length() > 1 && s.startsWith("0") && !s.contains(".")) {
+        }
+        else if (s.length() > 1 && s.startsWith("0") && !s.contains("."))
+        {
             return Long.parseUnsignedLong(s.substring(1), 8);
         }
         return Long.parseLong(s);
     }
 
-    private Token scanIdentifierOrKeyword() {
-        while (isIdentifierPart(peek(0))) {
+    private Token scanIdentifierOrKeyword()
+    {
+        while (isIdentifierPart(peek(0)))
+        {
             advance();
         }
 
         String text = currentTokenText();
         TokenType type = KEYWORDS.getOrDefault(text, TokenType.IDENTIFIER);
 
-        if (type == TokenType.TRUE) {
+        if (type == TokenType.TRUE)
+        {
             return new Token(type, text, Boolean.TRUE, tokenStartPosition());
-        } else if (type == TokenType.FALSE) {
+        }
+        else if (type == TokenType.FALSE)
+        {
             return new Token(type, text, Boolean.FALSE, tokenStartPosition());
-        } else if (type == TokenType.NULL) {
+        }
+        else if (type == TokenType.NULL)
+        {
             return new Token(type, text, null, tokenStartPosition());
         }
 
         return makeToken(type);
     }
 
-    private Token scanCharLiteral() {
-        if (isAtEnd()) {
+    private Token scanCharLiteral()
+    {
+        if (isAtEnd())
+        {
             return makeErrorToken("Unterminated character literal");
         }
 
         char value;
-        if (peek(0) == '\\') {
+        if (peek(0) == '\\')
+        {
             advance();
             value = scanEscapeSequence();
-        } else {
+        }
+        else
+        {
             value = advance();
         }
 
-        if (!match('\'')) {
+        if (!match('\''))
+        {
             return makeErrorToken("Unterminated character literal");
         }
 
         return new Token(TokenType.CHAR_LITERAL, currentTokenText(), value, tokenStartPosition());
     }
 
-    private Token scanStringLiteral() {
+    private Token scanStringLiteral()
+    {
         StringBuilder sb = new StringBuilder();
 
-        while (!isAtEnd() && peek(0) != '"') {
-            if (peek(0) == '\n') {
+        while (!isAtEnd() && peek(0) != '"')
+        {
+            if (peek(0) == '\n')
+            {
                 return makeErrorToken("Unterminated string literal");
             }
-            if (peek(0) == '\\') {
+            if (peek(0) == '\\')
+            {
                 advance();
                 sb.append(scanEscapeSequence());
-            } else {
+            }
+            else
+            {
                 sb.append(advance());
             }
         }
 
-        if (isAtEnd()) {
+        if (isAtEnd())
+        {
             return makeErrorToken("Unterminated string literal");
         }
 
@@ -451,43 +570,54 @@ public final class Lexer {
      * incidental-whitespace stripping, and escape processing. Emits a normal STRING_LITERAL so the
      * parser/lowerer need no text-block-specific handling.
      */
-    private Token scanTextBlock() {
+    private Token scanTextBlock()
+    {
         advance();
         advance();
-        while (peek(0) == ' ' || peek(0) == '\t' || peek(0) == '\f') {
+        while (peek(0) == ' ' || peek(0) == '\t' || peek(0) == '\f')
+        {
             advance();
         }
-        if (peek(0) == '\r') {
+        if (peek(0) == '\r')
+        {
             advance();
         }
-        if (peek(0) == '\n') {
+        if (peek(0) == '\n')
+        {
             advance();
             line++;
             column = 1;
         }
 
         StringBuilder raw = new StringBuilder();
-        while (true) {
-            if (isAtEnd()) {
+        while (true)
+        {
+            if (isAtEnd())
+            {
                 return makeErrorToken("Unterminated text block");
             }
             char c = peek(0);
-            if (c == '"' && peek(1) == '"' && peek(2) == '"') {
+            if (c == '"' && peek(1) == '"' && peek(2) == '"')
+            {
                 advance();
                 advance();
                 advance();
                 break;
             }
-            if (c == '\\') {
+            if (c == '\\')
+            {
                 raw.append(advance());
-                if (!isAtEnd()) {
+                if (!isAtEnd())
+                {
                     raw.append(advance());
                 }
                 continue;
             }
-            if (c == '\r') {
+            if (c == '\r')
+            {
                 advance();
-                if (peek(0) == '\n') {
+                if (peek(0) == '\n')
+                {
                     advance();
                 }
                 raw.append('\n');
@@ -495,7 +625,8 @@ public final class Lexer {
                 column = 1;
                 continue;
             }
-            if (c == '\n') {
+            if (c == '\n')
+            {
                 advance();
                 raw.append('\n');
                 line++;
@@ -514,11 +645,14 @@ public final class Lexer {
      * leading-whitespace prefix (computed over all non-blank lines plus the last line, which carries
      * the closing delimiter's indentation) and trailing white space from every line.
      */
-    private static String stripIncidentalWhitespace(String raw) {
+    private static String stripIncidentalWhitespace(String raw)
+    {
         java.util.List<String> lines = new java.util.ArrayList<>();
         int start = 0;
-        for (int i = 0; i < raw.length(); i++) {
-            if (raw.charAt(i) == '\n') {
+        for (int i = 0; i < raw.length(); i++)
+        {
+            if (raw.charAt(i) == '\n')
+            {
                 lines.add(raw.substring(start, i));
                 start = i + 1;
             }
@@ -526,42 +660,51 @@ public final class Lexer {
         lines.add(raw.substring(start));
 
         int minIndent = Integer.MAX_VALUE;
-        for (int i = 0; i < lines.size(); i++) {
+        for (int i = 0; i < lines.size(); i++)
+        {
             String ln = lines.get(i);
             boolean blank = ln.trim().isEmpty();
             boolean last = i == lines.size() - 1;
-            if (blank && !last) {
+            if (blank && !last)
+            {
                 continue;
             }
             minIndent = Math.min(minIndent, leadingWhitespaceCount(ln));
         }
-        if (minIndent == Integer.MAX_VALUE) {
+        if (minIndent == Integer.MAX_VALUE)
+        {
             minIndent = 0;
         }
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lines.size(); i++) {
+        for (int i = 0; i < lines.size(); i++)
+        {
             String ln = lines.get(i);
             String stripped = ln.length() >= minIndent ? ln.substring(minIndent) : "";
             sb.append(stripTrailingWhitespace(stripped));
-            if (i < lines.size() - 1) {
+            if (i < lines.size() - 1)
+            {
                 sb.append('\n');
             }
         }
         return sb.toString();
     }
 
-    private static int leadingWhitespaceCount(String s) {
+    private static int leadingWhitespaceCount(String s)
+    {
         int n = 0;
-        while (n < s.length() && (s.charAt(n) == ' ' || s.charAt(n) == '\t' || s.charAt(n) == '\f')) {
+        while (n < s.length() && (s.charAt(n) == ' ' || s.charAt(n) == '\t' || s.charAt(n) == '\f'))
+        {
             n++;
         }
         return n;
     }
 
-    private static String stripTrailingWhitespace(String s) {
+    private static String stripTrailingWhitespace(String s)
+    {
         int end = s.length();
-        while (end > 0 && (s.charAt(end - 1) == ' ' || s.charAt(end - 1) == '\t' || s.charAt(end - 1) == '\f')) {
+        while (end > 0 && (s.charAt(end - 1) == ' ' || s.charAt(end - 1) == '\t' || s.charAt(end - 1) == '\f'))
+        {
             end--;
         }
         return s.substring(0, end);
@@ -571,16 +714,20 @@ public final class Lexer {
      * Interprets escape sequences in re-indented text-block content, including {@code \s} (space,
      * preserved past trailing-whitespace stripping) and {@code \<line-terminator>} line continuation.
      */
-    private static String processTextBlockEscapes(String s) {
+    private static String processTextBlockEscapes(String s)
+    {
         StringBuilder out = new StringBuilder(s.length());
-        for (int i = 0; i < s.length(); i++) {
+        for (int i = 0; i < s.length(); i++)
+        {
             char c = s.charAt(i);
-            if (c != '\\' || i + 1 >= s.length()) {
+            if (c != '\\' || i + 1 >= s.length())
+            {
                 out.append(c);
                 continue;
             }
             char next = s.charAt(++i);
-            switch (next) {
+            switch (next)
+            {
                 case 'b': out.append('\b'); break;
                 case 't': out.append('\t'); break;
                 case 'n': out.append('\n'); break;
@@ -591,23 +738,29 @@ public final class Lexer {
                 case '\'': out.append('\''); break;
                 case '\\': out.append('\\'); break;
                 case '\n': break;
-                case 'u': {
-                    if (i + 4 < s.length()) {
+                case 'u':
+                {
+                    if (i + 4 < s.length())
+                    {
                         out.append((char) Integer.parseInt(s.substring(i + 1, i + 5), 16));
                         i += 4;
                     }
                     break;
                 }
                 default:
-                    if (next >= '0' && next <= '7') {
+                    if (next >= '0' && next <= '7')
+                    {
                         int j = i;
                         StringBuilder oct = new StringBuilder();
-                        while (j < s.length() && oct.length() < 3 && s.charAt(j) >= '0' && s.charAt(j) <= '7') {
+                        while (j < s.length() && oct.length() < 3 && s.charAt(j) >= '0' && s.charAt(j) <= '7')
+                        {
                             oct.append(s.charAt(j++));
                         }
                         out.append((char) Integer.parseInt(oct.toString(), 8));
                         i = j - 1;
-                    } else {
+                    }
+                    else
+                    {
                         out.append(next);
                     }
             }
@@ -615,11 +768,13 @@ public final class Lexer {
         return out.toString();
     }
 
-    private char scanEscapeSequence() {
+    private char scanEscapeSequence()
+    {
         if (isAtEnd()) return '\0';
 
         char c = advance();
-        switch (c) {
+        switch (c)
+        {
             case 'b': return '\b';
             case 't': return '\t';
             case 'n': return '\n';
@@ -638,35 +793,46 @@ public final class Lexer {
         }
     }
 
-    private char scanUnicodeEscape() {
+    private char scanUnicodeEscape()
+    {
         StringBuilder hex = new StringBuilder();
-        for (int i = 0; i < 4 && !isAtEnd(); i++) {
-            if (isHexDigit(peek(0))) {
+        for (int i = 0; i < 4 && !isAtEnd(); i++)
+        {
+            if (isHexDigit(peek(0)))
+            {
                 hex.append(advance());
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
-        if (hex.length() == 4) {
+        if (hex.length() == 4)
+        {
             return (char) Integer.parseInt(hex.toString(), 16);
         }
         return '\0';
     }
 
-    private char scanOctalEscape(char first) {
+    private char scanOctalEscape(char first)
+    {
         StringBuilder octal = new StringBuilder();
         octal.append(first);
-        for (int i = 0; i < 2 && !isAtEnd() && isOctalDigit(peek(0)); i++) {
+        for (int i = 0; i < 2 && !isAtEnd() && isOctalDigit(peek(0)); i++)
+        {
             octal.append(advance());
         }
         return (char) Integer.parseInt(octal.toString(), 8);
     }
 
-    private void skipWhitespaceAndComments() {
-        while (!isAtEnd()) {
+    private void skipWhitespaceAndComments()
+    {
+        while (!isAtEnd())
+        {
             char c = peek(0);
 
-            switch (c) {
+            switch (c)
+            {
                 case ' ':
                 case '\t':
                 case '\r':
@@ -678,11 +844,16 @@ public final class Lexer {
                     column = 1;
                     break;
                 case '/':
-                    if (peek(1) == '/') {
+                    if (peek(1) == '/')
+                    {
                         skipLineComment();
-                    } else if (peek(1) == '*') {
+                    }
+                    else if (peek(1) == '*')
+                    {
                         skipBlockComment();
-                    } else {
+                    }
+                    else
+                    {
                         return;
                     }
                     break;
@@ -692,45 +863,57 @@ public final class Lexer {
         }
     }
 
-    private void skipLineComment() {
-        while (!isAtEnd() && peek(0) != '\n') {
+    private void skipLineComment()
+    {
+        while (!isAtEnd() && peek(0) != '\n')
+        {
             advance();
         }
     }
 
-    private void skipBlockComment() {
+    private void skipBlockComment()
+    {
         advance();
         advance();
 
-        while (!isAtEnd()) {
-            if (peek(0) == '*' && peek(1) == '/') {
+        while (!isAtEnd())
+        {
+            if (peek(0) == '*' && peek(1) == '/')
+            {
                 advance();
                 advance();
                 return;
             }
-            if (peek(0) == '\n') {
+            if (peek(0) == '\n')
+            {
                 line++;
                 column = 1;
                 advance();
-            } else {
+            }
+            else
+            {
                 advance();
             }
         }
     }
 
-    private boolean isAtEnd() {
+    private boolean isAtEnd()
+    {
         return pos >= source.length();
     }
 
-    private char advance() {
+    private char advance()
+    {
         char c = source.charAt(pos);
         pos++;
         column++;
         return c;
     }
 
-    private boolean match(char expected) {
-        if (isAtEnd() || source.charAt(pos) != expected) {
+    private boolean match(char expected)
+    {
+        if (isAtEnd() || source.charAt(pos) != expected)
+        {
             return false;
         }
         pos++;
@@ -738,57 +921,70 @@ public final class Lexer {
         return true;
     }
 
-    private char peek(int offset) {
+    private char peek(int offset)
+    {
         int index = pos + offset;
-        if (index >= source.length()) {
+        if (index >= source.length())
+        {
             return '\0';
         }
         return source.charAt(index);
     }
 
-    private void markTokenStart() {
+    private void markTokenStart()
+    {
         tokenStart = pos;
         tokenStartLine = line;
         tokenStartColumn = column;
     }
 
-    private String currentTokenText() {
+    private String currentTokenText()
+    {
         return source.substring(tokenStart, pos);
     }
 
-    private SourcePosition tokenStartPosition() {
+    private SourcePosition tokenStartPosition()
+    {
         return SourcePosition.of(tokenStartLine, tokenStartColumn, tokenStart);
     }
 
-    private Token makeToken(TokenType type) {
+    private Token makeToken(TokenType type)
+    {
         return new Token(type, currentTokenText(), tokenStartPosition());
     }
 
-    private Token makeToken(TokenType type, String text) {
+    private Token makeToken(TokenType type, String text)
+    {
         return new Token(type, text, SourcePosition.of(line, column, pos));
     }
 
-    private Token makeErrorToken(String message) {
+    private Token makeErrorToken(String message)
+    {
         return new Token(TokenType.ERROR, message, tokenStartPosition());
     }
 
-    private static boolean isDigit(char c) {
+    private static boolean isDigit(char c)
+    {
         return c >= '0' && c <= '9';
     }
 
-    private static boolean isHexDigit(char c) {
+    private static boolean isHexDigit(char c)
+    {
         return isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
     }
 
-    private static boolean isOctalDigit(char c) {
+    private static boolean isOctalDigit(char c)
+    {
         return c >= '0' && c <= '7';
     }
 
-    private static boolean isIdentifierStart(char c) {
+    private static boolean isIdentifierStart(char c)
+    {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
     }
 
-    private static boolean isIdentifierPart(char c) {
+    private static boolean isIdentifierPart(char c)
+    {
         return isIdentifierStart(c) || isDigit(c);
     }
 }

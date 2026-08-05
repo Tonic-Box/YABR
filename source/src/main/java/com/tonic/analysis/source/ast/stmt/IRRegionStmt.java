@@ -8,28 +8,10 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import java.util.*;
 
 /**
- * Represents an irreducible control flow region that cannot be structured
- * into standard Java control flow constructs.
- *
- * This node is used as a fallback when the structural analysis cannot
- * recover if/while/for/switch structures from the CFG. The original IR
- * blocks are preserved and can be emitted as labeled blocks with breaks.
- *
- * Example output:
- * <pre>
- * // BEGIN UNSTRUCTURED REGION
- * region_0: {
- *     // instructions...
- *     if (cond) break region_1;
- *     break region_2;
- * }
- * region_1: {
- *     // instructions...
- * }
- * // END UNSTRUCTURED REGION
- * </pre>
+ * A fallback statement preserving raw IR blocks of an irreducible region, emitted as labeled blocks with breaks.
  */
-public final class IRRegionStmt implements Statement {
+public final class IRRegionStmt implements Statement
+{
 
     /**
      * The original IR blocks in this region.
@@ -49,86 +31,142 @@ public final class IRRegionStmt implements Statement {
     private SourceLocation location;
     private ASTNode parent;
 
-    public IRRegionStmt(List<IRBlock> blocks, Map<IRBlock, String> blockLabels, SourceLocation location) {
+    /**
+     * Creates a region over the given blocks, generating labels when none are supplied.
+     * @param blocks the region's IR blocks
+     * @param blockLabels emission labels per block, or null to generate defaults
+     * @param location source location, or null for unknown
+     * @throws NullPointerException if blocks is null
+     */
+    public IRRegionStmt(List<IRBlock> blocks, Map<IRBlock, String> blockLabels, SourceLocation location)
+    {
         this.blocks = new ArrayList<>(Objects.requireNonNull(blocks, "blocks cannot be null"));
         this.blockLabels = new LinkedHashMap<>(blockLabels != null ? blockLabels : generateLabels(blocks));
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public IRRegionStmt(List<IRBlock> blocks) {
+    /**
+     * Creates a region with generated labels and an unknown location.
+     * @param blocks the region's IR blocks
+     * @throws NullPointerException if blocks is null
+     */
+    public IRRegionStmt(List<IRBlock> blocks)
+    {
         this(blocks, null, SourceLocation.UNKNOWN);
     }
 
-    public List<IRBlock> getBlocks() {
+    /**
+     * @return the blocks
+     */
+    public List<IRBlock> getBlocks()
+    {
         return blocks;
     }
 
-    public Map<IRBlock, String> getBlockLabels() {
+    /**
+     * @return the block labels
+     */
+    public Map<IRBlock, String> getBlockLabels()
+    {
         return blockLabels;
     }
 
-    public String getReason() {
+    /**
+     * @return the reason
+     */
+    public String getReason()
+    {
         return reason;
     }
 
-    public void setReason(String reason) {
+    /**
+     * Sets the description of why this region is irreducible.
+     * @param reason the description, or null for none
+     */
+    public void setReason(String reason)
+    {
         this.reason = reason;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Generates default labels for blocks.
+     * Generates default emission labels for the given blocks.
+     * @param blocks blocks to label
+     * @return a label per block, in block order
      */
-    private static Map<IRBlock, String> generateLabels(List<IRBlock> blocks) {
+    private static Map<IRBlock, String> generateLabels(List<IRBlock> blocks)
+    {
         Map<IRBlock, String> labels = new LinkedHashMap<>();
-        for (int i = 0; i < blocks.size(); i++) {
+        for (int i = 0; i < blocks.size(); i++)
+        {
             labels.put(blocks.get(i), "region_" + blocks.get(i).getId() + "_" + i);
         }
         return labels;
     }
 
     /**
-     * Gets the entry block of this region (first block).
+     * @return the first block of this region, or null if empty
      */
-    public IRBlock getEntryBlock() {
+    public IRBlock getEntryBlock()
+    {
         return blocks.isEmpty() ? null : blocks.get(0);
     }
 
     /**
-     * Gets the label for a specific block.
+     * Looks up the emission label of a block.
+     * @param block the block to look up
+     * @return its label, or null if the block is not in this region
      */
-    public String getLabelFor(IRBlock block) {
+    public String getLabelFor(IRBlock block)
+    {
         return blockLabels.get(block);
     }
 
     /**
-     * Gets the number of blocks in this region.
+     * @return the number of blocks in this region
      */
-    public int getBlockCount() {
+    public int getBlockCount()
+    {
         return blocks.size();
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitIRRegion(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("/* IRREDUCIBLE REGION: ").append(blocks.size()).append(" blocks");
-        if (reason != null) {
+        if (reason != null)
+        {
             sb.append(" (").append(reason).append(")");
         }
         sb.append(" */");
@@ -136,7 +174,8 @@ public final class IRRegionStmt implements Statement {
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

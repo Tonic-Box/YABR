@@ -9,65 +9,123 @@ import java.util.Map;
 /**
  * A single query match: the code location it points to, its computed attributes (e.g. {@code class},
  * {@code method}, {@code matches}), and any nested evidence matches (the bytecode sites that
- * satisfied the query). A domain model with no presentation concerns — display labels are the
+ * satisfied the query). A domain model with no presentation concerns - display labels are the
  * caller's responsibility.
  */
-public class QueryMatch {
+public class QueryMatch
+{
 
     private final QueryTarget target;
     private final Map<String, Object> attributes;
     private final List<QueryMatch> evidence;
 
-    public QueryMatch(QueryTarget target, Map<String, Object> attributes, List<QueryMatch> evidence) {
+    /**
+     * Creates a match, copying the attributes and evidence defensively.
+     * @param target the matched code location
+     * @param attributes the computed attributes, may be null for none
+     * @param evidence the nested evidence matches, may be null for none
+     */
+    public QueryMatch(QueryTarget target, Map<String, Object> attributes, List<QueryMatch> evidence)
+    {
         this.target = target;
         this.attributes = attributes != null ? new LinkedHashMap<>(attributes) : new LinkedHashMap<>();
         this.evidence = evidence != null ? List.copyOf(evidence) : List.of();
     }
 
-    public QueryTarget getTarget() {
+    /**
+     * @return the target
+     */
+    public QueryTarget getTarget()
+    {
         return target;
     }
 
-    public List<QueryMatch> getEvidence() {
+    /**
+     * @return the evidence
+     */
+    public List<QueryMatch> getEvidence()
+    {
         return evidence;
     }
 
-    public Map<String, Object> getAttributes() {
+    /**
+     * @return an unmodifiable view of the computed attributes, in insertion order
+     */
+    public Map<String, Object> getAttributes()
+    {
         return Collections.unmodifiableMap(attributes);
     }
 
-    public Object getAttribute(String name) {
+    /**
+     * Looks up one computed attribute.
+     * @param name the attribute name
+     * @return the value, or null if the attribute was not computed
+     */
+    public Object getAttribute(String name)
+    {
         return attributes.get(name);
     }
 
-    public boolean hasEvidence() {
+    /**
+     * @return true if this match carries nested evidence matches
+     */
+    public boolean hasEvidence()
+    {
         return !evidence.isEmpty();
     }
 
-    public static Builder builder(QueryTarget target) {
+    /**
+     * Starts a builder for a match at a code location.
+     * @param target the matched code location
+     * @return the new builder
+     */
+    public static Builder builder(QueryTarget target)
+    {
         return new Builder(target);
     }
 
-    public static class Builder {
+    /**
+     * Fluent builder that accumulates attributes and evidence for one match.
+     */
+    public static class Builder
+    {
         private final QueryTarget target;
         private final Map<String, Object> attributes = new LinkedHashMap<>();
         private List<QueryMatch> evidence = new ArrayList<>();
 
-        Builder(QueryTarget target) {
+        Builder(QueryTarget target)
+        {
             this.target = target;
         }
 
-        public Builder attribute(String name, Object value) {
+        /**
+         * Adds one attribute, replacing any previous value under the same name.
+         * @param name the attribute name
+         * @param value the attribute value
+         * @return this builder
+         */
+        public Builder attribute(String name, Object value)
+        {
             attributes.put(name, value);
             return this;
         }
 
-        public Builder evidence(List<QueryMatch> evidence) {
+        /**
+         * Sets the nested matches that back this one.
+         * @param evidence the evidence matches, replacing the current list
+         * @return this builder
+         */
+        public Builder evidence(List<QueryMatch> evidence)
+        {
             this.evidence = evidence;
             return this;
         }
 
-        public QueryMatch build() {
+        /**
+         * @return a match holding the accumulated target, attributes and evidence
+         */
+        public QueryMatch build()
+        {
             return new QueryMatch(target, attributes, evidence);
         }
     }

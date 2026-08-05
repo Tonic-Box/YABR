@@ -14,13 +14,15 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class InterfaceRefItemTest {
+class InterfaceRefItemTest
+{
 
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classFile = BytecodeBuilder.forClass("com/test/InterfaceRefTest")
             .publicStaticMethod("test", "()V")
                 .vreturn()
@@ -29,17 +31,20 @@ class InterfaceRefItemTest {
     }
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void defaultConstructor() {
+        void defaultConstructor()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             assertNotNull(item);
             assertEquals(Item.ITEM_INTERFACE_REF, item.getType());
         }
 
         @Test
-        void setValueWithInterfaceRef() {
+        void setValueWithInterfaceRef()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             InterfaceRef ref = new InterfaceRef(4, 9);
             item.setValue(ref);
@@ -50,7 +55,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void setConstPool() {
+        void setConstPool()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setConstPool(constPool);
 
@@ -59,10 +65,12 @@ class InterfaceRefItemTest {
     }
 
     @Nested
-    class ResolutionTests {
+    class ResolutionTests
+    {
 
         @Test
-        void getOwnerReturnsNullWhenConstPoolNotSet() {
+        void getOwnerReturnsNullWhenConstPoolNotSet()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(1, 2));
 
@@ -70,7 +78,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getNameReturnsNullWhenConstPoolNotSet() {
+        void getNameReturnsNullWhenConstPoolNotSet()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(1, 2));
 
@@ -78,7 +87,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getDescriptorReturnsNullWhenConstPoolNotSet() {
+        void getDescriptorReturnsNullWhenConstPoolNotSet()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(1, 2));
 
@@ -86,7 +96,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getOwnerWithConstPool() {
+        void getOwnerWithConstPool()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/Runnable");
             int natIndex = constPool.addNameAndType("run", "()V");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -97,7 +108,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getNameWithConstPool() {
+        void getNameWithConstPool()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/List");
             int natIndex = constPool.addNameAndType("size", "()I");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -108,7 +120,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getDescriptorWithConstPool() {
+        void getDescriptorWithConstPool()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/List");
             int natIndex = constPool.addNameAndType("add", "(Ljava/lang/Object;)Z");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -119,7 +132,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void ownerReturnsInternalName() {
+        void ownerReturnsInternalName()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/Map");
             int natIndex = constPool.addNameAndType("put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -132,10 +146,12 @@ class InterfaceRefItemTest {
     }
 
     @Nested
-    class ParameterAnalysisTests {
+    class ParameterAnalysisTests
+    {
 
         @Test
-        void getParameterCountThrowsWhenConstPoolNotSet() {
+        void getParameterCountThrowsWhenConstPoolNotSet()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(1, 2));
 
@@ -143,7 +159,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getParameterCountForNoParameters() {
+        void getParameterCountForNoParameters()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/Runnable");
             int natIndex = constPool.addNameAndType("run", "()V");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -152,7 +169,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getParameterCountForOneParameter() {
+        void getParameterCountForOneParameter()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/function/Consumer");
             int natIndex = constPool.addNameAndType("accept", "(Ljava/lang/Object;)V");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -161,7 +179,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getParameterCountForMultipleParameters() {
+        void getParameterCountForMultipleParameters()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/Map");
             int natIndex = constPool.addNameAndType("put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -170,7 +189,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsThrowsWhenConstPoolNotSet() {
+        void getReturnTypeSlotsThrowsWhenConstPoolNotSet()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(1, 2));
 
@@ -178,7 +198,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForVoidReturn() {
+        void getReturnTypeSlotsForVoidReturn()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/lang/Runnable");
             int natIndex = constPool.addNameAndType("run", "()V");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -187,7 +208,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForIntReturn() {
+        void getReturnTypeSlotsForIntReturn()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/List");
             int natIndex = constPool.addNameAndType("size", "()I");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -196,7 +218,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForLongReturn() {
+        void getReturnTypeSlotsForLongReturn()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/stream/LongStream");
             int natIndex = constPool.addNameAndType("count", "()J");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -205,7 +228,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForDoubleReturn() {
+        void getReturnTypeSlotsForDoubleReturn()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/function/DoubleSupplier");
             int natIndex = constPool.addNameAndType("getAsDouble", "()D");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -214,7 +238,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForObjectReturn() {
+        void getReturnTypeSlotsForObjectReturn()
+        {
             ClassRefItem classRef = constPool.findOrAddClass("java/util/function/Supplier");
             int natIndex = constPool.addNameAndType("get", "()Ljava/lang/Object;");
             InterfaceRefItem item = constPool.findOrAddInterfaceRef(constPool.getIndexOf(classRef), natIndex);
@@ -225,10 +250,12 @@ class InterfaceRefItemTest {
         }
 
     @Nested
-    class SerializationTests {
+    class SerializationTests
+    {
 
         @Test
-        void writeInterfaceRef() throws IOException {
+        void writeInterfaceRef() throws IOException
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(0x0003, 0x0007));
 
@@ -245,7 +272,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void writeInterfaceRefWithLargeIndices() throws IOException {
+        void writeInterfaceRefWithLargeIndices() throws IOException
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             item.setValue(new InterfaceRef(0x1234, 0x5678));
 
@@ -263,10 +291,12 @@ class InterfaceRefItemTest {
     }
 
     @Nested
-    class TypeTests {
+    class TypeTests
+    {
 
         @Test
-        void getTypeReturnsInterfaceRefConstant() {
+        void getTypeReturnsInterfaceRefConstant()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             assertEquals(Item.ITEM_INTERFACE_REF, item.getType());
             assertEquals(0xB, item.getType());
@@ -274,10 +304,12 @@ class InterfaceRefItemTest {
     }
 
     @Nested
-    class ValueTests {
+    class ValueTests
+    {
 
         @Test
-        void getValueReturnsInterfaceRef() {
+        void getValueReturnsInterfaceRef()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             InterfaceRef ref = new InterfaceRef(7, 14);
             item.setValue(ref);
@@ -288,7 +320,8 @@ class InterfaceRefItemTest {
         }
 
         @Test
-        void interfaceRefIndicesAreImmutable() {
+        void interfaceRefIndicesAreImmutable()
+        {
             InterfaceRefItem item = new InterfaceRefItem();
             InterfaceRef ref = new InterfaceRef(100, 200);
             item.setValue(ref);

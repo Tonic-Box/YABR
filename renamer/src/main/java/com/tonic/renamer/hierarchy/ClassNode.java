@@ -5,10 +5,10 @@ import com.tonic.parser.ClassFile;
 import java.util.*;
 
 /**
- * Represents a node in the class hierarchy graph.
- * Tracks parent classes, interfaces, and child classes.
+ * A class in the hierarchy graph together with its supertypes and subtypes.
  */
-public class ClassNode {
+public class ClassNode
+{
 
     private final String name;
     private final ClassFile classFile;
@@ -19,122 +19,172 @@ public class ClassNode {
 
     /**
      * Creates a class node for a class in the ClassPool.
-     *
      * @param name      The internal class name
      * @param classFile The ClassFile, or null if external (not in pool)
      */
-    public ClassNode(String name, ClassFile classFile) {
+    public ClassNode(String name, ClassFile classFile)
+    {
         this.name = name;
         this.classFile = classFile;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public ClassFile getClassFile() {
+    /**
+     * @return the class file
+     */
+    public ClassFile getClassFile()
+    {
         return classFile;
     }
 
     /**
-     * Returns true if this class is in the ClassPool (not external).
+     * @return true when a class file is attached, false for a class outside the pool
      */
-    public boolean isInPool() {
+    public boolean isInPool()
+    {
         return classFile != null;
     }
 
-    public ClassNode getSuperClass() {
+    /**
+     * @return the super class
+     */
+    public ClassNode getSuperClass()
+    {
         return superClass;
     }
 
-    void setSuperClass(ClassNode superClass) {
+    void setSuperClass(ClassNode superClass)
+    {
         this.superClass = superClass;
     }
 
-    public List<ClassNode> getInterfaces() {
+    /**
+     * @return an unmodifiable view of the directly implemented interfaces
+     */
+    public List<ClassNode> getInterfaces()
+    {
         return Collections.unmodifiableList(interfaces);
     }
 
-    void addInterface(ClassNode iface) {
-        if (!interfaces.contains(iface)) {
+    void addInterface(ClassNode iface)
+    {
+        if (!interfaces.contains(iface))
+        {
             interfaces.add(iface);
         }
     }
 
-    public List<ClassNode> getSubClasses() {
+    /**
+     * @return an unmodifiable view of the direct subclasses
+     */
+    public List<ClassNode> getSubClasses()
+    {
         return Collections.unmodifiableList(subClasses);
     }
 
-    void addSubClass(ClassNode subClass) {
-        if (!subClasses.contains(subClass)) {
+    void addSubClass(ClassNode subClass)
+    {
+        if (!subClasses.contains(subClass))
+        {
             subClasses.add(subClass);
         }
     }
 
-    public List<ClassNode> getImplementors() {
+    /**
+     * @return an unmodifiable view of the classes implementing this interface
+     */
+    public List<ClassNode> getImplementors()
+    {
         return Collections.unmodifiableList(implementors);
     }
 
-    void addImplementor(ClassNode implementor) {
-        if (!implementors.contains(implementor)) {
+    void addImplementor(ClassNode implementor)
+    {
+        if (!implementors.contains(implementor))
+        {
             implementors.add(implementor);
         }
     }
 
     /**
-     * Checks if this class is an interface.
+     * @return true when the attached class file carries ACC_INTERFACE, false when there is none
      */
-    public boolean isInterface() {
-        if (classFile != null) {
+    public boolean isInterface()
+    {
+        if (classFile != null)
+        {
             return (classFile.getAccess() & 0x0200) != 0;
         }
         return false;
     }
 
     /**
-     * Returns all ancestors (superclasses and interfaces) recursively.
+     * Walks superclasses and interfaces transitively.
+     *
+     * @return every ancestor, in discovery order, excluding this node
      */
-    public Set<ClassNode> getAllAncestors() {
+    public Set<ClassNode> getAllAncestors()
+    {
         Set<ClassNode> ancestors = new LinkedHashSet<>();
         collectAncestors(ancestors);
         return ancestors;
     }
 
-    private void collectAncestors(Set<ClassNode> ancestors) {
-        if (superClass != null && ancestors.add(superClass)) {
+    private void collectAncestors(Set<ClassNode> ancestors)
+    {
+        if (superClass != null && ancestors.add(superClass))
+        {
             superClass.collectAncestors(ancestors);
         }
-        for (ClassNode iface : interfaces) {
-            if (ancestors.add(iface)) {
+        for (ClassNode iface : interfaces)
+        {
+            if (ancestors.add(iface))
+            {
                 iface.collectAncestors(ancestors);
             }
         }
     }
 
     /**
-     * Returns all descendants (subclasses and implementors) recursively.
+     * Walks subclasses and implementors transitively.
+     *
+     * @return every descendant, in discovery order, excluding this node
      */
-    public Set<ClassNode> getAllDescendants() {
+    public Set<ClassNode> getAllDescendants()
+    {
         Set<ClassNode> descendants = new LinkedHashSet<>();
         collectDescendants(descendants);
         return descendants;
     }
 
-    private void collectDescendants(Set<ClassNode> descendants) {
-        for (ClassNode sub : subClasses) {
-            if (descendants.add(sub)) {
+    private void collectDescendants(Set<ClassNode> descendants)
+    {
+        for (ClassNode sub : subClasses)
+        {
+            if (descendants.add(sub))
+            {
                 sub.collectDescendants(descendants);
             }
         }
-        for (ClassNode impl : implementors) {
-            if (descendants.add(impl)) {
+        for (ClassNode impl : implementors)
+        {
+            if (descendants.add(impl))
+            {
                 impl.collectDescendants(descendants);
             }
         }
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ClassNode)) return false;
         ClassNode classNode = (ClassNode) o;
@@ -142,12 +192,14 @@ public class ClassNode {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return name.hashCode();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ClassNode{" + name + (isInPool() ? "" : " [external]") + "}";
     }
 }

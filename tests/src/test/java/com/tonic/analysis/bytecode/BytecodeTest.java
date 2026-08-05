@@ -18,20 +18,23 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BytecodeTest {
+class BytecodeTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/BytecodeTestClass", access);
     }
 
     @Test
-    void bytecodeFromMethodEntry() throws IOException {
+    void bytecodeFromMethodEntry() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testMethod", "V");
         Bytecode bc = new Bytecode(method);
@@ -41,7 +44,8 @@ class BytecodeTest {
     }
 
     @Test
-    void bytecodeFromCodeWriter() throws IOException {
+    void bytecodeFromCodeWriter() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testMethod", "V");
         CodeWriter cw = new CodeWriter(method);
@@ -51,7 +55,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addIConstSmallValue() throws IOException {
+    void addIConstSmallValue() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getSmall", "I");
         Bytecode bc = new Bytecode(method);
@@ -64,7 +69,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addIConstBipushRange() throws IOException {
+    void addIConstBipushRange() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getBipush", "I");
         Bytecode bc = new Bytecode(method);
@@ -77,7 +83,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addIConstSipushRange() throws IOException {
+    void addIConstSipushRange() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getSipush", "I");
         Bytecode bc = new Bytecode(method);
@@ -90,7 +97,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addIConstLdcRange() throws IOException {
+    void addIConstLdcRange() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getLdc", "I");
         Bytecode bc = new Bytecode(method);
@@ -103,7 +111,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLConstZero() throws IOException {
+    void addLConstZero() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getLongZero", "J");
         Bytecode bc = new Bytecode(method);
@@ -116,7 +125,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLConstOne() throws IOException {
+    void addLConstOne() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getLongOne", "J");
         Bytecode bc = new Bytecode(method);
@@ -129,7 +139,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLConstLdc2w() throws IOException {
+    void addLConstLdc2w() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getLongBig", "J");
         Bytecode bc = new Bytecode(method);
@@ -142,7 +153,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addFConstZero() throws IOException {
+    void addFConstZero() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getFloatZero", "F");
         Bytecode bc = new Bytecode(method);
@@ -155,7 +167,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addFConstOne() throws IOException {
+    void addFConstOne() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getFloatOne", "F");
         Bytecode bc = new Bytecode(method);
@@ -168,7 +181,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addDConstZero() throws IOException {
+    void addDConstZero() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getDoubleZero", "D");
         Bytecode bc = new Bytecode(method);
@@ -181,7 +195,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addDConstOne() throws IOException {
+    void addDConstOne() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getDoubleOne", "D");
         Bytecode bc = new Bytecode(method);
@@ -194,7 +209,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addAConstNull() throws IOException {
+    void addAConstNull() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getNull", "Ljava/lang/Object;");
         Bytecode bc = new Bytecode(method);
@@ -207,7 +223,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addILoadAndStore() throws IOException {
+    void addILoadAndStore() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "copyInt", "I", "I");
         Bytecode bc = new Bytecode(method);
@@ -222,7 +239,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addALoadAndStore() throws IOException {
+    void addALoadAndStore() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "copyObject", "Ljava/lang/Object;", "Ljava/lang/Object;");
         Bytecode bc = new Bytecode(method);
@@ -237,7 +255,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLLoadAndLConst() throws IOException {
+    void addLLoadAndLConst() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "loadLong", "J", "J");
         Bytecode bc = new Bytecode(method);
@@ -250,7 +269,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLdcString() throws IOException {
+    void addLdcString() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getString", "Ljava/lang/String;");
         Bytecode bc = new Bytecode(method);
@@ -263,7 +283,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addIInc() throws IOException {
+    void addIInc() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "increment", "I", "I");
         Bytecode bc = new Bytecode(method);
@@ -277,7 +298,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addInvokeStatic() throws IOException {
+    void addInvokeStatic() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "callStatic", "J");
         Bytecode bc = new Bytecode(method);
@@ -290,7 +312,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addGetStatic() throws IOException {
+    void addGetStatic() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getOut", "Ljava/io/PrintStream;");
         Bytecode bc = new Bytecode(method);
@@ -303,7 +326,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addInvokeVirtual() throws IOException {
+    void addInvokeVirtual() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "printHello", "V");
         Bytecode bc = new Bytecode(method);
@@ -318,7 +342,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addReturnVoid() throws IOException {
+    void addReturnVoid() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "doNothing", "V");
         Bytecode bc = new Bytecode(method);
@@ -330,7 +355,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addReturnInt() throws IOException {
+    void addReturnInt() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "getInt", "I");
         Bytecode bc = new Bytecode(method);
@@ -343,7 +369,8 @@ class BytecodeTest {
     }
 
     @Test
-    void defineLabel() throws IOException {
+    void defineLabel() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "withLabel", "V");
         Bytecode bc = new Bytecode(method);
@@ -356,7 +383,8 @@ class BytecodeTest {
     }
 
     @Test
-    void setInsertBefore() throws IOException {
+    void setInsertBefore() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "insertBefore", "V");
         Bytecode bc = new Bytecode(method);
@@ -368,7 +396,8 @@ class BytecodeTest {
     }
 
     @Test
-    void isModifiedAfterInsertion() throws IOException {
+    void isModifiedAfterInsertion() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "modified", "V");
         Bytecode bc = new Bytecode(method);
@@ -381,7 +410,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLoadForInt() throws IOException {
+    void addLoadForInt() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "loadInt", "I", "I");
         Bytecode bc = new Bytecode(method);
@@ -394,7 +424,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLoadForLong() throws IOException {
+    void addLoadForLong() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "loadLong", "J", "J");
         Bytecode bc = new Bytecode(method);
@@ -407,7 +438,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLoadForFloat() throws IOException {
+    void addLoadForFloat() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "loadFloat", "F", "F");
         Bytecode bc = new Bytecode(method);
@@ -420,7 +452,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLoadForDouble() throws IOException {
+    void addLoadForDouble() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "loadDouble", "D", "D");
         Bytecode bc = new Bytecode(method);
@@ -433,7 +466,8 @@ class BytecodeTest {
     }
 
     @Test
-    void addLoadForReference() throws IOException {
+    void addLoadForReference() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "loadRef", "Ljava/lang/Object;", "Ljava/lang/Object;");
         Bytecode bc = new Bytecode(method);
@@ -446,7 +480,8 @@ class BytecodeTest {
     }
 
     @Test
-    void computeFrames() throws IOException {
+    void computeFrames() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "withFrames", "V");
         Bytecode bc = new Bytecode(method);
@@ -459,7 +494,8 @@ class BytecodeTest {
     }
 
     @Test
-    void forceComputeFrames() throws IOException {
+    void forceComputeFrames() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "forceFrames", "V");
         Bytecode bc = new Bytecode(method);
@@ -472,10 +508,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class ConstantLoadingEdgeCasesTests {
+    class ConstantLoadingEdgeCasesTests
+    {
 
         @Test
-        void addIConstNegativeOne() throws IOException {
+        void addIConstNegativeOne() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "getNegOne", "I");
             Bytecode bc = new Bytecode(method);
@@ -488,7 +526,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addIConstBoundaryValues() throws IOException {
+        void addIConstBoundaryValues() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
 
             MethodEntry method1 = classFile.createNewMethod(access, "getMinByte", "I");
@@ -515,12 +554,12 @@ class BytecodeTest {
             bc4.addReturn(ReturnType.IRETURN);
             bc4.finalizeBytecode();
 
-            assertTrue(bc1.endsWithReturn() && bc2.endsWithReturn() &&
-                       bc3.endsWithReturn() && bc4.endsWithReturn());
+            assertTrue(bc1.endsWithReturn() && bc2.endsWithReturn() && bc3.endsWithReturn() && bc4.endsWithReturn());
         }
 
         @Test
-        void addFConstTwo() throws IOException {
+        void addFConstTwo() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "getFloatTwo", "F");
             Bytecode bc = new Bytecode(method);
@@ -533,7 +572,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addFConstArbitrary() throws IOException {
+        void addFConstArbitrary() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "getFloatPi", "F");
             Bytecode bc = new Bytecode(method);
@@ -546,7 +586,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addDConstArbitrary() throws IOException {
+        void addDConstArbitrary() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "getDoublePi", "D");
             Bytecode bc = new Bytecode(method);
@@ -560,10 +601,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class FieldAccessTests {
+    class FieldAccessTests
+    {
 
         @Test
-        void addPutStatic() throws IOException {
+        void addPutStatic() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "setPutStatic", "V", "I");
 
@@ -582,7 +625,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addPutField() throws IOException {
+        void addPutField() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethod(access, "setPutField", "V", "I");
 
@@ -602,7 +646,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addGetField() throws IOException {
+        void addGetField() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethod(access, "getInstanceField", "I");
 
@@ -622,10 +667,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class MethodInvocationTests {
+    class MethodInvocationTests
+    {
 
         @Test
-        void addInvokeSpecial() throws IOException {
+        void addInvokeSpecial() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethod(access, "callSuper", "V");
 
@@ -641,7 +688,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addInvokeInterface() throws IOException {
+        void addInvokeInterface() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "callInterface", "I", "Ljava/util/List;");
 
@@ -657,7 +705,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addInvokeDynamic() throws IOException {
+        void addInvokeDynamic() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "callDynamic", "V");
 
@@ -668,10 +717,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class ObjectCreationTests {
+    class ObjectCreationTests
+    {
 
         @Test
-        void addNew() throws IOException {
+        void addNew() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "createObject", "Ljava/lang/StringBuilder;");
 
@@ -687,10 +738,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class SwitchInstructionTests {
+    class SwitchInstructionTests
+    {
 
         @Test
-        void addTableSwitch() throws IOException {
+        void addTableSwitch() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testTableSwitch", "I", "I");
 
@@ -711,7 +764,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addLookupSwitch() throws IOException {
+        void addLookupSwitch() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testLookupSwitch", "I", "I");
 
@@ -733,10 +787,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class InsertBeforeModeTests {
+    class InsertBeforeModeTests
+    {
 
         @Test
-        void insertBeforeForStaticMethod() throws IOException {
+        void insertBeforeForStaticMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "staticInsert", "V");
 
@@ -749,7 +805,8 @@ class BytecodeTest {
         }
 
         @Test
-        void insertBeforeForInstanceMethod() throws IOException {
+        void insertBeforeForInstanceMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethod(access, "instanceInsert", "V");
 
@@ -760,7 +817,8 @@ class BytecodeTest {
         }
 
         @Test
-        void insertBeforeWithInstructions() throws IOException {
+        void insertBeforeWithInstructions() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethod(access, "withInstructions", "V");
 
@@ -776,10 +834,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class FLoadAndDLoadTests {
+    class FLoadAndDLoadTests
+    {
 
         @Test
-        void addFLoad() throws IOException {
+        void addFLoad() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testFLoad", "F", "F");
 
@@ -792,7 +852,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addDLoad() throws IOException {
+        void addDLoad() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testDLoad", "D", "D");
 
@@ -806,10 +867,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class LabelTests {
+    class LabelTests
+    {
 
         @Test
-        void addGoto() throws IOException {
+        void addGoto() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testGoto", "V");
 
@@ -823,7 +886,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addGotoW() throws IOException {
+        void addGotoW() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "testGotoW", "V");
 
@@ -837,7 +901,8 @@ class BytecodeTest {
         }
 
         @Test
-        void defineMultipleLabels() throws IOException {
+        void defineMultipleLabels() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "multiLabel", "V");
 
@@ -857,10 +922,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class EndsWithReturnTests {
+    class EndsWithReturnTests
+    {
 
         @Test
-        void endsWithReturnTrue() throws IOException {
+        void endsWithReturnTrue() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "hasReturn", "V");
 
@@ -872,7 +939,8 @@ class BytecodeTest {
         }
 
         @Test
-        void endsWithReturnFalse() throws IOException {
+        void endsWithReturnFalse() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "noReturn", "V");
 
@@ -885,10 +953,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class LdcStringTests {
+    class LdcStringTests
+    {
 
         @Test
-        void addLdcShortString() throws IOException {
+        void addLdcShortString() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "shortString", "Ljava/lang/String;");
 
@@ -901,7 +971,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addLdcLongString() throws IOException {
+        void addLdcLongString() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "longString", "Ljava/lang/String;");
 
@@ -914,7 +985,8 @@ class BytecodeTest {
         }
 
         @Test
-        void addLdcEmptyString() throws IOException {
+        void addLdcEmptyString() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "emptyString", "Ljava/lang/String;");
 
@@ -928,10 +1000,12 @@ class BytecodeTest {
     }
 
     @Nested
-    class ComplexMethodTests {
+    class ComplexMethodTests
+    {
 
         @Test
-        void createHelloWorldMethod() throws IOException {
+        void createHelloWorldMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "helloWorld", "V");
 
@@ -946,7 +1020,8 @@ class BytecodeTest {
         }
 
         @Test
-        void createArithmeticMethod() throws IOException {
+        void createArithmeticMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "add", "I", "I", "I");
 
@@ -960,7 +1035,8 @@ class BytecodeTest {
         }
 
         @Test
-        void createLoopLikeMethod() throws IOException {
+        void createLoopLikeMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "loop", "I", "I");
 

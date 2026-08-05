@@ -7,9 +7,10 @@ import com.tonic.parser.MethodEntry;
 import java.util.Objects;
 
 /**
- * Represents a search result from pattern matching.
+ * A single pattern-search hit, locating a class, method, or IR instruction with a description.
  */
-public class SearchResult {
+public class SearchResult
+{
 
     private final ClassFile classFile;
     private final MethodEntry method;
@@ -17,8 +18,16 @@ public class SearchResult {
     private final int bytecodeOffset;
     private final String description;
 
-    public SearchResult(ClassFile classFile, MethodEntry method, IRInstruction instruction,
-                        int bytecodeOffset, String description) {
+    /**
+     * Creates an instruction-level result.
+     * @param classFile the class the result refers to
+     * @param method the matched method, may be null
+     * @param instruction the matched IR instruction, may be null
+     * @param bytecodeOffset the bytecode offset, or -1 if unknown
+     * @param description what was matched
+     */
+    public SearchResult(ClassFile classFile, MethodEntry method, IRInstruction instruction, int bytecodeOffset, String description)
+    {
         this.classFile = classFile;
         this.method = method;
         this.instruction = instruction;
@@ -26,62 +35,116 @@ public class SearchResult {
         this.description = description;
     }
 
-    public SearchResult(ClassFile classFile, MethodEntry method, String description) {
+    /**
+     * Creates a method-level result with no instruction.
+     * @param classFile the class the result refers to
+     * @param method the matched method
+     * @param description what was matched
+     */
+    public SearchResult(ClassFile classFile, MethodEntry method, String description)
+    {
         this(classFile, method, null, -1, description);
     }
 
-    public SearchResult(ClassFile classFile, String description) {
+    /**
+     * Creates a class-level result with no method or instruction.
+     * @param classFile the class the result refers to
+     * @param description what was matched
+     */
+    public SearchResult(ClassFile classFile, String description)
+    {
         this(classFile, null, null, -1, description);
     }
 
-    public ClassFile getClassFile() {
+    /**
+     * @return the class file
+     */
+    public ClassFile getClassFile()
+    {
         return classFile;
     }
 
-    public MethodEntry getMethod() {
+    /**
+     * @return the method
+     */
+    public MethodEntry getMethod()
+    {
         return method;
     }
 
-    public IRInstruction getInstruction() {
+    /**
+     * @return the instruction
+     */
+    public IRInstruction getInstruction()
+    {
         return instruction;
     }
 
-    public int getBytecodeOffset() {
+    /**
+     * @return the bytecode offset
+     */
+    public int getBytecodeOffset()
+    {
         return bytecodeOffset;
     }
 
-    public String getDescription() {
+    /**
+     * @return the description
+     */
+    public String getDescription()
+    {
         return description;
     }
 
-    public String getClassName() {
+    /**
+     * @return the class name, or null if no class is attached
+     */
+    public String getClassName()
+    {
         return classFile != null ? classFile.getClassName() : null;
     }
 
-    public String getMethodName() {
+    /**
+     * @return the method name, or null if no method is attached
+     */
+    public String getMethodName()
+    {
         return method != null ? method.getName() : null;
     }
 
-    public String getMethodDescriptor() {
+    /**
+     * @return the method descriptor, or null if no method is attached
+     */
+    public String getMethodDescriptor()
+    {
         return method != null ? method.getDesc() : null;
     }
 
-    public String getLocation() {
+    /**
+     * Formats the result location as class, optional method signature, and optional bytecode offset.
+     * @return the human-readable location string
+     */
+    public String getLocation()
+    {
         StringBuilder sb = new StringBuilder();
-        if (classFile != null) {
+        if (classFile != null)
+        {
             sb.append(classFile.getClassName());
         }
-        if (method != null) {
+        if (method != null)
+        {
             sb.append(".").append(method.getName()).append(method.getDesc());
         }
-        if (bytecodeOffset >= 0) {
+        if (bytecodeOffset >= 0)
+        {
             sb.append(" @ ").append(bytecodeOffset);
         }
         return sb.toString();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof SearchResult)) return false;
         SearchResult that = (SearchResult) o;
@@ -92,12 +155,14 @@ public class SearchResult {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(classFile, method, instruction, bytecodeOffset);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return getLocation() + ": " + description;
     }
 }

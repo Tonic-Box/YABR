@@ -11,20 +11,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-class InvokeDynamicExecutionTest {
+class InvokeDynamicExecutionTest
+{
 
     private SimpleHeapManager heap;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heap = new SimpleHeapManager();
     }
 
     @Nested
-    class InvokeDynamicInfoParsingTests {
+    class InvokeDynamicInfoParsingTests
+    {
 
         @Test
-        void testParseLambdaSupplier() {
+        void testParseLambdaSupplier()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "get", "()Ljava/util/function/Supplier;", 10);
             assertEquals("get", info.getMethodName());
             assertEquals("Ljava/util/function/Supplier;", info.getReturnType());
@@ -33,7 +37,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testParseLambdaFunction() {
+        void testParseLambdaFunction()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply", "(Ljava/lang/Object;)Ljava/util/function/Function;", 10);
             assertEquals("apply", info.getMethodName());
             assertEquals("Ljava/util/function/Function;", info.getReturnType());
@@ -42,7 +47,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testParseLambdaConsumer() {
+        void testParseLambdaConsumer()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "accept", "(Ljava/lang/Object;)Ljava/util/function/Consumer;", 10);
             assertEquals("accept", info.getMethodName());
             assertEquals("Ljava/util/function/Consumer;", info.getReturnType());
@@ -51,7 +57,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testParseLambdaPredicate() {
+        void testParseLambdaPredicate()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "(Ljava/lang/Object;)Ljava/util/function/Predicate;", 10);
             assertEquals("test", info.getMethodName());
             assertEquals("Ljava/util/function/Predicate;", info.getReturnType());
@@ -60,7 +67,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testParseStringConcatTwoStrings() {
+        void testParseStringConcatTwoStrings()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", 10);
             assertEquals("makeConcatWithConstants", info.getMethodName());
@@ -70,7 +78,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testParseStringConcatMixed() {
+        void testParseStringConcatMixed()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants",
                 "(Ljava/lang/String;IZ)Ljava/lang/String;", 10);
             assertEquals(3, info.getParameterSlots());
@@ -78,179 +87,208 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testParseStringConcatWithLongDouble() {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants",
-                "(JD)Ljava/lang/String;", 10);
+        void testParseStringConcatWithLongDouble()
+        {
+            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(JD)Ljava/lang/String;", 10);
             assertEquals(4, info.getParameterSlots());
             assertTrue(info.isStringConcat());
         }
     }
 
     @Nested
-    class DescriptorParsingEdgeCases {
+    class DescriptorParsingEdgeCases
+    {
 
         @Test
-        void testEmptyParams() {
+        void testEmptyParams()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()I", 0);
             assertEquals(0, info.getParameterSlots());
         }
 
         @Test
-        void testAllPrimitives() {
+        void testAllPrimitives()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "(ZBCSIJFD)V", 0);
             assertEquals(10, info.getParameterSlots());
         }
 
         @Test
-        void testNestedObjectArrays() {
+        void testNestedObjectArrays()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "([[[Ljava/lang/Object;)V", 0);
             assertEquals(1, info.getParameterSlots());
         }
 
         @Test
-        void testMultipleObjectParams() {
+        void testMultipleObjectParams()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test",
                 "(Ljava/lang/String;Ljava/lang/Integer;Ljava/util/List;)V", 0);
             assertEquals(3, info.getParameterSlots());
         }
 
         @Test
-        void testPrimitiveArrays() {
+        void testPrimitiveArrays()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "([I[J[D)V", 0);
             assertEquals(3, info.getParameterSlots());
         }
     }
 
     @Nested
-    class ReturnTypeParsingTests {
+    class ReturnTypeParsingTests
+    {
 
         @Test
-        void testReturnVoid() {
+        void testReturnVoid()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "(I)V", 0);
             assertEquals("V", info.getReturnType());
             assertTrue(info.isVoidReturn());
         }
 
         @Test
-        void testReturnBoolean() {
+        void testReturnBoolean()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()Z", 0);
             assertEquals("Z", info.getReturnType());
             assertFalse(info.isVoidReturn());
         }
 
         @Test
-        void testReturnByte() {
+        void testReturnByte()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()B", 0);
             assertEquals("B", info.getReturnType());
         }
 
         @Test
-        void testReturnChar() {
+        void testReturnChar()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()C", 0);
             assertEquals("C", info.getReturnType());
         }
 
         @Test
-        void testReturnShort() {
+        void testReturnShort()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()S", 0);
             assertEquals("S", info.getReturnType());
         }
 
         @Test
-        void testReturnInt() {
+        void testReturnInt()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()I", 0);
             assertEquals("I", info.getReturnType());
         }
 
         @Test
-        void testReturnLong() {
+        void testReturnLong()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()J", 0);
             assertEquals("J", info.getReturnType());
         }
 
         @Test
-        void testReturnFloat() {
+        void testReturnFloat()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()F", 0);
             assertEquals("F", info.getReturnType());
         }
 
         @Test
-        void testReturnDouble() {
+        void testReturnDouble()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()D", 0);
             assertEquals("D", info.getReturnType());
         }
 
         @Test
-        void testReturnObject() {
+        void testReturnObject()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()Ljava/lang/String;", 0);
             assertEquals("Ljava/lang/String;", info.getReturnType());
         }
 
         @Test
-        void testReturnPrimitiveArray() {
+        void testReturnPrimitiveArray()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()[I", 0);
             assertEquals("[I", info.getReturnType());
         }
 
         @Test
-        void testReturnObjectArray() {
+        void testReturnObjectArray()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()[Ljava/lang/Object;", 0);
             assertEquals("[Ljava/lang/Object;", info.getReturnType());
         }
 
         @Test
-        void testReturnMultiDimArray() {
+        void testReturnMultiDimArray()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "test", "()[[I", 0);
             assertEquals("[[I", info.getReturnType());
         }
     }
 
     @Nested
-    class LambdaMetafactoryPatternTests {
+    class LambdaMetafactoryPatternTests
+    {
 
         @Test
-        void testRunnableRun() {
+        void testRunnableRun()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "run", "()Ljava/lang/Runnable;", 0);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testCallableCall() {
+        void testCallableCall()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "call", "()Ljava/util/concurrent/Callable;", 0);
             assertFalse(info.isLambdaMetafactory());
         }
 
         @Test
-        void testBiFunctionApply() {
+        void testBiFunctionApply()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "apply",
                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/function/BiFunction;", 0);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testIntSupplier() {
+        void testIntSupplier()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsInt", "()Ljava/util/function/IntSupplier;", 0);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testLongSupplier() {
+        void testLongSupplier()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsLong", "()Ljava/util/function/LongSupplier;", 0);
             assertTrue(info.isLambdaMetafactory());
         }
 
         @Test
-        void testDoubleSupplier() {
+        void testDoubleSupplier()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "getAsDouble", "()Ljava/util/function/DoubleSupplier;", 0);
             assertTrue(info.isLambdaMetafactory());
         }
     }
 
     @Nested
-    class StringConcatPatternTests {
+    class StringConcatPatternTests
+    {
 
         @Test
-        void testMakeConcatWithConstants() {
+        void testMakeConcatWithConstants()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants",
                 "(Ljava/lang/String;)Ljava/lang/String;", 0);
             assertTrue(info.isStringConcat());
@@ -258,25 +296,28 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testMakeConcat() {
+        void testMakeConcat()
+        {
             InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", 0);
             assertTrue(info.isStringConcat());
         }
 
         @Test
-        void testNotStringConcat() {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "concat",
-                "(Ljava/lang/String;)Ljava/lang/String;", 0);
+        void testNotStringConcat()
+        {
+            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "concat", "(Ljava/lang/String;)Ljava/lang/String;", 0);
             assertFalse(info.isStringConcat());
         }
     }
 
     @Nested
-    class BytecodeEngineConfigTests {
+    class BytecodeEngineConfigTests
+    {
 
         @Test
-        void testEngineCreation() {
+        void testEngineCreation()
+        {
             ClassResolver resolver = new ClassResolver(mock(ClassPool.class));
             BytecodeContext ctx = new BytecodeContext.Builder()
                 .heapManager(heap)
@@ -288,7 +329,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testEngineWithDelegatedMode() {
+        void testEngineWithDelegatedMode()
+        {
             ClassResolver resolver = new ClassResolver(mock(ClassPool.class));
             BytecodeContext ctx = new BytecodeContext.Builder()
                 .heapManager(heap)
@@ -301,7 +343,8 @@ class InvokeDynamicExecutionTest {
         }
 
         @Test
-        void testEngineWithRecursiveMode() {
+        void testEngineWithRecursiveMode()
+        {
             ClassResolver resolver = new ClassResolver(mock(ClassPool.class));
             BytecodeContext ctx = new BytecodeContext.Builder()
                 .heapManager(heap)

@@ -14,14 +14,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for StrengthReduction transform.
  * Verifies strength reduction optimizations like multiply/divide by power of 2 to shift.
  */
-class StrengthReductionTest {
+class StrengthReductionTest
+{
 
     private IRMethod method;
     private IRBlock block;
     private StrengthReduction transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -34,13 +36,14 @@ class StrengthReductionTest {
     }
 
     @Test
-    void getNameReturnsCorrectName() {
+    void getNameReturnsCorrectName()
+    {
         assertEquals("StrengthReduction", transform.getName());
     }
 
     @Test
-    void multiplyByPowerOfTwoBecomesShift() {
-        // Create: x * 2
+    void multiplyByPowerOfTwoBecomesShift()
+    {
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL, x, IntConstant.of(2));
@@ -60,8 +63,8 @@ class StrengthReductionTest {
     }
 
     @Test
-    void multiplyByFourBecomesShiftByTwo() {
-        // Create: x * 4
+    void multiplyByFourBecomesShiftByTwo()
+    {
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL, x, IntConstant.of(4));
@@ -71,15 +74,14 @@ class StrengthReductionTest {
 
         assertTrue(changed, "Transform should optimize multiply by 4");
 
-        // Verify shift by 2
         BinaryOpInstruction binOp = (BinaryOpInstruction) block.getInstructions().get(0);
         assertEquals(BinaryOp.SHL, binOp.getOp());
         assertEquals(IntConstant.of(2), binOp.getRight());
     }
 
     @Test
-    void divideByPowerOfTwoBecomesShift() {
-        // Create: x / 2
+    void divideByPowerOfTwoBecomesShift()
+    {
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV, x, IntConstant.of(2));
@@ -96,8 +98,8 @@ class StrengthReductionTest {
     }
 
     @Test
-    void divideByEightBecomesShiftByThree() {
-        // Create: x / 8
+    void divideByEightBecomesShiftByThree()
+    {
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         BinaryOpInstruction div = new BinaryOpInstruction(result, BinaryOp.DIV, x, IntConstant.of(8));
@@ -107,15 +109,14 @@ class StrengthReductionTest {
 
         assertTrue(changed, "Transform should optimize divide by 8");
 
-        // Verify shift by 3
         BinaryOpInstruction binOp = (BinaryOpInstruction) block.getInstructions().get(0);
         assertEquals(BinaryOp.SHR, binOp.getOp());
         assertEquals(IntConstant.of(3), binOp.getRight());
     }
 
     @Test
-    void multiplyByNonPowerOfTwoNotOptimized() {
-        // Create: x * 3
+    void multiplyByNonPowerOfTwoNotOptimized()
+    {
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue result = new SSAValue(PrimitiveType.INT);
         BinaryOpInstruction mul = new BinaryOpInstruction(result, BinaryOp.MUL, x, IntConstant.of(3));
@@ -125,13 +126,13 @@ class StrengthReductionTest {
 
         assertFalse(changed, "Transform should not optimize multiply by 3");
 
-        // Verify instruction remains MUL
         BinaryOpInstruction binOp = (BinaryOpInstruction) block.getInstructions().get(0);
         assertEquals(BinaryOp.MUL, binOp.getOp());
     }
 
     @Test
-    void returnsFalseWhenNoReductions() {
+    void returnsFalseWhenNoReductions()
+    {
         // Add an addition instruction (not a reduction candidate)
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue y = new SSAValue(PrimitiveType.INT);
@@ -145,14 +146,16 @@ class StrengthReductionTest {
     }
 
     @Test
-    void returnsFalseOnEmptyMethod() {
+    void returnsFalseOnEmptyMethod()
+    {
         boolean changed = transform.run(method);
 
         assertFalse(changed, "Transform should return false on empty method");
     }
 
     @Test
-    void optimizesMultipleInstructions() {
+    void optimizesMultipleInstructions()
+    {
         // Create: x * 2 and y / 4
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue y = new SSAValue(PrimitiveType.INT);
@@ -167,11 +170,9 @@ class StrengthReductionTest {
         assertTrue(changed, "Transform should optimize both instructions");
         assertEquals(2, block.getInstructions().size());
 
-        // Verify first is shift left
         BinaryOpInstruction first = (BinaryOpInstruction) block.getInstructions().get(0);
         assertEquals(BinaryOp.SHL, first.getOp());
 
-        // Verify second is shift right
         BinaryOpInstruction second = (BinaryOpInstruction) block.getInstructions().get(1);
         assertEquals(BinaryOp.SHR, second.getOp());
     }

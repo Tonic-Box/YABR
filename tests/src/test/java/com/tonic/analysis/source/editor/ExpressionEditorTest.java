@@ -17,29 +17,32 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for ExpressionEditor.
  * Covers expression replacement, operator changes, subexpression extraction, and variable renaming.
  */
-class ExpressionEditorTest {
+class ExpressionEditorTest
+{
 
     private ASTFactory factory;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         factory = new ASTFactory();
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void createExpressionEditor() {
+    void createExpressionEditor()
+    {
         BlockStmt body = factory.block();
         ExpressionEditor editor = new ExpressionEditor(body, "testMethod", "()V", "com/example/Test");
         assertNotNull(editor);
     }
 
-    // ========== Expression Replacement Tests ==========
+    // Expression Replacement Tests
 
     @Test
-    void replaceMethodCallExpression() {
-        // Create: oldMethod();
+    void replaceMethodCallExpression()
+    {
         MethodCallExpr oldCall = factory.methodCall("oldMethod")
             .on("com/example/Service")
             .build();
@@ -48,12 +51,9 @@ class ExpressionEditorTest {
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onMethodCall((ctx, call) -> {
-            if (call.getMethodName().equals("oldMethod")) {
-                return Replacement.with(
-                    factory.methodCall("newMethod")
-                        .on("com/example/Service")
-                        .build()
-                );
+            if (call.getMethodName().equals("oldMethod"))
+            {
+                return Replacement.with(factory.methodCall("newMethod") .on("com/example/Service") .build());
             }
             return Replacement.keep();
         });
@@ -64,8 +64,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void replaceMethodCallByOwnerAndName() {
-        // Create: Service.oldMethod()
+    void replaceMethodCallByOwnerAndName()
+    {
         MethodCallExpr call = factory.methodCall("oldMethod")
             .on("com/example/Service")
             .build();
@@ -85,7 +85,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void replaceMethodCallWithDotNotation() {
+    void replaceMethodCallWithDotNotation()
+    {
         // Test that dot notation is converted to internal format
         MethodCallExpr call = factory.methodCall("method")
             .on("com/example/Service")
@@ -94,9 +95,7 @@ class ExpressionEditorTest {
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
-        editor.replaceMethodCall("com.example.Service", "method", (ctx, c) ->
-            factory.stringLiteral("replaced")
-        );
+        editor.replaceMethodCall("com.example.Service", "method", (ctx, c) -> factory.stringLiteral("replaced"));
         editor.apply();
 
         Expression result = ((ExprStmt) body.getStatements().get(0)).getExpression();
@@ -104,7 +103,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void removeMethodCall() {
+    void removeMethodCall()
+    {
         MethodCallExpr call = factory.methodCall("deprecatedMethod")
             .on("com/example/Service")
             .build();
@@ -115,15 +115,15 @@ class ExpressionEditorTest {
         editor.removeMethodCall("com/example/Service", "deprecatedMethod");
         editor.apply();
 
-        // The call was the entire statement, so removing it drops the enclosing statement — see
+        // The call was the entire statement, so removing it drops the enclosing statement - see
         // ASTEditor.processExprStmt, which removes a whole-statement expression when a handler removes it.
         // (Previously this asserted the statement survived via get(0), which threw IndexOutOfBounds.)
         assertTrue(body.getStatements().isEmpty());
     }
 
     @Test
-    void replaceFieldAccessExpression() {
-        // Create: obj.oldField
+    void replaceFieldAccessExpression()
+    {
         FieldAccessExpr fieldAccess = factory.fieldAccess(
             factory.variable("obj"),
             "oldField",
@@ -135,14 +135,10 @@ class ExpressionEditorTest {
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onFieldAccess((ctx, access) -> {
-            if (access.getFieldName().equals("oldField")) {
+            if (access.getFieldName().equals("oldField"))
+            {
                 return Replacement.with(
-                    factory.fieldAccess(
-                        access.getReceiver(),
-                        "newField",
-                        "com/example/Test",
-                        PrimitiveSourceType.INT
-                    )
+                    factory.fieldAccess(access.getReceiver(), "newField", "com/example/Test", PrimitiveSourceType.INT)
                 );
             }
             return Replacement.keep();
@@ -154,7 +150,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void replaceFieldAccessByOwnerAndName() {
+    void replaceFieldAccessByOwnerAndName()
+    {
         FieldAccessExpr fieldAccess = factory.fieldAccess(
             factory.variable("obj"),
             "field",
@@ -165,9 +162,7 @@ class ExpressionEditorTest {
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
-        editor.replaceFieldAccess("com/example/Test", "field", (ctx, access) ->
-            factory.stringLiteral("replaced")
-        );
+        editor.replaceFieldAccess("com/example/Test", "field", (ctx, access) -> factory.stringLiteral("replaced"));
         editor.apply();
 
         Expression result = ((ExprStmt) body.getStatements().get(0)).getExpression();
@@ -175,16 +170,14 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void replaceNewExpression() {
-        // Create: new OldClass()
+    void replaceNewExpression()
+    {
         NewExpr newExpr = factory.newExpr("com/example/OldClass");
         ExprStmt stmt = factory.exprStmt(newExpr);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
-        editor.replaceNewExpr("com/example/OldClass", (ctx, expr) ->
-            factory.newExpr("com/example/NewClass")
-        );
+        editor.replaceNewExpr("com/example/OldClass", (ctx, expr) -> factory.newExpr("com/example/NewClass"));
         editor.apply();
 
         NewExpr result = (NewExpr) ((ExprStmt) body.getStatements().get(0)).getExpression();
@@ -192,41 +185,35 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void replaceNewExprWithDotNotation() {
+    void replaceNewExprWithDotNotation()
+    {
         NewExpr newExpr = factory.newExpr("com/example/OldClass");
         ExprStmt stmt = factory.exprStmt(newExpr);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
-        editor.replaceNewExpr("com.example.OldClass", (ctx, expr) ->
-            factory.stringLiteral("replaced")
-        );
+        editor.replaceNewExpr("com.example.OldClass", (ctx, expr) -> factory.stringLiteral("replaced"));
         editor.apply();
 
         Expression result = ((ExprStmt) body.getStatements().get(0)).getExpression();
         assertTrue(result instanceof LiteralExpr);
     }
 
-    // ========== Operator Changes Tests ==========
+    // Operator Changes Tests
 
     @Test
-    void changeBinaryOperator() {
-        // Create: x + y
-        BinaryExpr addition = factory.add(
-            factory.variable("x"),
-            factory.variable("y"),
-            PrimitiveSourceType.INT
-        );
+    void changeBinaryOperator()
+    {
+        BinaryExpr addition = factory.add(factory.variable("x"), factory.variable("y"), PrimitiveSourceType.INT);
         ExprStmt stmt = factory.exprStmt(addition);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onBinaryExpr((ctx, binary) -> {
-            if (binary.getOperator() == BinaryOperator.ADD) {
+            if (binary.getOperator() == BinaryOperator.ADD)
+            {
                 // Change to subtraction
-                return Replacement.with(
-                    factory.subtract(binary.getLeft(), binary.getRight(), PrimitiveSourceType.INT)
-                );
+                return Replacement.with(factory.subtract(binary.getLeft(), binary.getRight(), PrimitiveSourceType.INT));
             }
             return Replacement.keep();
         });
@@ -237,15 +224,16 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void changeUnaryOperator() {
-        // Create: !x
+    void changeUnaryOperator()
+    {
         UnaryExpr not = factory.not(factory.variable("x"));
         ExprStmt stmt = factory.exprStmt(not);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onUnaryExpr((ctx, unary) -> {
-            if (unary.getOperator() == UnaryOperator.NOT) {
+            if (unary.getOperator() == UnaryOperator.NOT)
+            {
                 // Remove the NOT (just return the operand)
                 return Replacement.with(unary.getOperand());
             }
@@ -259,19 +247,18 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void changeComparisonOperator() {
-        // Create: x == y
+    void changeComparisonOperator()
+    {
         BinaryExpr equals = factory.equals(factory.variable("x"), factory.variable("y"));
         ExprStmt stmt = factory.exprStmt(equals);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onBinaryExpr((ctx, binary) -> {
-            if (binary.getOperator() == BinaryOperator.EQ) {
+            if (binary.getOperator() == BinaryOperator.EQ)
+            {
                 // Change to !=
-                return Replacement.with(
-                    factory.notEquals(binary.getLeft(), binary.getRight())
-                );
+                return Replacement.with(factory.notEquals(binary.getLeft(), binary.getRight()));
             }
             return Replacement.keep();
         });
@@ -281,11 +268,11 @@ class ExpressionEditorTest {
         assertEquals(BinaryOperator.NE, result.getOperator());
     }
 
-    // ========== Subexpression Extraction Tests ==========
+    // Subexpression Extraction Tests
 
     @Test
-    void extractMethodCallArgument() {
-        // Create: print(compute(5))
+    void extractMethodCallArgument()
+    {
         MethodCallExpr innerCall = factory.methodCall("compute")
             .on("com/example/Math")
             .withArgs(factory.intLiteral(5))
@@ -300,7 +287,8 @@ class ExpressionEditorTest {
         // Extract inner call to a variable
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onMethodCall((ctx, call) -> {
-            if (call.getMethodName().equals("print")) {
+            if (call.getMethodName().equals("print"))
+            {
                 // Replace argument with a variable reference
                 return Replacement.with(
                     factory.methodCall("print")
@@ -318,13 +306,9 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void extractBinaryExpressionOperand() {
-        // Create: (x + y) * z
-        BinaryExpr add = factory.add(
-            factory.variable("x"),
-            factory.variable("y"),
-            PrimitiveSourceType.INT
-        );
+    void extractBinaryExpressionOperand()
+    {
+        BinaryExpr add = factory.add(factory.variable("x"), factory.variable("y"), PrimitiveSourceType.INT);
         BinaryExpr multiply = factory.multiply(add, factory.variable("z"), PrimitiveSourceType.INT);
         ExprStmt stmt = factory.exprStmt(multiply);
         BlockStmt body = factory.block(stmt);
@@ -332,7 +316,8 @@ class ExpressionEditorTest {
         // Extract addition to variable
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onBinaryExpr((ctx, binary) -> {
-            if (binary.getOperator() == BinaryOperator.MUL) {
+            if (binary.getOperator() == BinaryOperator.MUL)
+            {
                 // Replace left operand with variable
                 return Replacement.with(
                     factory.multiply(factory.variable("sum"), binary.getRight(), PrimitiveSourceType.INT)
@@ -348,8 +333,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void extractFieldAccessReceiver() {
-        // Create: obj.field.subfield
+    void extractFieldAccessReceiver()
+    {
         FieldAccessExpr innerField = factory.fieldAccess(
             factory.variable("obj"),
             "field",
@@ -368,7 +353,8 @@ class ExpressionEditorTest {
         // Extract inner field access
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onFieldAccess((ctx, access) -> {
-            if (access.getFieldName().equals("subfield")) {
+            if (access.getFieldName().equals("subfield"))
+            {
                 return Replacement.with(
                     factory.fieldAccess(
                         factory.variable("temp"),
@@ -386,19 +372,18 @@ class ExpressionEditorTest {
         assertTrue(result.getReceiver() instanceof VarRefExpr);
     }
 
-    // ========== Variable Renaming Tests ==========
+    // Variable Renaming Tests
 
     @Test
-    void renameVariableInExpression() {
-        // Create: oldName (as standalone expression)
+    void renameVariableInExpression()
+    {
         VarRefExpr varRef = factory.variable("oldName");
         ExprStmt stmt = factory.exprStmt(varRef);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onExpr(
-            ExprMatcher.custom(expr -> expr instanceof VarRefExpr &&
-                ((VarRefExpr) expr).getName().equals("oldName")),
+            ExprMatcher.custom(expr -> expr instanceof VarRefExpr && ((VarRefExpr) expr).getName().equals("oldName")),
             (ctx, expr) -> Replacement.with(factory.variable("newName"))
         );
         editor.apply();
@@ -408,21 +393,16 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void renameVariableMultipleOccurrences() {
-        // Test replacing multiple independent variable references
+    void renameVariableMultipleOccurrences()
+    {
         VarRefExpr var1 = factory.variable("x");
         VarRefExpr var2 = factory.variable("x");
         VarRefExpr var3 = factory.variable("y");
-        BlockStmt body = factory.block(
-            factory.exprStmt(var1),
-            factory.exprStmt(var2),
-            factory.exprStmt(var3)
-        );
+        BlockStmt body = factory.block(factory.exprStmt(var1), factory.exprStmt(var2), factory.exprStmt(var3));
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onExpr(
-            ExprMatcher.custom(expr -> expr instanceof VarRefExpr &&
-                ((VarRefExpr) expr).getName().equals("x")),
+            ExprMatcher.custom(expr -> expr instanceof VarRefExpr && ((VarRefExpr) expr).getName().equals("x")),
             (ctx, expr) -> Replacement.with(factory.variable("renamed"))
         );
         editor.apply();
@@ -437,18 +417,17 @@ class ExpressionEditorTest {
         assertEquals("y", result3.getName()); // Not renamed
     }
 
-    // ========== Cast and Type Operations Tests ==========
+    // Cast and Type Operations Tests
 
     @Test
-    void replaceCastExpression() {
-        // Create: (String) obj
+    void replaceCastExpression()
+    {
         CastExpr cast = factory.cast("java/lang/String", factory.variable("obj"));
         ExprStmt stmt = factory.exprStmt(cast);
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onCast((ctx, c) -> {
-            // Remove cast, just use the variable
             return Replacement.with(c.getExpression());
         });
         editor.apply();
@@ -458,8 +437,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void replaceInstanceOfExpression() {
-        // Create: obj instanceof String
+    void replaceInstanceOfExpression()
+    {
         InstanceOfExpr instanceOf = factory.instanceOf(factory.variable("obj"), "java/lang/String");
         ExprStmt stmt = factory.exprStmt(instanceOf);
         BlockStmt body = factory.block(stmt);
@@ -476,11 +455,11 @@ class ExpressionEditorTest {
         assertEquals(true, ((LiteralExpr) result).getValue());
     }
 
-    // ========== Array Access Tests ==========
+    // Array Access Tests
 
     @Test
-    void replaceArrayAccessExpression() {
-        // Create: arr[0]
+    void replaceArrayAccessExpression()
+    {
         ArrayAccessExpr arrayAccess = factory.arrayAccess(
             factory.variable("arr"),
             factory.intLiteral(0),
@@ -503,8 +482,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void handleArrayReadVsStore() {
-        // Create: x = arr[0] (read)
+    void handleArrayReadVsStore()
+    {
         ArrayAccessExpr arrayRead = factory.arrayAccess(
             factory.variable("arr"),
             factory.intLiteral(0),
@@ -526,10 +505,11 @@ class ExpressionEditorTest {
         assertEquals(1, readCount[0]);
     }
 
-    // ========== Find Operations Tests ==========
+    // Find Operations Tests
 
     @Test
-    void findAllMethodCalls() {
+    void findAllMethodCalls()
+    {
         MethodCallExpr call1 = factory.methodCall("method1").on("com/example/Test").build();
         MethodCallExpr call2 = factory.methodCall("method2").on("com/example/Test").build();
         BlockStmt body = factory.block(factory.exprStmt(call1), factory.exprStmt(call2));
@@ -541,7 +521,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void findMethodCallsByName() {
+    void findMethodCallsByName()
+    {
         MethodCallExpr call1 = factory.methodCall("target").on("com/example/Test").build();
         MethodCallExpr call2 = factory.methodCall("other").on("com/example/Test").build();
         BlockStmt body = factory.block(factory.exprStmt(call1), factory.exprStmt(call2));
@@ -554,7 +535,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void findMethodCallsByOwnerAndName() {
+    void findMethodCallsByOwnerAndName()
+    {
         MethodCallExpr call1 = factory.methodCall("method").on("com/example/Test").build();
         MethodCallExpr call2 = factory.methodCall("method").on("com/example/Other").build();
         BlockStmt body = factory.block(factory.exprStmt(call1), factory.exprStmt(call2));
@@ -567,7 +549,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void findAllFieldAccesses() {
+    void findAllFieldAccesses()
+    {
         FieldAccessExpr field1 = factory.fieldAccess(
             factory.variable("obj"),
             "field1",
@@ -589,7 +572,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void findNewExpressionsByClass() {
+    void findNewExpressionsByClass()
+    {
         NewExpr new1 = factory.newExpr("java/lang/String");
         NewExpr new2 = factory.newExpr("java/lang/Integer");
         BlockStmt body = factory.block(factory.exprStmt(new1), factory.exprStmt(new2));
@@ -602,7 +586,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void findArrayAccesses() {
+    void findArrayAccesses()
+    {
         ArrayAccessExpr access1 = factory.arrayAccess(
             factory.variable("arr"),
             factory.intLiteral(0),
@@ -622,7 +607,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void findExpressionsWithMatcher() {
+    void findExpressionsWithMatcher()
+    {
         BinaryExpr addition = factory.add(factory.intLiteral(1), factory.intLiteral(2), PrimitiveSourceType.INT);
         BinaryExpr subtraction = factory.subtract(factory.intLiteral(3), factory.intLiteral(4), PrimitiveSourceType.INT);
         BlockStmt body = factory.block(factory.exprStmt(addition), factory.exprStmt(subtraction));
@@ -634,10 +620,11 @@ class ExpressionEditorTest {
         assertEquals(BinaryOperator.ADD, ((BinaryExpr) additions.get(0)).getOperator());
     }
 
-    // ========== Handler Registration Tests ==========
+    // Handler Registration Tests
 
     @Test
-    void onAnyExprHandler() {
+    void onAnyExprHandler()
+    {
         MethodCallExpr call = factory.methodCall("method").on("com/example/Test").build();
         LiteralExpr literal = factory.intLiteral(42);
         BlockStmt body = factory.block(factory.exprStmt(call), factory.exprStmt(literal));
@@ -650,12 +637,12 @@ class ExpressionEditorTest {
         });
         editor.apply();
 
-        // Should match both expressions
         assertEquals(2, count[0]);
     }
 
     @Test
-    void onNewArrayHandler() {
+    void onNewArrayHandler()
+    {
         NewArrayExpr newArray = factory.newArray("int", factory.intLiteral(10));
         ExprStmt stmt = factory.exprStmt(newArray);
         BlockStmt body = factory.block(stmt);
@@ -671,10 +658,11 @@ class ExpressionEditorTest {
         assertEquals(1, count[0]);
     }
 
-    // ========== Fluent API Tests ==========
+    // Fluent API Tests
 
     @Test
-    void fluentMethodChaining() {
+    void fluentMethodChaining()
+    {
         MethodCallExpr call = factory.methodCall("method").on("com/example/Test").build();
         FieldAccessExpr field = factory.fieldAccess(
             factory.variable("obj"),
@@ -703,10 +691,11 @@ class ExpressionEditorTest {
         assertEquals(1, fieldCount[0]);
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void replaceWithNullReturnsKeep() {
+    void replaceWithNullReturnsKeep()
+    {
         MethodCallExpr call = factory.methodCall("method").on("com/example/Test").build();
         ExprStmt stmt = factory.exprStmt(call);
         BlockStmt body = factory.block(stmt);
@@ -721,7 +710,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void getDelegateEditor() {
+    void getDelegateEditor()
+    {
         BlockStmt body = factory.block();
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         ASTEditor delegate = editor.getDelegate();
@@ -730,7 +720,8 @@ class ExpressionEditorTest {
     }
 
     @Test
-    void complexExpressionReplacement() {
+    void complexExpressionReplacement()
+    {
         // Create: a + b (test replacing top-level binary expression)
         BinaryExpr add = factory.add(factory.variable("a"), factory.variable("b"), PrimitiveSourceType.INT);
         ExprStmt stmt = factory.exprStmt(add);
@@ -739,10 +730,9 @@ class ExpressionEditorTest {
         // Replace addition with multiplication
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
         editor.onBinaryExpr((ctx, binary) -> {
-            if (binary.getOperator() == BinaryOperator.ADD) {
-                return Replacement.with(
-                    factory.multiply(binary.getLeft(), binary.getRight(), PrimitiveSourceType.INT)
-                );
+            if (binary.getOperator() == BinaryOperator.ADD)
+            {
+                return Replacement.with(factory.multiply(binary.getLeft(), binary.getRight(), PrimitiveSourceType.INT));
             }
             return Replacement.keep();
         });

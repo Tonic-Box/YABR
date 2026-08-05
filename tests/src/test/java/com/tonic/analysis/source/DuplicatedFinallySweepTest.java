@@ -26,9 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * close) run twice on that path. Legitimate path duplication (a shared tail copied into separate
  * branches) never places the copy in sequence after its own clause, so this stays a clean signal.
  *
- * <p>Opt-in like the verify sweep: pass {@code -Dverify.sweep.jar=<path>}; skipped otherwise.
+ *Opt-in like the verify sweep: pass {@code -Dverify.sweep.jar=<path>}; skipped otherwise.
  */
-class DuplicatedFinallySweepTest {
+class DuplicatedFinallySweepTest
+{
 
     /**
      * Classes with a triaged, not-yet-fixed duplicate - all one family: the finally body CARRIES CONTROL
@@ -48,7 +49,8 @@ class DuplicatedFinallySweepTest {
             "com/jme3/system/NativeLibraryLoader");
 
     @Test
-    void noStatementRepeatsItsOwnFinallyClause() throws Exception {
+    void noStatementRepeatsItsOwnFinallyClause() throws Exception
+    {
         String jarProp = System.getProperty("verify.sweep.jar");
         Assumptions.assumeTrue(jarProp != null,
                 "set -Dverify.sweep.jar=<path-to-jar> to run the duplicated-finally sweep");
@@ -60,19 +62,27 @@ class DuplicatedFinallySweepTest {
 
         Set<String> flagged = new TreeSet<>();
         int graded = 0, skipped = 0, knownRemaining = 0;
-        for (ClassFile cf : cfs) {
+        for (ClassFile cf : cfs)
+        {
             String source;
-            try {
+            try
+            {
                 source = ClassDecompiler.decompile(cf);
-            } catch (Throwable t) {
+            }
+            catch (Throwable t)
+            {
                 skipped++;
                 continue;
             }
             graded++;
-            if (hasPostFinallyDuplicate(source)) {
-                if (KNOWN_REMAINING.contains(cf.getClassName())) {
+            if (hasPostFinallyDuplicate(source))
+            {
+                if (KNOWN_REMAINING.contains(cf.getClassName()))
+                {
                     knownRemaining++;
-                } else {
+                }
+                else
+                {
                     flagged.add(cf.getClassName());
                 }
             }
@@ -80,7 +90,8 @@ class DuplicatedFinallySweepTest {
 
         System.out.println("[dup-finally-sweep] graded=" + graded + " skipped=" + skipped
                 + " flagged=" + flagged.size() + " known-remaining=" + knownRemaining);
-        for (String c : flagged) {
+        for (String c : flagged)
+        {
             System.out.println("  DUPLICATED FINALLY EFFECT: " + c);
         }
         assertTrue(flagged.isEmpty(),
@@ -94,43 +105,56 @@ class DuplicatedFinallySweepTest {
      * trimmed; only lines performing a call are considered (assignments of constants and braces are
      * not effects worth flagging).
      */
-    private static boolean hasPostFinallyDuplicate(String source) {
+    private static boolean hasPostFinallyDuplicate(String source)
+    {
         String[] lines = source.split("\n", -1);
-        for (int i = 0; i < lines.length; i++) {
-            if (!lines[i].trim().equals("finally {")) {
+        for (int i = 0; i < lines.length; i++)
+        {
+            if (!lines[i].trim().equals("finally {"))
+            {
                 continue;
             }
             int depth = 1;
             Set<String> body = new HashSet<>();
             int j = i + 1;
-            for (; j < lines.length && depth > 0; j++) {
+            for (; j < lines.length && depth > 0; j++)
+            {
                 String t = lines[j].trim();
-                if (t.endsWith("{")) {
+                if (t.endsWith("{"))
+                {
                     depth++;
-                } else if (t.equals("}")) {
+                }
+                else if (t.equals("}"))
+                {
                     depth--;
                     continue;
                 }
-                if (depth > 0 && isEffectLine(t)) {
+                if (depth > 0 && isEffectLine(t))
+                {
                     body.add(t);
                 }
             }
             int rel = 0;
-            for (int k = j, seen = 0; k < lines.length && seen < 6 && rel >= 0; k++) {
+            for (int k = j, seen = 0; k < lines.length && seen < 6 && rel >= 0; k++)
+            {
                 String t = lines[k].trim();
-                if (t.isEmpty()) {
+                if (t.isEmpty())
+                {
                     continue;
                 }
-                if (t.equals("}")) {
+                if (t.equals("}"))
+                {
                     rel--;
                     continue;
                 }
-                if (t.endsWith("{")) {
+                if (t.endsWith("{"))
+                {
                     rel++;
                     continue;
                 }
                 seen++;
-                if (body.contains(t)) {
+                if (body.contains(t))
+                {
                     return true;
                 }
             }
@@ -138,23 +162,33 @@ class DuplicatedFinallySweepTest {
         return false;
     }
 
-    /** A line whose re-execution is observable: it contains a call (not a bare brace or constant store). */
-    private static boolean isEffectLine(String trimmed) {
+    /**
+     * A line whose re-execution is observable: it contains a call (not a bare brace or constant store).
+     */
+    private static boolean isEffectLine(String trimmed)
+    {
         return trimmed.contains("(") && trimmed.endsWith(";");
     }
 
-    private static List<ClassFile> load(Path jar, ClassPool pool) throws Exception {
+    private static List<ClassFile> load(Path jar, ClassPool pool) throws Exception
+    {
         List<ClassFile> cfs = new ArrayList<>();
-        try (JarInputStream jis = new JarInputStream(Files.newInputStream(jar))) {
+        try (JarInputStream jis = new JarInputStream(Files.newInputStream(jar)))
+        {
             JarEntry e;
-            while ((e = jis.getNextJarEntry()) != null) {
+            while ((e = jis.getNextJarEntry()) != null)
+            {
                 String n = e.getName();
-                if (!n.endsWith(".class") || n.contains("module-info") || n.contains("package-info")) {
+                if (!n.endsWith(".class") || n.contains("module-info") || n.contains("package-info"))
+                {
                     continue;
                 }
-                try {
+                try
+                {
                     cfs.add(pool.loadClass(new ByteArrayInputStream(jis.readAllBytes())));
-                } catch (Throwable ignored) {
+                }
+                catch (Throwable ignored)
+                {
                     // unparseable entry - not this sweep's concern
                 }
             }

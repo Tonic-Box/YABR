@@ -7,10 +7,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class DebugEventListenerTest {
+class DebugEventListenerTest
+{
 
     @Test
-    void testDefaultOnSessionStartIsNoop() {
+    void testDefaultOnSessionStartIsNoop()
+    {
         DebugEventListener listener = new DebugEventListener() {};
         DebugSession session = mock(DebugSession.class);
 
@@ -18,7 +20,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testDefaultOnSessionStopIsNoop() {
+    void testDefaultOnSessionStopIsNoop()
+    {
         DebugEventListener listener = new DebugEventListener() {};
         DebugSession session = mock(DebugSession.class);
         BytecodeResult result = mock(BytecodeResult.class);
@@ -27,7 +30,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testDefaultOnBreakpointHitIsNoop() {
+    void testDefaultOnBreakpointHitIsNoop()
+    {
         DebugEventListener listener = new DebugEventListener() {};
         DebugSession session = mock(DebugSession.class);
         Breakpoint breakpoint = mock(Breakpoint.class);
@@ -36,7 +40,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testDefaultOnStepCompleteIsNoop() {
+    void testDefaultOnStepCompleteIsNoop()
+    {
         DebugEventListener listener = new DebugEventListener() {};
         DebugSession session = mock(DebugSession.class);
         DebugState state = mock(DebugState.class);
@@ -45,7 +50,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testDefaultOnExceptionIsNoop() {
+    void testDefaultOnExceptionIsNoop()
+    {
         DebugEventListener listener = new DebugEventListener() {};
         DebugSession session = mock(DebugSession.class);
         ObjectInstance exception = mock(ObjectInstance.class);
@@ -54,7 +60,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testDefaultOnStateChangeIsNoop() {
+    void testDefaultOnStateChangeIsNoop()
+    {
         DebugEventListener listener = new DebugEventListener() {};
         DebugSession session = mock(DebugSession.class);
 
@@ -62,7 +69,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testCanImplementOnSessionStart() {
+    void testCanImplementOnSessionStart()
+    {
         TestListener listener = new TestListener();
         DebugSession session = mock(DebugSession.class);
 
@@ -72,7 +80,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testCanImplementOnBreakpointHit() {
+    void testCanImplementOnBreakpointHit()
+    {
         TestListener listener = new TestListener();
         DebugSession session = mock(DebugSession.class);
         Breakpoint breakpoint = mock(Breakpoint.class);
@@ -83,7 +92,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testCanImplementOnStepComplete() {
+    void testCanImplementOnStepComplete()
+    {
         TestListener listener = new TestListener();
         DebugSession session = mock(DebugSession.class);
         DebugState state = mock(DebugState.class);
@@ -94,7 +104,8 @@ class DebugEventListenerTest {
     }
 
     @Test
-    void testCanImplementOnException() {
+    void testCanImplementOnException()
+    {
         TestListener listener = new TestListener();
         DebugSession session = mock(DebugSession.class);
         ObjectInstance exception = mock(ObjectInstance.class);
@@ -104,29 +115,34 @@ class DebugEventListenerTest {
         assertTrue(listener.exceptionCalled);
     }
 
-    private static class TestListener implements DebugEventListener {
+    private static class TestListener implements DebugEventListener
+    {
         boolean sessionStartCalled = false;
         boolean breakpointHitCalled = false;
         boolean stepCompleteCalled = false;
         boolean exceptionCalled = false;
 
         @Override
-        public void onSessionStart(DebugSession session) {
+        public void onSessionStart(DebugSession session)
+        {
             sessionStartCalled = true;
         }
 
         @Override
-        public void onBreakpointHit(DebugSession session, Breakpoint breakpoint) {
+        public void onBreakpointHit(DebugSession session, Breakpoint breakpoint)
+        {
             breakpointHitCalled = true;
         }
 
         @Override
-        public void onStepComplete(DebugSession session, DebugState state) {
+        public void onStepComplete(DebugSession session, DebugState state)
+        {
             stepCompleteCalled = true;
         }
 
         @Override
-        public void onException(DebugSession session, ObjectInstance exception) {
+        public void onException(DebugSession session, ObjectInstance exception)
+        {
             exceptionCalled = true;
         }
     }

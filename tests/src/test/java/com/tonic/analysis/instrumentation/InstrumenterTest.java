@@ -21,35 +21,37 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for Instrumenter.
  * Verifies instrumentation hook registration and application.
  */
-class InstrumenterTest {
+class InstrumenterTest
+{
 
     private ClassPool pool;
     private ClassFile testClass;
     private ClassFile hookClass;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
 
-        // Create test class with methods
         int access = new AccessBuilder().setPublic().build();
         testClass = pool.createNewClass("com/test/Target", access);
 
-        // Create hook receiver class
         hookClass = pool.createNewClass("com/test/Hooks", access);
     }
 
-    // ========== Instrumenter Creation Tests ==========
+    // Instrumenter Creation Tests
 
     @Test
-    void forClassCreatesInstrumenter() {
+    void forClassCreatesInstrumenter()
+    {
         Instrumenter instrumenter = Instrumenter.forClass(testClass);
 
         assertNotNull(instrumenter);
     }
 
     @Test
-    void forClassesListCreatesInstrumenter() {
+    void forClassesListCreatesInstrumenter()
+    {
         List<ClassFile> classes = List.of(testClass, hookClass);
         Instrumenter instrumenter = Instrumenter.forClasses(classes);
 
@@ -57,23 +59,26 @@ class InstrumenterTest {
     }
 
     @Test
-    void forClassesVarargsCreatesInstrumenter() {
+    void forClassesVarargsCreatesInstrumenter()
+    {
         Instrumenter instrumenter = Instrumenter.forClasses(testClass, hookClass);
 
         assertNotNull(instrumenter);
     }
 
     @Test
-    void forClassPoolCreatesInstrumenter() {
+    void forClassPoolCreatesInstrumenter()
+    {
         Instrumenter instrumenter = Instrumenter.forClassPool(pool);
 
         assertNotNull(instrumenter);
     }
 
-    // ========== Method Entry Hook Tests ==========
+    // Method Entry Hook Tests
 
     @Test
-    void methodEntryHookRegisters() throws IOException {
+    void methodEntryHookRegisters() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -86,7 +91,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodEntryHookWithClassName() throws IOException {
+    void methodEntryHookWithClassName() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -101,7 +107,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodEntryHookWithMethodName() throws IOException {
+    void methodEntryHookWithMethodName() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -115,7 +122,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodEntryHookWithThis() throws IOException {
+    void methodEntryHookWithThis() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = testClass.createNewMethodWithDescriptor(access, "instanceMethod", "()V");
         Bytecode bc = new Bytecode(method);
@@ -133,7 +141,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodEntryHookInPackage() throws IOException {
+    void methodEntryHookInPackage() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -147,7 +156,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodEntryHookMatchingMethod() throws IOException {
+    void methodEntryHookMatchingMethod() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
         addSimpleMethod(testClass, "otherMethod", "()V");
 
@@ -162,7 +172,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodEntryHookWithAllParameters() throws IOException {
+    void methodEntryHookWithAllParameters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ParamsTest")
                 .publicStaticMethod("hasParams", "(ILjava/lang/String;)V")
                     .vreturn()
@@ -179,10 +190,11 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
-    // ========== Method Exit Hook Tests ==========
+    // Method Exit Hook Tests
 
     @Test
-    void methodExitHookRegisters() throws IOException {
+    void methodExitHookRegisters() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -195,7 +207,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodExitHookWithReturnValue() throws IOException {
+    void methodExitHookWithReturnValue() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ReturnTest")
                 .publicStaticMethod("returnsInt", "()I")
                     .iconst(42)
@@ -214,7 +227,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodExitHookAllowModification() throws IOException {
+    void methodExitHookAllowModification() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ModifyReturnTest")
                 .publicStaticMethod("returnsInt", "()I")
                     .iconst(42)
@@ -234,7 +248,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodExitHookWithThisAndMethodName() throws IOException {
+    void methodExitHookWithThisAndMethodName() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = testClass.createNewMethodWithDescriptor(access, "instanceMethod", "()V");
         Bytecode bc = new Bytecode(method);
@@ -253,7 +268,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodExitHookWithClassName() throws IOException {
+    void methodExitHookWithClassName() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -267,7 +283,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodExitHookInPackageFilter() throws IOException {
+    void methodExitHookInPackageFilter() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -280,10 +297,11 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
-    // ========== Field Hook Tests ==========
+    // Field Hook Tests
 
     @Test
-    void fieldWriteHookRegisters() throws IOException {
+    void fieldWriteHookRegisters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -305,7 +323,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookWithNewValue() throws IOException {
+    void fieldWriteHookWithNewValue() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldValueTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -328,7 +347,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldReadHookRegisters() throws IOException {
+    void fieldReadHookRegisters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldReadTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("readField", "()I")
@@ -349,7 +369,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookWithOwnerAndFieldName() throws IOException {
+    void fieldWriteHookWithOwnerAndFieldName() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldOwnerTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -373,7 +394,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookWithOldValue() throws IOException {
+    void fieldWriteHookWithOldValue() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldOldValueTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -396,7 +418,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookWithModification() throws IOException {
+    void fieldWriteHookWithModification() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldModifyTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -420,7 +443,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldReadHookWithReadValue() throws IOException {
+    void fieldReadHookWithReadValue() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldReadValueTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("readField", "()I")
@@ -442,7 +466,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldReadHookWithOwnerAndFieldName() throws IOException {
+    void fieldReadHookWithOwnerAndFieldName() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldReadOwnerTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("readField", "()I")
@@ -465,7 +490,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookInstanceOnly() throws IOException {
+    void fieldWriteHookInstanceOnly() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/InstanceFieldTest")
                 .field(new AccessBuilder().setPublic().build(), "instanceField", "I")
                 .publicMethod("writeInstance", "()V")
@@ -488,7 +514,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldReadHookInstanceOnly() throws IOException {
+    void fieldReadHookInstanceOnly() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/InstanceFieldReadTest")
                 .field(new AccessBuilder().setPublic().build(), "instanceField", "I")
                 .publicMethod("readInstance", "()I")
@@ -510,7 +537,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookMatchingPattern() throws IOException {
+    void fieldWriteHookMatchingPattern() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldPatternTest")
                 .field(new AccessBuilder().setPublic().build(), "myField1", "I")
                 .field(new AccessBuilder().setPublic().build(), "myField2", "I")
@@ -536,7 +564,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookOfType() throws IOException {
+    void fieldWriteHookOfType() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldTypeTest")
                 .field(new AccessBuilder().setPublic().build(), "intField", "I")
                 .field(new AccessBuilder().setPublic().build(), "stringField", "Ljava/lang/String;")
@@ -562,7 +591,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookInClassFilter() throws IOException {
+    void fieldWriteHookInClassFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldClassTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -584,7 +614,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void fieldWriteHookInPackageFilter() throws IOException {
+    void fieldWriteHookInPackageFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FieldPackageTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("writeField", "()V")
@@ -605,10 +636,11 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
-    // ========== Array Hook Tests ==========
+    // Array Hook Tests
 
     @Test
-    void arrayStoreHookRegisters() throws IOException {
+    void arrayStoreHookRegisters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -633,7 +665,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayLoadHookRegisters() throws IOException {
+    void arrayLoadHookRegisters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadTest")
                 .publicStaticMethod("arrayLoad", "([I)I")
                     .aload(0)
@@ -654,7 +687,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookWithArray() throws IOException {
+    void arrayStoreHookWithArray() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreArrayTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -680,7 +714,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookWithIndex() throws IOException {
+    void arrayStoreHookWithIndex() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreIndexTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -706,7 +741,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookWithValue() throws IOException {
+    void arrayStoreHookWithValue() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreValueTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -732,7 +768,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookWithAll() throws IOException {
+    void arrayStoreHookWithAll() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreAllTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -758,7 +795,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookWithModification() throws IOException {
+    void arrayStoreHookWithModification() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreModifyTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -785,7 +823,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayLoadHookWithArray() throws IOException {
+    void arrayLoadHookWithArray() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadArrayTest")
                 .publicStaticMethod("arrayLoad", "([I)I")
                     .aload(0)
@@ -807,7 +846,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayLoadHookWithIndex() throws IOException {
+    void arrayLoadHookWithIndex() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadIndexTest")
                 .publicStaticMethod("arrayLoad", "([I)I")
                     .aload(0)
@@ -829,7 +869,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayLoadHookWithValue() throws IOException {
+    void arrayLoadHookWithValue() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayLoadValueTest")
                 .publicStaticMethod("arrayLoad", "([I)I")
                     .aload(0)
@@ -851,7 +892,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookInClassFilter() throws IOException {
+    void arrayStoreHookInClassFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreClassTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -877,7 +919,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookInPackageFilter() throws IOException {
+    void arrayStoreHookInPackageFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStorePackageTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -903,7 +946,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void arrayStoreHookInMethodFilter() throws IOException {
+    void arrayStoreHookInMethodFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayStoreMethodTest")
                 .publicStaticMethod("arrayStore", "()V")
                     .iconst(5)
@@ -928,10 +972,11 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
-    // ========== Method Call Hook Tests ==========
+    // Method Call Hook Tests
 
     @Test
-    void methodCallHookRegisters() throws IOException {
+    void methodCallHookRegisters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallTest")
                 .publicStaticMethod("callMethod", "()V")
                     .invokestatic("com/test/Other", "someMethod", "()V")
@@ -951,7 +996,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookAfter() throws IOException {
+    void methodCallHookAfter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallAfterTest")
                 .publicStaticMethod("callMethod", "()V")
                     .invokestatic("com/test/Other", "someMethod", "()V")
@@ -971,7 +1017,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookWithReceiver() throws IOException {
+    void methodCallHookWithReceiver() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallReceiverTest")
                 .publicStaticMethod("callMethod", "()V")
                     .aconst_null()
@@ -994,7 +1041,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookWithArguments() throws IOException {
+    void methodCallHookWithArguments() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallArgsTest")
                 .publicStaticMethod("callMethod", "()V")
                     .iconst(42)
@@ -1017,7 +1065,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookWithResult() throws IOException {
+    void methodCallHookWithResult() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallResultTest")
                 .publicStaticMethod("callMethod", "()I")
                     .invokestatic("com/test/Other", "getInt", "()I")
@@ -1038,7 +1087,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookWithMethodName() throws IOException {
+    void methodCallHookWithMethodName() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallMethodNameTest")
                 .publicStaticMethod("callMethod", "()V")
                     .invokestatic("com/test/Other", "someMethod", "()V")
@@ -1059,7 +1109,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookWithDescriptor() throws IOException {
+    void methodCallHookWithDescriptor() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallDescriptorTest")
                 .publicStaticMethod("callMethod", "()V")
                     .invokestatic("com/test/Other", "someMethod", "()V")
@@ -1079,7 +1130,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookInClassFilter() throws IOException {
+    void methodCallHookInClassFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallClassTest")
                 .publicStaticMethod("callMethod", "()V")
                     .invokestatic("com/test/Other", "someMethod", "()V")
@@ -1100,7 +1152,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void methodCallHookInPackageFilter() throws IOException {
+    void methodCallHookInPackageFilter() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/CallPackageTest")
                 .publicStaticMethod("callMethod", "()V")
                     .invokestatic("com/test/Other", "someMethod", "()V")
@@ -1124,10 +1177,11 @@ class InstrumenterTest {
     // try-catch blocks. Exception hooks would need to be tested with manually
     // constructed ClassFiles using low-level Bytecode API.
 
-    // ========== Configuration Tests ==========
+    // Configuration Tests
 
     @Test
-    void skipAbstractMethods() throws IOException {
+    void skipAbstractMethods() throws IOException
+    {
         int abstractAccess = new AccessBuilder().setPublic().setAbstract().build();
         testClass.createNewMethodWithDescriptor(abstractAccess, "abstractMethod", "()V");
 
@@ -1142,7 +1196,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void skipConstructors() throws IOException {
+    void skipConstructors() throws IOException
+    {
         addSimpleMethod(testClass, "normalMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1156,7 +1211,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void verboseMode() throws IOException {
+    void verboseMode() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1170,7 +1226,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void failOnErrorDisabled() throws IOException {
+    void failOnErrorDisabled() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1184,7 +1241,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void skipNativeMethods() throws IOException {
+    void skipNativeMethods() throws IOException
+    {
         int nativeAccess = new AccessBuilder().setPublic().setNative().build();
         testClass.createNewMethodWithDescriptor(nativeAccess, "nativeMethod", "()V");
 
@@ -1199,7 +1257,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void skipStaticInitializers() throws IOException {
+    void skipStaticInitializers() throws IOException
+    {
         addSimpleMethod(testClass, "normalMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1213,7 +1272,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void skipSyntheticMethods() throws IOException {
+    void skipSyntheticMethods() throws IOException
+    {
         addSimpleMethod(testClass, "normalMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1227,7 +1287,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void skipBridgeMethods() throws IOException {
+    void skipBridgeMethods() throws IOException
+    {
         addSimpleMethod(testClass, "normalMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1240,10 +1301,11 @@ class InstrumenterTest {
         assertTrue(count >= 0);
     }
 
-    // ========== Report Tests ==========
+    // Report Tests
 
     @Test
-    void applyWithReportReturnsReport() throws IOException {
+    void applyWithReportReturnsReport() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         Instrumenter instrumenter = Instrumenter.forClass(testClass)
@@ -1261,7 +1323,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void applyReturnsCount() throws IOException {
+    void applyReturnsCount() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1274,7 +1337,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void lastReportAccessible() throws IOException {
+    void lastReportAccessible() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         Instrumenter instrumenter = Instrumenter.forClass(testClass)
@@ -1288,7 +1352,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void reportToStringIsReadable() throws IOException {
+    void reportToStringIsReadable() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         Instrumenter instrumenter = Instrumenter.forClass(testClass)
@@ -1303,10 +1368,11 @@ class InstrumenterTest {
         assertTrue(str.contains("InstrumentationReport"));
     }
 
-    // ========== Multiple Hooks Tests ==========
+    // Multiple Hooks Tests
 
     @Test
-    void multipleHooksCanBeRegistered() throws IOException {
+    void multipleHooksCanBeRegistered() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1322,7 +1388,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void hookPriorityCanBeSet() throws IOException {
+    void hookPriorityCanBeSet() throws IOException
+    {
         addSimpleMethod(testClass, "targetMethod", "()V");
 
         int count = Instrumenter.forClass(testClass)
@@ -1340,7 +1407,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void multipleHookTypesCanBeRegistered() throws IOException {
+    void multipleHookTypesCanBeRegistered() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/MultiHookTest")
                 .field(new AccessBuilder().setPublic().build(), "testField", "I")
                 .publicMethod("complexMethod", "()I")
@@ -1374,7 +1442,8 @@ class InstrumenterTest {
     }
 
     @Test
-    void instrumentationDoesNotThrowOnValidClass() throws IOException {
+    void instrumentationDoesNotThrowOnValidClass() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ValidInstrument")
                 .publicStaticMethod("test", "()V")
                     .iconst(1)
@@ -1392,158 +1461,182 @@ class InstrumenterTest {
         });
     }
 
-    // ========== HookParameter Enum Tests ==========
+    // HookParameter Enum Tests
 
     @Nested
-    class HookParameterTests {
+    class HookParameterTests
+    {
 
         @Test
-        void thisParameterExists() {
+        void thisParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.THIS;
             assertNotNull(param);
             assertEquals("THIS", param.name());
         }
 
         @Test
-        void methodNameParameterExists() {
+        void methodNameParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.METHOD_NAME;
             assertNotNull(param);
             assertEquals("METHOD_NAME", param.name());
         }
 
         @Test
-        void methodDescriptorParameterExists() {
+        void methodDescriptorParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.METHOD_DESCRIPTOR;
             assertNotNull(param);
             assertEquals("METHOD_DESCRIPTOR", param.name());
         }
 
         @Test
-        void classNameParameterExists() {
+        void classNameParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CLASS_NAME;
             assertNotNull(param);
             assertEquals("CLASS_NAME", param.name());
         }
 
         @Test
-        void allParametersParameterExists() {
+        void allParametersParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.ALL_PARAMETERS;
             assertNotNull(param);
             assertEquals("ALL_PARAMETERS", param.name());
         }
 
         @Test
-        void parameterParameterExists() {
+        void parameterParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.PARAMETER;
             assertNotNull(param);
             assertEquals("PARAMETER", param.name());
         }
 
         @Test
-        void returnValueParameterExists() {
+        void returnValueParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.RETURN_VALUE;
             assertNotNull(param);
             assertEquals("RETURN_VALUE", param.name());
         }
 
         @Test
-        void fieldOwnerParameterExists() {
+        void fieldOwnerParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.FIELD_OWNER;
             assertNotNull(param);
             assertEquals("FIELD_OWNER", param.name());
         }
 
         @Test
-        void fieldNameParameterExists() {
+        void fieldNameParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.FIELD_NAME;
             assertNotNull(param);
             assertEquals("FIELD_NAME", param.name());
         }
 
         @Test
-        void newValueParameterExists() {
+        void newValueParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.NEW_VALUE;
             assertNotNull(param);
             assertEquals("NEW_VALUE", param.name());
         }
 
         @Test
-        void readValueParameterExists() {
+        void readValueParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.READ_VALUE;
             assertNotNull(param);
             assertEquals("READ_VALUE", param.name());
         }
 
         @Test
-        void arrayRefParameterExists() {
+        void arrayRefParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.ARRAY_REF;
             assertNotNull(param);
             assertEquals("ARRAY_REF", param.name());
         }
 
         @Test
-        void arrayIndexParameterExists() {
+        void arrayIndexParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.ARRAY_INDEX;
             assertNotNull(param);
             assertEquals("ARRAY_INDEX", param.name());
         }
 
         @Test
-        void exceptionParameterExists() {
+        void exceptionParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.EXCEPTION;
             assertNotNull(param);
             assertEquals("EXCEPTION", param.name());
         }
 
         @Test
-        void callReceiverParameterExists() {
+        void callReceiverParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CALL_RECEIVER;
             assertNotNull(param);
             assertEquals("CALL_RECEIVER", param.name());
         }
 
         @Test
-        void callArgumentsParameterExists() {
+        void callArgumentsParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CALL_ARGUMENTS;
             assertNotNull(param);
             assertEquals("CALL_ARGUMENTS", param.name());
         }
 
         @Test
-        void callResultParameterExists() {
+        void callResultParameterExists()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.CALL_RESULT;
             assertNotNull(param);
             assertEquals("CALL_RESULT", param.name());
         }
 
         @Test
-        void allParameterTypesAccessible() {
+        void allParameterTypesAccessible()
+        {
             HookDescriptor.HookParameter[] params = HookDescriptor.HookParameter.values();
             assertEquals(17, params.length);
         }
 
         @Test
-        void valueOfReturnsCorrectParameter() {
+        void valueOfReturnsCorrectParameter()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.valueOf("THIS");
             assertEquals(HookDescriptor.HookParameter.THIS, param);
         }
 
         @Test
-        void valueOfThrowsForInvalidName() {
+        void valueOfThrowsForInvalidName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                     HookDescriptor.HookParameter.valueOf("INVALID_PARAMETER"));
         }
 
         @Test
-        void parameterOrdinalIsConsistent() {
+        void parameterOrdinalIsConsistent()
+        {
             HookDescriptor.HookParameter[] params = HookDescriptor.HookParameter.values();
-            for (int i = 0; i < params.length; i++) {
+            for (int i = 0; i < params.length; i++)
+            {
                 assertEquals(i, params[i].ordinal());
             }
         }
 
         @Test
-        void parameterEqualsWorks() {
+        void parameterEqualsWorks()
+        {
             HookDescriptor.HookParameter param1 = HookDescriptor.HookParameter.THIS;
             HookDescriptor.HookParameter param2 = HookDescriptor.HookParameter.THIS;
             HookDescriptor.HookParameter param3 = HookDescriptor.HookParameter.METHOD_NAME;
@@ -1553,7 +1646,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void parameterHashCodeIsConsistent() {
+        void parameterHashCodeIsConsistent()
+        {
             HookDescriptor.HookParameter param1 = HookDescriptor.HookParameter.RETURN_VALUE;
             HookDescriptor.HookParameter param2 = HookDescriptor.HookParameter.RETURN_VALUE;
 
@@ -1561,10 +1655,12 @@ class InstrumenterTest {
         }
 
         @Test
-        void canSwitchOnParameterType() {
+        void canSwitchOnParameterType()
+        {
             HookDescriptor.HookParameter param = HookDescriptor.HookParameter.EXCEPTION;
             String result;
-            switch (param) {
+            switch (param)
+            {
                 case THIS:
                     result = "this";
                     break;
@@ -1579,13 +1675,15 @@ class InstrumenterTest {
         }
     }
 
-    // ========== Exception Hook Tests ==========
+    // Exception Hook Tests
 
     @Nested
-    class ExceptionHookBuilderTests {
+    class ExceptionHookBuilderTests
+    {
 
         @Test
-        void exceptionHookBuilderCreates() {
+        void exceptionHookBuilderCreates()
+        {
             Instrumenter.ExceptionHookBuilder builder = Instrumenter.forClass(testClass)
                     .onException();
 
@@ -1593,7 +1691,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithBasicConfiguration() throws IOException {
+        void exceptionHookWithBasicConfiguration() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1607,7 +1706,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookForSpecificExceptionType() throws IOException {
+        void exceptionHookForSpecificExceptionType() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1622,7 +1722,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithMethodName() throws IOException {
+        void exceptionHookWithMethodName() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1637,7 +1738,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithClassName() throws IOException {
+        void exceptionHookWithClassName() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1652,7 +1754,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithAllMetadata() throws IOException {
+        void exceptionHookWithAllMetadata() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1668,7 +1771,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithSuppression() throws IOException {
+        void exceptionHookWithSuppression() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1683,7 +1787,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookInClassFilter() throws IOException {
+        void exceptionHookInClassFilter() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1698,7 +1803,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookInPackageFilter() throws IOException {
+        void exceptionHookInPackageFilter() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1713,7 +1819,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithPriority() throws IOException {
+        void exceptionHookWithPriority() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1728,7 +1835,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookForNullPointerException() throws IOException {
+        void exceptionHookForNullPointerException() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1743,7 +1851,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookForIOException() throws IOException {
+        void exceptionHookForIOException() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1758,7 +1867,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void multipleExceptionHooks() throws IOException {
+        void multipleExceptionHooks() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1778,7 +1888,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithoutPassingException() throws IOException {
+        void exceptionHookWithoutPassingException() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1791,7 +1902,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookRegistersWithInstrumenter() throws IOException {
+        void exceptionHookRegistersWithInstrumenter() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             Instrumenter instrumenter = Instrumenter.forClass(testClass)
@@ -1805,7 +1917,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookBuilderChaining() throws IOException {
+        void exceptionHookBuilderChaining() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             Instrumenter.ExceptionHookBuilder builder = Instrumenter.forClass(testClass)
@@ -1826,7 +1939,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookInMultipleClasses() throws IOException {
+        void exceptionHookInMultipleClasses() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
             addSimpleMethod(hookClass, "hookMethod", "()V");
 
@@ -1841,7 +1955,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookWithDifferentPriorities() throws IOException {
+        void exceptionHookWithDifferentPriorities() throws IOException
+        {
             addSimpleMethod(testClass, "targetMethod", "()V");
 
             int count = Instrumenter.forClass(testClass)
@@ -1861,7 +1976,8 @@ class InstrumenterTest {
         }
 
         @Test
-        void exceptionHookCombinedWithOtherHooks() throws IOException {
+        void exceptionHookCombinedWithOtherHooks() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/CombinedTest")
                     .publicStaticMethod("test", "()V")
                         .vreturn()
@@ -1885,9 +2001,10 @@ class InstrumenterTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private void addSimpleMethod(ClassFile cf, String name, String desc) throws IOException {
+    private void addSimpleMethod(ClassFile cf, String name, String desc) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = cf.createNewMethodWithDescriptor(access, name, desc);
         Bytecode bc = new Bytecode(method);

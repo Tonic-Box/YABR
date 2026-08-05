@@ -9,11 +9,11 @@ import com.tonic.analysis.source.editor.Replacement;
  * Use this to intercept and transform binary operations.
  */
 @FunctionalInterface
-public interface BinaryExprHandler {
+public interface BinaryExprHandler
+{
 
     /**
      * Handle a binary expression.
-     *
      * @param ctx    the editing context
      * @param binary the binary expression
      * @return the replacement action

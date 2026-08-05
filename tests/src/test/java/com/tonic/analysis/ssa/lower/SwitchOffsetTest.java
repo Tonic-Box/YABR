@@ -22,14 +22,16 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SwitchOffsetTest {
+class SwitchOffsetTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private SSA ssa;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/SwitchTest", access);
@@ -37,10 +39,12 @@ class SwitchOffsetTest {
     }
 
     @Nested
-    class TableSwitchOffsetTests {
+    class TableSwitchOffsetTests
+    {
 
         @Test
-        void tableSwitchCasesHaveCorrectRelativeOffsets() throws IOException {
+        void tableSwitchCasesHaveCorrectRelativeOffsets() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "tableSwitch", "I", "I");
 
@@ -96,7 +100,8 @@ class SwitchOffsetTest {
         }
 
         @Test
-        void tableSwitchWithStackPhisAcrossBlocks() throws IOException {
+        void tableSwitchWithStackPhisAcrossBlocks() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "switchWithPhis", "I", "I");
 
@@ -110,10 +115,12 @@ class SwitchOffsetTest {
     }
 
     @Nested
-    class LookupSwitchOffsetTests {
+    class LookupSwitchOffsetTests
+    {
 
         @Test
-        void lookupSwitchCasesHaveCorrectRelativeOffsets() throws IOException {
+        void lookupSwitchCasesHaveCorrectRelativeOffsets() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "lookupSwitch", "I", "I");
 
@@ -163,10 +170,12 @@ class SwitchOffsetTest {
     }
 
     @Nested
-    class StackPhiPropagationTests {
+    class StackPhiPropagationTests
+    {
 
         @Test
-        void stackPhiValuesPropagateThroughBranches() throws IOException {
+        void stackPhiValuesPropagateThroughBranches() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "branchingStack", "I", "I", "I");
 
@@ -180,7 +189,8 @@ class SwitchOffsetTest {
         }
 
         @Test
-        void frameGeneratorHandlesControlFlowMerges() throws IOException {
+        void frameGeneratorHandlesControlFlowMerges() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "mergePoint", "I", "I");
 

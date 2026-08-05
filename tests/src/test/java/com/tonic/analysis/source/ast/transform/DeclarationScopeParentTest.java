@@ -22,12 +22,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * cleared when a transform rebuilt the node around it - reads as living outside every block it is actually
  * inside. The repair then hoists a perfectly well scoped declaration to the top of the method and leaves a
  * default initializer behind, which is how the second generation of a round trip stopped matching the first.
- * <p>
+ *
  * The loop variable is read only from inside an {@code if} condition, which is the position that goes wrong:
  * a condition replaced by one built around the old one leaves the old one - and everything under it - looking
  * detached, so the variable read there appears to be used outside the loop.
  */
-class DeclarationScopeParentTest {
+class DeclarationScopeParentTest
+{
 
     private static final String[] LINES = {
             "public class ScopedDecl {",
@@ -62,14 +63,14 @@ class DeclarationScopeParentTest {
     };
 
     @Test
-    void aDeclarationUsedOnlyInABlockStaysInIt() throws Exception {
+    void aDeclarationUsedOnlyInABlockStaysInIt() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("scoped-decl");
         Path src = dir.resolve("ScopedDecl.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("ScopedDecl.class")));

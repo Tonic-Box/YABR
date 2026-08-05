@@ -9,11 +9,11 @@ import com.tonic.analysis.source.editor.Replacement;
  * Use this to intercept and transform method returns.
  */
 @FunctionalInterface
-public interface ReturnHandler {
+public interface ReturnHandler
+{
 
     /**
      * Handle a return statement.
-     *
      * @param ctx       the editing context
      * @param returnStmt the return statement
      * @return the replacement action

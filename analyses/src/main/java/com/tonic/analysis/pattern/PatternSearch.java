@@ -20,19 +20,11 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * High-level API for searching code patterns across a ClassPool.
- *
- * Provides fluent interface for finding:
- * - Method calls (with filtering by owner, name, descriptor)
- * - Field accesses
- * - Type checks (instanceof, casts)
- * - Object allocations
- * - Null checks
- * - And more...
- *
- * Can leverage Call Graph, Dependency Analysis, and Type Inference for semantic queries.
+ * Fluent search API over a ClassPool for code patterns, optionally backed by call-graph,
+ * dependency, and type-inference analyses.
  */
-public class PatternSearch {
+public class PatternSearch
+{
 
     private final ClassPool classPool;
     private final List<ClassFile> targetClasses;
@@ -42,218 +34,322 @@ public class PatternSearch {
     private boolean useTypeInference;
     private int maxResults = Integer.MAX_VALUE;
 
-    public PatternSearch(ClassPool classPool) {
+    /**
+     * Creates a search over the given pool with an empty scope and no analyses attached.
+     * @param classPool the pool of classes to search
+     */
+    public PatternSearch(ClassPool classPool)
+    {
         this.classPool = classPool;
         this.targetClasses = new ArrayList<>();
         this.targetMethods = new ArrayList<>();
         this.useTypeInference = false;
     }
 
-    // ===== Scope Configuration =====
+    // Scope Configuration
 
     /**
-     * Search in all classes in the pool.
+     * Clears the scope so the search covers every class in the pool.
+     *
+     * @return this search
      */
-    public PatternSearch inAllClasses() {
+    public PatternSearch inAllClasses()
+    {
         targetClasses.clear();
         targetMethods.clear();
         return this;
     }
 
     /**
-     * Search in a specific class.
+     * Adds one class to the scope, ignoring names the pool cannot resolve.
+     *
+     * @param className name of the class to look up in the pool
+     * @return this search
      */
-    public PatternSearch inClass(String className) {
+    public PatternSearch inClass(String className)
+    {
         ClassFile cf = classPool.get(className);
-        if (cf != null) {
+        if (cf != null)
+        {
             targetClasses.add(cf);
         }
         return this;
     }
 
     /**
-     * Search in classes matching a package prefix.
+     * Adds the classes under a package prefix to the scope.
+     *
+     * @param packagePrefix package prefix to match
+     * @return this search
      */
-    public PatternSearch inPackage(String packagePrefix) {
+    public PatternSearch inPackage(String packagePrefix)
+    {
         // Would need to iterate classPool's internal list
         // For now, this is a placeholder - implementation depends on ClassPool API
         return this;
     }
 
     /**
-     * Search in a specific method.
+     * Adds one method to the scope; an explicit method scope overrides any class scope.
+     *
+     * @param method method to search
+     * @return this search
      */
-    public PatternSearch inMethod(MethodEntry method) {
+    public PatternSearch inMethod(MethodEntry method)
+    {
         targetMethods.add(method);
         return this;
     }
 
     /**
-     * Search in all methods of a class.
+     * Adds every method of a class to the scope.
+     *
+     * @param classFile class whose methods are searched
+     * @return this search
      */
-    public PatternSearch inAllMethodsOf(ClassFile classFile) {
+    public PatternSearch inAllMethodsOf(ClassFile classFile)
+    {
         targetClasses.add(classFile);
         return this;
     }
 
     /**
-     * Limit the number of results returned.
+     * Caps how many results any subsequent query returns.
+     *
+     * @param maxResults result ceiling
+     * @return this search
      */
-    public PatternSearch limit(int maxResults) {
+    public PatternSearch limit(int maxResults)
+    {
         this.maxResults = maxResults;
         return this;
     }
 
-    // ===== Analysis Integration =====
+    // Analysis Integration
 
     /**
-     * Use existing call graph for semantic queries.
+     * Attaches an already-built call graph for the caller and callee queries.
+     *
+     * @param callGraph call graph to use
+     * @return this search
      */
-    public PatternSearch withCallGraph(CallGraph callGraph) {
+    public PatternSearch withCallGraph(CallGraph callGraph)
+    {
         this.callGraph = callGraph;
         return this;
     }
 
     /**
-     * Build and use call graph for semantic queries.
+     * Builds a call graph over the pool and attaches it.
+     *
+     * @return this search
      */
-    public PatternSearch withCallGraph() {
+    public PatternSearch withCallGraph()
+    {
         this.callGraph = CallGraph.build(classPool);
         return this;
     }
 
     /**
-     * Use existing dependency analyzer.
+     * Attaches an already-built dependency analyzer for the dependency queries.
+     *
+     * @param analyzer dependency analyzer to use
+     * @return this search
      */
-    public PatternSearch withDependencies(DependencyAnalyzer analyzer) {
+    public PatternSearch withDependencies(DependencyAnalyzer analyzer)
+    {
         this.dependencyAnalyzer = analyzer;
         return this;
     }
 
     /**
-     * Build and use dependency analysis.
+     * Builds a dependency analyzer over the pool and attaches it.
+     *
+     * @return this search
      */
-    public PatternSearch withDependencies() {
+    public PatternSearch withDependencies()
+    {
         this.dependencyAnalyzer = new DependencyAnalyzer(classPool);
         return this;
     }
 
     /**
-     * Enable type inference for nullability-aware searches.
+     * Enables type inference so nullability-aware searches can run.
+     *
+     * @return this search
      */
-    public PatternSearch withTypeInference() {
+    public PatternSearch withTypeInference()
+    {
         this.useTypeInference = true;
         return this;
     }
 
-    // ===== Basic Pattern Searches =====
+    // Basic Pattern Searches
 
     /**
-     * Find all method calls matching the given pattern.
+     * Finds call sites accepted by a matcher.
+     *
+     * @param pattern matcher applied to every lifted instruction in scope
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findMethodCalls(PatternMatcher pattern) {
+    public List<SearchResult> findMethodCalls(PatternMatcher pattern)
+    {
         return findInstructions(pattern);
     }
 
     /**
-     * Find all calls to methods on a specific class.
+     * Finds calls to any method declared by one owner class.
+     *
+     * @param ownerClass owner class of the callee
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findMethodCalls(String ownerClass) {
+    public List<SearchResult> findMethodCalls(String ownerClass)
+    {
         return findMethodCalls(Patterns.methodCallTo(ownerClass));
     }
 
     /**
-     * Find all calls to a specific method.
+     * Finds calls to one named method on one owner class.
+     *
+     * @param ownerClass owner class of the callee
+     * @param methodName callee name
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findMethodCalls(String ownerClass, String methodName) {
+    public List<SearchResult> findMethodCalls(String ownerClass, String methodName)
+    {
         return findMethodCalls(Patterns.methodCall(ownerClass, methodName));
     }
 
     /**
-     * Find all field accesses (reads and writes).
+     * Finds field reads and writes against one owner class.
+     *
+     * @param ownerClass owner class declaring the field
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findFieldAccesses(String ownerClass) {
+    public List<SearchResult> findFieldAccesses(String ownerClass)
+    {
         return findInstructions(Patterns.fieldAccessOn(ownerClass));
     }
 
     /**
-     * Find all field accesses by name.
+     * Finds field accesses by field name, whatever the owner.
+     *
+     * @param fieldName field name to match
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findFieldsByName(String fieldName) {
+    public List<SearchResult> findFieldsByName(String fieldName)
+    {
         return findInstructions(Patterns.fieldNamed(fieldName));
     }
 
     /**
-     * Find all instanceof checks.
+     * Finds every instanceof check in scope.
+     *
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findInstanceOfChecks() {
+    public List<SearchResult> findInstanceOfChecks()
+    {
         return findInstructions(Patterns.anyInstanceOf());
     }
 
     /**
-     * Find instanceof checks for a specific type.
+     * Finds instanceof checks against one type.
+     *
+     * @param typeName type being tested
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findInstanceOfChecks(String typeName) {
+    public List<SearchResult> findInstanceOfChecks(String typeName)
+    {
         return findInstructions(Patterns.instanceOf(typeName));
     }
 
     /**
-     * Find all type casts.
+     * Finds every checked cast in scope.
+     *
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findCasts() {
+    public List<SearchResult> findCasts()
+    {
         return findInstructions(Patterns.anyCast());
     }
 
     /**
-     * Find casts to a specific type.
+     * Finds casts to one type.
+     *
+     * @param typeName cast target type
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findCastsTo(String typeName) {
+    public List<SearchResult> findCastsTo(String typeName)
+    {
         return findInstructions(Patterns.castTo(typeName));
     }
 
     /**
-     * Find all object allocations.
+     * Finds every object allocation in scope.
+     *
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findAllocations() {
+    public List<SearchResult> findAllocations()
+    {
         return findInstructions(Patterns.anyNew());
     }
 
     /**
-     * Find allocations of a specific class.
+     * Finds allocations of one class.
+     *
+     * @param className allocated class
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findAllocations(String className) {
+    public List<SearchResult> findAllocations(String className)
+    {
         return findInstructions(Patterns.newInstance(className));
     }
 
     /**
-     * Find all null checks.
+     * Finds every null comparison in scope.
+     *
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findNullChecks() {
+    public List<SearchResult> findNullChecks()
+    {
         return findInstructions(Patterns.nullCheck());
     }
 
     /**
-     * Find all throw statements.
+     * Finds every athrow in scope.
+     *
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findThrows() {
+    public List<SearchResult> findThrows()
+    {
         return findInstructions(Patterns.anyThrow());
     }
 
     /**
-     * Find instructions matching a custom pattern.
+     * Finds instructions accepted by a caller-supplied matcher.
+     *
+     * @param pattern matcher applied to every lifted instruction in scope
+     * @return matching instructions, up to the result limit
      */
-    public List<SearchResult> findPattern(PatternMatcher pattern) {
+    public List<SearchResult> findPattern(PatternMatcher pattern)
+    {
         return findInstructions(pattern);
     }
 
-    // ===== Call Graph Queries =====
+    // Call Graph Queries
 
     /**
-     * Find all callers of a specific method.
-     * Requires call graph to be built.
+     * Finds the methods that call one target, building the call graph first if none is attached.
+     *
+     * @param owner declaring class of the target
+     * @param name target method name
+     * @param descriptor target method descriptor
+     * @return one result per caller resolvable in the pool, up to the result limit
      */
-    public List<SearchResult> findCallersOf(String owner, String name, String descriptor) {
-        if (callGraph == null) {
+    public List<SearchResult> findCallersOf(String owner, String name, String descriptor)
+    {
+        if (callGraph == null)
+        {
             withCallGraph();
         }
 
@@ -261,26 +357,33 @@ public class PatternSearch {
         Set<MethodReference> callers = callGraph.getCallers(target);
 
         List<SearchResult> results = new ArrayList<>();
-        for (MethodReference caller : callers) {
+        for (MethodReference caller : callers)
+        {
             if (results.size() >= maxResults) break;
             ClassFile cf = classPool.get(caller.getOwner());
             if (cf == null) continue;
 
             MethodEntry method = findMethod(cf, caller.getName(), caller.getDescriptor());
-            if (method != null) {
-                results.add(new SearchResult(cf, method,
-                    "calls " + owner + "." + name + descriptor));
+            if (method != null)
+            {
+                results.add(new SearchResult(cf, method, "calls " + owner + "." + name + descriptor));
             }
         }
         return results;
     }
 
     /**
-     * Find all methods called by a specific method.
-     * Requires call graph to be built.
+     * Finds the methods one caller invokes, building the call graph first if none is attached.
+     *
+     * @param owner declaring class of the caller
+     * @param name caller method name
+     * @param descriptor caller method descriptor
+     * @return one result per callee, up to the result limit
      */
-    public List<SearchResult> findCalleesOf(String owner, String name, String descriptor) {
-        if (callGraph == null) {
+    public List<SearchResult> findCalleesOf(String owner, String name, String descriptor)
+    {
+        if (callGraph == null)
+        {
             withCallGraph();
         }
 
@@ -288,7 +391,8 @@ public class PatternSearch {
         Set<MethodReference> callees = callGraph.getCallees(caller);
 
         List<SearchResult> results = new ArrayList<>();
-        for (MethodReference callee : callees) {
+        for (MethodReference callee : callees)
+        {
             if (results.size() >= maxResults) break;
             ClassFile cf = classPool.get(callee.getOwner());
             results.add(new SearchResult(cf, null,
@@ -297,19 +401,25 @@ public class PatternSearch {
         return results;
     }
 
-    // ===== Dependency Queries =====
+    // Dependency Queries
 
     /**
-     * Find classes that depend on a specific class.
+     * Finds the classes that depend on one class, building the dependency analysis if none is attached.
+     *
+     * @param className class depended upon
+     * @return one result per dependent class, up to the result limit
      */
-    public List<SearchResult> findDependentsOf(String className) {
-        if (dependencyAnalyzer == null) {
+    public List<SearchResult> findDependentsOf(String className)
+    {
+        if (dependencyAnalyzer == null)
+        {
             withDependencies();
         }
 
         Set<String> dependents = dependencyAnalyzer.getDependents(className);
         List<SearchResult> results = new ArrayList<>();
-        for (String dep : dependents) {
+        for (String dep : dependents)
+        {
             if (results.size() >= maxResults) break;
             ClassFile cf = classPool.get(dep);
             results.add(new SearchResult(cf, "depends on " + className));
@@ -318,16 +428,22 @@ public class PatternSearch {
     }
 
     /**
-     * Find classes that a specific class depends on.
+     * Finds the classes one class depends on, building the dependency analysis if none is attached.
+     *
+     * @param className class whose dependencies are listed
+     * @return one result per dependency, up to the result limit
      */
-    public List<SearchResult> findDependenciesOf(String className) {
-        if (dependencyAnalyzer == null) {
+    public List<SearchResult> findDependenciesOf(String className)
+    {
+        if (dependencyAnalyzer == null)
+        {
             withDependencies();
         }
 
         Set<String> dependencies = dependencyAnalyzer.getDependencies(className);
         List<SearchResult> results = new ArrayList<>();
-        for (String dep : dependencies) {
+        for (String dep : dependencies)
+        {
             if (results.size() >= maxResults) break;
             ClassFile cf = classPool.get(dep);
             results.add(new SearchResult(cf, className + " depends on this"));
@@ -335,23 +451,28 @@ public class PatternSearch {
         return results;
     }
 
-    // ===== Type Inference Queries =====
+    // Type Inference Queries
 
     /**
-     * Find potential null pointer dereferences.
-     * Uses type inference to find method calls or field accesses on potentially null values.
+     * Finds calls and field reads whose receiver type inference cannot prove non-null.
+     * Methods that fail to lift or analyze are skipped.
+     *
+     * @return one result per suspect dereference, up to the result limit
      */
-    public List<SearchResult> findPotentialNullDereferences() {
+    public List<SearchResult> findPotentialNullDereferences()
+    {
         List<SearchResult> results = new ArrayList<>();
 
-        for (MethodEntry method : getTargetMethods()) {
+        for (MethodEntry method : getTargetMethods())
+        {
             if (results.size() >= maxResults) break;
             if (method.getCodeAttribute() == null) continue;
 
             ClassFile cf = getClassFileForMethod(method);
             if (cf == null) continue;
 
-            try {
+            try
+            {
                 SSA ssa = new SSA(cf.getConstPool());
                 IRMethod irMethod = ssa.lift(method);
                 if (irMethod == null) continue;
@@ -359,18 +480,23 @@ public class PatternSearch {
                 TypeInferenceAnalyzer typeAnalyzer = new TypeInferenceAnalyzer(irMethod);
                 typeAnalyzer.analyze();
 
-                for (IRBlock block : irMethod.getBlocks()) {
-                    for (IRInstruction instr : block.getInstructions()) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
+                    for (IRInstruction instr : block.getInstructions())
+                    {
                         // Check for method calls on nullable receivers
-                        if (instr instanceof InvokeInstruction) {
+                        if (instr instanceof InvokeInstruction)
+                        {
                             InvokeInstruction invoke = (InvokeInstruction) instr;
-                            if (invoke.getInvokeType() != InvokeType.STATIC) {
+                            if (invoke.getInvokeType() != InvokeType.STATIC)
+                            {
                                 var receiver = invoke.getReceiver();
-                                if (receiver instanceof SSAValue) {
-                                    TypeState state = typeAnalyzer.getTypeState(
-                                        (SSAValue) receiver);
+                                if (receiver instanceof SSAValue)
+                                {
+                                    TypeState state = typeAnalyzer.getTypeState((SSAValue) receiver);
                                     if (state.getNullability() == Nullability.UNKNOWN ||
-                                        state.getNullability() == Nullability.NULL) {
+                                        state.getNullability() == Nullability.NULL)
+                                        {
                                         results.add(new SearchResult(cf, method, instr, -1,
                                             "potential null dereference: " + invoke.getOwner() + "." +
                                             invoke.getName() + " on nullable receiver"));
@@ -381,15 +507,18 @@ public class PatternSearch {
                         }
 
                         // Check for field access on nullable receiver
-                        if (instr instanceof FieldAccessInstruction) {
+                        if (instr instanceof FieldAccessInstruction)
+                        {
                             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-                            if (fieldAccess.isLoad()) {
+                            if (fieldAccess.isLoad())
+                            {
                                 var obj = fieldAccess.getObjectRef();
-                                if (obj instanceof SSAValue) {
-                                    TypeState state = typeAnalyzer.getTypeState(
-                                        (SSAValue) obj);
+                                if (obj instanceof SSAValue)
+                                {
+                                    TypeState state = typeAnalyzer.getTypeState((SSAValue) obj);
                                     if (state.getNullability() == Nullability.UNKNOWN ||
-                                        state.getNullability() == Nullability.NULL) {
+                                        state.getNullability() == Nullability.NULL)
+                                        {
                                         results.add(new SearchResult(cf, method, instr, -1,
                                             "potential null dereference: field access on nullable"));
                                         if (results.size() >= maxResults) return results;
@@ -399,7 +528,9 @@ public class PatternSearch {
                         }
                     }
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 // Skip methods that fail to analyze
             }
         }
@@ -407,33 +538,40 @@ public class PatternSearch {
         return results;
     }
 
-    // ===== Internal Implementation =====
+    // Internal Implementation
 
-    private List<SearchResult> findInstructions(PatternMatcher pattern) {
+    private List<SearchResult> findInstructions(PatternMatcher pattern)
+    {
         List<SearchResult> results = new ArrayList<>();
 
-        for (MethodEntry method : getTargetMethods()) {
+        for (MethodEntry method : getTargetMethods())
+        {
             if (results.size() >= maxResults) break;
             if (method.getCodeAttribute() == null) continue;
 
             ClassFile cf = getClassFileForMethod(method);
             if (cf == null) continue;
 
-            try {
+            try
+            {
                 SSA ssa = new SSA(cf.getConstPool());
                 IRMethod irMethod = ssa.lift(method);
                 if (irMethod == null) continue;
 
-                for (IRBlock block : irMethod.getBlocks()) {
-                    for (IRInstruction instr : block.getInstructions()) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
+                    for (IRInstruction instr : block.getInstructions())
+                    {
                         if (results.size() >= maxResults) break;
-                        if (pattern.matches(instr, irMethod, method, cf)) {
-                            results.add(new SearchResult(cf, method, instr, -1,
-                                describeInstruction(instr)));
+                        if (pattern.matches(instr, irMethod, method, cf))
+                        {
+                            results.add(new SearchResult(cf, method, instr, -1, describeInstruction(instr)));
                         }
                     }
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 // Skip methods that fail to lift
             }
         }
@@ -441,69 +579,96 @@ public class PatternSearch {
         return results;
     }
 
-    private List<MethodEntry> getTargetMethods() {
-        if (!targetMethods.isEmpty()) {
+    private List<MethodEntry> getTargetMethods()
+    {
+        if (!targetMethods.isEmpty())
+        {
             return targetMethods;
         }
 
         List<MethodEntry> methods = new ArrayList<>();
-        if (targetClasses.isEmpty()) {
+        if (targetClasses.isEmpty())
+        {
             // Would need to iterate all classes - placeholder
             return methods;
         }
 
-        for (ClassFile cf : targetClasses) {
+        for (ClassFile cf : targetClasses)
+        {
             methods.addAll(cf.getMethods());
         }
         return methods;
     }
 
-    private ClassFile getClassFileForMethod(MethodEntry method) {
+    private ClassFile getClassFileForMethod(MethodEntry method)
+    {
         String owner = method.getOwnerName();
-        if (owner != null) {
+        if (owner != null)
+        {
             return classPool.get(owner);
         }
         // Try to find by checking target classes
-        for (ClassFile cf : targetClasses) {
-            if (cf.getMethods().contains(method)) {
+        for (ClassFile cf : targetClasses)
+        {
+            if (cf.getMethods().contains(method))
+            {
                 return cf;
             }
         }
         return null;
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name, String descriptor) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (name.equals(method.getName()) && descriptor.equals(method.getDesc())) {
+    private MethodEntry findMethod(ClassFile cf, String name, String descriptor)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (name.equals(method.getName()) && descriptor.equals(method.getDesc()))
+            {
                 return method;
             }
         }
         return null;
     }
 
-    private String describeInstruction(IRInstruction instr) {
-        if (instr instanceof InvokeInstruction) {
+    private String describeInstruction(IRInstruction instr)
+    {
+        if (instr instanceof InvokeInstruction)
+        {
             InvokeInstruction invoke = (InvokeInstruction) instr;
             return "call " + invoke.getOwner() + "." + invoke.getName();
-        } else if (instr instanceof FieldAccessInstruction) {
+        }
+        else if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
             String op = fieldAccess.isLoad() ? "read" : "write";
             return op + " " + fieldAccess.getOwner() + "." + fieldAccess.getName();
-        } else if (instr instanceof NewInstruction) {
+        }
+        else if (instr instanceof NewInstruction)
+        {
             return "new " + ((NewInstruction) instr).getClassName();
-        } else if (instr instanceof TypeCheckInstruction) {
+        }
+        else if (instr instanceof TypeCheckInstruction)
+        {
             TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
-            if (typeCheck.isInstanceOf()) {
+            if (typeCheck.isInstanceOf())
+            {
                 return "instanceof " + typeCheck.getTargetType();
-            } else {
+            }
+            else
+            {
                 return "cast to " + typeCheck.getTargetType();
             }
-        } else if (instr instanceof SimpleInstruction) {
+        }
+        else if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            if (simple.getOp() == SimpleOp.ATHROW) {
+            if (simple.getOp() == SimpleOp.ATHROW)
+            {
                 return "throw";
             }
-        } else if (instr instanceof ReturnInstruction) {
+        }
+        else if (instr instanceof ReturnInstruction)
+        {
             return "return";
         }
         return instr.getClass().getSimpleName();

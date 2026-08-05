@@ -1,7 +1,16 @@
 package com.tonic.demo;
 
-public class DemoClass {
-    public static void test(int[] arr) {
+/**
+ * Demo fixture whose test method exercises a nested if-else chain, used as recovery input by DemoTest.
+ */
+public class DemoClass
+{
+    /**
+     * Prints a case label for each array element using a nested if-else chain.
+     * @param arr the values to classify
+     */
+    public static void test(int[] arr)
+    {
         for (int i : arr)
         {
             if(i == 0)

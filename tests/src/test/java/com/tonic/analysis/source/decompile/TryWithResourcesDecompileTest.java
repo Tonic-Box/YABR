@@ -12,11 +12,15 @@ import java.nio.file.Paths;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regression for bug 5: try-with-resources reconstructs (and the throws clause is emitted). */
-public class TryWithResourcesDecompileTest {
+/**
+ * Regression for bug 5: try-with-resources reconstructs (and the throws clause is emitted).
+ */
+public class TryWithResourcesDecompileTest
+{
 
     @Test
-    public void tryWithResourcesReconstructs() throws Exception {
+    public void tryWithResourcesReconstructs() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S03_Exceptions.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

@@ -3,10 +3,12 @@ package com.tonic.analysis.execution.heap;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class ArrayInstanceTest {
+class ArrayInstanceTest
+{
 
     @Test
-    void testIntArrayCreation() {
+    void testIntArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 10);
         assertEquals(10, array.getLength());
         assertEquals("I", array.getComponentType());
@@ -15,7 +17,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testIntArrayAccess() {
+    void testIntArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
         array.setInt(0, 100);
         array.setInt(4, 500);
@@ -26,7 +29,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testIntArrayGenericAccess() {
+    void testIntArrayGenericAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 3);
         array.set(0, 10);
         array.set(1, 20);
@@ -36,14 +40,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testLongArrayCreation() {
+    void testLongArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "J", 5);
         assertEquals("J", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testLongArrayAccess() {
+    void testLongArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "J", 3);
         array.setLong(0, 1000000000000L);
         array.setLong(2, 9999999999999L);
@@ -53,14 +59,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testBooleanArrayCreation() {
+    void testBooleanArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "Z", 4);
         assertEquals("Z", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testBooleanArrayAccess() {
+    void testBooleanArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "Z", 3);
         array.setBoolean(0, true);
         array.setBoolean(1, false);
@@ -72,14 +80,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testByteArrayCreation() {
+    void testByteArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "B", 10);
         assertEquals("B", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testByteArrayAccess() {
+    void testByteArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "B", 3);
         array.setByte(0, (byte) 10);
         array.setByte(1, (byte) 20);
@@ -89,14 +99,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testCharArrayCreation() {
+    void testCharArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "C", 5);
         assertEquals("C", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testCharArrayAccess() {
+    void testCharArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "C", 5);
         array.setChar(0, 'H');
         array.setChar(1, 'e');
@@ -110,14 +122,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testShortArrayCreation() {
+    void testShortArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "S", 3);
         assertEquals("S", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testShortArrayAccess() {
+    void testShortArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "S", 2);
         array.setShort(0, (short) 1000);
         array.setShort(1, (short) 2000);
@@ -127,14 +141,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testFloatArrayCreation() {
+    void testFloatArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "F", 4);
         assertEquals("F", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testFloatArrayAccess() {
+    void testFloatArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "F", 3);
         array.setFloat(0, 3.14f);
         array.setFloat(1, 2.71f);
@@ -144,14 +160,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testDoubleArrayCreation() {
+    void testDoubleArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "D", 5);
         assertEquals("D", array.getComponentType());
         assertTrue(array.isPrimitiveArray());
     }
 
     @Test
-    void testDoubleArrayAccess() {
+    void testDoubleArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "D", 2);
         array.setDouble(0, 3.14159265359);
         array.setDouble(1, 2.71828182846);
@@ -161,7 +179,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testObjectArrayCreation() {
+    void testObjectArrayCreation()
+    {
         ArrayInstance array = new ArrayInstance(1, "Ljava/lang/String;", 5);
         assertEquals("Ljava/lang/String;", array.getComponentType());
         assertFalse(array.isPrimitiveArray());
@@ -169,7 +188,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testObjectArrayAccess() {
+    void testObjectArrayAccess()
+    {
         ArrayInstance array = new ArrayInstance(1, "Ljava/lang/Object;", 3);
         ObjectInstance obj1 = new ObjectInstance(10, "java/lang/String");
         ObjectInstance obj2 = new ObjectInstance(20, "java/lang/Integer");
@@ -184,7 +204,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testBoundsCheckingLowerBound() {
+    void testBoundsCheckingLowerBound()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
 
         HeapException ex = assertThrows(HeapException.class, () -> array.getInt(-1));
@@ -192,7 +213,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testBoundsCheckingUpperBound() {
+    void testBoundsCheckingUpperBound()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
 
         HeapException ex = assertThrows(HeapException.class, () -> array.getInt(5));
@@ -200,7 +222,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testBoundsCheckingOnSet() {
+    void testBoundsCheckingOnSet()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 3);
 
         assertThrows(HeapException.class, () -> array.setInt(-1, 100));
@@ -208,13 +231,15 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testNegativeLengthThrows() {
+    void testNegativeLengthThrows()
+    {
         HeapException ex = assertThrows(HeapException.class, () -> new ArrayInstance(1, "I", -1));
         assertTrue(ex.getMessage().contains("Negative array length"));
     }
 
     @Test
-    void testZeroLengthArray() {
+    void testZeroLengthArray()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 0);
         assertEquals(0, array.getLength());
 
@@ -222,7 +247,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ArrayInstance array = new ArrayInstance(255, "I", 10);
         String str = array.toString();
 
@@ -232,7 +258,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testWrongTypedAccessThrows() {
+    void testWrongTypedAccessThrows()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
 
         assertThrows(HeapException.class, () -> array.getLong(0));
@@ -240,20 +267,23 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testMultiDimensionalArrayComponentType() {
+    void testMultiDimensionalArrayComponentType()
+    {
         ArrayInstance array = new ArrayInstance(1, "[I", 5);
         assertEquals("[I", array.getComponentType());
         assertFalse(array.isPrimitiveArray());
     }
 
     @Test
-    void testArrayIsInstanceOfObject() {
+    void testArrayIsInstanceOfObject()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
         assertTrue(array.isInstanceOf("java/lang/Object"));
     }
 
     @Test
-    void testGenericGetWithBoolean() {
+    void testGenericGetWithBoolean()
+    {
         ArrayInstance array = new ArrayInstance(1, "Z", 3);
         array.set(0, true);
         array.set(1, false);
@@ -263,7 +293,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testGenericGetWithByte() {
+    void testGenericGetWithByte()
+    {
         ArrayInstance array = new ArrayInstance(1, "B", 2);
         array.set(0, (byte) 42);
 
@@ -271,7 +302,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testGenericGetWithChar() {
+    void testGenericGetWithChar()
+    {
         ArrayInstance array = new ArrayInstance(1, "C", 2);
         array.set(0, 'X');
 
@@ -279,7 +311,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testGenericGetWithShort() {
+    void testGenericGetWithShort()
+    {
         ArrayInstance array = new ArrayInstance(1, "S", 2);
         array.set(0, (short) 100);
 
@@ -287,7 +320,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testGenericGetWithLong() {
+    void testGenericGetWithLong()
+    {
         ArrayInstance array = new ArrayInstance(1, "J", 2);
         array.set(0, 123456789L);
 
@@ -295,7 +329,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testGenericGetWithFloat() {
+    void testGenericGetWithFloat()
+    {
         ArrayInstance array = new ArrayInstance(1, "F", 2);
         array.set(0, 1.5f);
 
@@ -303,7 +338,8 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testGenericGetWithDouble() {
+    void testGenericGetWithDouble()
+    {
         ArrayInstance array = new ArrayInstance(1, "D", 2);
         array.set(0, 2.5);
 
@@ -311,14 +347,16 @@ class ArrayInstanceTest {
     }
 
     @Test
-    void testArrayIdentity() {
+    void testArrayIdentity()
+    {
         ArrayInstance array = new ArrayInstance(42, "I", 5);
         assertEquals(42, array.getId());
         assertEquals(42, array.getIdentityHashCode());
     }
 
     @Test
-    void testArrayInheritance() {
+    void testArrayInheritance()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
         assertTrue(array instanceof ObjectInstance);
     }

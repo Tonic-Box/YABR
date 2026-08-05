@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@code make}=new/dup/invokespecial/areturn, {@code makeStr}=new/dup/ldc/invokespecial/areturn,
  * {@code plain}=const/ireturn (no new), {@code fact}=recursive invokestatic.
  */
-class SequenceQueryTest {
+class SequenceQueryTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -39,7 +40,8 @@ class SequenceQueryTest {
     private static ClassPool pool;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("query-seq");
@@ -50,7 +52,8 @@ class SequenceQueryTest {
         pool.loadClass(Files.readAllBytes(dir.resolve("t").resolve("Seq.class")));
     }
 
-    private List<String> methods(String query) throws Exception {
+    private List<String> methods(String query) throws Exception
+    {
         Query parsed = new QueryParser().parse(query);
         ProbePlan plan = new QueryPlanner().plan(parsed);
         return new QueryBatchRunner(pool).run(plan, null).matches().stream()
@@ -60,48 +63,53 @@ class SequenceQueryTest {
     }
 
     @Test
-    void adjacentOpcodes() throws Exception {
+    void adjacentOpcodes() throws Exception
+    {
         assertEquals(List.of("make", "makeStr"), methods("FIND methods WHERE SEQUENCE [ new, dup ]"));
     }
 
     @Test
-    void adjacencyIsStrict() throws Exception {
+    void adjacencyIsStrict() throws Exception
+    {
         // make has dup immediately before invokespecial; makeStr has an ldc in between.
         assertEquals(List.of("make"), methods("FIND methods WHERE SEQUENCE [ dup, invokespecial ]"));
     }
 
     @Test
-    void anyOneWildcard() throws Exception {
+    void anyOneWildcard() throws Exception
+    {
         // exactly one instruction between dup and invokespecial -> only makeStr (the ldc).
         assertEquals(List.of("makeStr"), methods("FIND methods WHERE SEQUENCE [ dup, _, invokespecial ]"));
     }
 
     @Test
-    void starRepetition() throws Exception {
+    void starRepetition() throws Exception
+    {
         assertEquals(List.of("make", "makeStr"),
                 methods("FIND methods WHERE SEQUENCE [ new, dup, _*, invokespecial ]"));
     }
 
     @Test
-    void gap() throws Exception {
-        assertEquals(List.of("make", "makeStr"),
-                methods("FIND methods WHERE SEQUENCE [ new, .., invokespecial ]"));
+    void gap() throws Exception
+    {
+        assertEquals(List.of("make", "makeStr"), methods("FIND methods WHERE SEQUENCE [ new, .., invokespecial ]"));
     }
 
     @Test
-    void predicateStepComposedWithFlag() throws Exception {
-        assertEquals(List.of("fact"),
-                methods("FIND methods WHERE recursive AND SEQ [ (opcode matches /^invoke/) ]"));
+    void predicateStepComposedWithFlag() throws Exception
+    {
+        assertEquals(List.of("fact"), methods("FIND methods WHERE recursive AND SEQ [ (opcode matches /^invoke/) ]"));
     }
 
     @Test
-    void negativeMatchesNothing() throws Exception {
+    void negativeMatchesNothing() throws Exception
+    {
         assertEquals(List.of(), methods("FIND methods WHERE SEQUENCE [ dup, dup ]"));
     }
 
     @Test
-    void opcodesRegexShorthand() throws Exception {
-        assertEquals(List.of("make", "makeStr"),
-                methods("FIND methods WHERE opcodes matches /new .* invokespecial/"));
+    void opcodesRegexShorthand() throws Exception
+    {
+        assertEquals(List.of("make", "makeStr"), methods("FIND methods WHERE opcodes matches /new .* invokespecial/"));
     }
 }

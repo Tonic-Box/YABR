@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * string concatenation (recipe + bsm name) and lambda metafactory. The fixture is built
  * programmatically so it does not depend on the test compiler's class-file version.
  */
-class DynamicQueryTest {
+class DynamicQueryTest
+{
 
     private static final MethodHandle CONCAT_BSM = new MethodHandle(MethodHandle.H_INVOKESTATIC,
             "java/lang/invoke/StringConcatFactory", "makeConcatWithConstants",
@@ -42,7 +43,8 @@ class DynamicQueryTest {
     private static ClassFile classFile;
 
     @BeforeAll
-    static void buildFixture() {
+    static void buildFixture()
+    {
         classFile = ClassBuilder.create("Dyn")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "concat", "(I)V")
@@ -69,11 +71,13 @@ class DynamicQueryTest {
                 .build();
     }
 
-    private boolean matches(String methodName, String query) throws Exception {
+    private boolean matches(String methodName, String query) throws Exception
+    {
         return matches(classFile, methodName, query);
     }
 
-    private static boolean matches(ClassFile cf, String methodName, String query) throws Exception {
+    private static boolean matches(ClassFile cf, String methodName, String query) throws Exception
+    {
         Condition condition = ConditionParser.parse(query);
         MethodEntry method = cf.getMethods().stream()
                 .filter(m -> m.getName().equals(methodName))
@@ -84,7 +88,8 @@ class DynamicQueryTest {
     }
 
     @Test
-    void matchesStringConcatBootstrapAndRecipe() throws Exception {
+    void matchesStringConcatBootstrapAndRecipe() throws Exception
+    {
         assertTrue(matches("concat", "has indy where (category == \"stringconcat\")"));
         assertTrue(matches("concat", "has indy where (category == \"stringconcat\" and recipe contains \"x\")"));
         assertTrue(matches("concat", "has indy where (bsmName matches /makeConcat.*/)"));
@@ -92,32 +97,37 @@ class DynamicQueryTest {
     }
 
     @Test
-    void recipeRendersArgMarkerNotRawTag() throws Exception {
+    void recipeRendersArgMarkerNotRawTag() throws Exception
+    {
         assertTrue(matches("concat", "has indy where (recipe contains \"{arg}\")"));
         assertFalse(matches("concat", "has indy where (category == \"lambda\")"));
     }
 
     @Test
-    void matchesLambdaBootstrap() throws Exception {
+    void matchesLambdaBootstrap() throws Exception
+    {
         assertTrue(matches("lambda", "has indy where (category == \"lambda\")"));
         assertTrue(matches("lambda", "has indy where (bsmOwner == \"java/lang/invoke/LambdaMetafactory\")"));
         assertFalse(matches("lambda", "has indy where (category == \"stringconcat\")"));
     }
 
     @Test
-    void bootstrapArgsAreQueryable() throws Exception {
+    void bootstrapArgsAreQueryable() throws Exception
+    {
         assertTrue(matches("concat", "has indy where (has bsmArg where (kind == \"string\"))"));
         assertTrue(matches("lambda", "has indy where (has bsmArg where (kind == \"methodHandle\"))"));
     }
 
     @Test
-    void dynamicSiteExposesKind() throws Exception {
+    void dynamicSiteExposesKind() throws Exception
+    {
         // `kind` mirrors `site` on a dynamic subject, so it resolves on the site itself, not only on bsmArgs.
         assertTrue(matches("concat", "has indy where (kind == \"indy\")"));
     }
 
     @Test
-    void condyBootstrapArgumentIsQueryableByKindAndBsm() throws Exception {
+    void condyBootstrapArgumentIsQueryableByKindAndBsm() throws Exception
+    {
         // Build a concat whose `{const}` is supplied by a CONSTANT_Dynamic - the exact shape that previously
         // returned no matches because a condy bsmArg (a dynamic subject) had no `kind` attribute.
         ClassFile cf = ClassBuilder.create("CondyArg")
@@ -155,7 +165,8 @@ class DynamicQueryTest {
     }
 
     @Test
-    void methodWithoutIndyDoesNotMatch() throws Exception {
+    void methodWithoutIndyDoesNotMatch() throws Exception
+    {
         assertFalse(matches("body", "has indy where (site == \"indy\")"));
     }
 }

@@ -23,20 +23,24 @@ import static org.junit.jupiter.api.Assertions.*;
  * StackScheduler schedules instructions for stack-based execution, inserting
  * LOAD and STORE operations as needed to manage the JVM operand stack.
  */
-class StackSchedulerTest {
+class StackSchedulerTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    // ========== Basic Scheduling Tests ==========
+    // Basic Scheduling Tests
 
     @Nested
-    class BasicSchedulingTests {
+    class BasicSchedulingTests
+    {
 
         @Test
-        void schedulerCreation() {
+        void schedulerCreation()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Sched", "test", "()V")
                 .entry()
                     .vreturn()
@@ -56,7 +60,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void schedulerSchedulesSimpleInstructions() {
+        void schedulerSchedulesSimpleInstructions()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Simple", "test", "()I")
                 .entry()
                     .iconst(42, "val")
@@ -78,7 +83,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void scheduleReturnsScheduledInstructions() {
+        void scheduleReturnsScheduledInstructions()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Ret", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -100,12 +106,12 @@ class StackSchedulerTest {
             assertNotNull(schedule);
 
             // Should have: EXECUTE(iconst), STORE/EXECUTE, EXECUTE(iconst), STORE/EXECUTE,
-            //              LOAD(a), LOAD(b), EXECUTE(add), STORE/EXECUTE(result), LOAD(result), EXECUTE(return)
             assertTrue(schedule.size() >= 4, "Schedule should have multiple instructions");
         }
 
         @Test
-        void emptyMethodSchedules() {
+        void emptyMethodSchedules()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Empty", "test", "()V")
                 .entry()
                     .vreturn()
@@ -127,13 +133,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Load Emission Tests ==========
+    // Load Emission Tests
 
     @Nested
-    class LoadEmissionTests {
+    class LoadEmissionTests
+    {
 
         @Test
-        void emitsLoadWhenOperandNotOnStack() {
+        void emitsLoadWhenOperandNotOnStack()
+        {
             // Create a scenario where a value needs to be loaded from local variable
             IRMethod method = IRBuilder.staticMethod("com/test/Load", "test", "()I")
                 .entry()
@@ -164,7 +172,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void loadInstructionHasCorrectRegister() {
+        void loadInstructionHasCorrectRegister()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/LoadReg", "test", "()I")
                 .entry()
                     .iconst(10, "x")
@@ -196,7 +205,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void multipleUsesRequireLoad() {
+        void multipleUsesRequireLoad()
+        {
             // Value used twice should be loaded each time it's needed
             IRMethod method = IRBuilder.staticMethod("com/test/MultiUse", "test", "()I")
                 .entry()
@@ -228,13 +238,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Store Emission Tests ==========
+    // Store Emission Tests
 
     @Nested
-    class StoreEmissionTests {
+    class StoreEmissionTests
+    {
 
         @Test
-        void emitsStoreWhenValueUsedMoreThanOnce() {
+        void emitsStoreWhenValueUsedMoreThanOnce()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Store", "test", "()I")
                 .entry()
                     .iconst(5, "a")
@@ -265,7 +277,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void storeInstructionHasCorrectRegister() {
+        void storeInstructionHasCorrectRegister()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/StoreReg", "test", "()I")
                 .entry()
                     .iconst(10, "x")
@@ -297,7 +310,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void storeNotEmittedForUnusedValue() {
+        void storeNotEmittedForUnusedValue()
+        {
             // A value that's defined but never used shouldn't need a store
             // (though it might still be scheduled, just not with a store after)
             IRMethod method = IRBuilder.staticMethod("com/test/NoStore", "test", "()I")
@@ -321,13 +335,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Immediate Use Detection Tests ==========
+    // Immediate Use Detection Tests
 
     @Nested
-    class ImmediateUseTests {
+    class ImmediateUseTests
+    {
 
         @Test
-        void immediateUseDoesNotRequireStore() {
+        void immediateUseDoesNotRequireStore()
+        {
             // If value is used immediately by next instruction only, no store needed
             IRMethod method = IRBuilder.staticMethod("com/test/Immediate", "test", "()I")
                 .entry()
@@ -354,7 +370,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void nonImmediateUseRequiresStore() {
+        void nonImmediateUseRequiresStore()
+        {
             // If value is not used immediately, it needs to be stored
             IRMethod method = IRBuilder.staticMethod("com/test/NotImmediate", "test", "()I")
                 .entry()
@@ -385,7 +402,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void chainedImmediateUses() {
+        void chainedImmediateUses()
+        {
             // a -> b -> c, each immediately used
             IRMethod method = IRBuilder.staticMethod("com/test/Chained", "test", "()I")
                 .entry()
@@ -412,13 +430,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Two-Slot Stack Accounting Tests ==========
+    // Two-Slot Stack Accounting Tests
 
     @Nested
-    class TwoSlotStackTests {
+    class TwoSlotStackTests
+    {
 
         @Test
-        void longValuesCountAsTwoSlots() {
+        void longValuesCountAsTwoSlots()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Long", "test", "()J")
                 .entry()
                     .lconst(100L, "a")
@@ -447,8 +467,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void doubleValuesCountAsTwoSlots() {
-            // Create method with double constant manually
+        void doubleValuesCountAsTwoSlots()
+        {
             IRMethod method = new IRMethod("com/test/Double", "test", "()D", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -476,7 +496,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void mixedSingleAndTwoSlotValues() {
+        void mixedSingleAndTwoSlotValues()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Mixed", "test", "()I")
                 .entry()
                     .iconst(5, "a")      // 1 slot
@@ -484,7 +505,6 @@ class StackSchedulerTest {
                     .iconst(3, "c")      // 1 slot
                     .build();
 
-            // Add return
             IRBlock entry = method.getEntryBlock();
             ReturnInstruction ret = new ReturnInstruction(entry.getInstructions().get(0).getResult());
             entry.addInstruction(ret);
@@ -504,7 +524,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void maxStackReflectsActualSlotCount() {
+        void maxStackReflectsActualSlotCount()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/MaxSlot", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -530,13 +551,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Schedule Type Tests ==========
+    // Schedule Type Tests
 
     @Nested
-    class ScheduleTypeTests {
+    class ScheduleTypeTests
+    {
 
         @Test
-        void scheduleTypeLoad() {
+        void scheduleTypeLoad()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/TypeLoad", "test", "()I")
                 .entry()
                     .iconst(5, "a")
@@ -565,7 +588,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void scheduleTypeStore() {
+        void scheduleTypeStore()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/TypeStore", "test", "()I")
                 .entry()
                     .iconst(5, "a")
@@ -594,7 +618,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void scheduleTypeExecute() {
+        void scheduleTypeExecute()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/TypeExec", "test", "()I")
                 .entry()
                     .iconst(42, "val")
@@ -620,7 +645,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void allScheduleTypesValid() {
+        void allScheduleTypesValid()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/AllTypes", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -650,14 +676,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Multiple Block Tests ==========
+    // Multiple Block Tests
 
     @Nested
-    class MultipleBlockTests {
+    class MultipleBlockTests
+    {
 
         @Test
-        void schedulesEachBlockIndependently() {
-            // Create method with multiple blocks manually
+        void schedulesEachBlockIndependently()
+        {
             IRMethod method = new IRMethod("com/test/MultiBlock", "test", "(I)I", true);
 
             // Entry block
@@ -700,12 +727,12 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            // Should schedule instructions from both blocks
             assertTrue(schedule.size() > 0);
         }
 
         @Test
-        void stackResetBetweenBlocks() {
+        void stackResetBetweenBlocks()
+        {
             // Each block should start with empty simulated stack
             IRMethod method = new IRMethod("com/test/StackReset", "test", "(I)I", true);
 
@@ -741,14 +768,13 @@ class StackSchedulerTest {
             StackScheduler scheduler = new StackScheduler(method, regAlloc);
             scheduler.schedule();
 
-            // Should successfully schedule without stack overflow
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
         }
 
         @Test
-        void complexControlFlow() {
-            // Test with branch
+        void complexControlFlow()
+        {
             IRMethod method = new IRMethod("com/test/Branch", "test", "(I)I", true);
 
             // Entry block
@@ -777,7 +803,6 @@ class StackSchedulerTest {
             IRBlock merge = new IRBlock("merge");
             method.addBlock(merge);
 
-            // Add branch
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, param, IntConstant.of(0), trueBlock, falseBlock);
             entry.addInstruction(branch);
 
@@ -785,7 +810,6 @@ class StackSchedulerTest {
             entry.addSuccessor(trueBlock);
             entry.addSuccessor(falseBlock);
 
-            // Add gotos
             SimpleInstruction gotoFromTrue = SimpleInstruction.createGoto(merge);
             trueBlock.addInstruction(gotoFromTrue);
             trueBlock.addSuccessor(merge);
@@ -794,7 +818,6 @@ class StackSchedulerTest {
             falseBlock.addInstruction(gotoFromFalse);
             falseBlock.addSuccessor(merge);
 
-            // Return from merge
             ReturnInstruction ret = new ReturnInstruction(trueVal);
             merge.addInstruction(ret);
 
@@ -809,18 +832,19 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            // Should handle complex control flow
             assertTrue(schedule.size() > 0);
         }
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void noInstructions() {
+        void noInstructions()
+        {
             IRMethod method = new IRMethod("com/test/NoInstr", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -842,7 +866,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void singleInstruction() {
+        void singleInstruction()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Single", "test", "()V")
                 .entry()
                     .vreturn()
@@ -863,7 +888,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void deepExpressionNesting() {
+        void deepExpressionNesting()
+        {
             // ((a + b) + (c + d)) + ((e + f) + (g + h))
             IRMethod method = IRBuilder.staticMethod("com/test/Deep", "test", "()I")
                 .entry()
@@ -901,25 +927,23 @@ class StackSchedulerTest {
         }
 
         @Test
-        void parameterHandling() {
+        void parameterHandling()
+        {
             IRMethod method = new IRMethod("com/test/Params", "add", "(II)I", true);
 
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
             method.setEntryBlock(entry);
 
-            // Add parameters
             SSAValue param0 = new SSAValue(PrimitiveType.INT, "p0");
             SSAValue param1 = new SSAValue(PrimitiveType.INT, "p1");
             method.addParameter(param0);
             method.addParameter(param1);
 
-            // Create add instruction
             SSAValue sum = new SSAValue(PrimitiveType.INT, "sum");
             BinaryOpInstruction add = new BinaryOpInstruction(sum, BinaryOp.ADD, param0, param1);
             entry.addInstruction(add);
 
-            // Return
             ReturnInstruction ret = new ReturnInstruction(sum);
             entry.addInstruction(ret);
 
@@ -939,13 +963,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Integration Tests ==========
+    // Integration Tests
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void schedulerIntegratesWithRegisterAllocator() {
+        void schedulerIntegratesWithRegisterAllocator()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Integrate", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -979,7 +1005,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void maxStackIsConsistentWithSchedule() {
+        void maxStackIsConsistentWithSchedule()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Consistent", "test", "()I")
                 .entry()
                     .iconst(10, "a")

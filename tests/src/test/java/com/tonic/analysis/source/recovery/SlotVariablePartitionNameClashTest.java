@@ -22,15 +22,18 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * share one name, their types unify, and the declaration comes out typed as neither ({@code float
  * local4_1 = ...iterator()}).
  */
-class SlotVariablePartitionNameClashTest {
+class SlotVariablePartitionNameClashTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    private static StoreLocalInstruction store(IRBlock block, int slot, int offset) {
+    private static StoreLocalInstruction store(IRBlock block, int slot, int offset)
+    {
         SSAValue v = new SSAValue(PrimitiveType.INT);
         ConstantInstruction c = new ConstantInstruction(v, IntConstant.ZERO);
         c.setBytecodeOffset(offset - 1);
@@ -41,7 +44,8 @@ class SlotVariablePartitionNameClashTest {
         return s;
     }
 
-    private static LoadLocalInstruction load(IRBlock block, int slot, int offset) {
+    private static LoadLocalInstruction load(IRBlock block, int slot, int offset)
+    {
         LoadLocalInstruction l = new LoadLocalInstruction(new SSAValue(PrimitiveType.INT), slot);
         l.setBytecodeOffset(offset);
         block.addInstruction(l);
@@ -49,7 +53,8 @@ class SlotVariablePartitionNameClashTest {
     }
 
     @Test
-    void aFallbackNameAvoidsDebugNamesOnOtherSlots() {
+    void aFallbackNameAvoidsDebugNamesOnOtherSlots()
+    {
         IRMethod method = new IRMethod("com/test/Clash", "m", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -70,8 +75,7 @@ class SlotVariablePartitionNameClashTest {
 
         assertEquals("local4_1", partition.nameForStore(namedStore),
                 "the debug name on slot 9 is authoritative for its own components");
-        assertEquals(partition.nameForStore(namedStore), partition.nameForLoad(namedLoad),
-                "one variable, one name");
+        assertEquals(partition.nameForStore(namedStore), partition.nameForLoad(namedLoad), "one variable, one name");
         assertNotEquals("local4_1", partition.nameForStore(first),
                 "slot 4 must not synthesize a name another slot already carries");
         assertNotEquals("local4_1", partition.nameForStore(second),

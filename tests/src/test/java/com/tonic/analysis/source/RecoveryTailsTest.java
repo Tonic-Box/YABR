@@ -32,21 +32,21 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Recovery tails that emitted references to variables that no longer exist:
- * <ul>
- * <li>A declaration merge that MOVES the merged value's evaluation above intervening statements is
+ * - A declaration merge that MOVES the merged value's evaluation above intervening statements is
  *     unsound when one of them declares a name the value reads
  *     ({@code float s = 0; int x = a[0]; s = s + t[x];} must not become
- *     {@code float s = 0 + t[x]; int x = a[0];}).</li>
- * <li>A ternary collapse discards its arm blocks, so an arm-produced allocation must inline as the
- *     allocation itself, never as the discarded temp's name.</li>
- * <li>A {@code synchronized} lock materialized into the scaffolding slot the sync recovery consumes
- *     must recover as the lock expression, not the never-emitted slot name.</li>
- * </ul>
+ *     {@code float s = 0 + t[x]; int x = a[0];}).
+ * - A ternary collapse discards its arm blocks, so an arm-produced allocation must inline as the
+ *     allocation itself, never as the discarded temp's name.
+ * - A {@code synchronized} lock materialized into the scaffolding slot the sync recovery consumes
+ *     must recover as the lock expression, not the never-emitted slot name.
  */
-class RecoveryTailsTest {
+class RecoveryTailsTest
+{
 
     @Test
-    void aDeclarationMergeRespectsInterveningDeclarations() throws Exception {
+    void aDeclarationMergeRespectsInterveningDeclarations() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Accum",
                 "public class Accum {",
                 "    static float total(float[] t, int[] coords) {",
@@ -74,7 +74,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aTernaryArmAllocationInlines() throws Exception {
+    void aTernaryArmAllocationInlines() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Fallback",
                 "public class Fallback {",
                 "    StringBuilder held;",
@@ -102,7 +103,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aSynchronizedLockRecoversItsExpression() throws Exception {
+    void aSynchronizedLockRecoversItsExpression() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Locked",
                 "public class Locked {",
                 "    private final Object gate = new Object();",
@@ -133,7 +135,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aSharedExitGuardChainFoldsToOneDisjunction() throws Exception {
+    void aSharedExitGuardChainFoldsToOneDisjunction() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("EqGuard",
                 "public class EqGuard {",
                 "    int kind;",
@@ -166,7 +169,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aStoreCarriedCallKeepsItsOrderAcrossAnEffect() throws Exception {
+    void aStoreCarriedCallKeepsItsOrderAcrossAnEffect() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Carried",
                 "public class Carried {",
                 "    static StringBuilder log = new StringBuilder();",
@@ -214,7 +218,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void switchCasesKeepTheirLayoutOrderAcrossRelowering() throws Exception {
+    void switchCasesKeepTheirLayoutOrderAcrossRelowering() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("CaseOrder",
                 "public class CaseOrder {",
                 "    enum Kind { SPHERE, BOX, OTHER }",
@@ -237,7 +242,8 @@ class RecoveryTailsTest {
         assertEquals("box|sphere|other", original, "the fixture itself must dispatch all three ways");
 
         ClassPool pool = new ClassPool();
-        for (ClassFile extra : loaded.values()) {
+        for (ClassFile extra : loaded.values())
+        {
             pool.loadClass(extra.write());
         }
         String d1 = ClassDecompiler.decompile(cf);
@@ -255,7 +261,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aQualifiedNestedArrayAllocationReferencesTheRealClass() throws Exception {
+    void aQualifiedNestedArrayAllocationReferencesTheRealClass() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Holder",
                 "public class Holder {",
                 "    enum Kind { A, B }",
@@ -275,7 +282,8 @@ class RecoveryTailsTest {
         assertEquals("AB", original, "the fixture itself must build and iterate the array");
 
         ClassPool pool = new ClassPool();
-        for (ClassFile each : loaded.values()) {
+        for (ClassFile each : loaded.values())
+        {
             pool.loadClass(each.write());
         }
         // The DOTTED source form of a nested type in an array allocation - what the decompile of a
@@ -300,7 +308,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aDefaultSharingAValueCaseKeepsItsArm() throws Exception {
+    void aDefaultSharingAValueCaseKeepsItsArm() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Shared",
                 "public class Shared {",
                 "    static int pick(int k) {",
@@ -344,7 +353,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aTailSynchronizedBlockDropsItsRedundantReturn() throws Exception {
+    void aTailSynchronizedBlockDropsItsRedundantReturn() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("SyncTail",
                 "import java.util.Iterator;",
                 "public class SyncTail {",
@@ -383,7 +393,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aValueReturningTailSynthesizesATypedReturn() throws Exception {
+    void aValueReturningTailSynthesizesATypedReturn() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("GuardTail",
                 "public class GuardTail {",
                 "    static boolean flag(int k) {",
@@ -425,7 +436,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aValueGuardKeepsItsBodyFormAcrossRelowering() throws Exception {
+    void aValueGuardKeepsItsBodyFormAcrossRelowering() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Orient",
                 "public class Orient {",
                 "    Object result;",
@@ -465,7 +477,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aComplementGuardAfterAnExitedGuardUnwraps() throws Exception {
+    void aComplementGuardAfterAnExitedGuardUnwraps() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("Unguard",
                 "import java.util.List;",
                 "public class Unguard {",
@@ -514,7 +527,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aTypedWrapRethrowCatchIsNotFinallyScaffolding() throws Exception {
+    void aTypedWrapRethrowCatchIsNotFinallyScaffolding() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("WrapCatch",
                 "public class WrapCatch {",
                 "    int size;",
@@ -562,15 +576,15 @@ class RecoveryTailsTest {
         // misclassification structured a phantom finally node, the region then declined, and the
         // constructor recovered as its unconditional guard throw alone.
         String d2 = ClassDecompiler.decompile(cf);
-        assertTrue(d2.contains("catch (NumberFormatException"),
-                "the typed catch survives the round trip:\n" + d2);
+        assertTrue(d2.contains("catch (NumberFormatException"), "the typed catch survives the round trip:\n" + d2);
         assertTrue(d2.contains("parseInt"), "the try body survives the round trip:\n" + d2);
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
     }
 
     @Test
-    void aTrySpilledReturnFoldsBackIntoTheTry() {
+    void aTrySpilledReturnFoldsBackIntoTheTry()
+    {
         // The modern-javac layout parks a returned value in a slot so the return sits outside the
         // protected range; recovery then renders `try { T x = expr; } catch { throw } return x;`.
         // The simplifier folds the spill back to the source's `try { return expr; }` form. (javac 11
@@ -578,29 +592,21 @@ class RecoveryTailsTest {
         SourceType obj =
                 new ReferenceSourceType("java/lang/Object");
         VarDeclStmt decl =
-                new VarDeclStmt(obj, "result",
-                        LiteralExpr.ofInt(7));
+                new VarDeclStmt(obj, "result", LiteralExpr.ofInt(7));
         BlockStmt tryBlock =
-                new BlockStmt(
-                        new java.util.ArrayList<>(java.util.List.of(
-                                (Statement) decl)));
+                new BlockStmt(new java.util.ArrayList<>(java.util.List.of((Statement) decl)));
         BlockStmt catchBody =
                 new BlockStmt(new java.util.ArrayList<>(java.util.List.of(
                         (Statement) new ThrowStmt(
                                 new VarRefExpr("e", obj)))));
         CatchClause clause =
-                new CatchClause(
-                        java.util.List.of(new ReferenceSourceType("java/lang/Exception")),
-                        "e", catchBody);
+                new CatchClause(java.util.List.of(new ReferenceSourceType("java/lang/Exception")), "e", catchBody);
         TryCatchStmt tryCatch =
-                new TryCatchStmt(tryBlock,
-                        new java.util.ArrayList<>(java.util.List.of(clause)), null);
+                new TryCatchStmt(tryBlock, new java.util.ArrayList<>(java.util.List.of(clause)), null);
         ReturnStmt ret =
-                new ReturnStmt(
-                        new VarRefExpr("result", obj));
+                new ReturnStmt(new VarRefExpr("result", obj));
         BlockStmt body =
-                new BlockStmt(new java.util.ArrayList<>(java.util.List.of(
-                        tryCatch, ret)));
+                new BlockStmt(new java.util.ArrayList<>(java.util.List.of(tryCatch, ret)));
 
         new ControlFlowSimplifier().transform(body);
 
@@ -609,12 +615,12 @@ class RecoveryTailsTest {
                 (TryCatchStmt) body.getStatements().get(0);
         Statement last =
                 ((BlockStmt) folded.getTryBlock()).getStatements().get(0);
-        assertTrue(last instanceof ReturnStmt,
-                "the spilled declaration becomes the try's own return: " + last);
+        assertTrue(last instanceof ReturnStmt, "the spilled declaration becomes the try's own return: " + last);
     }
 
     @Test
-    void aLambdaConstructorArgumentTakesTheDeclaredFunctionalType() throws Exception {
+    void aLambdaConstructorArgumentTakesTheDeclaredFunctionalType() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("HookCtor",
                 "public class HookCtor {",
                 "    static StringBuilder log = new StringBuilder();",
@@ -635,7 +641,8 @@ class RecoveryTailsTest {
         assertEquals("x", original, "the fixture itself must run the hook");
 
         ClassPool pool = new ClassPool();
-        for (ClassFile each : loaded.values()) {
+        for (ClassFile each : loaded.values())
+        {
             pool.loadClass(each.write());
         }
         String d1 = ClassDecompiler.decompile(cf);
@@ -651,7 +658,8 @@ class RecoveryTailsTest {
     }
 
     @Test
-    void aFinallyInsideAnIfArmSurvivesTheRelayeredLayout() throws Exception {
+    void aFinallyInsideAnIfArmSurvivesTheRelayeredLayout() throws Exception
+    {
         Map<String, ClassFile> loaded = compileAll("FinIf",
                 "import java.io.ByteArrayInputStream;",
                 "import java.io.IOException;",
@@ -697,7 +705,8 @@ class RecoveryTailsTest {
         assertEquals("so1rsr", original, "the fixture itself must take both arms");
 
         ClassPool pool = new ClassPool();
-        for (ClassFile each : loaded.values()) {
+        for (ClassFile each : loaded.values())
+        {
             pool.loadClass(each.write());
         }
         String d1 = ClassDecompiler.decompile(cf);
@@ -713,31 +722,38 @@ class RecoveryTailsTest {
                 "the round-tripped class must behave the same");
     }
 
-    /** Defines every fixture class in one loader and returns {@code main}'s Class. */
-    private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
+    /**
+     * Defines every fixture class in one loader and returns {@code main}'s Class.
+     */
+    private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception
+    {
         TestClassLoader loader = new TestClassLoader();
         Class<?> result = null;
-        for (ClassFile each : all.values()) {
+        for (ClassFile each : all.values())
+        {
             Class<?> c = loader.defineClass(each.getClassName().replace('/', '.'), each.write());
-            if (each == main) {
+            if (each == main)
+            {
                 result = c;
             }
         }
         return result;
     }
 
-    private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception {
+    private static Map<String, ClassFile> compileAll(String primary, String... lines) throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory(primary.toLowerCase());
         Path src = dir.resolve(primary + ".java");
         Files.writeString(src, String.join(System.lineSeparator(), lines));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         ClassPool pool = new ClassPool();
         Map<String, ClassFile> loaded = new HashMap<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class")) {
-            for (Path p : stream) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class"))
+        {
+            for (Path p : stream)
+            {
                 ClassFile cf = pool.loadClass(Files.readAllBytes(p));
                 loaded.put(cf.getClassName(), cf);
             }

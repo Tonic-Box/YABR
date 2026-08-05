@@ -17,18 +17,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for DefUseChains analysis.
  * Covers definition tracking, use tracking, and dead code detection.
  */
-class DefUseChainsTest {
+class DefUseChainsTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Tests ==========
+    // Basic Tests
 
     @Test
-    void computeOnEmptyMethod() {
+    void computeOnEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DefUseChains chains = new DefUseChains(method);
 
@@ -38,10 +41,11 @@ class DefUseChainsTest {
         assertNotNull(chains.getUses());
     }
 
-    // ========== Definition Tests ==========
+    // Definition Tests
 
     @Test
-    void getDefinitionForDefinedValue() {
+    void getDefinitionForDefinedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -59,7 +63,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void getDefinitionReturnsNullForUndefinedValue() {
+    void getDefinitionReturnsNullForUndefinedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DefUseChains chains = new DefUseChains(method);
         chains.compute();
@@ -68,10 +73,11 @@ class DefUseChainsTest {
         assertNull(chains.getDefinition(undefined));
     }
 
-    // ========== Use Tests ==========
+    // Use Tests
 
     @Test
-    void getUsesForUsedValue() {
+    void getUsesForUsedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -90,7 +96,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void getUsesReturnsEmptyForUnusedValue() {
+    void getUsesReturnsEmptyForUnusedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -107,10 +114,11 @@ class DefUseChainsTest {
         assertTrue(uses.isEmpty());
     }
 
-    // ========== getUsedValues Tests ==========
+    // getUsedValues Tests
 
     @Test
-    void getUsedValuesForInstruction() {
+    void getUsedValuesForInstruction()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -128,10 +136,11 @@ class DefUseChainsTest {
         assertTrue(usedValues.contains(v0));
     }
 
-    // ========== getDefinedValue Tests ==========
+    // getDefinedValue Tests
 
     @Test
-    void getDefinedValueForInstruction() {
+    void getDefinedValueForInstruction()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -149,7 +158,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void getDefinedValueReturnsNullForNoResult() {
+    void getDefinedValueReturnsNullForNoResult()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -164,10 +174,11 @@ class DefUseChainsTest {
         assertNull(chains.getDefinedValue(ret));
     }
 
-    // ========== hasUses Tests ==========
+    // hasUses Tests
 
     @Test
-    void hasUsesReturnsTrueForUsedValue() {
+    void hasUsesReturnsTrueForUsedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -184,7 +195,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void hasUsesReturnsFalseForUnusedValue() {
+    void hasUsesReturnsFalseForUnusedValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -200,10 +212,11 @@ class DefUseChainsTest {
         assertFalse(chains.hasUses(v0));
     }
 
-    // ========== getUseCount Tests ==========
+    // getUseCount Tests
 
     @Test
-    void getUseCountReturnsCorrectCount() {
+    void getUseCountReturnsCorrectCount()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -220,7 +233,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void getUseCountReturnsZeroForUnused() {
+    void getUseCountReturnsZeroForUnused()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -236,10 +250,11 @@ class DefUseChainsTest {
         assertEquals(0, chains.getUseCount(v0));
     }
 
-    // ========== isDeadCode Tests ==========
+    // isDeadCode Tests
 
     @Test
-    void isDeadCodeTrueForUnusedDefinition() {
+    void isDeadCodeTrueForUnusedDefinition()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -257,7 +272,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void isDeadCodeFalseForUsedDefinition() {
+    void isDeadCodeFalseForUsedDefinition()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -275,7 +291,8 @@ class DefUseChainsTest {
     }
 
     @Test
-    void isDeadCodeFalseForNoResult() {
+    void isDeadCodeFalseForNoResult()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -291,10 +308,11 @@ class DefUseChainsTest {
         assertFalse(chains.isDeadCode(ret));
     }
 
-    // ========== Phi Instruction Tests ==========
+    // Phi Instruction Tests
 
     @Test
-    void phiInstructionDefineValue() {
+    void phiInstructionDefineValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock merge = new IRBlock("merge");
@@ -316,10 +334,11 @@ class DefUseChainsTest {
         assertEquals(phi, chains.getDefinition(v0));
     }
 
-    // ========== Method Reference Tests ==========
+    // Method Reference Tests
 
     @Test
-    void getMethodReturnsMethod() {
+    void getMethodReturnsMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DefUseChains chains = new DefUseChains(method);
 

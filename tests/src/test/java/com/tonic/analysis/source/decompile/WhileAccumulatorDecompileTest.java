@@ -15,10 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * Regression for bug D: a while-loop accumulator (no constant-step counter) must not be promoted into a
  * for-loop header, which would declare it self-referentially and leave the return value out of scope.
  */
-public class WhileAccumulatorDecompileTest {
+public class WhileAccumulatorDecompileTest
+{
 
     @Test
-    public void whileAccumulatorStaysInScope() throws Exception {
+    public void whileAccumulatorStaysInScope() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S01_ControlFlow.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

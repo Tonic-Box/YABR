@@ -18,7 +18,8 @@ ClassPool classPool = ClassPool.getDefault();
 
 ```java
 // From InputStream
-try (InputStream is = new FileInputStream("MyClass.class")) {
+try (InputStream is = new FileInputStream("MyClass.class"))
+{
     ClassFile cf = classPool.loadClass(is);
 }
 
@@ -30,7 +31,8 @@ ClassFile cf = classPool.loadClass(classBytes);
 ClassFile cf = classPool.loadSystemClass("com/example/MyClass.class");
 
 // Load entire JAR
-try (JarFile jar = new JarFile("mylib.jar")) {
+try (JarFile jar = new JarFile("mylib.jar"))
+{
     classPool.loadJar(jar);
 }
 ```
@@ -272,7 +274,8 @@ boolean isPublic = Modifiers.isPublic(access);
 ```java
 CodeAttribute code = method.getCodeAttribute();
 
-if (code != null) {
+if (code != null)
+{
     int maxStack = code.getMaxStack();
     int maxLocals = code.getMaxLocals();
     byte[] bytecode = code.getCode();

@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * round trip is not yet a fixed point: the RECOMPILED synchronized layout still drops the catch on the second
  * decompile - a separate residual - but the recompiled bytecode itself is correct, as the execution asserts.)
  */
-class SyncNestedCatchInLoopFidelityTest {
+class SyncNestedCatchInLoopFidelityTest
+{
 
     private static final String SOURCE =
             "public class SyncNestedCatch {\n"
@@ -61,14 +62,14 @@ class SyncNestedCatchInLoopFidelityTest {
     private static Class<?> recompiledClass;
 
     @BeforeAll
-    static void compileAndRecompile() throws Exception {
+    static void compileAndRecompile() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("sync-nested-catch");
         Path src = dir.resolve("SyncNestedCatch.java");
         Files.writeString(src, SOURCE);
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
         byte[] bytes = Files.readAllBytes(dir.resolve("SyncNestedCatch.class"));
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.loadClass(bytes);
@@ -80,14 +81,16 @@ class SyncNestedCatchInLoopFidelityTest {
     }
 
     @Test
-    void nestedCatchIsPreservedAndCompilable() {
+    void nestedCatchIsPreservedAndCompilable()
+    {
         assertTrue(d1.contains("synchronized"), "the synchronized block must be preserved:\n" + d1);
         assertTrue(d1.contains("catch (RuntimeException"),
                 "the nested catch inside the loop must NOT be dropped (was uncompilable output):\n" + d1);
     }
 
     @Test
-    void theCaughtExceptionIsSwallowedNotPropagated() throws Exception {
+    void theCaughtExceptionIsSwallowedNotPropagated() throws Exception
+    {
         Object inst = recompiledClass.getDeclaredConstructor().newInstance();
         // i=0: sum+=0; i=1: f(1) throws, caught, sum unchanged; i=2: sum+=2; i=3: sum+=3 -> 5
         assertEquals(5, recompiledClass.getMethod("run").invoke(inst),

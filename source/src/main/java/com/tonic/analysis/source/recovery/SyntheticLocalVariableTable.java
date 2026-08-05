@@ -25,13 +25,15 @@ import java.util.Map;
  * the names are exactly the ones the decompiler renders in source ({@code local{slot}}, scope-aware, or a real
  * name when an LVT was present), so a live debugger reading this table shows locals matching the decompilation.
  *
- * <p>Each distinct {@code (slot, recovered-name)} pair becomes one entry — parameters and the receiver span the
+ * Each distinct {@code (slot, recovered-name)} pair becomes one entry - parameters and the receiver span the
  * whole method, body locals span the offsets of their loads/stores. Compiler temps that never occupy a JVM
  * local slot get no entry. The attribute is added to the original {@code Code} without changing any bytecode.
  */
-public final class SyntheticLocalVariableTable {
+public final class SyntheticLocalVariableTable
+{
 
-    private SyntheticLocalVariableTable() {
+    private SyntheticLocalVariableTable()
+    {
     }
 
     /**
@@ -40,23 +42,27 @@ public final class SyntheticLocalVariableTable {
      * @param method     the source method (the attribute's parent)
      * @param codeLength the original code length (scopes are clamped to it)
      * @param maxLocals  the method's {@code max_locals} (entry slots must be below it)
+     * @param constPool  the pool the entry names and descriptors are interned into
      * @return the synthetic attribute, or null when nothing recoverable
      */
-    public static LocalVariableTableAttribute build(IRMethod ir, RecoveryContext ctx, MethodEntry method,
-                                                    int codeLength, int maxLocals, ConstPool constPool) {
+    public static LocalVariableTableAttribute build(IRMethod ir, RecoveryContext ctx, MethodEntry method, int codeLength, int maxLocals, ConstPool constPool)
+    {
         SlotVariablePartition partition = ctx.getSlotPartition();
-        if (partition == null) {
+        if (partition == null)
+        {
             return null;
         }
         MethodLocals locals = new MethodLocals(ir);
         Map<String, Local> byKey = new LinkedHashMap<>();
 
         // Parameters + receiver: whole-method scope, names/types from the recovered parameter values.
-        for (SSAValue param : ir.getParameters()) {
+        for (SSAValue param : ir.getParameters())
+        {
             int slot = locals.slotOfParameter(param);
             String name = ctx.getVariableName(param);
             IRType type = param.getType();
-            if (slot < 0 || name == null || type == null) {
+            if (slot < 0 || name == null || type == null)
+            {
                 continue;
             }
             Local p = byKey.computeIfAbsent(slot + "|" + name, k -> new Local(slot, name));
@@ -65,56 +71,70 @@ public final class SyntheticLocalVariableTable {
         }
 
         // Body locals: each load/store contributes its recovered name and original bytecode offset.
-        for (IRBlock block : ir.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 int slot;
                 String name;
                 IRType type;
-                if (instr instanceof LoadLocalInstruction) {
+                if (instr instanceof LoadLocalInstruction)
+                {
                     LoadLocalInstruction load = (LoadLocalInstruction) instr;
                     slot = load.getLocalIndex();
                     name = partition.nameForLoad(load);
                     type = load.getResult() != null ? load.getResult().getType() : null;
-                } else if (instr instanceof StoreLocalInstruction) {
+                }
+                else if (instr instanceof StoreLocalInstruction)
+                {
                     StoreLocalInstruction store = (StoreLocalInstruction) instr;
                     slot = store.getLocalIndex();
                     name = partition.nameForStore(store);
                     type = typeOf(store.getValue());
-                } else {
+                }
+                else
+                {
                     continue;
                 }
                 int off = instr.getBytecodeOffset();
-                if (name == null || off < 0) {
+                if (name == null || off < 0)
+                {
                     continue;
                 }
                 Local local = byKey.computeIfAbsent(slot + "|" + name, k -> new Local(slot, name));
                 local.extend(off);
-                if (local.descriptor == null && type != null) {
+                if (local.descriptor == null && type != null)
+                {
                     local.descriptor = type.getDescriptor();
                 }
             }
         }
 
         List<LocalVariableTableEntry> entries = new ArrayList<>();
-        for (Local local : byKey.values()) {
+        for (Local local : byKey.values())
+        {
             int startPc;
             int length;
-            if (local.parameter || local.minOff == Integer.MAX_VALUE) {
+            if (local.parameter || local.minOff == Integer.MAX_VALUE)
+            {
                 startPc = 0;
                 length = codeLength;
-            } else {
+            }
+            else
+            {
                 startPc = Math.max(0, local.minOff);
                 length = Math.min(codeLength, local.maxOff + 1) - startPc;
             }
-            if (local.descriptor == null
-                    || !LvtSupport.valid(local.slot, maxLocals, startPc, length, codeLength)) {
+            if (local.descriptor == null || !LvtSupport.valid(local.slot, maxLocals, startPc, length, codeLength))
+            {
                 continue;
             }
             entries.add(LvtSupport.entry(constPool, local.slot, local.name, local.descriptor, startPc, length));
         }
 
         LvtSupport.dropSameSlotOverlaps(entries);
-        if (entries.isEmpty()) {
+        if (entries.isEmpty())
+        {
             return null;
         }
         int attrNameIndex = constPool.findOrAddUtf8("LocalVariableTable").getIndex(constPool);
@@ -125,11 +145,13 @@ public final class SyntheticLocalVariableTable {
         return attr;
     }
 
-    private static IRType typeOf(Value value) {
+    private static IRType typeOf(Value value)
+    {
         return value instanceof SSAValue ? value.getType() : null;
     }
 
-    private static final class Local {
+    private static final class Local
+    {
         final int slot;
         final String name;
         String descriptor;
@@ -137,12 +159,14 @@ public final class SyntheticLocalVariableTable {
         int maxOff = -1;
         boolean parameter;
 
-        Local(int slot, String name) {
+        Local(int slot, String name)
+        {
             this.slot = slot;
             this.name = name;
         }
 
-        void extend(int off) {
+        void extend(int off)
+        {
             minOff = Math.min(minOff, off);
             maxOff = Math.max(maxOff, off);
         }

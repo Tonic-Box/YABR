@@ -19,14 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for PhiInserter - verifies correct phi function insertion using Cytron algorithm.
  * Tests phi placement at dominance frontiers, duplicate prevention, and edge cases.
  */
-class PhiInserterTest {
+class PhiInserterTest
+{
 
     private IRMethod method;
     private DominatorTree dominatorTree;
     private PhiInserter phiInserter;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         // Reset ID counters for consistent test behavior
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
@@ -34,10 +36,11 @@ class PhiInserterTest {
         method = new IRMethod("com/test/TestClass", "testMethod", "()V", false);
     }
 
-    // ========== Basic Phi Insertion Tests ==========
+    // Basic Phi Insertion Tests
 
     @Test
-    void insertPhiAtSimpleJoinPoint() {
+    void insertPhiAtSimpleJoinPoint()
+    {
         // Create CFG: B0 -> B1 -> B3
         //                -> B2 -> B3
         // Diamond shape with join at B3
@@ -52,7 +55,6 @@ class PhiInserterTest {
         method.addBlock(b3);
         method.setEntryBlock(b0);
 
-        // Build CFG edges
         b0.addSuccessor(b1);
         b0.addSuccessor(b2);
         b1.addSuccessor(b3);
@@ -63,7 +65,6 @@ class PhiInserterTest {
         StoreLocalInstruction store1 = new StoreLocalInstruction(0, value1);
         b1.addInstruction(store1);
 
-        // Compute dominators and insert phis
         dominatorTree = new DominatorTree(method);
         dominatorTree.compute();
         phiInserter = new PhiInserter(dominatorTree);
@@ -79,7 +80,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void noPhi_whenNoDefinitions() {
+    void noPhi_whenNoDefinitions()
+    {
         // Create simple CFG with no variable definitions
         IRBlock b0 = new IRBlock("entry");
         IRBlock b1 = new IRBlock("block1");
@@ -94,13 +96,13 @@ class PhiInserterTest {
         phiInserter = new PhiInserter(dominatorTree);
         phiInserter.insertPhis(method);
 
-        // Verify: no phis inserted
         assertEquals(0, b0.getPhiInstructions().size(), "No phis in entry");
         assertEquals(0, b1.getPhiInstructions().size(), "No phis in block1");
     }
 
     @Test
-    void noPhi_whenSingleBlock() {
+    void noPhi_whenSingleBlock()
+    {
         // Single block with definition - no join points, no phis
         IRBlock b0 = new IRBlock("entry");
         method.addBlock(b0);
@@ -115,14 +117,14 @@ class PhiInserterTest {
         phiInserter = new PhiInserter(dominatorTree);
         phiInserter.insertPhis(method);
 
-        // Verify: no phis needed
         assertEquals(0, b0.getPhiInstructions().size(), "No phis in single block");
     }
 
-    // ========== Dominance Frontier Placement Tests ==========
+    // Dominance Frontier Placement Tests
 
     @Test
-    void phiAtCorrectDominanceFrontier_diamondCFG() {
+    void phiAtCorrectDominanceFrontier_diamondCFG()
+    {
         // Diamond CFG: entry -> left -> merge
         //                    -> right -> merge
         IRBlock entry = new IRBlock("entry");
@@ -160,7 +162,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void phiPlacement_nestedDiamond() {
+    void phiPlacement_nestedDiamond()
+    {
         // Nested diamond structure
         //      entry
         //     /     \
@@ -197,7 +200,6 @@ class PhiInserterTest {
         lmerge.addSuccessor(merge);
         right.addSuccessor(merge);
 
-        // Define variable in l1
         SSAValue val = new SSAValue(PrimitiveType.INT, "x");
         StoreLocalInstruction store = new StoreLocalInstruction(0, val);
         l1.addInstruction(store);
@@ -213,10 +215,11 @@ class PhiInserterTest {
         assertTrue(merge.getPhiInstructions().size() >= 1, "Phi at outer merge");
     }
 
-    // ========== Multiple Definitions Tests ==========
+    // Multiple Definitions Tests
 
     @Test
-    void multipleDefinitions_sameVariable() {
+    void multipleDefinitions_sameVariable()
+    {
         // Diamond with definitions in both branches
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -234,7 +237,6 @@ class PhiInserterTest {
         left.addSuccessor(merge);
         right.addSuccessor(merge);
 
-        // Define same variable in both branches
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left_def");
         SSAValue rightVal = new SSAValue(PrimitiveType.INT, "right_def");
         StoreLocalInstruction storeLeft = new StoreLocalInstruction(0, leftVal);
@@ -253,7 +255,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void multipleVariables_separatePhis() {
+    void multipleVariables_separatePhis()
+    {
         // Diamond with different variables in each branch
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -284,15 +287,18 @@ class PhiInserterTest {
         phiInserter = new PhiInserter(dominatorTree);
         phiInserter.insertPhis(method);
 
-        // Verify: two separate phis at merge
         assertEquals(2, merge.getPhiInstructions().size(), "Two phis at merge");
 
         boolean hasPhi0 = false, hasPhi1 = false;
-        for (PhiInstruction phi : merge.getPhiInstructions()) {
-            if (phi.getResult().getName().equals("phi_0")) {
+        for (PhiInstruction phi : merge.getPhiInstructions())
+        {
+            if (phi.getResult().getName().equals("phi_0"))
+            {
                 hasPhi0 = true;
                 assertEquals(PrimitiveType.INT, phi.getResult().getType());
-            } else if (phi.getResult().getName().equals("phi_1")) {
+            }
+            else if (phi.getResult().getName().equals("phi_1"))
+            {
                 hasPhi1 = true;
                 assertEquals(PrimitiveType.FLOAT, phi.getResult().getType());
             }
@@ -301,10 +307,11 @@ class PhiInserterTest {
         assertTrue(hasPhi1, "Should have phi for variable 1");
     }
 
-    // ========== Duplicate Prevention Tests ==========
+    // Duplicate Prevention Tests
 
     @Test
-    void preventDuplicatePhis_sameVariable() {
+    void preventDuplicatePhis_sameVariable()
+    {
         // Triangle: entry -> branch -> merge
         //           entry ---------> merge
         IRBlock entry = new IRBlock("entry");
@@ -335,7 +342,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void hasPhiForVariable_detectsExistingPhi() {
+    void hasPhiForVariable_detectsExistingPhi()
+    {
         IRBlock block = new IRBlock("test");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_5");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -369,7 +377,6 @@ class PhiInserterTest {
         dominatorTree.compute();
         phiInserter = new PhiInserter(dominatorTree);
 
-        // Insert phis twice
         phiInserter.insertPhis(method);
         int firstCount = merge.getPhiInstructions().size();
         phiInserter.insertPhis(method);
@@ -379,10 +386,11 @@ class PhiInserterTest {
         assertEquals(firstCount, secondCount, "Should not create duplicate phis");
     }
 
-    // ========== Loop Tests ==========
+    // Loop Tests
 
     @Test
-    void phiAtLoopHeader_forLoopVariable() {
+    void phiAtLoopHeader_forLoopVariable()
+    {
         // Simple loop: entry -> header <-> body
         //                       header -> exit
         IRBlock entry = new IRBlock("entry");
@@ -415,8 +423,10 @@ class PhiInserterTest {
         assertTrue(header.getPhiInstructions().size() >= 1, "Phi at loop header");
 
         boolean hasLoopPhi = false;
-        for (PhiInstruction phi : header.getPhiInstructions()) {
-            if (phi.getResult().getName().equals("phi_0")) {
+        for (PhiInstruction phi : header.getPhiInstructions())
+        {
+            if (phi.getResult().getName().equals("phi_0"))
+            {
                 hasLoopPhi = true;
             }
         }
@@ -424,7 +434,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void phiAtLoopHeader_multipleBackEdges() {
+    void phiAtLoopHeader_multipleBackEdges()
+    {
         // Loop with multiple back edges:
         // entry -> header -> body1 -> header
         //                 -> body2 -> header
@@ -449,7 +460,6 @@ class PhiInserterTest {
         body1.addSuccessor(header);
         body2.addSuccessor(header);
 
-        // Define in body1
         SSAValue val = new SSAValue(PrimitiveType.INT, "x");
         StoreLocalInstruction store = new StoreLocalInstruction(0, val);
         body1.addInstruction(store);
@@ -459,14 +469,14 @@ class PhiInserterTest {
         phiInserter = new PhiInserter(dominatorTree);
         phiInserter.insertPhis(method);
 
-        // Verify: phi at header (multiple predecessors)
         assertTrue(header.getPhiInstructions().size() >= 1, "Phi at loop header");
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void skipNonSSAValues_inStoreLocal() {
+    void skipNonSSAValues_inStoreLocal()
+    {
         // Test that non-SSAValue stores don't cause issues
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -499,7 +509,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void complexCFG_correctPhiPlacement() {
+    void complexCFG_correctPhiPlacement()
+    {
         // More complex CFG with multiple join points
         //        entry
         //       /     \
@@ -535,7 +546,6 @@ class PhiInserterTest {
         d.addSuccessor(merge);
         merge.addSuccessor(exit);
 
-        // Define variable in c
         SSAValue val = new SSAValue(PrimitiveType.INT, "x");
         StoreLocalInstruction store = new StoreLocalInstruction(0, val);
         c.addInstruction(store);
@@ -556,7 +566,8 @@ class PhiInserterTest {
     }
 
     @Test
-    void unreachableBlock_handledCorrectly() {
+    void unreachableBlock_handledCorrectly()
+    {
         // CFG with unreachable block
         IRBlock entry = new IRBlock("entry");
         IRBlock reachable = new IRBlock("reachable");
@@ -578,12 +589,12 @@ class PhiInserterTest {
         dominatorTree.compute();
         phiInserter = new PhiInserter(dominatorTree);
 
-        // Should handle gracefully without crash
         assertDoesNotThrow(() -> phiInserter.insertPhis(method));
     }
 
     @Test
-    void preservesVariableTypes() {
+    void preservesVariableTypes()
+    {
         // Verify that phi functions preserve the type from store instructions
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -601,7 +612,6 @@ class PhiInserterTest {
         left.addSuccessor(merge);
         right.addSuccessor(merge);
 
-        // Define with LONG type
         SSAValue val = new SSAValue(PrimitiveType.LONG, "long_val");
         StoreLocalInstruction store = new StoreLocalInstruction(2, val);
         left.addInstruction(store);
@@ -611,7 +621,6 @@ class PhiInserterTest {
         phiInserter = new PhiInserter(dominatorTree);
         phiInserter.insertPhis(method);
 
-        // Verify: phi has correct type
         assertEquals(1, merge.getPhiInstructions().size());
         PhiInstruction phi = merge.getPhiInstructions().get(0);
         assertEquals(PrimitiveType.LONG, phi.getResult().getType(), "Phi should preserve LONG type");

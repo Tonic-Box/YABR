@@ -6,26 +6,31 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ValidationResultTest {
+class ValidationResultTest
+{
 
     private ValidationResult result;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         result = new ValidationResult();
     }
 
     @Nested
-    class ErrorHandlingTests {
+    class ErrorHandlingTests
+    {
 
         @Test
-        void newResultIsValid() {
+        void newResultIsValid()
+        {
             assertTrue(result.isValid());
             assertFalse(result.hasErrors());
         }
 
         @Test
-        void addingErrorMakesInvalid() {
+        void addingErrorMakesInvalid()
+        {
             result.addError("Test error");
 
             assertFalse(result.isValid());
@@ -33,7 +38,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void errorsAreStoredAndRetrievable() {
+        void errorsAreStoredAndRetrievable()
+        {
             result.addError("Error 1");
             result.addError("Error 2");
 
@@ -44,25 +50,27 @@ class ValidationResultTest {
         }
 
         @Test
-        void getErrorsReturnsUnmodifiableList() {
+        void getErrorsReturnsUnmodifiableList()
+        {
             result.addError("Test error");
 
-            assertThrows(UnsupportedOperationException.class, () ->
-                result.getErrors().add("Another error")
-            );
+            assertThrows(UnsupportedOperationException.class, () -> result.getErrors().add("Another error"));
         }
     }
 
     @Nested
-    class WarningHandlingTests {
+    class WarningHandlingTests
+    {
 
         @Test
-        void newResultHasNoWarnings() {
+        void newResultHasNoWarnings()
+        {
             assertFalse(result.hasWarnings());
         }
 
         @Test
-        void addingWarningDoesNotMakeInvalid() {
+        void addingWarningDoesNotMakeInvalid()
+        {
             result.addWarning("Test warning");
 
             assertTrue(result.isValid());
@@ -70,7 +78,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void warningsAreStoredAndRetrievable() {
+        void warningsAreStoredAndRetrievable()
+        {
             result.addWarning("Warning 1");
             result.addWarning("Warning 2");
 
@@ -81,20 +90,21 @@ class ValidationResultTest {
         }
 
         @Test
-        void getWarningsReturnsUnmodifiableList() {
+        void getWarningsReturnsUnmodifiableList()
+        {
             result.addWarning("Test warning");
 
-            assertThrows(UnsupportedOperationException.class, () ->
-                result.getWarnings().add("Another warning")
-            );
+            assertThrows(UnsupportedOperationException.class, () -> result.getWarnings().add("Another warning"));
         }
     }
 
     @Nested
-    class MergeTests {
+    class MergeTests
+    {
 
         @Test
-        void mergeAddsErrorsFromOther() {
+        void mergeAddsErrorsFromOther()
+        {
             result.addError("Error 1");
 
             ValidationResult other = new ValidationResult();
@@ -108,7 +118,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void mergeAddsWarningsFromOther() {
+        void mergeAddsWarningsFromOther()
+        {
             result.addWarning("Warning 1");
 
             ValidationResult other = new ValidationResult();
@@ -122,7 +133,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void mergeEmptyResultHasNoEffect() {
+        void mergeEmptyResultHasNoEffect()
+        {
             result.addError("Error 1");
             result.addWarning("Warning 1");
 
@@ -135,10 +147,12 @@ class ValidationResultTest {
     }
 
     @Nested
-    class ReportTests {
+    class ReportTests
+    {
 
         @Test
-        void reportContainsErrors() {
+        void reportContainsErrors()
+        {
             result.addError("Error 1");
             result.addError("Error 2");
 
@@ -149,7 +163,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void reportContainsWarnings() {
+        void reportContainsWarnings()
+        {
             result.addWarning("Warning 1");
             result.addWarning("Warning 2");
 
@@ -160,13 +175,15 @@ class ValidationResultTest {
         }
 
         @Test
-        void reportIndicatesNoIssuesWhenEmpty() {
+        void reportIndicatesNoIssuesWhenEmpty()
+        {
             String report = result.getReport();
             assertTrue(report.contains("No errors or warnings"));
         }
 
         @Test
-        void reportContainsBothErrorsAndWarnings() {
+        void reportContainsBothErrorsAndWarnings()
+        {
             result.addError("Error 1");
             result.addWarning("Warning 1");
 
@@ -179,16 +196,19 @@ class ValidationResultTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringIndicatesValidWhenNoErrors() {
+        void toStringIndicatesValidWhenNoErrors()
+        {
             String str = result.toString();
             assertTrue(str.contains("VALID"));
         }
 
         @Test
-        void toStringIndicatesInvalidWhenErrors() {
+        void toStringIndicatesInvalidWhenErrors()
+        {
             result.addError("Test error");
 
             String str = result.toString();
@@ -197,7 +217,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void toStringShowsWarningCount() {
+        void toStringShowsWarningCount()
+        {
             result.addWarning("Warning 1");
             result.addWarning("Warning 2");
 
@@ -206,7 +227,8 @@ class ValidationResultTest {
         }
 
         @Test
-        void toStringShowsBothErrorAndWarningCounts() {
+        void toStringShowsBothErrorAndWarningCounts()
+        {
             result.addError("Error 1");
             result.addWarning("Warning 1");
 

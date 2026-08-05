@@ -25,11 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * class whose pool already exceeds 255 entries truncated the index (and, once re-parsed as a single byte,
  * surfaced as cp index 0). A correct {@code ldc} must widen to {@code ldc_w} when its index exceeds 255.
  */
-class LdcWideningTest {
+class LdcWideningTest
+{
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -37,7 +41,8 @@ class LdcWideningTest {
     }
 
     @Test
-    void ldcIndexAbove255WidensAndResolvesCorrectly() throws Exception {
+    void ldcIndexAbove255WidensAndResolvesCorrectly() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         pool.loadPlatformClass("java/lang/Object.class");
 
@@ -56,7 +61,8 @@ class LdcWideningTest {
         int base = 0x4000_0000;
         CodeWriter cw = new CodeWriter(m);
         Instruction first = cw.getInstructionList().get(0);
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++)
+        {
             cw.insertAfter(first, CodeBuilder.detached().ldc(base + i).pop().assemble(cf));
         }
         cw.write();
@@ -65,23 +71,30 @@ class LdcWideningTest {
         assertTrue(cp.getItems().size() > 255, "pool should exceed 255 entries: " + cp.getItems().size());
 
         // Re-parse the written method: every inserted ldc/ldc_w must still resolve to a real Integer in
-        // [base, base+count) — none truncated to a wrong/zero index.
+        // [base, base+count) - none truncated to a wrong/zero index.
         CodeWriter verify = new CodeWriter(m);
         int resolved = 0;
-        for (Instruction insn : verify.getInstructionList()) {
+        for (Instruction insn : verify.getInstructionList())
+        {
             int idx = -1;
-            if (insn instanceof LdcInstruction) {
+            if (insn instanceof LdcInstruction)
+            {
                 idx = ((LdcInstruction) insn).getCpIndex();
-            } else if (insn instanceof LdcWInstruction) {
+            }
+            else if (insn instanceof LdcWInstruction)
+            {
                 idx = ((LdcWInstruction) insn).getCpIndex();
             }
-            if (idx <= 0) {
+            if (idx <= 0)
+            {
                 continue;
             }
             Item<?> item = cp.getItem(idx);
-            if (item instanceof IntegerItem) {
+            if (item instanceof IntegerItem)
+            {
                 int v = ((IntegerItem) item).getValue();
-                if (v >= base && v < base + count) {
+                if (v >= base && v < base + count)
+                {
                     resolved++;
                 }
             }

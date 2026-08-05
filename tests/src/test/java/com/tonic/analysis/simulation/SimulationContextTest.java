@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for SimulationContext.
+ * * Tests for SimulationContext.
  */
-class SimulationContextTest {
+class SimulationContextTest
+{
 
     @Test
-    void testDefaults() {
+    void testDefaults()
+    {
         SimulationContext ctx = SimulationContext.defaults();
 
         assertEquals(SimulationMode.INSTRUCTION, ctx.getMode());
@@ -24,7 +26,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testWithMode() {
+    void testWithMode()
+    {
         SimulationContext ctx = SimulationContext.defaults()
             .withMode(SimulationMode.BLOCK);
 
@@ -33,7 +36,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testWithMaxCallDepth() {
+    void testWithMaxCallDepth()
+    {
         SimulationContext ctx = SimulationContext.defaults()
             .withMaxCallDepth(3);
 
@@ -42,7 +46,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testWithHeapTracking() {
+    void testWithHeapTracking()
+    {
         SimulationContext ctx = SimulationContext.defaults()
             .withHeapTracking(true);
 
@@ -50,7 +55,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testWithValueTracking() {
+    void testWithValueTracking()
+    {
         SimulationContext ctx = SimulationContext.defaults()
             .withValueTracking(true);
 
@@ -58,7 +64,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testWithStackOperationTracking() {
+    void testWithStackOperationTracking()
+    {
         SimulationContext ctx = SimulationContext.defaults()
             .withStackOperationTracking(false);
 
@@ -66,7 +73,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testChaining() {
+    void testChaining()
+    {
         SimulationContext ctx = SimulationContext.defaults()
             .withMode(SimulationMode.BLOCK)
             .withMaxCallDepth(5)
@@ -80,7 +88,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testIsInstructionLevel() {
+    void testIsInstructionLevel()
+    {
         SimulationContext instrLevel = SimulationContext.defaults()
             .withMode(SimulationMode.INSTRUCTION);
         assertTrue(instrLevel.isInstructionLevel());
@@ -91,7 +100,8 @@ class SimulationContextTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         SimulationContext ctx = SimulationContext.defaults();
         String str = ctx.toString();
 

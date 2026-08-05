@@ -6,15 +6,22 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class SecurityHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for AccessController and the native seed generator; privileged
+ * actions return null rather than being run.
+ */
+public final class SecurityHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerAccessControllerHandlers(registry);
         registerNativeSeedGeneratorHandlers(registry);
     }
 
-    private void registerAccessControllerHandlers(NativeRegistry registry) {
+    private void registerAccessControllerHandlers(NativeRegistry registry)
+    {
         registry.register("java/security/AccessController", "doPrivileged", "(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
 
@@ -25,15 +32,18 @@ public final class SecurityHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.nullRef());
     }
 
-    private void registerNativeSeedGeneratorHandlers(NativeRegistry registry) {
+    private void registerNativeSeedGeneratorHandlers(NativeRegistry registry)
+    {
         registry.register("sun/security/provider/NativeSeedGenerator", "nativeGenerateSeed", "([B)Z",
             (receiver, args, ctx) -> {
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     ArrayInstance arr = (ArrayInstance) args[0].asReference();
                     java.security.SecureRandom secureRandom = new java.security.SecureRandom();
                     byte[] bytes = new byte[arr.getLength()];
                     secureRandom.nextBytes(bytes);
-                    for (int i = 0; i < bytes.length; i++) {
+                    for (int i = 0; i < bytes.length; i++)
+                    {
                         arr.setByte(i, bytes[i]);
                     }
                     return ConcreteValue.intValue(1);

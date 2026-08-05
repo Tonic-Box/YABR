@@ -31,19 +31,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the operand stack like javac compiles it, not be spilled to a (type-reused, hence {@code Object}) local.
  * Validated by EXECUTING the recompiled bytecode (the Gradle test JVM does not verify), plus YABR's Verifier.
  */
-class ReceiverResidencyTest {
+class ReceiverResidencyTest
+{
 
     private static final String SRC =
         "package test; public class Recv { public static int f(int n) {"
         + " int s = 0; for (int i = 0; i < n; i++) { System.out.println(\"x\" + i); s = s + i; } return s; } }";
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void receiverStaysOnStackCorrectAndClean() throws Exception {
+    void receiverStaysOnStackCorrectAndClean() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         int pubStatic = new AccessBuilder().setPublic().setStatic().build();
         ClassFile cf = pool.createNewClass("test/Recv", new AccessBuilder().setPublic().build());
@@ -67,9 +70,12 @@ class ReceiverResidencyTest {
         ByteArrayOutputStream cap = new ByteArrayOutputStream();
         Object result;
         System.setOut(new PrintStream(cap));
-        try {
+        try
+        {
             result = f.invoke(null, 4);
-        } finally {
+        }
+        finally
+        {
             System.setOut(orig);
         }
         assertEquals(6, result, "loop result must be correct (0+1+2+3)");
@@ -79,12 +85,12 @@ class ReceiverResidencyTest {
         // Cleanliness + convergence: the receiver stays inline (no `Object` spill / `(PrintStream)` cast), stable.
         assertFalse(src1.contains("(PrintStream)"),
             "receiver should stay inline as System.out.println(...), not spilled to a cast local:\n" + src1);
-        assertTrue(src1.contains("System.out.println"),
-            "expected a clean System.out.println call:\n" + src1);
+        assertTrue(src1.contains("System.out.println"), "expected a clean System.out.println call:\n" + src1);
         assertEquals(src1, src2, "must round-trip identically:\n" + src1 + "\n---\n" + src2);
     }
 
-    private static void lowerF(ClassFile cf, ClassPool pool, String source, int access) {
+    private static void lowerF(ClassFile cf, ClassPool pool, String source, int access)
+    {
         CompilationUnit cu = JavaParser.create().parse(source);
         ClassDecl decl = (ClassDecl) cu.getPrimaryType();
         ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
@@ -92,30 +98,36 @@ class ReceiverResidencyTest {
         lowerer.setImports(cu.getImports());
         MethodDecl f = decl.getMethods().stream().filter(m -> m.getName().equals("f")).findFirst().orElseThrow();
         MethodEntry target = null;
-        for (MethodEntry m : cf.getMethods()) {
+        for (MethodEntry m : cf.getMethods())
+        {
             if (m.getName().equals("f")) { target = m; break; }
         }
-        if (target == null) {
+        if (target == null)
+        {
             target = cf.createNewMethodWithDescriptor(access, "f", "(I)I");
         }
         new SSA(cf.getConstPool()).lower(lowerer.lower(f, "test/Recv"), target);
         try { cf.rebuild(); } catch (Exception e) { throw new RuntimeException(e); }
     }
 
-    private static Class<?> defineClass(String name, byte[] bytes) throws Exception {
+    private static Class<?> defineClass(String name, byte[] bytes) throws Exception
+    {
         Method def = ClassLoader.class.getDeclaredMethod(
             "defineClass", String.class, byte[].class, int.class, int.class);
         def.setAccessible(true);
         return (Class<?>) def.invoke(new ClassLoader() {}, name, bytes, 0, bytes.length);
     }
 
-    private static String methodBody(String src, String name) {
+    private static String methodBody(String src, String name)
+    {
         boolean in = false;
         int depth = 0;
         StringBuilder sb = new StringBuilder();
-        for (String l : src.split("\n")) {
+        for (String l : src.split("\n"))
+        {
             if (!in && l.contains(" " + name + "(")) in = true;
-            if (in) {
+            if (in)
+            {
                 sb.append(l).append("\n");
                 depth += (int) (l.chars().filter(c -> c == '{').count() - l.chars().filter(c -> c == '}').count());
                 if (depth <= 0 && l.contains("}")) break;

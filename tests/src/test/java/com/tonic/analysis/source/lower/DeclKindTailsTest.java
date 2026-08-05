@@ -20,21 +20,21 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Three declaration-kind tails that failed whole classes:
- * <ul>
- * <li>An enum constant WITH A CLASS BODY compiles to an anonymous subclass that carries ACC_ENUM but
+ * - An enum constant WITH A CLASS BODY compiles to an anonymous subclass that carries ACC_ENUM but
  *     extends the enum - no legal source declares {@code enum X extends Y}, so such a class emits as a
- *     plain class.</li>
- * <li>A {@code package-info} class declares nothing recompilable; it is accepted as-is rather than
- *     parsed as {@code interface package-info}.</li>
- * <li>A declared type beats an initializer whose resolved type degraded to Object (an unresolvable
+ *     plain class.
+ * - A {@code package-info} class declares nothing recompilable; it is accepted as-is rather than
+ *     parsed as {@code interface package-info}.
+ * - A declared type beats an initializer whose resolved type degraded to Object (an unresolvable
  *     call return): {@code byte[] b = Ext.make(); b.length} must lower as arraylength, not as a field
- *     on Object.</li>
- * </ul>
+ *     on Object.
  */
-class DeclKindTailsTest {
+class DeclKindTailsTest
+{
 
     @Test
-    void anEnumConstantBodyEmitsAsAClass() throws Exception {
+    void anEnumConstantBodyEmitsAsAClass() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("enum-body");
@@ -45,15 +45,17 @@ class DeclKindTailsTest {
                 "    TIMES { public int apply(int a, int b) { return a * b; } };",
                 "    public abstract int apply(int a, int b);",
                 "}"));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile body = null;
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class")) {
-            for (Path p : stream) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.class"))
+        {
+            for (Path p : stream)
+            {
                 ClassFile cf = pool.loadClass(Files.readAllBytes(p));
-                if (cf.getClassName().equals("Op$1")) {
+                if (cf.getClassName().equals("Op$1"))
+                {
                     body = cf;
                 }
             }
@@ -62,12 +64,12 @@ class DeclKindTailsTest {
 
         String d1 = ClassDecompiler.decompile(body);
         assertFalse(d1.contains("enum Op$1"), "a constant body must not claim to be an enum:\n" + d1);
-        assertTrue(TestUtils.recompileSource(body, pool, d1, "Op$1"),
-                "the constant body must recompile:\n" + d1);
+        assertTrue(TestUtils.recompileSource(body, pool, d1, "Op$1"), "the constant body must recompile:\n" + d1);
     }
 
     @Test
-    void aPackageInfoClassIsAcceptedAsIs() throws Exception {
+    void aPackageInfoClassIsAcceptedAsIs() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("pkg-info");
@@ -82,12 +84,12 @@ class DeclKindTailsTest {
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("pkgy").resolve("package-info.class")));
         String d1 = ClassDecompiler.decompile(cf);
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, cf.getClassName()),
-                "package-info must be accepted:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, cf.getClassName()), "package-info must be accepted:\n" + d1);
     }
 
     @Test
-    void aDeclaredTypeBeatsAnUnresolvableInitializerType() throws Exception {
+    void aDeclaredTypeBeatsAnUnresolvableInitializerType() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("decl-type");
@@ -119,11 +121,11 @@ class DeclKindTailsTest {
         String d1 = ClassDecompiler.decompile(cf);
         assertTrue(TestUtils.recompileSource(cf, pool, d1, "UseExt"),
                 "the declared byte[] must carry - no field lookup on Object:\n" + d1);
-        assertEquals(original, invokeCheck(cf.write(), extBytes),
-                "the round-tripped class must behave the same");
+        assertEquals(original, invokeCheck(cf.write(), extBytes), "the round-tripped class must behave the same");
     }
 
-    private static Object invokeCheck(byte[] userBytes, byte[] extBytes) throws Exception {
+    private static Object invokeCheck(byte[] userBytes, byte[] extBytes) throws Exception
+    {
         TestClassLoader loader = new TestClassLoader();
         loader.defineClass("ExtSupplier", extBytes);
         Class<?> clazz = loader.defineClass("UseExt", userBytes);

@@ -11,38 +11,44 @@ import java.util.List;
 /**
  * Builds a ClassHierarchy from a ClassPool.
  */
-public class ClassHierarchyBuilder {
+public class ClassHierarchyBuilder
+{
 
     /**
      * Builds a complete class hierarchy from the given ClassPool.
-     *
      * @param classPool The ClassPool containing all classes
      * @return The built ClassHierarchy
      */
-    public static ClassHierarchy build(ClassPool classPool) {
+    public static ClassHierarchy build(ClassPool classPool)
+    {
         ClassHierarchy hierarchy = new ClassHierarchy();
 
         List<ClassFile> classes = getClassList(classPool);
-        if (classes == null) {
+        if (classes == null)
+        {
             return hierarchy;
         }
 
-        // First pass: create all nodes
-        for (ClassFile cf : classes) {
+        for (ClassFile cf : classes)
+        {
             hierarchy.getOrCreateNode(cf.getClassName(), cf);
         }
 
         // Second pass: establish relationships
-        for (ClassFile cf : classes) {
+        for (ClassFile cf : classes)
+        {
             ClassNode node = hierarchy.getNode(cf.getClassName());
 
             String superName = cf.getSuperClassName();
-            if (superName != null && !superName.equals("java/lang/Object")) {
+            if (superName != null && !superName.equals("java/lang/Object"))
+            {
                 ClassFile superFile = classPool.get(superName);
                 ClassNode superNode = hierarchy.getOrCreateNode(superName, superFile);
                 node.setSuperClass(superNode);
                 superNode.addSubClass(node);
-            } else if (superName != null) {
+            }
+            else if (superName != null)
+            {
                 // java/lang/Object - create external node
                 ClassNode objectNode = hierarchy.getOrCreateNode("java/lang/Object", null);
                 node.setSuperClass(objectNode);
@@ -50,9 +56,11 @@ public class ClassHierarchyBuilder {
             }
 
             // Set interfaces - they are stored as constant pool indices
-            for (Integer ifaceIndex : cf.getInterfaces()) {
+            for (Integer ifaceIndex : cf.getInterfaces())
+            {
                 String ifaceName = resolveClassName(cf.getConstPool(), ifaceIndex);
-                if (ifaceName != null) {
+                if (ifaceName != null)
+                {
                     ClassFile ifaceFile = classPool.get(ifaceName);
                     ClassNode ifaceNode = hierarchy.getOrCreateNode(ifaceName, ifaceFile);
                     node.addInterface(ifaceNode);
@@ -67,19 +75,24 @@ public class ClassHierarchyBuilder {
     /**
      * Gets the list of classes from a ClassPool.
      */
-    private static List<ClassFile> getClassList(ClassPool classPool) {
+    private static List<ClassFile> getClassList(ClassPool classPool)
+    {
         return classPool.getClasses();
     }
 
     /**
      * Resolves a class name from a constant pool index.
      */
-    private static String resolveClassName(ConstPool cp, int classIndex) {
-        try {
+    private static String resolveClassName(ConstPool cp, int classIndex)
+    {
+        try
+        {
             ClassRefItem classRef = (ClassRefItem) cp.getItem(classIndex);
             Utf8Item utf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
             return utf8.getValue();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return null;
         }
     }
@@ -87,11 +100,11 @@ public class ClassHierarchyBuilder {
     /**
      * Rebuilds the hierarchy after class renames.
      * This is necessary because class names have changed.
-     *
      * @param classPool The ClassPool with renamed classes
      * @return The rebuilt ClassHierarchy
      */
-    public static ClassHierarchy rebuild(ClassPool classPool) {
+    public static ClassHierarchy rebuild(ClassPool classPool)
+    {
         return build(classPool);
     }
 }

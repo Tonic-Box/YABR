@@ -7,10 +7,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StackSnapshotTest {
+class StackSnapshotTest
+{
 
     @Test
-    void testConstructionFromConcreteStack() {
+    void testConstructionFromConcreteStack()
+    {
         ConcreteStack stack = new ConcreteStack(5);
         stack.pushInt(42);
         stack.pushInt(100);
@@ -21,7 +23,8 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testDepthMatches() {
+    void testDepthMatches()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(1);
         stack.pushInt(2);
@@ -32,7 +35,8 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testValuesInCorrectOrder() {
+    void testValuesInCorrectOrder()
+    {
         ConcreteStack stack = new ConcreteStack(5);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -48,7 +52,8 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testEmptyStackHandling() {
+    void testEmptyStackHandling()
+    {
         ConcreteStack stack = new ConcreteStack(5);
         StackSnapshot snapshot = new StackSnapshot(stack);
 
@@ -57,7 +62,8 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testGetValues() {
+    void testGetValues()
+    {
         ConcreteStack stack = new ConcreteStack(3);
         stack.pushInt(42);
         stack.pushInt(100);
@@ -72,12 +78,14 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testNullStackThrows() {
+    void testNullStackThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new StackSnapshot(null));
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ConcreteStack stack = new ConcreteStack(5);
         stack.pushInt(42);
 
@@ -89,7 +97,8 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testMixedTypes() {
+    void testMixedTypes()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         stack.pushLong(100L);
@@ -105,7 +114,8 @@ class StackSnapshotTest {
     }
 
     @Test
-    void testSingleValue() {
+    void testSingleValue()
+    {
         ConcreteStack stack = new ConcreteStack(5);
         stack.pushInt(999);
 

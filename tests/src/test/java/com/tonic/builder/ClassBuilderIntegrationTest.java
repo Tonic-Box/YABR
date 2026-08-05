@@ -11,13 +11,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-class ClassBuilderIntegrationTest {
+class ClassBuilderIntegrationTest
+{
 
     @Nested
-    class SimpleClassGeneration {
+    class SimpleClassGeneration
+    {
 
         @Test
-        void generateSimpleClass() {
+        void generateSimpleClass()
+        {
             ClassFile cf = ClassBuilder.create("com/test/SimpleClass")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_PUBLIC)
@@ -48,7 +51,8 @@ class ClassBuilderIntegrationTest {
         }
 
         @Test
-        void generateClassWithFields() {
+        void generateClassWithFields()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldClass")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_PUBLIC)
@@ -71,10 +75,12 @@ class ClassBuilderIntegrationTest {
     }
 
     @Nested
-    class ControlFlowTests {
+    class ControlFlowTests
+    {
 
         @Test
-        void generateMethodWithBranches() {
+        void generateMethodWithBranches()
+        {
             ClassFile cf = ClassBuilder.create("com/test/BranchClass")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_PUBLIC)
@@ -99,7 +105,8 @@ class ClassBuilderIntegrationTest {
         }
 
         @Test
-        void generateMethodWithLoop() {
+        void generateMethodWithLoop()
+        {
             ClassFile cf = ClassBuilder.create("com/test/LoopClass")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_PUBLIC)
@@ -140,10 +147,12 @@ class ClassBuilderIntegrationTest {
     }
 
     @Nested
-    class ArithmeticTests {
+    class ArithmeticTests
+    {
 
         @Test
-        void generateArithmeticMethods() {
+        void generateArithmeticMethods()
+        {
             ClassFile cf = ClassBuilder.create("com/test/ArithClass")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_PUBLIC)
@@ -175,10 +184,12 @@ class ClassBuilderIntegrationTest {
     }
 
     @Nested
-    class BytecodeVerificationTests {
+    class BytecodeVerificationTests
+    {
 
         @Test
-        void generatedBytecodePassesVerification() {
+        void generatedBytecodePassesVerification()
+        {
             ClassFile cf = ClassBuilder.create("com/test/VerifyClass")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_PUBLIC)
@@ -207,7 +218,8 @@ class ClassBuilderIntegrationTest {
         }
 
         @Test
-        void classFileMagicNumberIsCorrect() {
+        void classFileMagicNumberIsCorrect()
+        {
             byte[] bytes = ClassBuilder.create("com/test/MagicClass")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .code()
@@ -224,10 +236,12 @@ class ClassBuilderIntegrationTest {
     }
 
     @Nested
-    class LambdaLikeClassGeneration {
+    class LambdaLikeClassGeneration
+    {
 
         @Test
-        void generateLambdaLikeClass() {
+        void generateLambdaLikeClass()
+        {
             ClassFile cf = ClassBuilder.create("com/example/MyClass$$Lambda$1")
                 .version(AccessFlags.V11, 0)
                 .access(AccessFlags.ACC_FINAL, AccessFlags.ACC_SYNTHETIC)
@@ -265,15 +279,19 @@ class ClassBuilderIntegrationTest {
         }
     }
 
-    private static Set<String> getMethodNames(ClassFile cf) {
+    private static Set<String> getMethodNames(ClassFile cf)
+    {
         return cf.getMethods().stream()
             .map(MethodEntry::getName)
             .collect(Collectors.toSet());
     }
 
-    private static MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private static MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }

@@ -19,14 +19,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * A branch on a boolean local reads as the variable itself, not as a comparison against an int. A boolean
  * is an int once it is in a register, so nothing in the value's own type says otherwise - the declared type
  * has to be consulted, and the condition came out as {@code if (flag == 0)}, which javac rejects.
- * <p>
+ *
  * The variable is carried across a loop on purpose. Such a variable is read through its merge phi, which
  * carries no bytecode offset of its own, so its recorded range collapsed to the single store instruction -
  * covering neither the branch that reads it nor anything else. That makes the second generation the sharper
  * assertion here: the first can lean on javac's range, the second only works once the range emitted by the
  * round trip spans the variable too.
  */
-class BooleanLocalConditionTest {
+class BooleanLocalConditionTest
+{
 
     private static final String[] LINES = {
             "import java.util.ArrayList;",
@@ -69,14 +70,14 @@ class BooleanLocalConditionTest {
     };
 
     @Test
-    void aBranchOnABooleanLocalTestsTheVariable() throws Exception {
+    void aBranchOnABooleanLocalTestsTheVariable() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("bool-cond");
         Path src = dir.resolve("BoolCond.java");
         Files.writeString(src, String.join(System.lineSeparator(), LINES));
-        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0,
-                "fixture compiled");
+        assumeTrue(compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString()) == 0, "fixture compiled");
 
         ClassPool pool = new ClassPool();
         ClassFile cf = pool.loadClass(Files.readAllBytes(dir.resolve("BoolCond.class")));
@@ -86,8 +87,7 @@ class BooleanLocalConditionTest {
         String d1 = ClassDecompiler.decompile(cf);
         assertFalse(d1.contains("separate ==") || d1.contains("seen =="),
                 "a boolean local must not be compared against an int literal:\n" + d1);
-        assertTrue(TestUtils.recompileSource(cf, pool, d1, "BoolCond"),
-                "the decompiled source must recompile:\n" + d1);
+        assertTrue(TestUtils.recompileSource(cf, pool, d1, "BoolCond"), "the decompiled source must recompile:\n" + d1);
         assertEquals(original, TestUtils.loadAndVerify(cf).getMethod("check").invoke(null),
                 "the round-tripped class must behave the same");
 

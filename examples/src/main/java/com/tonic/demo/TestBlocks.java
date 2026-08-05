@@ -18,9 +18,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * Demonstrates the SSA IR block visitor pattern.
+ * Demo showing the SSA IR block visitor pattern over a generated class.
  */
-public class TestBlocks {
+public class TestBlocks
+{
 
     private static final int classAccess = new AccessBuilder()
             .setPublic()
@@ -35,7 +36,13 @@ public class TestBlocks {
             .setPrivate()
             .build();
 
-    public static void main(String[] args) throws IOException {
+    /**
+     * Generates a class with accessor methods and visits its IR blocks.
+     * @param args unused
+     * @throws IOException if class generation fails
+     */
+    public static void main(String[] args) throws IOException
+    {
         Logger.setLog(false);
         ClassPool classPool = ClassPool.getDefault();
         ClassFile classFile = ClassFactory.createClass(classPool, "com/tonic/ANewClass", classAccess);
@@ -58,24 +65,30 @@ public class TestBlocks {
     /**
      * Class visitor that visits each method and processes it with the SSA IR visitor.
      */
-    public static final class TestClassVisitor extends AbstractClassVisitor {
+    public static final class TestClassVisitor extends AbstractClassVisitor
+    {
 
         private final PrintBlockVisitor printBlockVisitor = new PrintBlockVisitor();
 
         @Override
-        public void visitMethod(MethodEntry methodEntry) {
+        public void visitMethod(MethodEntry methodEntry)
+        {
             super.visitMethod(methodEntry);
-            try {
+            try
+            {
                 System.out.println("Method: " + methodEntry.getName() + methodEntry.getDesc());
                 printBlockVisitor.process(methodEntry);
                 System.out.println();
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 throw new RuntimeException(e);
             }
         }
 
         @Override
-        public void visitField(FieldEntry fieldEntry) {
+        public void visitField(FieldEntry fieldEntry)
+        {
             super.visitField(fieldEntry);
         }
     }
@@ -83,10 +96,12 @@ public class TestBlocks {
     /**
      * Visitor that prints SSA IR blocks and instructions.
      */
-    public static class PrintBlockVisitor extends AbstractBlockVisitor {
+    public static class PrintBlockVisitor extends AbstractBlockVisitor
+    {
 
         @Override
-        public void visitBlock(IRBlock block) {
+        public void visitBlock(IRBlock block)
+        {
             System.out.println("\tBlock: " + block.getName());
             System.out.println("\t  Predecessors: " + block.getPredecessors().stream()
                     .map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
@@ -97,12 +112,14 @@ public class TestBlocks {
         }
 
         @Override
-        public void visitPhi(PhiInstruction phi) {
+        public void visitPhi(PhiInstruction phi)
+        {
             System.out.println("\t\t[PHI] " + IRPrinter.format(phi));
         }
 
         @Override
-        public void visitInstruction(IRInstruction instruction) {
+        public void visitInstruction(IRInstruction instruction)
+        {
             System.out.println("\t\t" + IRPrinter.format(instruction));
         }
     }

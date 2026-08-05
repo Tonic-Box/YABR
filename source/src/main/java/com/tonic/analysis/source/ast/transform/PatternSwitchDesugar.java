@@ -35,8 +35,7 @@ import java.util.List;
 /**
  * Desugars a Java 21 pattern-matching switch EXPRESSION (type-pattern and guarded arms) into the
  * {@code SwitchBootstraps.typeSwitch} invokedynamic + an integer dispatch switch, for the
- * source-to-bytecode front end — the inverse of {@link PatternSwitchReconstructor}.
- *
+ * source-to-bytecode front end - the inverse of {@link PatternSwitchReconstructor}.
  * <pre>
  *   T r = switch (sel) { case A a -&gt; e0; case B b when g -&gt; e1; default -&gt; d; };
  *     =&gt;
@@ -50,41 +49,56 @@ import java.util.List;
  *     default: { r = d; break; }
  *   }
  * </pre>
- *
  * Runs before {@link SwitchExpressionDesugar}: it lowers pattern switches fully (the resulting
  * integer switch and casts are handled by the ordinary statement lowering), leaving only constant
  * switch expressions for that pass. Record-deconstruction arms are not yet desugared here.
  */
-public class PatternSwitchDesugar implements ASTTransform {
+public class PatternSwitchDesugar implements ASTTransform
+{
 
     private int counter = 0;
     private final ClassPool classPool;
 
-    public PatternSwitchDesugar() {
+    /**
+     * Creates a desugarer with no class pool, so record-component lookups are unavailable.
+     */
+    public PatternSwitchDesugar()
+    {
         this(null);
     }
 
-    public PatternSwitchDesugar(ClassPool classPool) {
+    /**
+     * Creates a desugarer that resolves record components through a pool.
+     * @param classPool the pool used to read Record attributes, or null
+     */
+    public PatternSwitchDesugar(ClassPool classPool)
+    {
         this.classPool = classPool;
     }
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "PatternSwitchDesugar";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         return process(block.getStatements());
     }
 
-    private boolean process(List<Statement> stmts) {
+    private boolean process(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement s = stmts.get(i);
-            if (s instanceof VarDeclStmt) {
+            if (s instanceof VarDeclStmt)
+            {
                 VarDeclStmt vd = (VarDeclStmt) s;
-                if (isLowerablePatternSwitch(vd.getInitializer())) {
+                if (isLowerablePatternSwitch(vd.getInitializer()))
+                {
                     SwitchExpr se = (SwitchExpr) vd.getInitializer();
                     List<Statement> repl = new ArrayList<>();
                     repl.add(new VarDeclStmt(vd.getType(), vd.getName(), defaultLiteral(vd.getType())));
@@ -96,9 +110,11 @@ public class PatternSwitchDesugar implements ASTTransform {
                     continue;
                 }
             }
-            if (s instanceof ReturnStmt) {
+            if (s instanceof ReturnStmt)
+            {
                 ReturnStmt rs = (ReturnStmt) s;
-                if (isLowerablePatternSwitch(rs.getValue())) {
+                if (isLowerablePatternSwitch(rs.getValue()))
+                {
                     SwitchExpr se = (SwitchExpr) rs.getValue();
                     SourceType type = se.getType();
                     String tmp = "$pres$" + (counter++);
@@ -113,11 +129,13 @@ public class PatternSwitchDesugar implements ASTTransform {
                     continue;
                 }
             }
-            if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr) {
+            if (s instanceof ExprStmt && ((ExprStmt) s).getExpression() instanceof BinaryExpr)
+            {
                 BinaryExpr assign = (BinaryExpr) ((ExprStmt) s).getExpression();
                 if (assign.getOperator() == BinaryOperator.ASSIGN
                         && assign.getLeft() instanceof VarRefExpr
-                        && isLowerablePatternSwitch(assign.getRight())) {
+                        && isLowerablePatternSwitch(assign.getRight()))
+                {
                     SwitchExpr se = (SwitchExpr) assign.getRight();
                     VarRefExpr lhs = (VarRefExpr) assign.getLeft();
                     List<Statement> repl = desugar(se, lhs.getName(), lhs.getType());
@@ -129,18 +147,24 @@ public class PatternSwitchDesugar implements ASTTransform {
                 }
             }
         }
-        for (Statement s : stmts) {
+        for (Statement s : stmts)
+        {
             changed |= recurse(s);
         }
         return changed;
     }
 
-    private boolean recurse(ASTNode node) {
+    private boolean recurse(ASTNode node)
+    {
         boolean changed = false;
-        for (ASTNode child : node.getChildren()) {
-            if (child instanceof BlockStmt) {
+        for (ASTNode child : node.getChildren())
+        {
+            if (child instanceof BlockStmt)
+            {
                 changed |= process(((BlockStmt) child).getStatements());
-            } else {
+            }
+            else
+            {
                 changed |= recurse(child);
             }
         }
@@ -152,38 +176,53 @@ public class PatternSwitchDesugar implements ASTTransform {
      * and every record-deconstruction arm's record type is resolvable (so its component accessors
      * can be named).
      */
-    private boolean isLowerablePatternSwitch(Expression e) {
-        if (!(e instanceof SwitchExpr)) {
+    private boolean isLowerablePatternSwitch(Expression e)
+    {
+        if (!(e instanceof SwitchExpr))
+        {
             return false;
         }
         SwitchExpr se = (SwitchExpr) e;
         boolean anyPattern = false;
-        for (SwitchExpr.Arm arm : se.getArms()) {
-            if (arm.isRecordDeconstruction()) {
-                if (recordAccessorNames(arm.getPatternType()) == null) {
+        for (SwitchExpr.Arm arm : se.getArms())
+        {
+            if (arm.isRecordDeconstruction())
+            {
+                if (recordAccessorNames(arm.getPatternType()) == null)
+                {
                     return false;
                 }
                 anyPattern = true;
-            } else if (arm.isTypePattern()) {
+            }
+            else if (arm.isTypePattern())
+            {
                 anyPattern = true;
             }
         }
         return anyPattern;
     }
 
-    /** The record's component accessor names in declaration order, or null if not resolvable as a record. */
-    private List<String> recordAccessorNames(SourceType recordType) {
-        if (classPool == null || !(recordType instanceof ReferenceSourceType)) {
+    /**
+     * The record's component accessor names in declaration order, or null if not resolvable as a record.
+     */
+    private List<String> recordAccessorNames(SourceType recordType)
+    {
+        if (classPool == null || !(recordType instanceof ReferenceSourceType))
+        {
             return null;
         }
         ClassFile cf = classPool.get(((ReferenceSourceType) recordType).getInternalName());
-        if (cf == null) {
+        if (cf == null)
+        {
             return null;
         }
-        for (Attribute a : cf.getClassAttributes()) {
-            if (a instanceof RecordAttribute) {
+        for (Attribute a : cf.getClassAttributes())
+        {
+            if (a instanceof RecordAttribute)
+            {
                 List<String> names = new ArrayList<>();
-                for (String[] nd : ((RecordAttribute) a).getComponentNameAndDescriptors()) {
+                for (String[] nd : ((RecordAttribute) a).getComponentNameAndDescriptors())
+                {
                     names.add(nd[0]);
                 }
                 return names;
@@ -192,7 +231,8 @@ public class PatternSwitchDesugar implements ASTTransform {
         return null;
     }
 
-    private List<Statement> desugar(SwitchExpr se, String target, SourceType targetType) {
+    private List<Statement> desugar(SwitchExpr se, String target, SourceType targetType)
+    {
         // The selector temp is typed Object: typeSwitch matches against Object, and a uniform Object
         // temp keeps the indy descriptor, the null check, and the per-arm casts mutually consistent.
         SourceType selType = ReferenceSourceType.OBJECT;
@@ -202,15 +242,20 @@ public class PatternSwitchDesugar implements ASTTransform {
 
         List<SwitchExpr.Arm> patternArms = new ArrayList<>();
         SwitchExpr.Arm defaultArm = null;
-        for (SwitchExpr.Arm arm : se.getArms()) {
-            if (arm.isDefault()) {
+        for (SwitchExpr.Arm arm : se.getArms())
+        {
+            if (arm.isDefault())
+            {
                 defaultArm = arm;
-            } else if (arm.isTypePattern()) {
+            }
+            else if (arm.isTypePattern())
+            {
                 patternArms.add(arm);
             }
         }
         List<String> caseTypeInternals = new ArrayList<>();
-        for (SwitchExpr.Arm arm : patternArms) {
+        for (SwitchExpr.Arm arm : patternArms)
+        {
             caseTypeInternals.add(internalName(arm.getPatternType()));
         }
 
@@ -226,17 +271,22 @@ public class PatternSwitchDesugar implements ASTTransform {
                 typeSwitchIndy(selTemp, selType, selInternal, caseTypeInternals, 0)));
 
         boolean guarded = false;
-        for (SwitchExpr.Arm arm : patternArms) {
-            if (arm.getGuard() != null) {
+        for (SwitchExpr.Arm arm : patternArms)
+        {
+            if (arm.getGuard() != null)
+            {
                 guarded = true;
                 break;
             }
         }
 
-        if (!guarded) {
+        if (!guarded)
+        {
             out.add(buildDispatchSwitch(patternArms, defaultArm, selTemp, selType, idxTemp,
                     target, targetType, null, selInternal, caseTypeInternals));
-        } else {
+        }
+        else
+        {
             String label = "$pswitch$" + counter;
             SwitchStmt sw = buildDispatchSwitch(patternArms, defaultArm, selTemp, selType, idxTemp,
                     target, targetType, label, selInternal, caseTypeInternals);
@@ -254,15 +304,15 @@ public class PatternSwitchDesugar implements ASTTransform {
      * {@code typeSwitch} with the next restart index and {@code break}s only the inner switch so the
      * loop re-dispatches.
      */
-    private SwitchStmt buildDispatchSwitch(List<SwitchExpr.Arm> patternArms, SwitchExpr.Arm defaultArm,
-                                           String selTemp, SourceType selType, String idxTemp,
-                                           String target, SourceType targetType, String loopLabel,
-                                           String selInternal, List<String> caseTypeInternals) {
+    private SwitchStmt buildDispatchSwitch(List<SwitchExpr.Arm> patternArms, SwitchExpr.Arm defaultArm, String selTemp, SourceType selType, String idxTemp, String target, SourceType targetType, String loopLabel, String selInternal, List<String> caseTypeInternals)
+    {
         List<SwitchCase> cases = new ArrayList<>();
-        for (int k = 0; k < patternArms.size(); k++) {
+        for (int k = 0; k < patternArms.size(); k++)
+        {
             SwitchExpr.Arm arm = patternArms.get(k);
             List<Statement> body = new ArrayList<>(bindPattern(arm, k, selTemp, selType));
-            if (arm.getGuard() != null) {
+            if (arm.getGuard() != null)
+            {
                 List<Statement> pass = new ArrayList<>();
                 pass.add(assign(target, targetType, arm.getResult()));
                 pass.add(new BreakStmt(loopLabel));
@@ -272,7 +322,9 @@ public class PatternSwitchDesugar implements ASTTransform {
                         typeSwitchIndy(selTemp, selType, selInternal, caseTypeInternals, k + 1),
                         PrimitiveSourceType.INT)));
                 body.add(new BreakStmt());
-            } else {
+            }
+            else
+            {
                 body.add(assign(target, targetType, arm.getResult()));
                 body.add(new BreakStmt(loopLabel));
             }
@@ -290,21 +342,23 @@ public class PatternSwitchDesugar implements ASTTransform {
      * ({@code T b = (T) sel;}), or a temp cast plus a component-accessor declaration per binding for
      * a record deconstruction ({@code T $pdec = (T) sel; C0 b0 = $pdec.comp0(); ...}).
      */
-    private List<Statement> bindPattern(SwitchExpr.Arm arm, int k, String selTemp, SourceType selType) {
+    private List<Statement> bindPattern(SwitchExpr.Arm arm, int k, String selTemp, SourceType selType)
+    {
         List<Statement> body = new ArrayList<>();
         SourceType recordType = arm.getPatternType();
-        if (!arm.isRecordDeconstruction()) {
+        if (!arm.isRecordDeconstruction())
+        {
             body.add(new VarDeclStmt(recordType, arm.getPatternBinding(),
                     new CastExpr(recordType, new VarRefExpr(selTemp, selType))));
             return body;
         }
         String decTemp = selTemp + "_d" + k;
-        body.add(new VarDeclStmt(recordType, decTemp,
-                new CastExpr(recordType, new VarRefExpr(selTemp, selType))));
+        body.add(new VarDeclStmt(recordType, decTemp, new CastExpr(recordType, new VarRefExpr(selTemp, selType))));
         List<String> accessors = recordAccessorNames(recordType);
         String recordInternal = internalName(recordType);
         List<SwitchExpr.Component> comps = arm.getDeconstructionComponents();
-        for (int c = 0; c < comps.size(); c++) {
+        for (int c = 0; c < comps.size(); c++)
+        {
             SwitchExpr.Component comp = comps.get(c);
             body.add(new VarDeclStmt(comp.getType(), comp.getBinding(),
                     MethodCallExpr.instanceCall(new VarRefExpr(decTemp, recordType),
@@ -313,13 +367,14 @@ public class PatternSwitchDesugar implements ASTTransform {
         return body;
     }
 
-    private static Statement assign(String target, SourceType targetType, Expression value) {
+    private static Statement assign(String target, SourceType targetType, Expression value)
+    {
         return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
                 new VarRefExpr(target, targetType), value, targetType));
     }
 
-    private InvokeDynamicExpr typeSwitchIndy(String selTemp, SourceType selType, String selInternal,
-                                             List<String> caseTypeInternals, int restartIndex) {
+    private InvokeDynamicExpr typeSwitchIndy(String selTemp, SourceType selType, String selInternal, List<String> caseTypeInternals, int restartIndex)
+    {
         InvokeDynamicExpr indy = new InvokeDynamicExpr(
                 "typeSwitch",
                 "(L" + selInternal + ";I)I",
@@ -329,16 +384,22 @@ public class PatternSwitchDesugar implements ASTTransform {
         return indy;
     }
 
-    private static String internalName(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private static String internalName(SourceType type)
+    {
+        if (type instanceof ReferenceSourceType)
+        {
             return ((ReferenceSourceType) type).getInternalName();
         }
         return "java/lang/Object";
     }
 
-    /** A type-appropriate default so the target local is definitely-assigned. */
-    private static Expression defaultLiteral(SourceType type) {
-        if (type instanceof PrimitiveSourceType) {
+    /**
+     * A type-appropriate default so the target local is definitely-assigned.
+     */
+    private static Expression defaultLiteral(SourceType type)
+    {
+        if (type instanceof PrimitiveSourceType)
+        {
             PrimitiveSourceType p = (PrimitiveSourceType) type;
             if (p == PrimitiveSourceType.BOOLEAN) return LiteralExpr.ofBoolean(false);
             if (p == PrimitiveSourceType.LONG) return LiteralExpr.ofLong(0L);

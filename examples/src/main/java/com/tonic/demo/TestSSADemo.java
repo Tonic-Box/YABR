@@ -22,19 +22,28 @@ import java.io.InputStream;
 import java.util.List;
 
 /**
- * Demonstrates the SSA-form IR system capabilities using SSAShowcase class.
+ * Demo showing SSA lifting, analysis, and optimization over the SSAShowcase methods.
  */
-public class TestSSADemo {
+public class TestSSADemo
+{
 
     private static int successCount = 0;
     private static int failCount = 0;
 
-    public static void main(String[] args) throws IOException {
+    /**
+     * Lifts each SSAShowcase method to SSA, runs the demo passes, and reports pass/fail counts.
+     * @param args unused
+     * @throws IOException if the class resource cannot be read
+     */
+    public static void main(String[] args) throws IOException
+    {
         Logger.setLog(false);
         ClassPool classPool = ClassPool.getDefault();
 
-        try (InputStream is = TestSSADemo.class.getResourceAsStream("SSAShowcase.class")) {
-            if (is == null) {
+        try (InputStream is = TestSSADemo.class.getResourceAsStream("SSAShowcase.class"))
+        {
+            if (is == null)
+            {
                 throw new IOException("Resource 'SSAShowcase.class' not found. Make sure it's compiled to resources.");
             }
 
@@ -96,14 +105,17 @@ public class TestSSADemo {
                 "cvpNoOptimization"
             );
 
-            for (MethodEntry method : classFile.getMethods()) {
+            for (MethodEntry method : classFile.getMethods())
+            {
                 String methodName = method.getName();
 
-                if (methodName.startsWith("<") || !showcaseMethods.contains(methodName)) {
+                if (methodName.startsWith("<") || !showcaseMethods.contains(methodName))
+                {
                     continue;
                 }
 
-                if (method.getCodeAttribute() == null) {
+                if (method.getCodeAttribute() == null)
+                {
                     continue;
                 }
 
@@ -122,16 +134,20 @@ public class TestSSADemo {
         }
     }
 
-    private static void processMethod(MethodEntry method, ConstPool constPool) {
+    private static void processMethod(MethodEntry method, ConstPool constPool)
+    {
         String methodName = method.getName();
         String desc = method.getDesc();
 
         System.out.println("--- " + methodName + desc + " ---");
 
-        try {
+        try
+        {
             analyzeAndTransformMethod(method, constPool);
             successCount++;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.out.println("ERROR: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             e.printStackTrace(System.out);
             failCount++;
@@ -139,13 +155,14 @@ public class TestSSADemo {
         System.out.println();
     }
 
-    private static void analyzeAndTransformMethod(MethodEntry method, ConstPool constPool) {
+    private static void analyzeAndTransformMethod(MethodEntry method, ConstPool constPool)
+    {
         SSA ssa = new SSA(constPool);
 
-        // Lift to SSA
         IRMethod irMethod = ssa.lift(method);
 
-        if (irMethod.getEntryBlock() == null) {
+        if (irMethod.getEntryBlock() == null)
+        {
             System.out.println("(empty method)");
             return;
         }
@@ -182,80 +199,97 @@ public class TestSSADemo {
         printIRDetails(irMethod);
 
         int eliminated = instrBefore - instrAfter;
-        if (eliminated > 0) {
+        if (eliminated > 0)
+        {
             System.out.println("Eliminated " + eliminated + " instrs (" +
                 String.format("%.1f", (eliminated * 100.0 / instrBefore)) + "%)");
         }
 
-        // Lower back to bytecode
         ssa.lower(irMethod, method);
         CodeWriter cw = new CodeWriter(method);
         System.out.println("Lowered: " + cw.getBytecode().length + " bytes");
     }
 
-    private static int countInstructions(IRMethod irMethod) {
+    private static int countInstructions(IRMethod irMethod)
+    {
         int count = 0;
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             count += block.getInstructions().size();
         }
         return count;
     }
 
-    private static int countPhis(IRMethod irMethod) {
+    private static int countPhis(IRMethod irMethod)
+    {
         int count = 0;
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             count += block.getPhiInstructions().size();
         }
         return count;
     }
 
-    private static int countDefinitions(DefUseChains defUse) {
+    private static int countDefinitions(DefUseChains defUse)
+    {
         return defUse.getDefinitions().size();
     }
 
-    private static int countUses(DefUseChains defUse) {
+    private static int countUses(DefUseChains defUse)
+    {
         int total = 0;
-        for (SSAValue value : defUse.getDefinitions().keySet()) {
+        for (SSAValue value : defUse.getDefinitions().keySet())
+        {
             total += defUse.getUses(value).size();
         }
         return total;
     }
 
-    private static void printIRDetails(IRMethod irMethod) {
-        for (IRBlock block : irMethod.getBlocksInOrder()) {
+    private static void printIRDetails(IRMethod irMethod)
+    {
+        for (IRBlock block : irMethod.getBlocksInOrder())
+        {
             System.out.println("  " + block.getName() + ":");
 
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 System.out.println("    " + IRPrinter.format(phi));
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 System.out.println("    " + IRPrinter.format(instr));
             }
         }
     }
 
-    private static void printSummary() {
+    private static void printSummary()
+    {
         System.out.println("Summary: " + successCount + " passed, " + failCount + " failed, " +
                           (successCount + failCount) + " total");
     }
 
-    private static int computeDomTreeDepth(DominatorTree domTree, IRMethod irMethod) {
+    private static int computeDomTreeDepth(DominatorTree domTree, IRMethod irMethod)
+    {
         if (irMethod.getEntryBlock() == null) return 0;
         return computeDepth(domTree, irMethod.getEntryBlock(), 0);
     }
 
-    private static int computeDepth(DominatorTree domTree, IRBlock block, int currentDepth) {
+    private static int computeDepth(DominatorTree domTree, IRBlock block, int currentDepth)
+    {
         int maxDepth = currentDepth;
-        for (IRBlock child : domTree.getDominatorTreeChildren(block)) {
+        for (IRBlock child : domTree.getDominatorTreeChildren(block))
+        {
             maxDepth = Math.max(maxDepth, computeDepth(domTree, child, currentDepth + 1));
         }
         return maxDepth;
     }
 
-    private static int computeMaxLiveVars(LivenessAnalysis liveness, IRMethod irMethod) {
+    private static int computeMaxLiveVars(LivenessAnalysis liveness, IRMethod irMethod)
+    {
         int max = 0;
-        for (IRBlock block : irMethod.getBlocks()) {
+        for (IRBlock block : irMethod.getBlocks())
+        {
             int liveIn = liveness.getLiveIn().getOrDefault(block, java.util.Collections.emptySet()).size();
             int liveOut = liveness.getLiveOut().getOrDefault(block, java.util.Collections.emptySet()).size();
             max = Math.max(max, Math.max(liveIn, liveOut));

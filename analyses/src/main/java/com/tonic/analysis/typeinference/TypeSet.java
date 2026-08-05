@@ -6,127 +6,168 @@ import com.tonic.analysis.ssa.type.ReferenceType;
 import java.util.*;
 
 /**
- * Represents a set of possible types for a value.
- * Used for tracking polymorphic receivers and type unions.
+ * A union of the types a value may hold, flagged complete when the members are exact and
+ * incomplete when subtypes may also occur.
  */
-public class TypeSet {
+public class TypeSet
+{
 
     private final Set<IRType> types;
     private boolean isComplete;
 
-    public TypeSet() {
+    /**
+     * Creates an empty, complete type set.
+     */
+    public TypeSet()
+    {
         this.types = new LinkedHashSet<>();
         this.isComplete = true;
     }
 
-    public TypeSet(IRType singleType) {
+    /**
+     * Creates a set holding one type, or an empty set if it is null.
+     * @param singleType the sole member, may be null
+     */
+    public TypeSet(IRType singleType)
+    {
         this();
-        if (singleType != null) {
+        if (singleType != null)
+        {
             types.add(singleType);
         }
     }
 
-    public TypeSet(Collection<? extends IRType> types) {
+    /**
+     * Creates a set holding the given types.
+     * @param types the initial members
+     */
+    public TypeSet(Collection<? extends IRType> types)
+    {
         this();
         this.types.addAll(types);
     }
 
     /**
-     * Creates a type set representing all subtypes of a given type.
+     * Creates an incomplete set rooted at the given type, standing for it and all its subtypes.
+     * @param type the root type
+     * @return the incomplete set
      */
-    public static TypeSet allSubtypesOf(IRType type) {
+    public static TypeSet allSubtypesOf(IRType type)
+    {
         TypeSet set = new TypeSet(type);
         set.isComplete = false; // Indicates may include subtypes
         return set;
     }
 
     /**
-     * Adds a type to this set.
+     * Adds a type, ignoring null.
+     * @param type the type to add, may be null
      */
-    public void addType(IRType type) {
-        if (type != null) {
+    public void addType(IRType type)
+    {
+        if (type != null)
+        {
             types.add(type);
         }
     }
 
     /**
-     * Removes a type from this set.
+     * Removes a type.
+     * @param type the type to remove
      */
-    public void removeType(IRType type) {
+    public void removeType(IRType type)
+    {
         types.remove(type);
     }
 
     /**
-     * Gets all types in this set.
+     * @return an unmodifiable view of the members
      */
-    public Set<IRType> getTypes() {
+    public Set<IRType> getTypes()
+    {
         return Collections.unmodifiableSet(types);
     }
 
     /**
-     * Gets the number of types in this set.
+     * @return the number of members
      */
-    public int size() {
+    public int size()
+    {
         return types.size();
     }
 
     /**
-     * Checks if this set is empty.
+     * @return true when there are no members
      */
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         return types.isEmpty();
     }
 
     /**
-     * Checks if this set contains exactly one type.
+     * @return true when there is exactly one member
      */
-    public boolean isSingleton() {
+    public boolean isSingleton()
+    {
         return types.size() == 1;
     }
 
     /**
-     * Gets the single type if this is a singleton set.
+     * Returns the sole member of a singleton set.
+     * @return the only member
+     * @throws IllegalStateException if the set does not hold exactly one type
      */
-    public IRType getSingleType() {
-        if (!isSingleton()) {
+    public IRType getSingleType()
+    {
+        if (!isSingleton())
+        {
             throw new IllegalStateException("TypeSet is not a singleton");
         }
         return types.iterator().next();
     }
 
     /**
-     * Gets any type from this set (for cases where we need a representative).
+     * Returns an arbitrary member to stand in for the set.
+     * @return a member, or null when the set is empty
      */
-    public IRType getAnyType() {
+    public IRType getAnyType()
+    {
         return types.isEmpty() ? null : types.iterator().next();
     }
 
     /**
-     * Checks if this set contains the given type.
+     * Tests membership.
+     * @param type the type to look for
+     * @return true when the type is a member
      */
-    public boolean contains(IRType type) {
+    public boolean contains(IRType type)
+    {
         return types.contains(type);
     }
 
     /**
-     * Checks if this set is complete (exact types known)
-     * or incomplete (may include subtypes).
+     * @return true when the members are exact, false when subtypes may also occur
      */
-    public boolean isComplete() {
+    public boolean isComplete()
+    {
         return isComplete;
     }
 
     /**
-     * Marks this set as incomplete (may include subtypes).
+     * Marks the set as possibly including subtypes of its members.
      */
-    public void setIncomplete() {
+    public void setIncomplete()
+    {
         this.isComplete = false;
     }
 
     /**
-     * Joins this type set with another (union).
+     * Unions two sets; the result is complete only when both operands are.
+     * @param other the set to union with
+     * @return a new set holding the union
      */
-    public TypeSet join(TypeSet other) {
+    public TypeSet join(TypeSet other)
+    {
         TypeSet result = new TypeSet(this.types);
         result.types.addAll(other.types);
         result.isComplete = this.isComplete && other.isComplete;
@@ -134,12 +175,17 @@ public class TypeSet {
     }
 
     /**
-     * Meets this type set with another (intersection).
+     * Intersects two sets; the result is complete when either operand is.
+     * @param other the set to intersect with
+     * @return a new set holding the intersection
      */
-    public TypeSet meet(TypeSet other) {
+    public TypeSet meet(TypeSet other)
+    {
         TypeSet result = new TypeSet();
-        for (IRType type : this.types) {
-            if (other.types.contains(type)) {
+        for (IRType type : this.types)
+        {
+            if (other.types.contains(type))
+            {
                 result.types.add(type);
             }
         }
@@ -148,27 +194,33 @@ public class TypeSet {
     }
 
     /**
-     * Gets the most specific common supertype (least upper bound).
-     * Returns java/lang/Object if no better common type exists.
+     * Computes the least upper bound, collapsing any mix of reference types to Object.
+     * @return the sole member when singleton, Object when all members are references,
+     *         null when the set is empty or mixes primitives
      */
-    public IRType getLeastUpperBound() {
-        if (types.isEmpty()) {
+    public IRType getLeastUpperBound()
+    {
+        if (types.isEmpty())
+        {
             return null;
         }
-        if (types.size() == 1) {
+        if (types.size() == 1)
+        {
             return types.iterator().next();
         }
         // For now, return Object for multiple reference types
         // A full implementation would compute the actual LUB
         boolean allReference = types.stream().allMatch(IRType::isReference);
-        if (allReference) {
+        if (allReference)
+        {
             return ReferenceType.OBJECT;
         }
         return null;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof TypeSet)) return false;
         TypeSet typeSet = (TypeSet) o;
@@ -176,27 +228,33 @@ public class TypeSet {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(types, isComplete);
     }
 
     @Override
-    public String toString() {
-        if (types.isEmpty()) {
+    public String toString()
+    {
+        if (types.isEmpty())
+        {
             return "{}";
         }
-        if (types.size() == 1) {
+        if (types.size() == 1)
+        {
             return types.iterator().next().toString();
         }
         StringBuilder sb = new StringBuilder("{");
         boolean first = true;
-        for (IRType type : types) {
+        for (IRType type : types)
+        {
             if (!first) sb.append(", ");
             sb.append(type);
             first = false;
         }
         sb.append("}");
-        if (!isComplete) {
+        if (!isComplete)
+        {
             sb.append("+");
         }
         return sb.toString();

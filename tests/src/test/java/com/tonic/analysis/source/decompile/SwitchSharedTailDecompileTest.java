@@ -14,10 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * a bare break - dropping the tail for every case but the first. The tail must be recovered once
  * after the switch so it runs for all cases.
  */
-public class SwitchSharedTailDecompileTest {
+public class SwitchSharedTailDecompileTest
+{
 
     @Test
-    public void sharedTailEmittedAfterSwitchNotAbsorbedIntoFirstCase() throws Exception {
+    public void sharedTailEmittedAfterSwitchNotAbsorbedIntoFirstCase() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("SwitchSharedTail");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");

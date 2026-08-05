@@ -11,12 +11,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for SimulationState.
+ * * Tests for SimulationState.
  */
-class SimulationStateTest {
+class SimulationStateTest
+{
 
     @Test
-    void testEmpty() {
+    void testEmpty()
+    {
         SimulationState state = SimulationState.empty();
         assertEquals(0, state.stackDepth());
         assertNull(state.getCurrentBlock());
@@ -25,7 +27,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testOf() {
+    void testOf()
+    {
         StackState stack = StackState.empty();
         LocalState locals = LocalState.empty();
 
@@ -36,7 +39,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testPush() {
+    void testPush()
+    {
         SimulationState state = SimulationState.empty();
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
@@ -49,7 +53,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testPushWide() {
+    void testPushWide()
+    {
         SimulationState state = SimulationState.empty();
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
 
@@ -63,7 +68,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testPop() {
+    void testPop()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -78,7 +84,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testPopMultiple() {
+    void testPopMultiple()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
         SimValue v3 = SimValue.constant(3, PrimitiveType.INT, null);
@@ -93,7 +100,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testPopWide() {
+    void testPopWide()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.DOUBLE, null);
 
         SimulationState state = SimulationState.empty().pushWide(value);
@@ -103,7 +111,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testPeekAtDepth() {
+    void testPeekAtDepth()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -116,7 +125,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testSetLocal() {
+    void testSetLocal()
+    {
         SimulationState state = SimulationState.empty();
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
@@ -127,7 +137,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testSetLocalWide() {
+    void testSetLocalWide()
+    {
         SimulationState state = SimulationState.empty();
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
 
@@ -139,7 +150,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testDup() {
+    void testDup()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
         SimulationState state = SimulationState.empty().push(value);
@@ -149,7 +161,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testSwap() {
+    void testSwap()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -161,7 +174,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testClearStack() {
+    void testClearStack()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
         SimulationState state = SimulationState.empty()
@@ -174,7 +188,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testAtInstruction() {
+    void testAtInstruction()
+    {
         SimulationState state = SimulationState.empty();
 
         SimulationState newState = state.atInstruction(5);
@@ -183,7 +198,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testNextInstruction() {
+    void testNextInstruction()
+    {
         SimulationState state = SimulationState.empty().atInstruction(3);
 
         SimulationState next = state.nextInstruction();
@@ -192,7 +208,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testEnterCall() {
+    void testEnterCall()
+    {
         SimulationState state = SimulationState.empty()
             .push(SimValue.unknown(null));
 
@@ -203,7 +220,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testMerge() {
+    void testMerge()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -216,7 +234,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testSnapshot() {
+    void testSnapshot()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
         SimulationState state = SimulationState.empty().push(value);
 
@@ -227,7 +246,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testIsAtBlockStart() {
+    void testIsAtBlockStart()
+    {
         SimulationState state = SimulationState.empty();
         assertTrue(state.isAtBlockStart());
 
@@ -236,7 +256,8 @@ class SimulationStateTest {
     }
 
     @Test
-    void testMaxStackDepth() {
+    void testMaxStackDepth()
+    {
         SimulationState state = SimulationState.empty()
             .push(SimValue.unknown(null))
             .push(SimValue.unknown(null))
