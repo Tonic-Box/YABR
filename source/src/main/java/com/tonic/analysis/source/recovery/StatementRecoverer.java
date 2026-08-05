@@ -3891,6 +3891,38 @@ public class StatementRecoverer implements RegionRecoveryBridge
             }
         }
 
+        // This route folds the whole method into ONE try(...) header, so every user catch it takes has to
+        // be a catch ON THIS RESOURCE - some entry of the clause opens no later than the resource
+        // scaffolding it guards. Measured per CLAUSE, not per entry: javac splits a user catch around the
+        // cleanup handlers, and the split entries open after the resource. A clause whose every entry
+        // opens later than the resource belongs to a SEPARATE construct in the same method; folding it
+        // here drops the clause and truncates the method where that construct began.
+        int resourceStart = Integer.MAX_VALUE;
+        for (ExceptionHandler h : cleanup)
+        {
+            if (h.getTryStart() != null)
+            {
+                resourceStart = Math.min(resourceStart, h.getTryStart().getBytecodeOffset());
+            }
+        }
+        Map<IRBlock, Integer> clauseStart = new HashMap<>();
+        for (ExceptionHandler h : userHandlers)
+        {
+            if (h.getHandlerBlock() == null || h.getTryStart() == null)
+            {
+                continue;
+            }
+            int start = h.getTryStart().getBytecodeOffset();
+            Integer known = clauseStart.get(h.getHandlerBlock());
+            clauseStart.put(h.getHandlerBlock(), known == null ? start : Math.min(known, start));
+        }
+        for (int start : clauseStart.values())
+        {
+            if (start > resourceStart)
+            {
+                return null;
+            }
+        }
         List<CatchClause> userClauses = buildCatchClauses(userHandlers);
         BlockStmt finallyBlock = null;
         Set<String> finallyVars = new HashSet<>();
