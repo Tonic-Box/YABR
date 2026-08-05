@@ -11863,7 +11863,11 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 }
             }
         }
-        return materializeIntoTemporary(result, value, "v" + result.getId());
+        // Not "v" plus the id: the synthetic namer mints "v" plus a running COUNTER, so an id-based name
+        // of the same shape can land on a name the naming pass already gave another value. Whether the two
+        // numbers coincide depends on the bytecode layout, which would make the capture appear and vanish
+        // between generations. A prefix the synthetic namer never produces cannot collide at all.
+        return materializeIntoTemporary(result, value, "tmp" + result.getId());
     }
 
     /**
