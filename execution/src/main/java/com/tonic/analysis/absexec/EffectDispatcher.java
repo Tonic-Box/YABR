@@ -13,10 +13,13 @@ import com.tonic.analysis.instruction.IIncInstruction;
 import com.tonic.analysis.instruction.ILoadInstruction;
 import com.tonic.analysis.instruction.IStoreInstruction;
 import com.tonic.analysis.instruction.Instruction;
+import com.tonic.analysis.instruction.InvokeInterfaceInstruction;
+import com.tonic.analysis.instruction.InvokeSpecialInstruction;
+import com.tonic.analysis.instruction.InvokeStaticInstruction;
+import com.tonic.analysis.instruction.InvokeVirtualInstruction;
 import com.tonic.analysis.instruction.LLoadInstruction;
 import com.tonic.analysis.instruction.LStoreInstruction;
 import com.tonic.analysis.instruction.LookupSwitchInstruction;
-import com.tonic.analysis.instruction.PutFieldInstruction;
 import com.tonic.analysis.instruction.TableSwitchInstruction;
 import com.tonic.util.DescriptorUtil;
 
@@ -37,7 +40,6 @@ final class EffectDispatcher {
     static void execute(Instruction insn, Frame frame, InsnContext ictx) {
         int op = insn.getOpcode();
         Stack stack = frame.stack();
-        Variables vars = frame.variables();
 
         switch (op) {
             case 0x00: // nop
@@ -163,8 +165,8 @@ final class EffectDispatcher {
             // --- field access ---
             case 0xB2: getField(ictx, stack, (GetFieldInstruction) insn, false); return; // getstatic
             case 0xB4: getField(ictx, stack, (GetFieldInstruction) insn, true); return; // getfield
-            case 0xB3: putField(ictx, stack, (PutFieldInstruction) insn, false); return; // putstatic
-            case 0xB5: putField(ictx, stack, (PutFieldInstruction) insn, true); return; // putfield
+            case 0xB3: putField(ictx, stack, false); return; // putstatic
+            case 0xB5: putField(ictx, stack, true); return; // putfield
 
             // --- invokes ---
             case 0xB6: case 0xB7: case 0xB9: invoke(ictx, stack, insn, true); return; // virtual/special/interface
@@ -182,7 +184,6 @@ final class EffectDispatcher {
             default:
                 // Generic fallback by net stack change (e.g. multianewarray, wide-prefixed, jsr/ret).
                 generic(ictx, stack, insn);
-                return;
         }
     }
 
@@ -235,7 +236,7 @@ final class EffectDispatcher {
         push(ictx, stack, isWideDesc(insn.getFieldDescriptor()));
     }
 
-    private static void putField(InsnContext ictx, Stack stack, PutFieldInstruction insn, boolean instance) {
+    private static void putField(InsnContext ictx, Stack stack, boolean instance) {
         pop(ictx, stack, instance ? 2 : 1); // value (+ objref for putfield)
     }
 
@@ -376,17 +377,17 @@ final class EffectDispatcher {
     }
 
     private static String methodDescriptor(Instruction insn) {
-        if (insn instanceof com.tonic.analysis.instruction.InvokeVirtualInstruction) {
-            return ((com.tonic.analysis.instruction.InvokeVirtualInstruction) insn).getMethodDescriptor();
+        if (insn instanceof InvokeVirtualInstruction) {
+            return ((InvokeVirtualInstruction) insn).getMethodDescriptor();
         }
-        if (insn instanceof com.tonic.analysis.instruction.InvokeSpecialInstruction) {
-            return ((com.tonic.analysis.instruction.InvokeSpecialInstruction) insn).getMethodDescriptor();
+        if (insn instanceof InvokeSpecialInstruction) {
+            return ((InvokeSpecialInstruction) insn).getMethodDescriptor();
         }
-        if (insn instanceof com.tonic.analysis.instruction.InvokeStaticInstruction) {
-            return ((com.tonic.analysis.instruction.InvokeStaticInstruction) insn).getMethodDescriptor();
+        if (insn instanceof InvokeStaticInstruction) {
+            return ((InvokeStaticInstruction) insn).getMethodDescriptor();
         }
-        if (insn instanceof com.tonic.analysis.instruction.InvokeInterfaceInstruction) {
-            return ((com.tonic.analysis.instruction.InvokeInterfaceInstruction) insn).getMethodDescriptor();
+        if (insn instanceof InvokeInterfaceInstruction) {
+            return ((InvokeInterfaceInstruction) insn).getMethodDescriptor();
         }
         return null;
     }

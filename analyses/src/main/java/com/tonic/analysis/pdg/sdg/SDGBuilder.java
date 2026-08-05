@@ -14,11 +14,11 @@ import com.tonic.analysis.pdg.sdg.node.*;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
+import com.tonic.analysis.ssa.ir.InvokeType;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.util.DescriptorUtil;
-
 import java.util.*;
 
 public class SDGBuilder {
@@ -221,7 +221,7 @@ public class SDGBuilder {
         List<Value> args = invoke.getArguments();
         int paramIndex = 0;
 
-        if (invoke.getInvokeType() != com.tonic.analysis.ssa.ir.InvokeType.STATIC) {
+        if (invoke.getInvokeType() != InvokeType.STATIC) {
             Value receiver = invoke.getReceiver();
             if (receiver != null) {
                 SDGActualInNode actualIn = new SDGActualInNode(

@@ -6,7 +6,6 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
@@ -1464,19 +1463,19 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitSwitchExpr(com.tonic.analysis.source.ast.expr.SwitchExpr expr) {
+    public Void visitSwitchExpr(SwitchExpr expr) {
         writer.write("switch (");
         expr.getSelector().accept(this);
         writer.writeLine(") {");
         writer.indent();
-        for (com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm : expr.getArms()) {
+        for (SwitchExpr.Arm arm : expr.getArms()) {
             if (arm.isDefault()) {
                 writer.write("default -> ");
             } else if (arm.isRecordDeconstruction()) {
                 writer.write("case ");
                 writer.write(arm.getPatternType().toJavaSource());
                 writer.write("(");
-                List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> comps =
+                List<SwitchExpr.Component> comps =
                         arm.getDeconstructionComponents();
                 for (int i = 0; i < comps.size(); i++) {
                     if (i > 0) writer.write(", ");
@@ -1514,7 +1513,7 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     /** Emits {@code  when <guard>} for a guarded pattern arm. */
-    private void emitWhenGuard(com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm) {
+    private void emitWhenGuard(SwitchExpr.Arm arm) {
         if (arm.getGuard() != null) {
             writer.write(" when ");
             arm.getGuard().accept(this);

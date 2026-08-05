@@ -131,12 +131,16 @@ ClassDecompiler d1 = new ClassDecompiler(cf1, decompilerConfig);
 ClassDecompiler d2 = new ClassDecompiler(cf2, decompilerConfig);
 ```
 
-**Baseline transforms** always run first, regardless of preset:
+**Baseline transforms** run before preset/manual transforms on constructors and `<clinit>`:
 - `ControlFlowReducibility` - converts irreducible control flow to reducible form
 - `DuplicateBlockMerging` - merges duplicate blocks created by reducibility
 
-Preset and manual transforms run after these. The available passes are described in
-[SSA Transforms](ssa-transforms.md).
+Regular method bodies skip the baseline pair and receive only the configured transforms. The
+available passes are described in [SSA Transforms](ssa-transforms.md).
+
+**Variable naming** - `DecompilerConfig.Builder.nameRecoveryStrategy(NameRecoveryStrategy)`
+controls local/parameter naming: `PREFER_DEBUG_INFO` (default; LocalVariableTable names with
+synthetic fallback), `ALWAYS_SYNTHETIC`, or `PARAMETERS_ONLY`.
 
 ## Line Maps and Source Spans
 

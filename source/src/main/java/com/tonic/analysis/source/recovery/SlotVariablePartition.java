@@ -11,7 +11,7 @@ import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.ir.UnaryOpInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
-
+import com.tonic.analysis.ssa.value.Value;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -313,7 +313,7 @@ public class SlotVariablePartition {
         return valueReadsSlot(store.getValue(), slot, new HashSet<>());
     }
 
-    private boolean valueReadsSlot(com.tonic.analysis.ssa.value.Value v, int slot, Set<SSAValue> seen) {
+    private boolean valueReadsSlot(Value v, int slot, Set<SSAValue> seen) {
         if (!(v instanceof SSAValue)) {
             return false;
         }
@@ -333,7 +333,7 @@ public class SlotVariablePartition {
         // in-place update of the slot.
         if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction
                 || def instanceof CopyInstruction) {
-            for (com.tonic.analysis.ssa.value.Value operand : def.getOperands()) {
+            for (Value operand : def.getOperands()) {
                 if (valueReadsSlot(operand, slot, seen)) {
                     return true;
                 }
@@ -363,7 +363,7 @@ public class SlotVariablePartition {
         return dependsOnSlot(store.getValue(), slot, storedToSlot, new HashSet<>());
     }
 
-    private boolean dependsOnSlot(com.tonic.analysis.ssa.value.Value v, int slot,
+    private boolean dependsOnSlot(Value v, int slot,
                                   Set<SSAValue> storedToSlot, Set<SSAValue> seen) {
         if (!(v instanceof SSAValue)) {
             return false;
@@ -384,7 +384,7 @@ public class SlotVariablePartition {
         }
         if (def instanceof BinaryOpInstruction || def instanceof UnaryOpInstruction
                 || def instanceof CopyInstruction || def instanceof PhiInstruction) {
-            for (com.tonic.analysis.ssa.value.Value operand : def.getOperands()) {
+            for (Value operand : def.getOperands()) {
                 if (dependsOnSlot(operand, slot, storedToSlot, seen)) {
                     return true;
                 }

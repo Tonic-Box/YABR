@@ -4,6 +4,7 @@ import com.tonic.analysis.ssa.analysis.*;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.lift.*;
+import com.tonic.analysis.ssa.llvm.LlvmLowering;
 import com.tonic.analysis.ssa.lower.BytecodeLowerer;
 import com.tonic.analysis.ssa.transform.*;
 import com.tonic.parser.ClassFile;
@@ -134,7 +135,7 @@ public class SSA {
      * @return the LLVM IR module text
      */
     public String toLlvm(IRMethod irMethod) {
-        return new com.tonic.analysis.ssa.llvm.LlvmLowering().lower(irMethod);
+        return new LlvmLowering().lower(irMethod);
     }
 
     /**

@@ -11,13 +11,13 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
+import com.tonic.util.AccessBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -161,7 +161,7 @@ class StatementRecovererTest {
             BlockStmt body = recoverer.recoverMethod();
 
             assertNotNull(body);
-            assertTrue(body.getStatements().size() >= 1);
+            assertTrue(!body.getStatements().isEmpty());
         }
 
         @Test
@@ -423,7 +423,7 @@ class StatementRecovererTest {
 
         @Test
         void recoverGetField() throws IOException {
-            int publicAccess = new com.tonic.util.AccessBuilder().setPublic().build();
+            int publicAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .field(publicAccess, "value", "I")
                 .publicMethod("getValue", "()I")
@@ -444,7 +444,7 @@ class StatementRecovererTest {
 
         @Test
         void recoverPutField() throws IOException {
-            int publicAccess = new com.tonic.util.AccessBuilder().setPublic().build();
+            int publicAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .field(publicAccess, "value", "I")
                 .publicMethod("setValue", "(I)V")

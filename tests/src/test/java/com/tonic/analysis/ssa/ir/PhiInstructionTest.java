@@ -1,16 +1,16 @@
 package com.tonic.analysis.ssa.ir;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
+import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -455,7 +455,7 @@ class PhiInstructionTest {
 
     private static class TestConstantValue implements Value {
         @Override
-        public com.tonic.analysis.ssa.type.IRType getType() {
+        public IRType getType() {
             return PrimitiveType.INT;
         }
 

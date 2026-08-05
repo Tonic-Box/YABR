@@ -4,15 +4,23 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.InstanceOfExpr;
+import com.tonic.analysis.source.ast.expr.LambdaExpr;
+import com.tonic.analysis.source.ast.expr.LambdaParameter;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.CatchClause;
+import com.tonic.analysis.source.ast.stmt.DoWhileStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.ForEachStmt;
+import com.tonic.analysis.source.ast.stmt.ForStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
+import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
+import com.tonic.analysis.source.ast.stmt.WhileStmt;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,19 +72,19 @@ public class ScopeEscapeHoister implements ASTTransform {
                 if (bin.getOperator().isAssignment() && bin.getLeft() instanceof VarRefExpr) {
                     writes.putIfAbsent(((VarRefExpr) bin.getLeft()).getName(), (VarRefExpr) bin.getLeft());
                 }
-            } else if (node instanceof com.tonic.analysis.source.ast.stmt.TryCatchStmt) {
-                for (com.tonic.analysis.source.ast.stmt.CatchClause c
-                        : ((com.tonic.analysis.source.ast.stmt.TryCatchStmt) node).getCatches()) {
+            } else if (node instanceof TryCatchStmt) {
+                for (CatchClause c
+                        : ((TryCatchStmt) node).getCatches()) {
                     implicitlyDeclared.add(c.variableName());
                 }
-            } else if (node instanceof com.tonic.analysis.source.ast.expr.LambdaExpr) {
-                for (com.tonic.analysis.source.ast.expr.LambdaParameter p
-                        : ((com.tonic.analysis.source.ast.expr.LambdaExpr) node).getParameters()) {
+            } else if (node instanceof LambdaExpr) {
+                for (LambdaParameter p
+                        : ((LambdaExpr) node).getParameters()) {
                     implicitlyDeclared.add(p.name());
                 }
-            } else if (node instanceof com.tonic.analysis.source.ast.expr.InstanceOfExpr) {
-                com.tonic.analysis.source.ast.expr.InstanceOfExpr io =
-                        (com.tonic.analysis.source.ast.expr.InstanceOfExpr) node;
+            } else if (node instanceof InstanceOfExpr) {
+                InstanceOfExpr io =
+                        (InstanceOfExpr) node;
                 if (io.hasPatternVariable()) {
                     implicitlyDeclared.add(io.getPatternVariable());
                 }
@@ -329,10 +337,10 @@ public class ScopeEscapeHoister implements ASTTransform {
     /** Whether any node on the path from {@code scope} up to {@code stopAt} is a loop statement. */
     private static boolean insideLoop(ASTNode scope, ASTNode stopAt) {
         for (ASTNode p = scope; p != null && p != stopAt; p = p.getParent()) {
-            if (p instanceof com.tonic.analysis.source.ast.stmt.WhileStmt
-                    || p instanceof com.tonic.analysis.source.ast.stmt.DoWhileStmt
-                    || p instanceof com.tonic.analysis.source.ast.stmt.ForStmt
-                    || p instanceof com.tonic.analysis.source.ast.stmt.ForEachStmt) {
+            if (p instanceof WhileStmt
+                    || p instanceof DoWhileStmt
+                    || p instanceof ForStmt
+                    || p instanceof ForEachStmt) {
                 return true;
             }
         }

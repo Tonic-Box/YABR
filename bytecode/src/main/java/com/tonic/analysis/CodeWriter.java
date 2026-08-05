@@ -793,7 +793,7 @@ public class CodeWriter {
         public ClonedRange redirectReturns() {
             Map<Instruction, Instruction> rewritten = new IdentityHashMap<>();
             for (int i = 0; i < instructions.size(); i++) {
-                if (instructions.get(i) instanceof ReturnInstruction) {
+                if (instructions.get(i) instanceof MethodReturnInstruction) {
                     Instruction goto_ = new GotoInstruction(GOTO.getCode(), 0, (short) 0);
                     rewritten.put(instructions.get(i), goto_);
                     instructions.set(i, goto_);
@@ -1083,8 +1083,8 @@ public class CodeWriter {
         if (i instanceof PutFieldInstruction) {
             return new PutFieldInstruction(pool, op, 0, cpRemap.applyAsInt(((PutFieldInstruction) i).getFieldIndex()));
         }
-        if (i instanceof NewInstruction) {
-            return new NewInstruction(pool, op, 0, cpRemap.applyAsInt(((NewInstruction) i).getClassIndex()));
+        if (i instanceof NewObjectInstruction) {
+            return new NewObjectInstruction(pool, op, 0, cpRemap.applyAsInt(((NewObjectInstruction) i).getClassIndex()));
         }
         if (i instanceof CheckCastInstruction) {
             return new CheckCastInstruction(pool, op, 0, cpRemap.applyAsInt(((CheckCastInstruction) i).getClassIndex()));
@@ -1158,7 +1158,7 @@ public class CodeWriter {
 
         // 2b. Widen any branch whose span now exceeds the 16-bit range (goto->goto_w, conditional->
         // inverted-conditional + goto_w). Mutates newOrder/branchTargets; re-layout afterwards.
-        newOrder = widenBranches(newOrder);
+        widenBranches(newOrder);
         newOff = InstructionLayout.layout(newOrder);
 
         // 4. Reconstruct branches/switches with new offsets+relatives; move others to their new offset.
@@ -1231,7 +1231,7 @@ public class CodeWriter {
      * and never overflow. {@code jsr} has no modeled wide form and raises an exception (obsolete since
      * Java 6). Mutates {@code order} and {@link #branchTargets}; returns the (possibly grown) list.
      */
-    private List<Instruction> widenBranches(List<Instruction> order) {
+    private void widenBranches(List<Instruction> order) {
         while (true) {
             Map<Instruction, Integer> off = InstructionLayout.layout(order);
             int idx = -1;
@@ -1263,7 +1263,7 @@ public class CodeWriter {
                 break;
             }
             if (idx < 0) {
-                return order;
+                return;
             }
             Instruction b = order.get(idx);
             if (b instanceof GotoInstruction) {
@@ -1914,8 +1914,8 @@ public class CodeWriter {
      * @param offset        The bytecode offset to insert the instruction at.
      * @param classRefIndex The index into the constant pool for the class reference.
      */
-    public NewInstruction insertNew(int offset, int classRefIndex) {
-        NewInstruction newInstr = new NewInstruction(constPool, NEW.getCode(), offset, classRefIndex);
+    public NewObjectInstruction insertNew(int offset, int classRefIndex) {
+        NewObjectInstruction newInstr = new NewObjectInstruction(constPool, NEW.getCode(), offset, classRefIndex);
         insertInstruction(offset, newInstr);
         return newInstr;
     }

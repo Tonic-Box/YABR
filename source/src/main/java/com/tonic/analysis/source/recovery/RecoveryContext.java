@@ -1,11 +1,11 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.MethodEntry;
-import com.tonic.analysis.ssa.analysis.DefUseChains;
-
 import java.util.*;
 
 /**
@@ -35,7 +35,7 @@ public class RecoveryContext {
     private final Set<String> declaredVariables = new HashSet<>();
     private final Set<String> baselineDeclaredVariables = new HashSet<>();
 
-    private final Map<String, com.tonic.analysis.source.ast.type.SourceType> declaredVariableTypes = new HashMap<>();
+    private final Map<String, SourceType> declaredVariableTypes = new HashMap<>();
 
     private final Map<Integer, String> localSlotNames = new HashMap<>();
 
@@ -155,7 +155,7 @@ public class RecoveryContext {
     }
 
     /** Types of declared variables */
-    public Map<String, com.tonic.analysis.source.ast.type.SourceType> getDeclaredVariableTypes() {
+    public Map<String, SourceType> getDeclaredVariableTypes() {
         return declaredVariableTypes;
     }
 
@@ -276,7 +276,7 @@ public class RecoveryContext {
     /**
      * Marks a variable name as declared with a specific type.
      */
-    public void markDeclaredWithType(String name, com.tonic.analysis.source.ast.type.SourceType type) {
+    public void markDeclaredWithType(String name, SourceType type) {
         markDeclared(name);
         if (type != null) {
             declaredVariableTypes.put(name, type);
@@ -286,7 +286,7 @@ public class RecoveryContext {
     /**
      * Gets the declared type for a variable, or null if not tracked.
      */
-    public com.tonic.analysis.source.ast.type.SourceType getDeclaredType(String name) {
+    public SourceType getDeclaredType(String name) {
         return declaredVariableTypes.get(name);
     }
 

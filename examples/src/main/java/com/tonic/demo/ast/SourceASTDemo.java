@@ -4,7 +4,6 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.emit.SourceEmitter;
-import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.*;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -13,7 +12,6 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.util.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -349,12 +347,10 @@ public class SourceASTDemo {
     private static void testTypeSystem() {
         section("Part 4: Type System");
 
-        test("Primitive types", () -> {
-            return PrimitiveSourceType.INT.toJavaSource().equals("int")
-                    && PrimitiveSourceType.LONG.toJavaSource().equals("long")
-                    && PrimitiveSourceType.BOOLEAN.toJavaSource().equals("boolean")
-                    && PrimitiveSourceType.DOUBLE.toJavaSource().equals("double");
-        });
+        test("Primitive types", () -> PrimitiveSourceType.INT.toJavaSource().equals("int")
+                && PrimitiveSourceType.LONG.toJavaSource().equals("long")
+                && PrimitiveSourceType.BOOLEAN.toJavaSource().equals("boolean")
+                && PrimitiveSourceType.DOUBLE.toJavaSource().equals("double"));
 
         test("Reference type simple name", () -> {
             ReferenceSourceType ref = new ReferenceSourceType("java/lang/String", List.of());
@@ -371,13 +367,11 @@ public class SourceASTDemo {
             return arr2d.toJavaSource().equals("int[][]");
         });
 
-        test("Void type", () -> {
-            return VoidSourceType.INSTANCE.toJavaSource().equals("void");
-        });
+        test("Void type", () -> VoidSourceType.INSTANCE.toJavaSource().equals("void"));
 
         test("Type from IR type conversion", () -> {
             // Test the fromIRType static method
-            PrimitiveType irInt = com.tonic.analysis.ssa.type.PrimitiveType.INT;
+            PrimitiveType irInt = PrimitiveType.INT;
             SourceType sourceType = SourceType.fromIRType(irInt);
             return sourceType == PrimitiveSourceType.INT;
         });

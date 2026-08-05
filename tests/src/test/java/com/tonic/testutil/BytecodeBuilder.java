@@ -1,23 +1,31 @@
 package com.tonic.testutil;
-import com.tonic.analysis.ClassFactory;
-
 import com.tonic.analysis.Bytecode;
+import com.tonic.analysis.ClassFactory;
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.instruction.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.BootstrapMethodsAttribute;
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
+import com.tonic.parser.constpool.ClassRefItem;
+import com.tonic.parser.constpool.FieldRefItem;
+import com.tonic.parser.constpool.InterfaceRefItem;
+import com.tonic.parser.constpool.MethodRefItem;
+import com.tonic.parser.constpool.NameAndTypeRefItem;
+import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.util.AccessBuilder;
 import com.tonic.util.ReturnType;
-
-import static com.tonic.analysis.instruction.ArithmeticInstruction.ArithmeticType;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.tonic.analysis.instruction.ArithmeticInstruction.ArithmeticType;
 
 /**
  * Fluent builder for creating test classes with bytecode.
@@ -44,7 +52,7 @@ public class BytecodeBuilder {
     private final List<FieldDef> fields = new ArrayList<>();
     private final List<BootstrapMethodDef> bootstrapMethodDefs = new ArrayList<>();
     private final List<LambdaBootstrapDef> lambdaBootstrapDefs = new ArrayList<>();
-    com.tonic.parser.ConstPool constPool;
+    ConstPool constPool;
 
     private static class LambdaBootstrapDef {
         final String samDescriptor;
@@ -157,7 +165,7 @@ public class BytecodeBuilder {
      *
      * @return the constant pool, or null if build() hasn't been called yet
      */
-    public com.tonic.parser.ConstPool getConstPool() {
+    public ConstPool getConstPool() {
         return constPool;
     }
 
@@ -234,8 +242,8 @@ public class BytecodeBuilder {
 
         // Generate BootstrapMethodsAttribute if needed
         if (!bootstrapMethodDefs.isEmpty()) {
-            com.tonic.parser.attribute.BootstrapMethodsAttribute bsmAttr =
-                new com.tonic.parser.attribute.BootstrapMethodsAttribute(constPool);
+            BootstrapMethodsAttribute bsmAttr =
+                new BootstrapMethodsAttribute(constPool);
             for (BootstrapMethodDef def : bootstrapMethodDefs) {
                 bsmAttr.addBootstrapMethod(def.methodHandleIndex, def.arguments);
             }
@@ -720,7 +728,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldc_int(int value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int index = constPool.getIndexOf(constPool.findOrAddInteger(value));
                 cw.appendInstruction(new LdcInstruction(constPool, 0x12, cw.getBytecodeSize(), index));
             }, 2);
@@ -729,7 +737,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldc_float(float value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int index = constPool.getIndexOf(constPool.findOrAddFloat(value));
                 cw.appendInstruction(new LdcInstruction(constPool, 0x12, cw.getBytecodeSize(), index));
             }, 2);
@@ -738,8 +746,8 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldc_class(String className) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(className);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(className);
                 int index = constPool.getIndexOf(classRef);
                 cw.appendInstruction(new LdcInstruction(constPool, 0x12, cw.getBytecodeSize(), index));
             }, 2);
@@ -748,7 +756,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldcw_int(int value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int index = constPool.getIndexOf(constPool.findOrAddInteger(value));
                 cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), index));
             }, 3);
@@ -757,7 +765,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldcw_float(float value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int index = constPool.getIndexOf(constPool.findOrAddFloat(value));
                 cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), index));
             }, 3);
@@ -766,7 +774,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldcw_string(String value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int stringIndex = constPool.getIndexOf(constPool.findOrAddString(value));
                 cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), stringIndex));
             }, 3);
@@ -775,8 +783,8 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldcw_class(String className) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(className);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(className);
                 int index = constPool.getIndexOf(classRef);
                 cw.appendInstruction(new LdcWInstruction(constPool, 0x13, cw.getBytecodeSize(), index));
             }, 3);
@@ -785,7 +793,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldc2w_long(long value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int index = constPool.getIndexOf(constPool.findOrAddLong(value));
                 cw.appendInstruction(new Ldc2WInstruction(constPool, 0x14, cw.getBytecodeSize(), index));
             }, 3);
@@ -794,7 +802,7 @@ public class BytecodeBuilder {
 
         public MethodBuilder ldc2w_double(double value) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
+                ConstPool constPool = bc.getConstPool();
                 int index = constPool.getIndexOf(constPool.findOrAddDouble(value));
                 cw.appendInstruction(new Ldc2WInstruction(constPool, 0x14, cw.getBytecodeSize(), index));
             }, 3);
@@ -1157,12 +1165,12 @@ public class BytecodeBuilder {
 
         public MethodBuilder putstatic(String owner, String name, String desc) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
-                com.tonic.parser.constpool.Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(owner);
-                com.tonic.parser.constpool.NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
-                com.tonic.parser.constpool.FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
+                ConstPool constPool = bc.getConstPool();
+                Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
+                Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
+                ClassRefItem classRef = constPool.findOrAddClass(owner);
+                NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
+                FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
                 int fieldRefIndex = constPool.getIndexOf(fieldRef);
                 bc.addPutStatic(fieldRefIndex);
             }, 3);
@@ -1171,12 +1179,12 @@ public class BytecodeBuilder {
 
         public MethodBuilder putfield(String owner, String name, String desc) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
-                com.tonic.parser.constpool.Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(owner);
-                com.tonic.parser.constpool.NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
-                com.tonic.parser.constpool.FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
+                ConstPool constPool = bc.getConstPool();
+                Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
+                Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
+                ClassRefItem classRef = constPool.findOrAddClass(owner);
+                NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
+                FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
                 int fieldRefIndex = constPool.getIndexOf(fieldRef);
                 bc.addPutField(fieldRefIndex);
             }, 3);
@@ -1185,12 +1193,12 @@ public class BytecodeBuilder {
 
         public MethodBuilder getfield(String owner, String name, String desc) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
-                com.tonic.parser.constpool.Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(owner);
-                com.tonic.parser.constpool.NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
-                com.tonic.parser.constpool.FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
+                ConstPool constPool = bc.getConstPool();
+                Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(name);
+                Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(desc);
+                ClassRefItem classRef = constPool.findOrAddClass(owner);
+                NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(fieldNameUtf8.getIndex(constPool), fieldDescUtf8.getIndex(constPool));
+                FieldRefItem fieldRef = constPool.findOrAddField(classRef.getClassName(), nameAndType.getName(), nameAndType.getDescriptor());
                 int fieldRefIndex = constPool.getIndexOf(fieldRef);
                 bc.addGetField(fieldRefIndex);
             }, 3);
@@ -1200,17 +1208,17 @@ public class BytecodeBuilder {
         // ========== Array Instructions ==========
 
         public MethodBuilder newarray(int atype) {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.NewArrayInstruction(0xBC, cw.getBytecodeSize(), atype, 0)), 2);
+            addOp((bc, cw) -> cw.appendInstruction(new NewPrimitiveArrayInstruction(0xBC, cw.getBytecodeSize(), atype, 0)), 2);
             return this;
         }
 
         public MethodBuilder iastore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.IAStoreInstruction(0x4F, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new IAStoreInstruction(0x4F, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder iaload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.IALoadInstruction(0x2E, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new IALoadInstruction(0x2E, cw.getBytecodeSize())), 1);
             return this;
         }
 
@@ -1220,62 +1228,62 @@ public class BytecodeBuilder {
         }
 
         public MethodBuilder laload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.LALoadInstruction(0x2F, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new LALoadInstruction(0x2F, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder lastore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.LAStoreInstruction(0x50, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new LAStoreInstruction(0x50, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder faload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.FALoadInstruction(0x30, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new FALoadInstruction(0x30, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder fastore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.FAStoreInstruction(0x51, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new FAStoreInstruction(0x51, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder daload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.DALoadInstruction(0x31, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new DALoadInstruction(0x31, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder dastore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.DAStoreInstruction(0x52, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new DAStoreInstruction(0x52, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder baload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.BALOADInstruction(0x33, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new BALOADInstruction(0x33, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder bastore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.BAStoreInstruction(0x54, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new BAStoreInstruction(0x54, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder caload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.CALoadInstruction(0x34, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new CALoadInstruction(0x34, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder castore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.CAStoreInstruction(0x55, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new CAStoreInstruction(0x55, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder saload() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.SALoadInstruction(0x35, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new SALoadInstruction(0x35, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder sastore() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.SAStoreInstruction(0x56, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new SAStoreInstruction(0x56, cw.getBytecodeSize())), 1);
             return this;
         }
 
@@ -1291,8 +1299,8 @@ public class BytecodeBuilder {
 
         public MethodBuilder anewarray(String type) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(type);
                 int classRefIndex = constPool.getIndexOf(classRef);
                 cw.appendInstruction(new ANewArrayInstruction(constPool, 0xBD, cw.getBytecodeSize(), classRefIndex, 0));
             }, 3);
@@ -1301,18 +1309,18 @@ public class BytecodeBuilder {
 
         public MethodBuilder new_(String type) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(type);
                 int classRefIndex = constPool.getIndexOf(classRef);
-                cw.appendInstruction(new NewInstruction(constPool, 0xBB, cw.getBytecodeSize(), classRefIndex));
+                cw.appendInstruction(new NewObjectInstruction(constPool, 0xBB, cw.getBytecodeSize(), classRefIndex));
             }, 3);
             return this;
         }
 
         public MethodBuilder multianewarray(String type, int dimensions) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(type);
                 int classRefIndex = constPool.getIndexOf(classRef);
                 cw.appendInstruction(new MultiANewArrayInstruction(constPool, 0xC5, cw.getBytecodeSize(), classRefIndex, dimensions));
             }, 4);
@@ -1320,12 +1328,12 @@ public class BytecodeBuilder {
         }
 
         public MethodBuilder monitorenter() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.MonitorEnterInstruction(0xC2, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new MonitorEnterInstruction(0xC2, cw.getBytecodeSize())), 1);
             return this;
         }
 
         public MethodBuilder monitorexit() {
-            addOp((bc, cw) -> cw.appendInstruction(new com.tonic.analysis.instruction.MonitorExitInstruction(0xC3, cw.getBytecodeSize())), 1);
+            addOp((bc, cw) -> cw.appendInstruction(new MonitorExitInstruction(0xC3, cw.getBytecodeSize())), 1);
             return this;
         }
 
@@ -1333,8 +1341,8 @@ public class BytecodeBuilder {
 
         public MethodBuilder instanceof_(String type) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(type);
                 int classRefIndex = constPool.getIndexOf(classRef);
                 cw.appendInstruction(new InstanceOfInstruction(constPool, 0xC1, cw.getBytecodeSize(), classRefIndex));
             }, 3);
@@ -1343,8 +1351,8 @@ public class BytecodeBuilder {
 
         public MethodBuilder checkcast(String type) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(type);
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(type);
                 int classRefIndex = constPool.getIndexOf(classRef);
                 cw.appendInstruction(new CheckCastInstruction(constPool, 0xC0, cw.getBytecodeSize(), classRefIndex));
             }, 3);
@@ -1365,10 +1373,10 @@ public class BytecodeBuilder {
 
         public MethodBuilder invokespecial(String owner, String name, String desc) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(owner);
-                com.tonic.parser.constpool.NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(name, desc);
-                com.tonic.parser.constpool.MethodRefItem methodRef = constPool.findOrAddMethodRef(
+                ConstPool constPool = bc.getConstPool();
+                ClassRefItem classRef = constPool.findOrAddClass(owner);
+                NameAndTypeRefItem nameAndType = constPool.findOrAddNameAndType(name, desc);
+                MethodRefItem methodRef = constPool.findOrAddMethodRef(
                     constPool.getIndexOf(classRef), constPool.getIndexOf(nameAndType));
                 int methodRefIndex = constPool.getIndexOf(methodRef);
                 bc.addInvokeSpecial(methodRefIndex);
@@ -1378,8 +1386,8 @@ public class BytecodeBuilder {
 
         public MethodBuilder invokeinterface(String owner, String name, String desc, int count) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool constPool = bc.getConstPool();
-                com.tonic.parser.constpool.InterfaceRefItem interfaceRef = constPool.findOrAddInterfaceRef(owner, name, desc);
+                ConstPool constPool = bc.getConstPool();
+                InterfaceRefItem interfaceRef = constPool.findOrAddInterfaceRef(owner, name, desc);
                 int interfaceRefIndex = constPool.getIndexOf(interfaceRef);
                 bc.addInvokeInterface(interfaceRefIndex, count);
             }, 5);
@@ -1396,7 +1404,7 @@ public class BytecodeBuilder {
          */
         public MethodBuilder invokedynamic(String name, String descriptor, int bootstrapIndex) {
             addOp((bc, cw) -> {
-                com.tonic.parser.ConstPool cp = parent.constPool;
+                ConstPool cp = parent.constPool;
                 int nameAndType = cp.addNameAndType(name, descriptor);
                 int indyIndex = cp.addInvokeDynamic(bootstrapIndex, nameAndType);
                 bc.addInvokeDynamic(indyIndex);
@@ -1507,8 +1515,8 @@ public class BytecodeBuilder {
 
             // Add exception handlers to the code attribute
             if (!exceptionRegions.isEmpty()) {
-                com.tonic.parser.attribute.CodeAttribute codeAttr = method.getCodeAttribute();
-                com.tonic.parser.ConstPool constPool = classFile.getConstPool();
+                CodeAttribute codeAttr = method.getCodeAttribute();
+                ConstPool constPool = classFile.getConstPool();
 
                 for (ExceptionRegion region : exceptionRegions) {
                     int startPc = labelOffsets.get(region.tryStart);
@@ -1518,19 +1526,19 @@ public class BytecodeBuilder {
                     int catchType = 0; // 0 = catch all
                     if (region.exceptionType != null) {
                         // Add class reference to constant pool
-                        com.tonic.parser.constpool.ClassRefItem classRef = constPool.findOrAddClass(region.exceptionType);
+                        ClassRefItem classRef = constPool.findOrAddClass(region.exceptionType);
                         catchType = constPool.getIndexOf(classRef);
                     }
 
-                    com.tonic.parser.attribute.table.ExceptionTableEntry entry =
-                        new com.tonic.parser.attribute.table.ExceptionTableEntry(
+                    ExceptionTableEntry entry =
+                        new ExceptionTableEntry(
                             startPc, endPc, handlerPc, catchType);
                     codeAttr.getExceptionTable().add(entry);
                 }
             }
 
             if (maxLocalUsed > 0) {
-                com.tonic.parser.attribute.CodeAttribute codeAttr = method.getCodeAttribute();
+                CodeAttribute codeAttr = method.getCodeAttribute();
                 if (codeAttr != null && codeAttr.getMaxLocals() < maxLocalUsed) {
                     codeAttr.setMaxLocals(maxLocalUsed);
                 }

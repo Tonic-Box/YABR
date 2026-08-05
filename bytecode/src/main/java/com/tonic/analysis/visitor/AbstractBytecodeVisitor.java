@@ -130,9 +130,9 @@ public abstract class AbstractBytecodeVisitor implements Visitor<MethodEntry>
 
     public void visit(PutFieldInstruction instr) {}
 
-    public void visit(NewInstruction instr) {}
+    public void visit(NewObjectInstruction instr) {}
 
-    public void visit(NewArrayInstruction instr) {}
+    public void visit(NewPrimitiveArrayInstruction instr) {}
 
     public void visit(ANewArrayInstruction instr) {}
 
@@ -150,7 +150,7 @@ public abstract class AbstractBytecodeVisitor implements Visitor<MethodEntry>
 
     public void visit(WideInstruction instr) {}
 
-    public void visit(ReturnInstruction instr) {}
+    public void visit(MethodReturnInstruction instr) {}
 
     public void visit(UnknownInstruction instr) {}
 

@@ -208,7 +208,7 @@ public class FrameGenerator {
      * reached by fall-through and begins a new basic block (requiring a frame).
      */
     private boolean isUnconditionalTransfer(Instruction instr) {
-        return instr instanceof ReturnInstruction
+        return instr instanceof MethodReturnInstruction
                 || instr instanceof ATHROWInstruction
                 || instr instanceof GotoInstruction
                 || instr instanceof TableSwitchInstruction

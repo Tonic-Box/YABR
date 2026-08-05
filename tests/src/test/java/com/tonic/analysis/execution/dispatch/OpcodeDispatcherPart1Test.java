@@ -1,11 +1,12 @@
 package com.tonic.analysis.execution.dispatch;
 
+import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.*;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.testutil.StubDispatchContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class OpcodeDispatcherPart1Test {
         }
 
         @Override
-        public void accept(com.tonic.analysis.visitor.AbstractBytecodeVisitor visitor) {}
+        public void accept(AbstractBytecodeVisitor visitor) {}
 
         @Override
         public void write(java.io.DataOutputStream dos) {}
@@ -99,7 +100,7 @@ class OpcodeDispatcherPart1Test {
         try {
             java.lang.reflect.Method method = OpcodeDispatcher.class.getDeclaredMethod(
                 "dispatch",
-                com.tonic.analysis.execution.frame.StackFrame.class,
+                StackFrame.class,
                 DispatchContext.class
             );
             throw new UnsupportedOperationException("Cannot test without proper frame");

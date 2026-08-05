@@ -1,10 +1,12 @@
 package com.tonic.analysis.bytecode;
 
 import com.tonic.analysis.CodeWriter;
+import com.tonic.analysis.instruction.GotoInstruction;
+import com.tonic.analysis.instruction.ILoadInstruction;
+import com.tonic.analysis.instruction.IStoreInstruction;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.instruction.NopInstruction;
-import com.tonic.builder.ClassBuilder;
-import com.tonic.type.AccessFlags;
+import com.tonic.analysis.instruction.WideInstruction;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
@@ -13,17 +15,19 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.lower.ASTLowerer;
 import com.tonic.analysis.source.parser.JavaParser;
 import com.tonic.analysis.ssa.SSA;
+import com.tonic.builder.ClassBuilder;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.testutil.TestUtils;
+import com.tonic.type.AccessFlags;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -201,8 +205,8 @@ class BytecodeEditTest {
         List<Instruction> shifted = cw.cloneRange(body.get(0), body.get(body.size() - 1), 1);
         boolean sawLowLocal = false;
         for (Instruction i : shifted) {
-            if (i instanceof com.tonic.analysis.instruction.ILoadInstruction
-                    || i instanceof com.tonic.analysis.instruction.IStoreInstruction) {
+            if (i instanceof ILoadInstruction
+                    || i instanceof IStoreInstruction) {
                 assertEquals(1, i.getLength(), "a local at index 0-3 must use the compact 1-byte form: " + i);
                 sawLowLocal = true;
             }
@@ -212,7 +216,7 @@ class BytecodeEditTest {
         List<Instruction> wide = cw.cloneRange(body.get(0), body.get(body.size() - 1), 300);
         boolean sawWide = false;
         for (Instruction i : wide) {
-            if (i instanceof com.tonic.analysis.instruction.WideInstruction) {
+            if (i instanceof WideInstruction) {
                 sawWide = true;
                 break;
             }
@@ -291,9 +295,9 @@ class BytecodeEditTest {
 
     private static boolean hasWideGoto(CodeWriter cw) {
         for (Instruction i : cw.getInstructions()) {
-            if (i instanceof com.tonic.analysis.instruction.GotoInstruction
-                    && ((com.tonic.analysis.instruction.GotoInstruction) i).getType()
-                       == com.tonic.analysis.instruction.GotoInstruction.GotoType.GOTO_WIDE) {
+            if (i instanceof GotoInstruction
+                    && ((GotoInstruction) i).getType()
+                       == GotoInstruction.GotoType.GOTO_WIDE) {
                 return true;
             }
         }
@@ -369,7 +373,7 @@ class BytecodeEditTest {
             if (m.getCodeAttribute() == null) {
                 continue;
             }
-            for (com.tonic.parser.attribute.Attribute a : m.getCodeAttribute().getAttributes()) {
+            for (Attribute a : m.getCodeAttribute().getAttributes()) {
                 if (a.getClass().getSimpleName().equals("StackMapTableAttribute")) {
                     n++;
                 }

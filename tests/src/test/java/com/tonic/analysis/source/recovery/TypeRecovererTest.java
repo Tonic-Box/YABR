@@ -5,13 +5,14 @@ import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.BinaryOpInstruction;
 import com.tonic.analysis.ssa.ir.TypeCheckInstruction;
 import com.tonic.analysis.ssa.type.*;
+import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.Value;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -254,7 +255,7 @@ class TypeRecovererTest {
 
         @Test
         void recoverType_nullValue_returnsVoid() {
-            SourceType result = recoverer.recoverType((com.tonic.analysis.ssa.value.Value) null);
+            SourceType result = recoverer.recoverType((Value) null);
             assertEquals(VoidSourceType.INSTANCE, result);
         }
 
@@ -267,7 +268,7 @@ class TypeRecovererTest {
 
         @Test
         void recoverType_constantWithNullType_returnsVoid() {
-            com.tonic.analysis.ssa.value.Constant constant = new com.tonic.analysis.ssa.value.Constant() {
+            Constant constant = new Constant() {
                 @Override
                 public IRType getType() {
                     return null;

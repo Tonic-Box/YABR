@@ -3,13 +3,12 @@ package com.tonic.analysis.execution.listener;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
+import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 public final class StatisticsListener extends AbstractBytecodeListener {
 
@@ -45,7 +44,7 @@ public final class StatisticsListener extends AbstractBytecodeListener {
     }
 
     @Override
-    public void onFramePop(StackFrame frame, com.tonic.analysis.execution.state.ConcreteValue returnValue) {
+    public void onFramePop(StackFrame frame, ConcreteValue returnValue) {
         currentCallDepth--;
     }
 
@@ -68,7 +67,7 @@ public final class StatisticsListener extends AbstractBytecodeListener {
     }
 
     @Override
-    public void onMethodCall(StackFrame caller, MethodEntry target, com.tonic.analysis.execution.state.ConcreteValue[] args) {
+    public void onMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args) {
         String methodSig = target.getOwnerName() + "." + target.getName() + target.getDesc();
         methodCallCount.merge(methodSig, 1L, Long::sum);
     }

@@ -447,8 +447,8 @@ YABR supports all JVM instructions through the `com.tonic.analysis.instruction` 
 | Math | `ArithmeticInstruction`, `ArithmeticShiftInstruction`, `INegInstruction` |
 | Conversion | `ConversionInstruction`, `NarrowingConversionInstruction`, `I2LInstruction` |
 | Comparison | `CompareInstruction`, `ConditionalBranchInstruction` |
-| Control | `GotoInstruction`, `ReturnInstruction`, `TableSwitchInstruction`, `LookupSwitchInstruction` |
-| Reference | `GetFieldInstruction`, `PutFieldInstruction`, `NewInstruction` |
+| Control | `GotoInstruction`, `MethodReturnInstruction`, `TableSwitchInstruction`, `LookupSwitchInstruction` |
+| Reference | `GetFieldInstruction`, `PutFieldInstruction`, `NewObjectInstruction` |
 | Invoke | `InvokeVirtualInstruction`, `InvokeStaticInstruction` |
 
 The four owner-bearing invokes - `Invoke{Virtual,Special,Static,Interface}Instruction` - implement the

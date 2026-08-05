@@ -415,14 +415,14 @@ public final class InstructionFactory {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int newClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
-                return new NewInstruction(constPool, opcode, offset, newClassIndex);
+                return new NewObjectInstruction(constPool, opcode, offset, newClassIndex);
 
             case 0xBC:
                 if (offset + 1 >= bytecode.length) {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
                 }
                 int newarrayTypeCode = Byte.toUnsignedInt(bytecode[offset + 1]);
-                return new NewArrayInstruction(opcode, offset, newarrayTypeCode, 1);
+                return new NewPrimitiveArrayInstruction(opcode, offset, newarrayTypeCode, 1);
 
             case 0xBD:
                 if (offset + 2 >= bytecode.length) {
@@ -467,7 +467,7 @@ public final class InstructionFactory {
             case 0xAF:
             case 0xB0:
             case 0xB1:
-                return new ReturnInstruction(opcode, offset);
+                return new MethodReturnInstruction(opcode, offset);
 
             case 0xC1:
                 if (offset + 2 >= bytecode.length) {

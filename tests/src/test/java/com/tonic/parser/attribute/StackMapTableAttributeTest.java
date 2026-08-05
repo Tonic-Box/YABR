@@ -1,12 +1,13 @@
 package com.tonic.parser.attribute;
 
+import com.tonic.parser.ClassFile;
+import com.tonic.parser.MemberEntry;
 import com.tonic.parser.attribute.stack.SameFrame;
 import com.tonic.parser.attribute.stack.StackMapFrame;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,7 +15,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void constructorWithMemberParent() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         assertNotNull(attr.getFrames());
         assertTrue(attr.getFrames().isEmpty());
@@ -23,7 +24,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void constructorWithClassParent() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.ClassFile) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (ClassFile) null, 10, 0);
 
         assertNotNull(attr.getFrames());
         assertTrue(attr.getFrames().isEmpty());
@@ -32,7 +33,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void setFramesUpdatesCount() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
         frames.add(new SameFrame(0));
@@ -47,7 +48,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void setFramesMakesDefensiveCopy() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
         frames.add(new SameFrame(5));
@@ -61,7 +62,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void setFramesWithEmptyList() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         attr.setFrames(Collections.emptyList());
 
@@ -71,7 +72,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void updateLengthWithNoFrames() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         attr.setFrames(Collections.emptyList());
         attr.updateLength();
@@ -79,7 +80,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void updateLengthWithSameFrames() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
         frames.add(new SameFrame(0));
@@ -104,7 +105,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void getFramesPreservesOrder() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
         frames.add(new SameFrame(0));
@@ -124,7 +125,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void toStringContainsRelevantInfo() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
         frames.add(new SameFrame(5));
@@ -162,7 +163,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void multipleSameFrameUpdatesLength() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
@@ -177,7 +178,7 @@ class StackMapTableAttributeTest {
 
     @Test
     void replaceFrames() {
-        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (com.tonic.parser.MemberEntry) null, 10, 0);
+        StackMapTableAttribute attr = new StackMapTableAttribute("StackMapTable", (MemberEntry) null, 10, 0);
 
         List<StackMapFrame> frames1 = new ArrayList<>();
         frames1.add(new SameFrame(5));

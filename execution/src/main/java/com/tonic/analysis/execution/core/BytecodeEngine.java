@@ -7,17 +7,29 @@ import com.tonic.analysis.execution.dispatch.InvokeDynamicInfo;
 import com.tonic.analysis.execution.dispatch.MethodHandleInfo;
 import com.tonic.analysis.execution.dispatch.MethodInfo;
 import com.tonic.analysis.execution.dispatch.MethodTypeInfo;
-import com.tonic.analysis.execution.dispatch.OpcodeDispatcher;
 import com.tonic.analysis.execution.dispatch.OpcodeDispatcher.DispatchResult;
+import com.tonic.analysis.execution.dispatch.OpcodeDispatcher;
 import com.tonic.analysis.execution.frame.CallStack;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
+import com.tonic.analysis.execution.heap.HeapManager;
 import com.tonic.analysis.execution.heap.ObjectInstance;
+import com.tonic.analysis.execution.invoke.InvocationContext;
+import com.tonic.analysis.execution.invoke.InvocationHandler;
+import com.tonic.analysis.execution.invoke.InvocationResult;
+import com.tonic.analysis.execution.invoke.NativeContext;
+import com.tonic.analysis.execution.invoke.NativeException;
+import com.tonic.analysis.execution.invoke.NativeRegistry;
+import com.tonic.analysis.execution.invoke.RecursiveHandler;
+import com.tonic.analysis.execution.listener.BytecodeListener;
+import com.tonic.analysis.execution.listener.CapableListener;
+import com.tonic.analysis.execution.listener.ListenerCapability;
 import com.tonic.analysis.execution.resolve.ClassResolver;
+import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
-import com.tonic.parser.ConstPool;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
@@ -27,28 +39,16 @@ import com.tonic.parser.constpool.FloatItem;
 import com.tonic.parser.constpool.IntegerItem;
 import com.tonic.parser.constpool.Item;
 import com.tonic.parser.constpool.LongItem;
-import com.tonic.parser.constpool.Utf8Item;
-
-import static com.tonic.util.Opcode.*;
 import com.tonic.parser.constpool.StringRefItem;
-import com.tonic.analysis.execution.invoke.InvocationContext;
-import com.tonic.analysis.execution.invoke.InvocationHandler;
-import com.tonic.analysis.execution.invoke.InvocationResult;
-import com.tonic.analysis.execution.invoke.NativeContext;
-import com.tonic.analysis.execution.invoke.NativeException;
-import com.tonic.analysis.execution.invoke.NativeRegistry;
-import com.tonic.analysis.execution.invoke.RecursiveHandler;
-import com.tonic.analysis.execution.resolve.ResolvedMethod;
-import com.tonic.analysis.execution.listener.BytecodeListener;
-import com.tonic.analysis.execution.listener.CapableListener;
-import com.tonic.analysis.execution.listener.ListenerCapability;
+import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.util.Modifiers;
-
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.tonic.util.Opcode.*;
 
 public final class BytecodeEngine {
 
@@ -560,11 +560,11 @@ public final class BytecodeEngine {
         try {
             NativeContext nativeContext = new NativeContext() {
                 @Override
-                public com.tonic.analysis.execution.heap.HeapManager getHeapManager() {
+                public HeapManager getHeapManager() {
                     return context.getHeapManager();
                 }
                 @Override
-                public com.tonic.analysis.execution.resolve.ClassResolver getClassResolver() {
+                public ClassResolver getClassResolver() {
                     return context.getClassResolver();
                 }
                 @Override
@@ -612,11 +612,11 @@ public final class BytecodeEngine {
             try {
                 NativeContext nativeContext = new NativeContext() {
                     @Override
-                    public com.tonic.analysis.execution.heap.HeapManager getHeapManager() {
+                    public HeapManager getHeapManager() {
                         return context.getHeapManager();
                     }
                     @Override
-                    public com.tonic.analysis.execution.resolve.ClassResolver getClassResolver() {
+                    public ClassResolver getClassResolver() {
                         return context.getClassResolver();
                     }
                     @Override
@@ -796,7 +796,7 @@ public final class BytecodeEngine {
             }
 
             @Override
-            public com.tonic.analysis.execution.heap.HeapManager getHeapManager() {
+            public HeapManager getHeapManager() {
                 return context.getHeapManager();
             }
 

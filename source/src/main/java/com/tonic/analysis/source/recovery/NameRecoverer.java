@@ -1,19 +1,20 @@
 package com.tonic.analysis.source.recovery;
 
+import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
 import com.tonic.parser.attribute.table.LocalVariableTableEntry;
-import com.tonic.parser.attribute.Attribute;
-import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.util.ClassNameUtil;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,8 +47,8 @@ public class NameRecoverer {
     private void buildSortedOffsets() {
         java.util.TreeSet<Integer> offs = new java.util.TreeSet<>();
         if (irMethod != null) {
-            for (com.tonic.analysis.ssa.cfg.IRBlock block : irMethod.getBlocks()) {
-                for (com.tonic.analysis.ssa.ir.IRInstruction instr : block.getInstructions()) {
+            for (IRBlock block : irMethod.getBlocks()) {
+                for (IRInstruction instr : block.getInstructions()) {
                     if (instr.getBytecodeOffset() >= 0) {
                         offs.add(instr.getBytecodeOffset());
                     }

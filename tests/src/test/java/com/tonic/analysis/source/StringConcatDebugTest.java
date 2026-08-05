@@ -12,17 +12,17 @@ import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.lift.BytecodeLifter;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.type.AccessFlags;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class StringConcatDebugTest {
 
@@ -109,7 +109,7 @@ public class StringConcatDebugTest {
             }
 
             System.out.println("\n=== Lifting bytecode back to IR ===");
-            com.tonic.analysis.ssa.lift.BytecodeLifter lifter = new com.tonic.analysis.ssa.lift.BytecodeLifter(cf.getConstPool());
+            BytecodeLifter lifter = new BytecodeLifter(cf.getConstPool());
             IRMethod liftedIr = lifter.lift(method);
             for (IRBlock liftedBlock : liftedIr.getBlocks()) {
                 System.out.println("Lifted Block " + liftedBlock.getId() + ":");

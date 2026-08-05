@@ -25,7 +25,6 @@ import com.tonic.parser.attribute.BootstrapMethodsAttribute;
 import com.tonic.parser.attribute.table.BootstrapMethod;
 import com.tonic.parser.constpool.*;
 import com.tonic.parser.constpool.structure.MethodHandle;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -954,9 +953,9 @@ public class ExpressionRecoverer {
             // Preserve class-constant bootstrap static arguments (e.g. SwitchBootstraps.typeSwitch
             // case types) so pattern-switch reconstruction can recover the case-type labels.
             List<String> classArgs = new ArrayList<>();
-            for (com.tonic.analysis.ssa.value.Constant c : bsInfo.getBootstrapArguments()) {
-                if (c instanceof com.tonic.analysis.ssa.value.ClassConstant) {
-                    classArgs.add(((com.tonic.analysis.ssa.value.ClassConstant) c).getClassName());
+            for (Constant c : bsInfo.getBootstrapArguments()) {
+                if (c instanceof ClassConstant) {
+                    classArgs.add(((ClassConstant) c).getClassName());
                 }
             }
             expr.setBootstrapClassArgs(classArgs);

@@ -8,10 +8,9 @@ import com.tonic.parser.constpool.*;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import com.tonic.util.Opcode;
+import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -1390,7 +1389,7 @@ class TypeInferenceTest {
     void testIReturn() {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
-        Instruction ireturn = new ReturnInstruction(0xAC, 0);
+        Instruction ireturn = new MethodReturnInstruction(0xAC, 0);
         TypeState result = inference.apply(state, ireturn);
 
         assertEquals(0, result.getStackSize());
@@ -1400,7 +1399,7 @@ class TypeInferenceTest {
     void testLReturn() {
         TypeState state = initialState.push(VerificationType.LONG);
 
-        Instruction lreturn = new ReturnInstruction(0xAD, 0);
+        Instruction lreturn = new MethodReturnInstruction(0xAD, 0);
         TypeState result = inference.apply(state, lreturn);
 
         assertEquals(0, result.getStackSize());
@@ -1410,7 +1409,7 @@ class TypeInferenceTest {
     void testFReturn() {
         TypeState state = initialState.push(VerificationType.FLOAT);
 
-        Instruction freturn = new ReturnInstruction(0xAE, 0);
+        Instruction freturn = new MethodReturnInstruction(0xAE, 0);
         TypeState result = inference.apply(state, freturn);
 
         assertEquals(0, result.getStackSize());
@@ -1420,7 +1419,7 @@ class TypeInferenceTest {
     void testDReturn() {
         TypeState state = initialState.push(VerificationType.DOUBLE);
 
-        Instruction dreturn = new ReturnInstruction(0xAF, 0);
+        Instruction dreturn = new MethodReturnInstruction(0xAF, 0);
         TypeState result = inference.apply(state, dreturn);
 
         assertEquals(0, result.getStackSize());
@@ -1430,7 +1429,7 @@ class TypeInferenceTest {
     void testAReturn() {
         TypeState state = initialState.push(VerificationType.object(1));
 
-        Instruction areturn = new ReturnInstruction(0xB0, 0);
+        Instruction areturn = new MethodReturnInstruction(0xB0, 0);
         TypeState result = inference.apply(state, areturn);
 
         assertEquals(0, result.getStackSize());
@@ -1440,7 +1439,7 @@ class TypeInferenceTest {
     void testReturn() {
         TypeState state = initialState.push(VerificationType.INTEGER).push(VerificationType.FLOAT);
 
-        Instruction returnInstr = new ReturnInstruction(0xB1, 0);
+        Instruction returnInstr = new MethodReturnInstruction(0xB1, 0);
         TypeState result = inference.apply(state, returnInstr);
 
         assertEquals(0, result.getStackSize());
@@ -1627,7 +1626,7 @@ class TypeInferenceTest {
 
     @Test
     void testNew() {
-        Instruction newInstr = new NewInstruction(constPool, 0xBB, 0,
+        Instruction newInstr = new NewObjectInstruction(constPool, 0xBB, 0,
                 constPool.findOrAddClass("java/lang/Object").getIndex(constPool));
         TypeState result = inference.apply(initialState, newInstr);
 
@@ -1640,7 +1639,7 @@ class TypeInferenceTest {
     void testNewArray() {
         TypeState state = initialState.push(VerificationType.INTEGER);
 
-        Instruction newarray = new NewArrayInstruction(0xBC, 0, 10, 0); // T_INT
+        Instruction newarray = new NewPrimitiveArrayInstruction(0xBC, 0, 10, 0); // T_INT
         TypeState result = inference.apply(state, newarray);
 
         assertEquals(1, result.getStackSize());
@@ -1730,7 +1729,7 @@ class TypeInferenceTest {
         // A WIDE-prefixed iload (local index > 255) pushes an int, exactly like its narrow form. This
         // previously asserted a no-op (assertSame) — codifying the bug where TypeInference dispatched on the
         // 0xC4 prefix, matched nothing, and ignored the wrapped instruction's stack effect.
-        Instruction wide = new WideInstruction(0xC4, 0, com.tonic.util.Opcode.ILOAD, 300);
+        Instruction wide = new WideInstruction(0xC4, 0, Opcode.ILOAD, 300);
         TypeState result = inference.apply(initialState, wide);
 
         assertEquals(1, result.getStackSize());

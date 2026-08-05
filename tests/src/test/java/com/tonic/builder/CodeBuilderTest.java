@@ -628,7 +628,7 @@ class CodeBuilderTest {
             , "()[I");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, NewArrayInstruction.class));
+            assertTrue(containsOpcodeType(insns, NewPrimitiveArrayInstruction.class));
         }
     }
 
@@ -687,23 +687,23 @@ class CodeBuilderTest {
 
         @Test
         void vreturnInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb.vreturn(), "()V");
+            ClassFile cf = buildMethodWithCode(CodeBuilder::vreturn, "()V");
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
 
         @Test
         void ireturnInstruction() {
             ClassFile cf = buildMethodWithCode(cb -> cb.iconst(0).ireturn(), "()I");
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
 
         @Test
         void areturnInstruction() {
             ClassFile cf = buildMethodWithCode(cb -> cb.aconst_null().areturn(), "()Ljava/lang/Object;");
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
@@ -819,7 +819,7 @@ class CodeBuilderTest {
             , "()J");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
@@ -935,7 +935,7 @@ class CodeBuilderTest {
             , "()F");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
@@ -1051,7 +1051,7 @@ class CodeBuilderTest {
             , "()D");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
@@ -1729,7 +1729,7 @@ class CodeBuilderTest {
             , "()Ljava/lang/Object;");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, NewInstruction.class));
+            assertTrue(containsOpcodeType(insns, NewObjectInstruction.class));
         }
 
         @Test
@@ -1949,12 +1949,10 @@ class CodeBuilderTest {
 
         @Test
         void ldcUnsupportedTypeThrowsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                buildMethodWithCode(cb -> cb
-                    .ldc(new Object())
-                    .areturn()
-                , "()Ljava/lang/Object;");
-            });
+            assertThrows(IllegalArgumentException.class, () -> buildMethodWithCode(cb -> cb
+                .ldc(new Object())
+                .areturn()
+            , "()Ljava/lang/Object;"));
         }
     }
 

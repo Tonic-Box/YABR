@@ -8,7 +8,7 @@ import java.io.IOException;
 /**
  * Represents the NEWARRAY instruction (0xBC).
  */
-public class NewArrayInstruction extends Instruction {
+public class NewPrimitiveArrayInstruction extends Instruction {
     private final ArrayType arrayType;
     private final int typeCode;
     private final int count;
@@ -53,17 +53,17 @@ public class NewArrayInstruction extends Instruction {
     }
 
     /**
-     * Constructs a NewArrayInstruction.
+     * Constructs a NewPrimitiveArrayInstruction.
      *
      * @param opcode    The opcode of the instruction.
      * @param offset    The bytecode offset of the instruction.
      * @param typeCode  The type code of the array elements.
      * @param count     The number of elements in the array.
      */
-    public NewArrayInstruction(int opcode, int offset, int typeCode, int count) {
+    public NewPrimitiveArrayInstruction(int opcode, int offset, int typeCode, int count) {
         super(opcode, offset, 2);
         if (opcode != 0xBC) {
-            throw new IllegalArgumentException("Invalid opcode for NewArrayInstruction: " + opcode);
+            throw new IllegalArgumentException("Invalid opcode for NewPrimitiveArrayInstruction: " + opcode);
         }
         this.typeCode = typeCode;
         this.arrayType = ArrayType.fromCode(typeCode);

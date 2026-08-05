@@ -1,18 +1,30 @@
 package com.tonic.analysis.source;
 
+import com.tonic.analysis.source.ast.expr.LiteralExpr;
+import com.tonic.analysis.source.ast.expr.VarRefExpr;
+import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.CatchClause;
+import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
+import com.tonic.analysis.source.ast.stmt.ThrowStmt;
+import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
+import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
+import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.testutil.TestClassLoader;
 import com.tonic.testutil.TestUtils;
-import org.junit.jupiter.api.Test;
-
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -563,41 +575,41 @@ class RecoveryTailsTest {
         // protected range; recovery then renders `try { T x = expr; } catch { throw } return x;`.
         // The simplifier folds the spill back to the source's `try { return expr; }` form. (javac 11
         // keeps the return in-range, so this shape is only constructible directly.)
-        com.tonic.analysis.source.ast.type.SourceType obj =
-                new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Object");
-        com.tonic.analysis.source.ast.stmt.VarDeclStmt decl =
-                new com.tonic.analysis.source.ast.stmt.VarDeclStmt(obj, "result",
-                        com.tonic.analysis.source.ast.expr.LiteralExpr.ofInt(7));
-        com.tonic.analysis.source.ast.stmt.BlockStmt tryBlock =
-                new com.tonic.analysis.source.ast.stmt.BlockStmt(
+        SourceType obj =
+                new ReferenceSourceType("java/lang/Object");
+        VarDeclStmt decl =
+                new VarDeclStmt(obj, "result",
+                        LiteralExpr.ofInt(7));
+        BlockStmt tryBlock =
+                new BlockStmt(
                         new java.util.ArrayList<>(java.util.List.of(
-                                (com.tonic.analysis.source.ast.stmt.Statement) decl)));
-        com.tonic.analysis.source.ast.stmt.BlockStmt catchBody =
-                new com.tonic.analysis.source.ast.stmt.BlockStmt(new java.util.ArrayList<>(java.util.List.of(
-                        (com.tonic.analysis.source.ast.stmt.Statement) new com.tonic.analysis.source.ast.stmt.ThrowStmt(
-                                new com.tonic.analysis.source.ast.expr.VarRefExpr("e", obj)))));
-        com.tonic.analysis.source.ast.stmt.CatchClause clause =
-                new com.tonic.analysis.source.ast.stmt.CatchClause(
-                        java.util.List.of(new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Exception")),
+                                (Statement) decl)));
+        BlockStmt catchBody =
+                new BlockStmt(new java.util.ArrayList<>(java.util.List.of(
+                        (Statement) new ThrowStmt(
+                                new VarRefExpr("e", obj)))));
+        CatchClause clause =
+                new CatchClause(
+                        java.util.List.of(new ReferenceSourceType("java/lang/Exception")),
                         "e", catchBody);
-        com.tonic.analysis.source.ast.stmt.TryCatchStmt tryCatch =
-                new com.tonic.analysis.source.ast.stmt.TryCatchStmt(tryBlock,
+        TryCatchStmt tryCatch =
+                new TryCatchStmt(tryBlock,
                         new java.util.ArrayList<>(java.util.List.of(clause)), null);
-        com.tonic.analysis.source.ast.stmt.ReturnStmt ret =
-                new com.tonic.analysis.source.ast.stmt.ReturnStmt(
-                        new com.tonic.analysis.source.ast.expr.VarRefExpr("result", obj));
-        com.tonic.analysis.source.ast.stmt.BlockStmt body =
-                new com.tonic.analysis.source.ast.stmt.BlockStmt(new java.util.ArrayList<>(java.util.List.of(
+        ReturnStmt ret =
+                new ReturnStmt(
+                        new VarRefExpr("result", obj));
+        BlockStmt body =
+                new BlockStmt(new java.util.ArrayList<>(java.util.List.of(
                         tryCatch, ret)));
 
-        new com.tonic.analysis.source.ast.transform.ControlFlowSimplifier().transform(body);
+        new ControlFlowSimplifier().transform(body);
 
         assertEquals(1, body.getStatements().size(), "the trailing return folds away");
-        com.tonic.analysis.source.ast.stmt.TryCatchStmt folded =
-                (com.tonic.analysis.source.ast.stmt.TryCatchStmt) body.getStatements().get(0);
-        com.tonic.analysis.source.ast.stmt.Statement last =
-                ((com.tonic.analysis.source.ast.stmt.BlockStmt) folded.getTryBlock()).getStatements().get(0);
-        assertTrue(last instanceof com.tonic.analysis.source.ast.stmt.ReturnStmt,
+        TryCatchStmt folded =
+                (TryCatchStmt) body.getStatements().get(0);
+        Statement last =
+                ((BlockStmt) folded.getTryBlock()).getStatements().get(0);
+        assertTrue(last instanceof ReturnStmt,
                 "the spilled declaration becomes the try's own return: " + last);
     }
 
@@ -703,7 +715,7 @@ class RecoveryTailsTest {
 
     /** Defines every fixture class in one loader and returns {@code main}'s Class. */
     private static Class<?> loadWith(Map<String, ClassFile> all, ClassFile main) throws Exception {
-        com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
+        TestClassLoader loader = new TestClassLoader();
         Class<?> result = null;
         for (ClassFile each : all.values()) {
             Class<?> c = loader.defineClass(each.getClassName().replace('/', '.'), each.write());

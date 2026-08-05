@@ -1,6 +1,7 @@
 package com.tonic.analysis.pattern;
 
 import com.tonic.analysis.Bytecode;
+import com.tonic.analysis.instruction.PopInstruction;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -11,11 +12,10 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import com.tonic.util.ReturnType;
+import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -44,7 +44,7 @@ class PatternsTest {
         methodEntry = classFile.createNewMethod(methodAccess, "testMethod", "V");
     }
 
-    private void buildIR() throws IOException {
+    private void buildIR() {
         irMethod = TestUtils.liftMethod(methodEntry);
     }
 
@@ -76,7 +76,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -88,7 +88,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addIConst(42);
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -100,7 +100,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -112,7 +112,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -124,7 +124,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -136,7 +136,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -148,7 +148,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -160,7 +160,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -172,7 +172,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -184,7 +184,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -196,7 +196,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -208,7 +208,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -220,7 +220,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -232,7 +232,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -268,7 +268,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -293,7 +293,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -305,7 +305,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addIConst(42);
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -324,7 +324,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -336,7 +336,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -348,7 +348,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -360,7 +360,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -479,7 +479,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -496,7 +496,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -513,7 +513,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -531,7 +531,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -548,7 +548,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -565,7 +565,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -583,7 +583,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addIConst(42);
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -597,7 +597,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -611,7 +611,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -629,7 +629,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -657,7 +657,7 @@ class PatternsTest {
             bc.finalizeBytecode();
 
             buildIR();
-            assertTrue(irMethod.getBlocks().size() > 0);
+            assertTrue(!irMethod.getBlocks().isEmpty());
         }
 
         @Test
@@ -677,7 +677,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -702,7 +702,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -715,7 +715,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -734,7 +734,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -747,7 +747,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -760,7 +760,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -832,7 +832,7 @@ class PatternsTest {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
             bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+                new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 

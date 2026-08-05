@@ -1,15 +1,17 @@
 package com.tonic.analysis.source.decompile;
 
+import com.tonic.analysis.source.emit.SourceEmitterConfig;
+import com.tonic.analysis.ssa.cfg.IRBlock;
+import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,8 +23,8 @@ class ClassDecompilerTest {
 
     @BeforeEach
     void setUp() {
-        com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
-        com.tonic.analysis.ssa.value.SSAValue.resetIdCounter();
+        IRBlock.resetIdCounter();
+        SSAValue.resetIdCounter();
     }
 
     // ========== Basic Class Decompilation Tests ==========
@@ -522,8 +524,8 @@ class ClassDecompilerTest {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/ConfigTest", access);
 
-        com.tonic.analysis.source.emit.SourceEmitterConfig config =
-            com.tonic.analysis.source.emit.SourceEmitterConfig.defaults();
+        SourceEmitterConfig config =
+            SourceEmitterConfig.defaults();
 
         String result = ClassDecompiler.decompile(cf, config);
 

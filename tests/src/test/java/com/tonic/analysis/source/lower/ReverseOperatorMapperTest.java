@@ -3,6 +3,7 @@ package com.tonic.analysis.source.lower;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.UnaryOperator;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.CompareOp;
 import com.tonic.analysis.ssa.ir.UnaryOp;
@@ -192,8 +193,8 @@ class ReverseOperatorMapperTest {
     @Test
     void getCastOp_NonPrimitiveReturnsNull() {
         assertNull(ReverseOperatorMapper.getCastOp(
-            com.tonic.analysis.source.ast.type.ReferenceSourceType.OBJECT,
-            com.tonic.analysis.source.ast.type.ReferenceSourceType.STRING));
+            ReferenceSourceType.OBJECT,
+            ReferenceSourceType.STRING));
     }
 
     // ========== Compound Assignment Base Operator Tests ==========

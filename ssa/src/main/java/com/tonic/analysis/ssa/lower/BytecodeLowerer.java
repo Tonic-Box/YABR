@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.lower;
 
+import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
@@ -8,10 +9,10 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
-import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.analysis.ssa.transform.DeadCodeElimination;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
@@ -91,7 +92,7 @@ public class BytecodeLowerer {
             // tables, so the LocalVariableTypeTable can be rebuilt against the regenerated LocalVariableTable ranges
             // rather than left with the source class's offsets - a mismatch the class loader rejects.
             Map<Long, Integer> genericSignatures = new HashMap<>();
-            for (com.tonic.parser.attribute.Attribute attr : codeAttr.getAttributes()) {
+            for (Attribute attr : codeAttr.getAttributes()) {
                 if (attr instanceof LocalVariableTypeTableAttribute) {
                     for (LocalVariableTypeTableEntry e
                             : ((LocalVariableTypeTableAttribute) attr).getLocalVariableTypeTable()) {

@@ -117,14 +117,9 @@ The module exposes exactly two public types; everything else is package-private.
 
 | Method | Description |
 |---|---|
-| `LlvmLifter()` | Construct with default config. |
-| `LlvmLifter(LlvmLifterConfig)` | Construct with a custom config. |
+| `LlvmLifter()` | Construct a lifter. |
 | `IRMethod lift(String)` | Parse the first `define` in the module text and return it as an `IRMethod`. Throws `LlvmLiftException` if none found. |
 | `List<IRMethod> liftModule(String)` | Parse all `define` functions in the module text and return them in order. |
-
-### `LlvmLifterConfig`
-
-A placeholder that keeps the API symmetric with `LlvmLoweringConfig`. Call `LlvmLifterConfig.defaults()` or omit it.
 
 ### `LlvmLiftException`
 

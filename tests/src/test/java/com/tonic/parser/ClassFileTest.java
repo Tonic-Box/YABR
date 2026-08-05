@@ -1,15 +1,18 @@
 package com.tonic.parser;
 
 import com.tonic.analysis.ClassFactory;
+import com.tonic.parser.constpool.DoubleItem;
+import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.LongItem;
+import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.testutil.TestClassLoader;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Nested;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -345,7 +348,7 @@ class ClassFileTest {
 
     @Test
     void roundTripWithLongConstantPreservesConstPoolCount() throws IOException {
-        com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+        LongItem longItem = new LongItem();
         longItem.setValue(123456789L);
         int longIndex = classFile.getConstPool().addItem(longItem);
 
@@ -359,7 +362,7 @@ class ClassFileTest {
 
     @Test
     void roundTripWithDoubleConstantPreservesConstPoolCount() throws IOException {
-        com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+        DoubleItem doubleItem = new DoubleItem();
         doubleItem.setValue(3.14159);
         int doubleIndex = classFile.getConstPool().addItem(doubleItem);
 
@@ -374,7 +377,7 @@ class ClassFileTest {
     @Test
     void roundTripWithMultipleLongsPreservesConstPoolCount() throws IOException {
         for (int i = 0; i < 16; i++) {
-            com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+            LongItem longItem = new LongItem();
             longItem.setValue(i * 1000000L);
             classFile.getConstPool().addItem(longItem);
         }
@@ -390,11 +393,11 @@ class ClassFileTest {
     @Test
     void roundTripWithMixedLongDoublePreservesConstPoolCount() throws IOException {
         for (int i = 0; i < 8; i++) {
-            com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+            LongItem longItem = new LongItem();
             longItem.setValue(i * 1000000L);
             classFile.getConstPool().addItem(longItem);
 
-            com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+            DoubleItem doubleItem = new DoubleItem();
             doubleItem.setValue(i * 1.5);
             classFile.getConstPool().addItem(doubleItem);
         }
@@ -409,7 +412,7 @@ class ClassFileTest {
 
     @Test
     void classWithLongConstantLoadsInJVM() throws Exception {
-        com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+        LongItem longItem = new LongItem();
         longItem.setValue(9876543210L);
         classFile.getConstPool().addItem(longItem);
 
@@ -422,7 +425,7 @@ class ClassFileTest {
 
     @Test
     void classWithDoubleConstantLoadsInJVM() throws Exception {
-        com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+        DoubleItem doubleItem = new DoubleItem();
         doubleItem.setValue(2.71828);
         classFile.getConstPool().addItem(doubleItem);
 
@@ -667,9 +670,9 @@ class ClassFileTest {
             classFile.setClassName("com/test/NewClass");
 
             boolean foundUpdatedDescriptor = false;
-            for (com.tonic.parser.constpool.Item<?> item : classFile.getConstPool().getItems()) {
-                if (item instanceof com.tonic.parser.constpool.Utf8Item) {
-                    String value = ((com.tonic.parser.constpool.Utf8Item) item).getValue();
+            for (Item<?> item : classFile.getConstPool().getItems()) {
+                if (item instanceof Utf8Item) {
+                    String value = ((Utf8Item) item).getValue();
                     if (value.contains("Lcom/test/NewClass;")) {
                         foundUpdatedDescriptor = true;
                         break;

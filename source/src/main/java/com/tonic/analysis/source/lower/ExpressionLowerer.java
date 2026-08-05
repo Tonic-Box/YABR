@@ -9,11 +9,11 @@ import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
+import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -94,8 +94,8 @@ public class ExpressionLowerer {
         CompareOp leaf = negate ? CompareOp.IFEQ : CompareOp.IFNE;
         BranchInstruction branch = new BranchInstruction(leaf, cond, trueTarget, falseTarget);
         ctx.getCurrentBlock().addInstruction(branch);
-        ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(trueTarget, EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(falseTarget, EdgeType.NORMAL);
     }
 
     /** The inverse of {@code op} when {@code negate} (null-safe), else {@code op} unchanged. */
@@ -115,8 +115,8 @@ public class ExpressionLowerer {
             if (binOp == BinaryOperator.EQ || binOp == BinaryOperator.NE) {
                 CompareOp op = binOp == BinaryOperator.EQ ? CompareOp.ACMPEQ : CompareOp.ACMPNE;
                 ctx.getCurrentBlock().addInstruction(new BranchInstruction(maybeInvert(op, negate), left, right, trueTarget, falseTarget));
-                ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-                ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(trueTarget, EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(falseTarget, EdgeType.NORMAL);
                 return;
             }
         }
@@ -173,8 +173,8 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         }
 
-        currentBlock.addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        currentBlock.addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(trueTarget, EdgeType.NORMAL);
+        currentBlock.addSuccessor(falseTarget, EdgeType.NORMAL);
     }
 
     /**
@@ -705,13 +705,13 @@ public class ExpressionLowerer {
         SSAValue one = ctx.newValue(PrimitiveType.INT);
         trueBlock.addInstruction(new ConstantInstruction(one, IntConstant.ONE));
         trueBlock.addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        trueBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(falseBlock);
         SSAValue zero = ctx.newValue(PrimitiveType.INT);
         falseBlock.addInstruction(new ConstantInstruction(zero, IntConstant.ZERO));
         falseBlock.addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        falseBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -787,20 +787,20 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         }
 
-        currentBlock.addSuccessor(trueBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        currentBlock.addSuccessor(falseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(trueBlock, EdgeType.NORMAL);
+        currentBlock.addSuccessor(falseBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(trueBlock);
         SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        trueBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(falseBlock);
         SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        falseBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -852,20 +852,20 @@ public class ExpressionLowerer {
             IRBlock currentBlock = ctx.getCurrentBlock();
             BranchInstruction branch = new BranchInstruction(CompareOp.IFEQ, operand, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-            currentBlock.addSuccessor(trueBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-            currentBlock.addSuccessor(falseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            currentBlock.addSuccessor(trueBlock, EdgeType.NORMAL);
+            currentBlock.addSuccessor(falseBlock, EdgeType.NORMAL);
 
             ctx.setCurrentBlock(trueBlock);
             SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-            trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            trueBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
             ctx.setCurrentBlock(falseBlock);
             SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-            falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            falseBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
             ctx.setCurrentBlock(mergeBlock);
             SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -1973,13 +1973,13 @@ public class ExpressionLowerer {
         Value thenVal = lower(ternary.getThenExpr());
         IRBlock thenEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        thenEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        thenEndBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(elseBlock);
         Value elseVal = lower(ternary.getElseExpr());
         IRBlock elseEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        elseEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        elseEndBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         IRType resultType = ternary.getType().toIRType();

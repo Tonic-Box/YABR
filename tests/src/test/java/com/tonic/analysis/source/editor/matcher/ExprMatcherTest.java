@@ -1,12 +1,14 @@
 package com.tonic.analysis.source.editor.matcher;
 
+import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-import org.junit.jupiter.api.Test;
-
+import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -671,7 +673,7 @@ class ExprMatcherTest {
     private static class VarRefExpr implements Expression {
         private final String name;
         private final SourceType type;
-        private com.tonic.analysis.source.ast.ASTNode parent;
+        private ASTNode parent;
 
         VarRefExpr(String name, SourceType type) {
             this.name = name;
@@ -684,22 +686,22 @@ class ExprMatcherTest {
         }
 
         @Override
-        public com.tonic.analysis.source.ast.SourceLocation getLocation() {
-            return com.tonic.analysis.source.ast.SourceLocation.UNKNOWN;
+        public SourceLocation getLocation() {
+            return SourceLocation.UNKNOWN;
         }
 
         @Override
-        public com.tonic.analysis.source.ast.ASTNode getParent() {
+        public ASTNode getParent() {
             return parent;
         }
 
         @Override
-        public void setParent(com.tonic.analysis.source.ast.ASTNode parent) {
+        public void setParent(ASTNode parent) {
             this.parent = parent;
         }
 
         @Override
-        public <T> T accept(com.tonic.analysis.source.visitor.SourceVisitor<T> visitor) {
+        public <T> T accept(SourceVisitor<T> visitor) {
             return null;
         }
 

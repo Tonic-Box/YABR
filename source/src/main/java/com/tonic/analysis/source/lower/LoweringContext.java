@@ -1,13 +1,14 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.CopyInstruction;
 import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ConstPool;
-
 import java.util.*;
 
 /**
@@ -161,13 +162,13 @@ public class LoweringContext {
     }
 
     /** The declared return type of the method being lowered - the target type of its return values. */
-    private com.tonic.analysis.source.ast.type.SourceType currentMethodReturnType;
+    private SourceType currentMethodReturnType;
 
-    public com.tonic.analysis.source.ast.type.SourceType getCurrentMethodReturnType() {
+    public SourceType getCurrentMethodReturnType() {
         return currentMethodReturnType;
     }
 
-    public void setCurrentMethodReturnType(com.tonic.analysis.source.ast.type.SourceType type) {
+    public void setCurrentMethodReturnType(SourceType type) {
         this.currentMethodReturnType = type;
     }
 
@@ -176,10 +177,10 @@ public class LoweringContext {
      * variable whose initializer is under way. Consulted when a call's return type cannot be resolved, so
      * the descriptor carries what the source demands instead of degrading to Object.
      */
-    private final java.util.ArrayDeque<com.tonic.analysis.source.ast.type.SourceType> expectedTypes =
+    private final java.util.ArrayDeque<SourceType> expectedTypes =
             new java.util.ArrayDeque<>();
 
-    public void pushExpectedType(com.tonic.analysis.source.ast.type.SourceType type) {
+    public void pushExpectedType(SourceType type) {
         expectedTypes.push(type);
     }
 
@@ -187,7 +188,7 @@ public class LoweringContext {
         expectedTypes.pop();
     }
 
-    public com.tonic.analysis.source.ast.type.SourceType peekExpectedType() {
+    public SourceType peekExpectedType() {
         return expectedTypes.peek();
     }
 
@@ -303,14 +304,14 @@ public class LoweringContext {
         if (emitLocalInstructions && currentBlock != null) {
             IRMethod.SourceLocal owner = irMethod.sourceLocalOf(value);
             boolean aliasesOtherLocal = owner != null && owner != currentSourceLocal.get(name);
-            if (!aliasesOtherLocal && value.getDefinition() instanceof com.tonic.analysis.ssa.ir.LoadLocalInstruction) {
-                int loadedFrom = ((com.tonic.analysis.ssa.ir.LoadLocalInstruction) value.getDefinition()).getLocalIndex();
+            if (!aliasesOtherLocal && value.getDefinition() instanceof LoadLocalInstruction) {
+                int loadedFrom = ((LoadLocalInstruction) value.getDefinition()).getLocalIndex();
                 aliasesOtherLocal = !variableLocalIndices.containsKey(name) || variableLocalIndices.get(name) != loadedFrom;
             }
             if (aliasesOtherLocal) {
                 SSAValue aliased = newValue(value.getType());
                 currentBlock.addInstruction(
-                        new com.tonic.analysis.ssa.ir.CopyInstruction(aliased, value));
+                        new CopyInstruction(aliased, value));
                 value = aliased;
             }
         }

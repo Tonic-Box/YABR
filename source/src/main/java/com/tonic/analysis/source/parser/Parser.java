@@ -5,7 +5,6 @@ import com.tonic.analysis.source.ast.decl.*;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
-
 import java.util.*;
 
 public class Parser {
@@ -1051,7 +1050,7 @@ public class Parser {
      * Parses a switch expression (Java 14) in arrow form:
      * {@code switch (sel) { case L1, L2 -> expr; default -> expr; }}.
      */
-    private com.tonic.analysis.source.ast.expr.SwitchExpr parseSwitchExpr() {
+    private SwitchExpr parseSwitchExpr() {
         SourceLocation loc = currentLocation();
         consume(TokenType.SWITCH, "Expected 'switch'");
         consume(TokenType.LPAREN, "Expected '(' after 'switch'");
@@ -1059,17 +1058,17 @@ public class Parser {
         consume(TokenType.RPAREN, "Expected ')' after switch selector");
         consume(TokenType.LBRACE, "Expected '{' before switch body");
 
-        List<com.tonic.analysis.source.ast.expr.SwitchExpr.Arm> arms = new ArrayList<>();
+        List<SwitchExpr.Arm> arms = new ArrayList<>();
         SourceType type = null;
         while (!check(TokenType.RBRACE) && !isAtEnd()) {
-            com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm = parseSwitchExprArm();
+            SwitchExpr.Arm arm = parseSwitchExprArm();
             arms.add(arm);
             if (type == null && arm.getResult() != null && arm.getResult().getType() != null) {
                 type = arm.getResult().getType();
             }
         }
         consume(TokenType.RBRACE, "Expected '}' after switch expression body");
-        return new com.tonic.analysis.source.ast.expr.SwitchExpr(selector, arms, type, loc);
+        return new SwitchExpr(selector, arms, type, loc);
     }
 
     /**
@@ -1077,11 +1076,11 @@ public class Parser {
      * {@code case T b [when g] -> e}, a record-deconstruction arm {@code case T(C0 b0, ...) [when g] -> e},
      * or {@code default -> e} (Java 21 pattern switch).
      */
-    private com.tonic.analysis.source.ast.expr.SwitchExpr.Arm parseSwitchExprArm() {
+    private SwitchExpr.Arm parseSwitchExprArm() {
         List<Expression> labels = new ArrayList<>();
         SourceType patternType = null;
         String patternBinding = null;
-        List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> components = null;
+        List<SwitchExpr.Component> components = null;
         Expression guard = null;
         boolean isDefault = false;
 
@@ -1112,21 +1111,21 @@ public class Parser {
         consume(TokenType.SEMICOLON, "Expected ';' after switch expression arm");
 
         if (patternType != null) {
-            return new com.tonic.analysis.source.ast.expr.SwitchExpr.Arm(
+            return new SwitchExpr.Arm(
                     new ArrayList<>(), false, patternType, patternBinding, components, guard, result);
         }
-        return new com.tonic.analysis.source.ast.expr.SwitchExpr.Arm(labels, isDefault, result);
+        return new SwitchExpr.Arm(labels, isDefault, result);
     }
 
     /** Parses {@code (C0 b0, C1 b1, ...)} of a record-deconstruction pattern (flat components). */
-    private List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> parseDeconstructionComponents() {
+    private List<SwitchExpr.Component> parseDeconstructionComponents() {
         consume(TokenType.LPAREN, "Expected '(' in record-deconstruction pattern");
-        List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> components = new ArrayList<>();
+        List<SwitchExpr.Component> components = new ArrayList<>();
         if (!check(TokenType.RPAREN)) {
             do {
                 SourceType compType = parseType();
                 String compBinding = consume(TokenType.IDENTIFIER, "Expected component binding name").getText();
-                components.add(new com.tonic.analysis.source.ast.expr.SwitchExpr.Component(compType, compBinding));
+                components.add(new SwitchExpr.Component(compType, compBinding));
             } while (match(TokenType.COMMA));
         }
         consume(TokenType.RPAREN, "Expected ')' after record-deconstruction components");

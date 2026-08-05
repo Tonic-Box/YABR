@@ -4,7 +4,6 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +22,7 @@ public final class SwitchExpr implements Expression {
     public static final class Arm {
         private final List<Expression> labels;
         private final boolean isDefault;
-        private final com.tonic.analysis.source.ast.type.SourceType patternType;
+        private final SourceType patternType;
         private final String patternBinding;
         private final List<Component> deconstructionComponents;
         /** The {@code when} guard of a guarded pattern arm, or null. */
@@ -35,19 +34,19 @@ public final class SwitchExpr implements Expression {
         }
 
         public Arm(List<Expression> labels, boolean isDefault,
-                   com.tonic.analysis.source.ast.type.SourceType patternType, String patternBinding,
+                   SourceType patternType, String patternBinding,
                    Expression result) {
             this(labels, isDefault, patternType, patternBinding, null, null, result);
         }
 
         public Arm(List<Expression> labels, boolean isDefault,
-                   com.tonic.analysis.source.ast.type.SourceType patternType, String patternBinding,
+                   SourceType patternType, String patternBinding,
                    List<Component> deconstructionComponents, Expression result) {
             this(labels, isDefault, patternType, patternBinding, deconstructionComponents, null, result);
         }
 
         public Arm(List<Expression> labels, boolean isDefault,
-                   com.tonic.analysis.source.ast.type.SourceType patternType, String patternBinding,
+                   SourceType patternType, String patternBinding,
                    List<Component> deconstructionComponents, Expression guard, Expression result) {
             this.labels = labels != null ? labels : new ArrayList<>();
             this.isDefault = isDefault;

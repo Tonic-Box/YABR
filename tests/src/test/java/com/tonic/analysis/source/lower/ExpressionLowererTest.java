@@ -4,9 +4,11 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.type.ArrayType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.*;
@@ -15,11 +17,10 @@ import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -534,7 +535,7 @@ class ExpressionLowererTest {
         MethodCallExpr call = new MethodCallExpr(
             receiver, "doSomething", "com/test/Test",
             List.of(), false,
-            com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE
+            VoidSourceType.INSTANCE
         );
 
         Value result = lowerer.lower(call);
@@ -585,7 +586,7 @@ class ExpressionLowererTest {
     @Test
     void lowerArrayAccess() {
         VarRefExpr array = new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT, 1));
-        SSAValue arrayValue = new SSAValue(new com.tonic.analysis.ssa.type.ArrayType(PrimitiveType.INT, 1));
+        SSAValue arrayValue = new SSAValue(new ArrayType(PrimitiveType.INT, 1));
         ctx.setVariable("arr", arrayValue);
 
         LiteralExpr index = LiteralExpr.ofInt(0);
@@ -601,7 +602,7 @@ class ExpressionLowererTest {
     @Test
     void lowerArrayAssignment() {
         VarRefExpr array = new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT, 1));
-        SSAValue arrayValue = new SSAValue(new com.tonic.analysis.ssa.type.ArrayType(PrimitiveType.INT, 1));
+        SSAValue arrayValue = new SSAValue(new ArrayType(PrimitiveType.INT, 1));
         ctx.setVariable("arr", arrayValue);
 
         LiteralExpr index = LiteralExpr.ofInt(0);

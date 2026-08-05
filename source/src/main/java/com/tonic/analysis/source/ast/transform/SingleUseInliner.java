@@ -3,8 +3,9 @@ package com.tonic.analysis.source.ast.transform;
 import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
-
+import com.tonic.analysis.ssa.value.SSAValue;
 import java.util.*;
 
 /**
@@ -59,7 +60,7 @@ public class SingleUseInliner implements ASTTransform {
      * deleting the declaration would orphan those. SSA identity distinguishes that hazard from
      * ordinary same-named shadow ranges, which are different values.
      */
-    private int countSsaRefs(com.tonic.analysis.ssa.value.SSAValue ssa) {
+    private int countSsaRefs(SSAValue ssa) {
         int[] n = {0};
         rootBlock.accept(new AbstractSourceVisitor<Void>() {
             @Override
@@ -108,8 +109,8 @@ public class SingleUseInliner implements ASTTransform {
     }
 
     /** The SSA value of the first {@code varName} reference inside {@code stmt}, or null. */
-    private com.tonic.analysis.ssa.value.SSAValue refSsaIn(Statement stmt, String varName) {
-        com.tonic.analysis.ssa.value.SSAValue[] found = {null};
+    private SSAValue refSsaIn(Statement stmt, String varName) {
+        SSAValue[] found = {null};
         stmt.accept(new AbstractSourceVisitor<Void>() {
             @Override
             public Void visitVarRef(VarRefExpr expr) {
@@ -156,7 +157,7 @@ public class SingleUseInliner implements ASTTransform {
 
                 if (usage.count == 1 && usage.canInline && usage.usageStmtIndex > i
                         && !escapeRefs.contains(varName)) {
-                    com.tonic.analysis.ssa.value.SSAValue useSsa =
+                    SSAValue useSsa =
                             refSsaIn(stmts.get(usage.usageStmtIndex), varName);
                     if (useSsa != null && countSsaRefs(useSsa) > usage.count) {
                         continue;
@@ -332,7 +333,7 @@ public class SingleUseInliner implements ASTTransform {
                 Expression newExpr = replaceInExpression(ret.getValue(), replacer);
                 // Inlining an int-typed spill into a boolean method's return surfaces the JVM's 0/1 form;
                 // render the boolean literal the source had.
-                if (ret.getMethodReturnType() == com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN
+                if (ret.getMethodReturnType() == PrimitiveSourceType.BOOLEAN
                         && newExpr instanceof LiteralExpr
                         && ((LiteralExpr) newExpr).getValue() instanceof Integer) {
                     int iv = (Integer) ((LiteralExpr) newExpr).getValue();

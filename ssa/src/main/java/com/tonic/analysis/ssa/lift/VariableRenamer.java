@@ -4,9 +4,9 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-
 import java.util.*;
 import java.util.Collections;
 import java.util.regex.Matcher;
@@ -44,9 +44,6 @@ public class VariableRenamer {
         initializeParameters(method);
 
         if (method.getEntryBlock() != null) {
-            int blockCount = method.getBlockCount();
-            if (blockCount > 500) {
-            }
             renameBlock(method.getEntryBlock());
         }
     }
@@ -104,7 +101,7 @@ public class VariableRenamer {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
             for (IRInstruction instr : instructions) {
                 renameUses(instr);
-                renameDefinitions(instr, block);
+                renameDefinitions(instr);
             }
 
             for (IRBlock succ : block.getSuccessors()) {
@@ -155,7 +152,7 @@ public class VariableRenamer {
         }
     }
 
-    private void renameDefinitions(IRInstruction instr, IRBlock block) {
+    private void renameDefinitions(IRInstruction instr) {
         if (instr instanceof StoreLocalInstruction) {
             StoreLocalInstruction store = (StoreLocalInstruction) instr;
             int varIndex = store.getLocalIndex();
@@ -196,7 +193,7 @@ public class VariableRenamer {
         return stack != null && !stack.isEmpty() ? stack.peek() : null;
     }
 
-    private SSAValue createNewName(int varIndex, com.tonic.analysis.ssa.type.IRType type) {
+    private SSAValue createNewName(int varIndex, IRType type) {
         int count = varCounters.getOrDefault(varIndex, 0);
         varCounters.put(varIndex, count + 1);
         return new SSAValue(type, "v" + varIndex + "_" + count);

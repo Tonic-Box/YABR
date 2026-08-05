@@ -1,19 +1,37 @@
 package com.tonic.analysis.source.ast.expr;
 
 import com.tonic.analysis.source.ast.SourceLocation;
+import com.tonic.analysis.source.ast.stmt.BlockStmt;
+import com.tonic.analysis.source.ast.stmt.BreakStmt;
+import com.tonic.analysis.source.ast.stmt.ContinueStmt;
+import com.tonic.analysis.source.ast.stmt.DoWhileStmt;
+import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.ForEachStmt;
+import com.tonic.analysis.source.ast.stmt.ForStmt;
+import com.tonic.analysis.source.ast.stmt.IRRegionStmt;
+import com.tonic.analysis.source.ast.stmt.IfStmt;
+import com.tonic.analysis.source.ast.stmt.LabeledStmt;
+import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
+import com.tonic.analysis.source.ast.stmt.SwitchStmt;
+import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
+import com.tonic.analysis.source.ast.stmt.ThrowStmt;
+import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
+import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
+import com.tonic.analysis.source.ast.stmt.WhileStmt;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.value.SSAValue;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -129,87 +147,87 @@ class ExpressionASTTest {
         }
 
         @Override
-        public String visitBlock(com.tonic.analysis.source.ast.stmt.BlockStmt stmt) {
+        public String visitBlock(BlockStmt stmt) {
             return "visitBlock";
         }
 
         @Override
-        public String visitIf(com.tonic.analysis.source.ast.stmt.IfStmt stmt) {
+        public String visitIf(IfStmt stmt) {
             return "visitIf";
         }
 
         @Override
-        public String visitWhile(com.tonic.analysis.source.ast.stmt.WhileStmt stmt) {
+        public String visitWhile(WhileStmt stmt) {
             return "visitWhile";
         }
 
         @Override
-        public String visitDoWhile(com.tonic.analysis.source.ast.stmt.DoWhileStmt stmt) {
+        public String visitDoWhile(DoWhileStmt stmt) {
             return "visitDoWhile";
         }
 
         @Override
-        public String visitFor(com.tonic.analysis.source.ast.stmt.ForStmt stmt) {
+        public String visitFor(ForStmt stmt) {
             return "visitFor";
         }
 
         @Override
-        public String visitForEach(com.tonic.analysis.source.ast.stmt.ForEachStmt stmt) {
+        public String visitForEach(ForEachStmt stmt) {
             return "visitForEach";
         }
 
         @Override
-        public String visitSwitch(com.tonic.analysis.source.ast.stmt.SwitchStmt stmt) {
+        public String visitSwitch(SwitchStmt stmt) {
             return "visitSwitch";
         }
 
         @Override
-        public String visitTryCatch(com.tonic.analysis.source.ast.stmt.TryCatchStmt stmt) {
+        public String visitTryCatch(TryCatchStmt stmt) {
             return "visitTryCatch";
         }
 
         @Override
-        public String visitReturn(com.tonic.analysis.source.ast.stmt.ReturnStmt stmt) {
+        public String visitReturn(ReturnStmt stmt) {
             return "visitReturn";
         }
 
         @Override
-        public String visitThrow(com.tonic.analysis.source.ast.stmt.ThrowStmt stmt) {
+        public String visitThrow(ThrowStmt stmt) {
             return "visitThrow";
         }
 
         @Override
-        public String visitVarDecl(com.tonic.analysis.source.ast.stmt.VarDeclStmt stmt) {
+        public String visitVarDecl(VarDeclStmt stmt) {
             return "visitVarDecl";
         }
 
         @Override
-        public String visitExprStmt(com.tonic.analysis.source.ast.stmt.ExprStmt stmt) {
+        public String visitExprStmt(ExprStmt stmt) {
             return "visitExprStmt";
         }
 
         @Override
-        public String visitSynchronized(com.tonic.analysis.source.ast.stmt.SynchronizedStmt stmt) {
+        public String visitSynchronized(SynchronizedStmt stmt) {
             return "visitSynchronized";
         }
 
         @Override
-        public String visitLabeled(com.tonic.analysis.source.ast.stmt.LabeledStmt stmt) {
+        public String visitLabeled(LabeledStmt stmt) {
             return "visitLabeled";
         }
 
         @Override
-        public String visitBreak(com.tonic.analysis.source.ast.stmt.BreakStmt stmt) {
+        public String visitBreak(BreakStmt stmt) {
             return "visitBreak";
         }
 
         @Override
-        public String visitContinue(com.tonic.analysis.source.ast.stmt.ContinueStmt stmt) {
+        public String visitContinue(ContinueStmt stmt) {
             return "visitContinue";
         }
 
         @Override
-        public String visitIRRegion(com.tonic.analysis.source.ast.stmt.IRRegionStmt stmt) {
+        public String visitIRRegion(IRRegionStmt stmt) {
             return "visitIRRegion";
         }
 
@@ -229,7 +247,7 @@ class ExpressionASTTest {
         }
 
         @Override
-        public String visitVoidType(com.tonic.analysis.source.ast.type.VoidSourceType type) {
+        public String visitVoidType(VoidSourceType type) {
             return "visitVoidType";
         }
     }
@@ -350,7 +368,7 @@ class ExpressionASTTest {
         @Test
         void basicConstructor() {
             SourceType elementType = PrimitiveSourceType.INT;
-            List<Expression> dimensions = Arrays.asList(LiteralExpr.ofInt(10));
+            List<Expression> dimensions = List.of(LiteralExpr.ofInt(10));
 
             NewArrayExpr expr = new NewArrayExpr(elementType, dimensions);
 
@@ -478,7 +496,7 @@ class ExpressionASTTest {
         @Test
         void toStringWithInitializer() {
             ArrayInitExpr init = new ArrayInitExpr(
-                    Arrays.asList(LiteralExpr.ofInt(1)),
+                    List.of(LiteralExpr.ofInt(1)),
                     new ArraySourceType(PrimitiveSourceType.INT)
             );
             NewArrayExpr expr = NewArrayExpr.withInit(PrimitiveSourceType.INT, init);
@@ -1414,7 +1432,7 @@ class ExpressionASTTest {
             Expression receiver = createTestExpression();
             String methodName = "toString";
             String ownerClass = "java/lang/Object";
-            List<Expression> arguments = Arrays.asList(createTestExpression());
+            List<Expression> arguments = List.of(createTestExpression());
             SourceType returnType = ReferenceSourceType.STRING;
 
             MethodCallExpr expr = new MethodCallExpr(
@@ -1440,7 +1458,7 @@ class ExpressionASTTest {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "java/lang/Math",
                     "abs",
-                    Arrays.asList(LiteralExpr.ofInt(-5)),
+                    List.of(LiteralExpr.ofInt(-5)),
                     PrimitiveSourceType.INT
             );
 
@@ -1599,7 +1617,7 @@ class ExpressionASTTest {
             MethodCallExpr expr = MethodCallExpr.staticCall(
                     "java/lang/Math",
                     "abs",
-                    Arrays.asList(LiteralExpr.ofInt(-5)),
+                    List.of(LiteralExpr.ofInt(-5)),
                     PrimitiveSourceType.INT
             );
 
@@ -1665,7 +1683,7 @@ class ExpressionASTTest {
         @Test
         void withArguments() {
             String className = "java/lang/StringBuilder";
-            List<Expression> arguments = Arrays.asList(LiteralExpr.ofString("initial"));
+            List<Expression> arguments = List.of(LiteralExpr.ofString("initial"));
 
             NewExpr expr = new NewExpr(className, arguments);
 
@@ -1795,9 +1813,9 @@ class ExpressionASTTest {
             List<LambdaParameter> params = Collections.singletonList(
                     LambdaParameter.explicit(PrimitiveSourceType.INT, "x")
             );
-            com.tonic.analysis.source.ast.stmt.Statement body =
-                    new com.tonic.analysis.source.ast.stmt.BlockStmt(
-                            Collections.singletonList(new com.tonic.analysis.source.ast.stmt.ReturnStmt())
+            Statement body =
+                    new BlockStmt(
+                            Collections.singletonList(new ReturnStmt())
                     );
             SourceType type = new ReferenceSourceType("java/util/function/Function");
 
@@ -1834,8 +1852,8 @@ class ExpressionASTTest {
 
         @Test
         void isBlockBody() {
-            com.tonic.analysis.source.ast.stmt.Statement body =
-                    new com.tonic.analysis.source.ast.stmt.BlockStmt(Collections.emptyList());
+            Statement body =
+                    new BlockStmt(Collections.emptyList());
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
                     new ReferenceSourceType("java/lang/Runnable"));
 
@@ -1846,8 +1864,8 @@ class ExpressionASTTest {
 
         @Test
         void getExpressionBodyThrowsForBlockBody() {
-            com.tonic.analysis.source.ast.stmt.Statement body =
-                    new com.tonic.analysis.source.ast.stmt.BlockStmt(Collections.emptyList());
+            Statement body =
+                    new BlockStmt(Collections.emptyList());
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
                     new ReferenceSourceType("java/lang/Runnable"));
 
@@ -1943,8 +1961,8 @@ class ExpressionASTTest {
 
         @Test
         void toStringWithBlockBody() {
-            com.tonic.analysis.source.ast.stmt.Statement body =
-                    new com.tonic.analysis.source.ast.stmt.BlockStmt(Collections.emptyList());
+            Statement body =
+                    new BlockStmt(Collections.emptyList());
             LambdaExpr lambda = new LambdaExpr(Collections.emptyList(), body,
                     new ReferenceSourceType("java/lang/Runnable"));
 

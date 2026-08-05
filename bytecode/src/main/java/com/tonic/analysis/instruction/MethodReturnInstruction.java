@@ -9,16 +9,16 @@ import java.io.IOException;
 /**
  * Represents the return instructions (IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN).
  */
-public class ReturnInstruction extends Instruction {
+public class MethodReturnInstruction extends Instruction {
     private final ReturnType type;
 
     /**
-     * Constructs a ReturnInstruction.
+     * Constructs a MethodReturnInstruction.
      *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
-    public ReturnInstruction(int opcode, int offset) {
+    public MethodReturnInstruction(int opcode, int offset) {
         super(opcode, offset, 1);
         this.type = ReturnType.fromOpcode(opcode);
         if (this.type == null) {

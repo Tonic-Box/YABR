@@ -7,6 +7,7 @@ import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
@@ -20,12 +21,11 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -74,7 +74,7 @@ class ASTLowererTest {
 
     @Test
     void lowerMethodWithReturnStatement() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt(LiteralExpr.ofInt(42)));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -95,7 +95,7 @@ class ASTLowererTest {
 
     @Test
     void lowerMethodWithVoidReturn() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
@@ -213,7 +213,7 @@ class ASTLowererTest {
 
     @Test
     void lowerVariableDeclarationWithoutInitializer() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x"));
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
@@ -234,7 +234,7 @@ class ASTLowererTest {
 
     @Test
     void lowerVariableDeclarationWithInitializer() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(10)));
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
@@ -250,7 +250,7 @@ class ASTLowererTest {
         );
 
         assertNotNull(irMethod);
-        assertTrue(irMethod.getEntryBlock().getInstructions().size() > 0);
+        assertTrue(!irMethod.getEntryBlock().getInstructions().isEmpty());
     }
 
     // ========== Expression Lowering Tests ==========
@@ -264,7 +264,7 @@ class ASTLowererTest {
             PrimitiveSourceType.INT
         );
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x"));
         stmts.add(new ExprStmt(assignment));
         stmts.add(new ReturnStmt());
@@ -293,7 +293,7 @@ class ASTLowererTest {
             PrimitiveSourceType.INT
         );
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt(addition));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -313,7 +313,7 @@ class ASTLowererTest {
 
     @Test
     void lowerLiteralExpression() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt(LiteralExpr.ofInt(123)));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -425,7 +425,7 @@ class ASTLowererTest {
 
     @Test
     void lowerMethodAddsImplicitReturnIfMissing() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -445,13 +445,13 @@ class ASTLowererTest {
     // ========== Existing IRMethod Lowering Tests ==========
 
     @Test
-    void replaceBodyReplacesExistingBlocks() throws IOException {
+    void replaceBodyReplacesExistingBlocks() {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "original", "V");
         IRMethod irMethod = new IRMethod("com/test/Test", "original", "()V", true);
         irMethod.addBlock(new IRBlock("oldBlock"));
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
@@ -465,7 +465,7 @@ class ASTLowererTest {
     void replaceBodySetsNewEntryBlock() {
         IRMethod irMethod = new IRMethod("com/test/Test", "test", "()V", true);
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
@@ -500,7 +500,7 @@ class ASTLowererTest {
 
     @Test
     void lowerMethodWithMultipleStatements() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1)));
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "b", LiteralExpr.ofInt(2)));
 
@@ -529,7 +529,7 @@ class ASTLowererTest {
 
     @Test
     void lowerMethodDoesNotThrowOnComplexAST() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
             stmts.add(new VarDeclStmt(

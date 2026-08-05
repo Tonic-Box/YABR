@@ -1,19 +1,19 @@
 package com.tonic.testutil;
 
+import com.tonic.analysis.Bytecode;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.ConstructorDecl;
+import com.tonic.analysis.source.ast.decl.EnumDecl;
+import com.tonic.analysis.source.ast.decl.InterfaceDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
+import com.tonic.analysis.source.ast.decl.TypeDecl;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.lower.ASTLowerer;
 import com.tonic.analysis.source.lower.TypeResolver;
 import com.tonic.analysis.source.parser.JavaParser;
 import com.tonic.analysis.ssa.SSA;
-import com.tonic.analysis.verifier.VerificationError;
-import com.tonic.analysis.verifier.VerificationErrorType;
-import com.tonic.analysis.verifier.Verifier;
-import java.util.List;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -22,6 +22,9 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.LongConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.verifier.VerificationError;
+import com.tonic.analysis.verifier.VerificationErrorType;
+import com.tonic.analysis.verifier.Verifier;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
@@ -30,6 +33,7 @@ import com.tonic.type.AccessFlags;
 import com.tonic.util.AccessBuilder;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -80,7 +84,7 @@ public final class TestUtils {
      * @throws IOException if creation fails
      */
     public static ClassFile createClassWithMethod(String className, String methodName,
-                                                   String desc, Consumer<com.tonic.analysis.Bytecode> bytecodeSetup)
+                                                   String desc, Consumer<Bytecode> bytecodeSetup)
             throws IOException {
         ClassPool pool = emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
@@ -89,7 +93,7 @@ public final class TestUtils {
         int methodAccess = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = cf.createNewMethodWithDescriptor(methodAccess, methodName, desc);
 
-        com.tonic.analysis.Bytecode bc = new com.tonic.analysis.Bytecode(method);
+        Bytecode bc = new Bytecode(method);
         bytecodeSetup.accept(bc);
         bc.finalizeBytecode();
 
@@ -321,11 +325,11 @@ public final class TestUtils {
         }
         CompilationUnit cu = JavaParser.create().parse(source);
         boolean plainClass = cu.getPrimaryType() instanceof ClassDecl;
-        if (!plainClass && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.EnumDecl)
-                && !(cu.getPrimaryType() instanceof com.tonic.analysis.source.ast.decl.InterfaceDecl)) {
+        if (!plainClass && !(cu.getPrimaryType() instanceof EnumDecl)
+                && !(cu.getPrimaryType() instanceof InterfaceDecl)) {
             return false;
         }
-        com.tonic.analysis.source.ast.decl.TypeDecl decl = cu.getPrimaryType();
+        TypeDecl decl = cu.getPrimaryType();
         TypeResolver resolver = new TypeResolver(pool, owner);
         resolver.setImports(cu.getImports());
         resolver.setCurrentClassDecl(decl);

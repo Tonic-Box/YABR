@@ -1,6 +1,5 @@
 package com.tonic.analysis.source.recovery;
 
-import com.tonic.util.Logger;
 import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.*;
@@ -9,10 +8,13 @@ import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.recovery.StructuralAnalyzer.RegionInfo;
+import com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer;
+import com.tonic.analysis.source.recovery.rcs.RegionRecoveryBridge;
 import com.tonic.analysis.source.recovery.rcs.SwitchDescriptor;
 import com.tonic.analysis.source.recovery.rcs.TryNodeDescriptor;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
+import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -24,16 +26,18 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.NullConstant;
-import com.tonic.analysis.ssa.value.StringConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
+import com.tonic.analysis.ssa.value.StringConstant;
 import com.tonic.analysis.ssa.value.Value;
-
+import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
+import com.tonic.util.Logger;
 import java.util.*;
 
 /**
  * Recovers Statement AST nodes from IR blocks using structural analysis.
  */
-public class StatementRecoverer implements com.tonic.analysis.source.recovery.rcs.RegionRecoveryBridge {
+public class StatementRecoverer implements RegionRecoveryBridge {
 
     private final ControlFlowContext context;
     private final StructuralAnalyzer analyzer;
@@ -45,12 +49,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * by returning null for shapes it does not yet handle (exception scaffolding, irreducible flow, and the
      * few regions it declines), which the legacy walk still recovers until it is retired.
      */
-    private final com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer rcsStructurer;
+    private final ReachingConditionStructurer rcsStructurer;
 
     /** The pool enum constants resolve from when a switch dispatches on {@code ordinal()} directly. */
-    private com.tonic.parser.ClassPool enumClassPool;
+    private ClassPool enumClassPool;
 
-    public void setEnumClassPool(com.tonic.parser.ClassPool pool) {
+    public void setEnumClassPool(ClassPool pool) {
         this.enumClassPool = pool;
     }
 
@@ -60,7 +64,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         this.analyzer = analyzer;
         this.exprRecoverer = exprRecoverer;
         this.typeRecoverer = new TypeRecoverer();
-        this.rcsStructurer = new com.tonic.analysis.source.recovery.rcs.ReachingConditionStructurer(this, context);
+        this.rcsStructurer = new ReachingConditionStructurer(this, context);
 
         // Pre-declare parameters so stores to them become assignments, not declarations
         preDeclareParameters();
@@ -1865,8 +1869,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         }
         IRBlock join = null;
         for (IRBlock b : subtree) {
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL || subtree.contains(e.getKey())) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() != EdgeType.NORMAL || subtree.contains(e.getKey())) {
                     continue;
                 }
                 if (join != null && join != e.getKey()) {
@@ -3913,8 +3917,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
                 continue;
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     work.add(e.getKey());
                 }
             }
@@ -3971,8 +3975,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 break;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     if (next != null) {
                         return null;
                     }
@@ -4054,8 +4058,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (term instanceof SimpleInstruction && ((SimpleInstruction) term).getOp() == SimpleOp.ATHROW) {
                     continue;
                 }
-                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL && dt.dominates(root, e.getKey())) {
+                for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() == EdgeType.NORMAL && dt.dominates(root, e.getKey())) {
                         work.add(e.getKey());
                     }
                 }
@@ -4114,8 +4118,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 trace("finally-dedup bail#3 root=" + root.getBytecodeOffset());
                 return false;
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     twork.add(e.getKey());
                 }
             }
@@ -4166,8 +4170,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         break;
                     }
                     hblocks.add(b);
-                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() == EdgeType.NORMAL) {
                             hwork.add(e.getKey());
                         }
                     }
@@ -4332,8 +4336,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 }
                 IRBlock exitOf = null;
                 for (IRBlock copy : map.values()) {
-                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : copy.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                    for (Map.Entry<IRBlock, EdgeType> e : copy.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() == EdgeType.NORMAL
                                 && !map.containsValue(e.getKey())) {
                             exitOf = e.getKey();
                         }
@@ -4373,8 +4377,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // are still HUNTED - or relowered-parked continuation whose exits carry no copies - so a
             // failed match there is not the family's failure.
             boolean mustCover = rawRangeBlocks.contains(p);
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+            for (Map.Entry<IRBlock, EdgeType> e : p.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() != EdgeType.NORMAL
                         || protectedBlocks.contains(e.getKey()) || e.getKey() == root
                         || tblocks.contains(e.getKey())
                         || matchedCopyBlocks.contains(e.getKey())) {
@@ -4455,9 +4459,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (copyRoot == null) {
                     copyRoot = e.getValue();
                 }
-                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> se
+                for (Map.Entry<IRBlock, EdgeType> se
                         : e.getValue().getSuccessorEdgeTypes().entrySet()) {
-                    if (se.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                    if (se.getValue() == EdgeType.NORMAL
                             && !map.containsValue(se.getKey())) {
                         copyExit = se.getKey();
                     }
@@ -4861,8 +4865,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
 
     private IRBlock singleNormalSuccessor(IRBlock b) {
         IRBlock next = null;
-        for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-            if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+        for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+            if (e.getValue() == EdgeType.NORMAL) {
                 if (next != null) {
                     return null;
                 }
@@ -5009,8 +5013,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 return false;
             }
             boolean any = false;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : x.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : x.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     work.add(e.getKey());
                     any = true;
                 }
@@ -5081,8 +5085,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (term instanceof BranchInstruction) {
                 return false;
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     work.add(e.getKey());
                 }
             }
@@ -5395,8 +5399,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     // range and the continuation. A return leaving from inside the block has no such target
                     // and stays uncovered.
                     boolean coveredByTarget = !(b.getTerminator() instanceof ReturnInstruction);
-                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                    for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                        if (e.getValue() != EdgeType.NORMAL) {
                             continue;
                         }
                         IRBlock t = e.getKey();
@@ -8005,9 +8009,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
         consumed.addAll(handlerBody);
         IRBlock after = null;
         for (IRBlock cb : handlerBody) {
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+            for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
                 IRBlock succ = e.getKey();
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION
+                if (e.getValue() == EdgeType.EXCEPTION
                         || consumed.contains(succ) || dt.dominates(succ, cb)) {
                     continue;
                 }
@@ -8031,8 +8035,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             // place any block there) and the phantom edge reads as an irreducible cycle.
             Set<IRBlock> trySideTargets = new HashSet<>();
             for (IRBlock cb : consumed) {
-                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() == EdgeType.NORMAL
                             && !consumed.contains(e.getKey())) {
                         trySideTargets.add(e.getKey());
                     }
@@ -8077,8 +8081,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 if (handlerBody.contains(cb)) {
                     continue;
                 }
-                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() != EdgeType.NORMAL
                             || consumed.contains(e.getKey())) {
                         continue;
                     }
@@ -8122,8 +8126,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 return out;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     next = e.getKey();
                 }
             }
@@ -8301,8 +8305,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     break;
                 }
                 IRBlock next = null;
-                for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : hb.getSuccessorEdgeTypes().entrySet()) {
-                    if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                for (Map.Entry<IRBlock, EdgeType> e : hb.getSuccessorEdgeTypes().entrySet()) {
+                    if (e.getValue() == EdgeType.NORMAL) {
                         if (next != null) {
                             return true;
                         }
@@ -8478,9 +8482,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                         continue;
                     }
                     boolean flowsOut = true;
-                    for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e
+                    for (Map.Entry<IRBlock, EdgeType> e
                             : cb.getSuccessorEdgeTypes().entrySet()) {
-                        if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+                        if (e.getValue() != EdgeType.NORMAL) {
                             continue;
                         }
                         IRBlock t = resolveThroughGotoShells(e.getKey());
@@ -8537,9 +8541,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (cb != rethrower.getHandlerBlock() && dt.dominates(rethrower.getHandlerBlock(), cb)) {
                 continue;
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
+            for (Map.Entry<IRBlock, EdgeType> e : cb.getSuccessorEdgeTypes().entrySet()) {
                 IRBlock succ = e.getKey();
-                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+                if (e.getValue() != EdgeType.NORMAL
                         || consumed.contains(succ) || dt.dominates(succ, cb)) {
                     continue;
                 }
@@ -8756,8 +8760,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 continue;
             }
             boolean any = false;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     work.add(e.getKey());
                     any = true;
                 }
@@ -8795,8 +8799,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 return false;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     if (next != null) {
                         return false;
                     }
@@ -8833,8 +8837,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                 return false;
             }
             IRBlock next = null;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     if (next != null) {
                         return false;
                     }
@@ -8871,8 +8875,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (contextStops.contains(b)) {
                 return true;
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     work.add(e.getKey());
                 }
             }
@@ -8898,8 +8902,8 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
                     return false;
                 }
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() == com.tonic.analysis.ssa.cfg.EdgeType.NORMAL) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() == EdgeType.NORMAL) {
                     work.add(e.getKey());
                 }
             }
@@ -9068,9 +9072,9 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (isTerminalBlockShape(b)) {
                 return false;
             }
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
                 IRBlock succ = e.getKey();
-                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL || succ == merge
+                if (e.getValue() != EdgeType.NORMAL || succ == merge
                         || stopBlocks.contains(succ) || !seen.add(succ)) {
                     continue;
                 }
@@ -11619,12 +11623,12 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
      * then successively rewrites separators to {@code $} from the right ({@code a/b/Outer/Inner} ->
      * {@code a/b/Outer$Inner}).
      */
-    private com.tonic.parser.ClassFile poolClassFor(String name) {
+    private ClassFile poolClassFor(String name) {
         if (enumClassPool == null) {
             return null;
         }
         String n = name.replace('.', '/');
-        com.tonic.parser.ClassFile cf = enumClassPool.get(n);
+        ClassFile cf = enumClassPool.get(n);
         char[] chars = n.toCharArray();
         for (int i = chars.length - 1; cf == null && i >= 0; i--) {
             if (chars[i] == '/') {
@@ -11648,7 +11652,7 @@ public class StatementRecoverer implements com.tonic.analysis.source.recovery.rc
             if (cur.equals(sup) || nestedSimpleName(cur).equals(nestedSimpleName(sup))) {
                 return true;
             }
-            com.tonic.parser.ClassFile cf = poolClassFor(cur);
+            ClassFile cf = poolClassFor(cur);
             if (cf != null) {
                 if (cf.getSuperClassName() != null) {
                     work.add(cf.getSuperClassName());

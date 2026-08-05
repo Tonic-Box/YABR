@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
+import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.analysis.PostDominatorTree;
@@ -10,8 +11,6 @@ import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
-
 import java.util.*;
 
 /**
@@ -337,7 +336,7 @@ public class StructuralAnalyzer {
     private static boolean isConstantOperand(Value v) {
         return v instanceof Constant
                 || (v instanceof SSAValue
-                    && ((SSAValue) v).getDefinition() instanceof com.tonic.analysis.ssa.ir.ConstantInstruction);
+                    && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
     }
 
     private boolean usesLocal(SSAValue value, int localIndex) {

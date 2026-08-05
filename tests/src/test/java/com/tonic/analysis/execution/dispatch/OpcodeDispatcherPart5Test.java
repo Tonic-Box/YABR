@@ -1,10 +1,10 @@
 package com.tonic.analysis.execution.dispatch;
 
-import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
 import com.tonic.analysis.instruction.*;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.testutil.StubDispatchContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class OpcodeDispatcherPart5Test {
         }
 
         @Override
-        public void accept(com.tonic.analysis.visitor.AbstractBytecodeVisitor visitor) {}
+        public void accept(AbstractBytecodeVisitor visitor) {}
 
         @Override
         public void write(java.io.DataOutputStream dos) {}
@@ -42,8 +42,8 @@ class OpcodeDispatcherPart5Test {
 
     private static class SimpleStackFrame {
         private Instruction currentInstruction;
-        private ConcreteStack stack;
-        private ConcreteLocals locals;
+        private final ConcreteStack stack;
+        private final ConcreteLocals locals;
         private int pc;
 
         public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals) {

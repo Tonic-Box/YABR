@@ -130,8 +130,8 @@ List<SearchResult> results = search.findPattern(staticStringCall);
 // Create a custom pattern with a lambda
 List<SearchResult> exceptionAllocs = search.findPattern(
     (instr, method, sourceMethod, classFile) -> {
-        if (!(instr instanceof NewInstruction)) return false;
-        String className = ((NewInstruction) instr).getClassName();
+        if (!(instr instanceof NewObjectInstruction)) return false;
+        String className = ((NewObjectInstruction) instr).getClassName();
         return className != null && className.endsWith("Exception");
     }
 );

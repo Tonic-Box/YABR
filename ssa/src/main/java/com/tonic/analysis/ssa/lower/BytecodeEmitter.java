@@ -7,6 +7,7 @@ import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
@@ -2465,7 +2466,7 @@ public class BytecodeEmitter {
         if (emitting != null && owner.equals(emitting.getClassName())) {
             return (emitting.getAccess() & 0x0200) != 0;
         }
-        com.tonic.parser.ClassPool pool = emitting != null ? emitting.getClassPool() : null;
+        ClassPool pool = emitting != null ? emitting.getClassPool() : null;
         ClassFile cf = pool != null ? pool.get(owner) : null;
         if (cf != null) {
             return (cf.getAccess() & 0x0200) != 0;

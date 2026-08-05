@@ -3,15 +3,18 @@ package com.tonic.analysis.query.eval;
 import com.tonic.analysis.Bootstraps;
 import com.tonic.analysis.instruction.GetFieldInstruction;
 import com.tonic.analysis.instruction.Instruction;
-import com.tonic.analysis.instruction.Ldc2WInstruction;
-import com.tonic.analysis.instruction.LdcInstruction;
-import com.tonic.analysis.instruction.LdcWInstruction;
 import com.tonic.analysis.instruction.InvokeDynamicInstruction;
 import com.tonic.analysis.instruction.InvokeInsn;
 import com.tonic.analysis.instruction.InvokeInterfaceInstruction;
 import com.tonic.analysis.instruction.InvokeSpecialInstruction;
 import com.tonic.analysis.instruction.InvokeStaticInstruction;
+import com.tonic.analysis.instruction.Ldc2WInstruction;
+import com.tonic.analysis.instruction.LdcInstruction;
+import com.tonic.analysis.instruction.LdcWInstruction;
 import com.tonic.analysis.instruction.PutFieldInstruction;
+import com.tonic.analysis.query.ast.Step;
+import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
+import com.tonic.analysis.query.value.Value;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -32,11 +35,8 @@ import com.tonic.parser.constpool.MethodHandleItem;
 import com.tonic.parser.constpool.MethodTypeItem;
 import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.parser.constpool.Utf8Item;
-import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
-import com.tonic.analysis.query.value.Value;
 import com.tonic.util.DescriptorUtil;
 import com.tonic.util.Opcode;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -135,7 +135,7 @@ public final class DefaultAttributes {
         return wantDepth ? Value.of(la.getLoopDepth(block)) : Value.of(la.isInLoop(block));
     }
 
-    private static boolean isRecursive(MethodEntry method, com.tonic.analysis.query.eval.EvalContext ctx) {
+    private static boolean isRecursive(MethodEntry method, EvalContext ctx) {
         String owner = method.getOwnerName();
         String name = method.getName();
         String desc = method.getDesc();
@@ -330,7 +330,7 @@ public final class DefaultAttributes {
         return out.stream();
     }
 
-    private static Stream<Subject> args(Subject.CallSubject call, com.tonic.analysis.query.ast.Step step) {
+    private static Stream<Subject> args(Subject.CallSubject call, Step step) {
         int arity = ArgumentTypeAnalyzer.countDescriptorArguments(invokeDescriptor(call.invoke()));
         if (step.hasIndex()) {
             int idx = step.index();
@@ -344,7 +344,7 @@ public final class DefaultAttributes {
     }
 
     private static Stream<Subject> params(MethodEntry method, EvalContext ctx,
-                                          com.tonic.analysis.query.ast.Step step) {
+                                          Step step) {
         List<String> types = DescriptorUtil.parseParameterDescriptors(method.getDesc());
         if (step.hasIndex()) {
             int idx = step.index();

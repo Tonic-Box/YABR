@@ -10,8 +10,8 @@ import com.tonic.analysis.ssa.llvm.lift.LlvmLifter;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,7 +64,7 @@ public final class LlvmRoundTripDemo {
     }
 
     private static void roundTripClass(String classFile) throws Exception {
-        ClassFile cf = com.tonic.parser.ClassPool.getDefault()
+        ClassFile cf = ClassPool.getDefault()
             .loadClass(new FileInputStream(classFile));
         SSA ssa = new SSA(cf.getConstPool());
         for (MethodEntry m : cf.getMethods()) {
@@ -88,6 +88,7 @@ public final class LlvmRoundTripDemo {
 
         // Optionally run opt
         String toOptimize = ll1;
+        boolean optimized = false;
         if (toolAvailable("opt")) {
             Path tmp = Files.createTempFile("roundtrip_", ".ll");
             Files.writeString(tmp, ll1);
@@ -98,6 +99,7 @@ public final class LlvmRoundTripDemo {
             p.waitFor();
             if (out.length > 0) {
                 toOptimize = new String(out);
+                optimized = true;
                 System.out.println("\n-- after opt -O2 --\n" + toOptimize);
             }
             Files.deleteIfExists(tmp);
@@ -107,11 +109,11 @@ public final class LlvmRoundTripDemo {
         IRMethod lifted = lifter.lift(toOptimize);
         System.out.println("\n-- lifted IR --\n" + IRPrinter.format(lifted));
 
-        if (toOptimize == ll1) {
+        if (!optimized) {
             // Pure round-trip: re-lower and compare
-            com.tonic.analysis.ssa.value.SSAValue.resetIdCounter();
-            com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
-            com.tonic.analysis.ssa.ir.IRInstruction.resetIdCounter();
+            SSAValue.resetIdCounter();
+            IRBlock.resetIdCounter();
+            IRInstruction.resetIdCounter();
             LlvmLifter lifter2 = new LlvmLifter();
             IRMethod lifted2 = lifter2.lift(ll1);
             String ll2 = lowering.lower(lifted2);

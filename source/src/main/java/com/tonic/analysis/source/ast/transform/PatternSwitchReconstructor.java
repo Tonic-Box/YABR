@@ -1,7 +1,7 @@
 package com.tonic.analysis.source.ast.transform;
 
-import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.CastExpr;
@@ -11,14 +11,15 @@ import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.NewExpr;
 import com.tonic.analysis.source.ast.expr.SwitchExpr;
+import com.tonic.analysis.source.ast.expr.UnaryExpr;
+import com.tonic.analysis.source.ast.expr.UnaryOperator;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.BreakStmt;
-import com.tonic.analysis.source.ast.stmt.ExprStmt;
-import com.tonic.analysis.source.ast.expr.UnaryExpr;
-import com.tonic.analysis.source.ast.expr.UnaryOperator;
 import com.tonic.analysis.source.ast.stmt.ContinueStmt;
+import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
+import com.tonic.analysis.source.ast.stmt.LabeledStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.SwitchCase;
@@ -28,7 +29,6 @@ import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
 import com.tonic.analysis.source.ast.stmt.WhileStmt;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -126,9 +126,9 @@ public class PatternSwitchReconstructor implements ASTTransform {
         if (s instanceof WhileStmt) {
             return (WhileStmt) s;
         }
-        if (s instanceof com.tonic.analysis.source.ast.stmt.LabeledStmt
-                && ((com.tonic.analysis.source.ast.stmt.LabeledStmt) s).getStatement() instanceof WhileStmt) {
-            return (WhileStmt) ((com.tonic.analysis.source.ast.stmt.LabeledStmt) s).getStatement();
+        if (s instanceof LabeledStmt
+                && ((LabeledStmt) s).getStatement() instanceof WhileStmt) {
+            return (WhileStmt) ((LabeledStmt) s).getStatement();
         }
         return null;
     }

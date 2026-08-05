@@ -1,11 +1,9 @@
 package com.tonic.analysis.bytecode;
 
-import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.instruction.*;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
-import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -334,31 +332,31 @@ class InstructionTest {
 
     @Test
     void returnInstructionHasLength1() {
-        ReturnInstruction ret = new ReturnInstruction(0xB1, 0);
+        MethodReturnInstruction ret = new MethodReturnInstruction(0xB1, 0);
         assertEquals(1, ret.getLength());
     }
 
     @Test
     void ireturnPopsOne() {
-        ReturnInstruction iret = new ReturnInstruction(0xAC, 0);
+        MethodReturnInstruction iret = new MethodReturnInstruction(0xAC, 0);
         assertEquals(-1, iret.getStackChange());
     }
 
     @Test
     void lreturnPopsTwo() {
-        ReturnInstruction lret = new ReturnInstruction(0xAD, 0);
+        MethodReturnInstruction lret = new MethodReturnInstruction(0xAD, 0);
         assertEquals(-2, lret.getStackChange());
     }
 
     @Test
     void areturnPopsOne() {
-        ReturnInstruction aret = new ReturnInstruction(0xB0, 0);
+        MethodReturnInstruction aret = new MethodReturnInstruction(0xB0, 0);
         assertEquals(-1, aret.getStackChange());
     }
 
     @Test
     void returnPopsZero() {
-        ReturnInstruction ret = new ReturnInstruction(0xB1, 0);
+        MethodReturnInstruction ret = new MethodReturnInstruction(0xB1, 0);
         assertEquals(0, ret.getStackChange());
     }
 
@@ -473,7 +471,7 @@ class InstructionTest {
     void factoryCreatesReturnInstruction() {
         byte[] bytecode = {(byte) 0xB1};
         Instruction instr = InstructionFactory.createInstruction(0xB1, 0, bytecode, constPool);
-        assertTrue(instr instanceof ReturnInstruction);
+        assertTrue(instr instanceof MethodReturnInstruction);
     }
 
     @Test

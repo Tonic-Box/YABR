@@ -2,7 +2,7 @@ package com.tonic.demo;
 import com.tonic.analysis.ClassFactory;
 
 import com.tonic.analysis.Bytecode;
-import com.tonic.analysis.instruction.ReturnInstruction;
+import com.tonic.analysis.instruction.MethodReturnInstruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.visitor.AbstractClassVisitor;
 import com.tonic.parser.*;
@@ -91,7 +91,7 @@ public class TestVisitor
          * @param instruction the return instruction
          */
         @Override
-        public void visit(ReturnInstruction instruction) {
+        public void visit(MethodReturnInstruction instruction) {
             super.visit(instruction);
             Bytecode bytecode = new Bytecode(codeWriter);
             bytecode.setInsertBefore(true);

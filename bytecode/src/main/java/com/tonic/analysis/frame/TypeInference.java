@@ -1,6 +1,7 @@
 package com.tonic.analysis.frame;
 
 import com.tonic.analysis.instruction.*;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
 
@@ -420,8 +421,8 @@ public class TypeInference {
 
         if (opcode == NEWARRAY.getCode()) {
             state = state.pop();
-            if (instr instanceof NewArrayInstruction) {
-                NewArrayInstruction newArray = (NewArrayInstruction) instr;
+            if (instr instanceof NewPrimitiveArrayInstruction) {
+                NewPrimitiveArrayInstruction newArray = (NewPrimitiveArrayInstruction) instr;
                 String arrayDesc = newArrayTypeDescriptor(newArray.getArrayType());
                 int classIndex = constPool.findOrAddClass(arrayDesc).getIndex(constPool);
                 return state.push(VerificationType.object(classIndex));
@@ -548,7 +549,7 @@ public class TypeInference {
             state = state.pop();
         }
 
-        if (instr instanceof com.tonic.analysis.instruction.GetFieldInstruction) {
+        if (instr instanceof GetFieldInstruction) {
             GetFieldInstruction getField = (GetFieldInstruction) instr;
             int fieldIndex = getField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
@@ -673,7 +674,7 @@ public class TypeInference {
                     // from `new` initializes to the created class, which is the methodref owner.
                     int classIndex;
                     if (objectRef.equals(VerificationType.UNINITIALIZED_THIS)) {
-                        com.tonic.parser.ClassFile owner = constPool.getClassFile();
+                        ClassFile owner = constPool.getClassFile();
                         classIndex = owner != null && owner.getThisClass() > 0
                                 ? owner.getThisClass()
                                 : getInitClassIndex(instr);
@@ -851,7 +852,7 @@ public class TypeInference {
         return constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
     }
 
-    private String newArrayTypeDescriptor(NewArrayInstruction.ArrayType arrayType) {
+    private String newArrayTypeDescriptor(NewPrimitiveArrayInstruction.ArrayType arrayType) {
         if (arrayType == null) {
             return "[Ljava/lang/Object;";
         }

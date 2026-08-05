@@ -1,19 +1,30 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
+import com.tonic.analysis.source.ast.expr.LiteralExpr;
+import com.tonic.analysis.source.ast.expr.MethodCallExpr;
+import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-import java.util.ArrayList;
+import com.tonic.analysis.source.recovery.EnumConstants;
+import com.tonic.analysis.source.visitor.SourceVisitor;
+import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.PrimitiveType;
+import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -120,10 +131,10 @@ public class StatementLowerer {
     }
 
     /** An Object-typed reference says nothing about the value - any specific declared type beats it. */
-    private static boolean isUnspecificReference(com.tonic.analysis.ssa.type.IRType type) {
-        return type instanceof com.tonic.analysis.ssa.type.ReferenceType
+    private static boolean isUnspecificReference(IRType type) {
+        return type instanceof ReferenceType
                 && "java/lang/Object".equals(
-                        ((com.tonic.analysis.ssa.type.ReferenceType) type).getInternalName());
+                        ((ReferenceType) type).getInternalName());
     }
 
     private void lowerVarDecl(VarDeclStmt decl) {
@@ -134,7 +145,7 @@ public class StatementLowerer {
         // toIRType would record it unqualified - any later resolution against the record would then
         // re-qualify it blind (matching an unrelated same-simple-name class).
         ctx.declareLocal(name,
-                com.tonic.analysis.ssa.type.IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(type)),
+                IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(type)),
                 false, ctx.getTypeResolver().signatureOf(type));
 
         if (init != null) {
@@ -151,20 +162,20 @@ public class StatementLowerer {
                 // Object (an unresolvable call return, say) would poison every later use of the variable
                 // - `byte[] bytes = data.getBytes(...)` then `bytes.length` reads a field on Object -
                 // so re-type the value to what the source declares.
-                com.tonic.analysis.ssa.type.IRType declared =
-                        com.tonic.analysis.ssa.type.IRType.fromDescriptor(
+                IRType declared =
+                        IRType.fromDescriptor(
                                 ctx.getTypeResolver().descriptorOf(type));
                 if (isUnspecificReference(ssaVal.getType()) && declared != null
                         && !isUnspecificReference(declared)
-                        && !(declared instanceof com.tonic.analysis.ssa.type.PrimitiveType)
+                        && !(declared instanceof PrimitiveType)
                         && !(ssaVal.getDefinition()
-                                instanceof com.tonic.analysis.ssa.ir.ConstantInstruction)) {
+                                instanceof ConstantInstruction)) {
                     // A checkcast, not a copy: the degraded value is Object ON THE STACK too (its
                     // descriptor said so), and the verifier holds the bytecode to that - a later
                     // arraylength or member access needs the frame narrowed, not just the SSA type.
                     SSAValue retyped = ctx.newValue(declared);
                     ctx.getCurrentBlock().addInstruction(
-                            com.tonic.analysis.ssa.ir.TypeCheckInstruction.createCast(
+                            TypeCheckInstruction.createCast(
                                     retyped, ssaVal, declared));
                     ssaVal = retyped;
                 }
@@ -223,7 +234,7 @@ public class StatementLowerer {
         boolean thenFallsThrough = ctx.getCurrentBlock().getTerminator() == null;
         if (thenFallsThrough) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-            ctx.getCurrentBlock().addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(mergeBlock, EdgeType.NORMAL);
         }
         IRBlock thenEndBlock = ctx.getCurrentBlock();
 
@@ -234,7 +245,7 @@ public class StatementLowerer {
             elseFallsThrough = ctx.getCurrentBlock().getTerminator() == null;
             if (elseFallsThrough) {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-                ctx.getCurrentBlock().addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(mergeBlock, EdgeType.NORMAL);
             }
         } else {
             elseFallsThrough = true;
@@ -253,7 +264,7 @@ public class StatementLowerer {
         IRBlock exitBlock = ctx.createBlock();
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-        ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
         if (isTrueLiteral(whileStmt.getCondition())) {
@@ -262,7 +273,7 @@ public class StatementLowerer {
             // exits normally would then get a synthetic void return there (a VerifyError). The exit block is
             // reached only by a `break` inside the body.
             condBlock.addInstruction(SimpleInstruction.createGoto(bodyBlock));
-            condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            condBlock.addSuccessor(bodyBlock, EdgeType.NORMAL);
         } else {
             exprLowerer.lowerCondition(whileStmt.getCondition(), bodyBlock, exitBlock);
         }
@@ -273,7 +284,7 @@ public class StatementLowerer {
         lower(whileStmt.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-            ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
         }
 
         ctx.popLoop();
@@ -281,8 +292,8 @@ public class StatementLowerer {
     }
 
     private boolean isTrueLiteral(Expression e) {
-        return e instanceof com.tonic.analysis.source.ast.expr.LiteralExpr
-                && Boolean.TRUE.equals(((com.tonic.analysis.source.ast.expr.LiteralExpr) e).getValue());
+        return e instanceof LiteralExpr
+                && Boolean.TRUE.equals(((LiteralExpr) e).getValue());
     }
 
     private void lowerDoWhile(DoWhileStmt doWhile) {
@@ -291,7 +302,7 @@ public class StatementLowerer {
         IRBlock exitBlock = ctx.createBlock();
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
-        ctx.getCurrentBlock().addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(bodyBlock, EdgeType.NORMAL);
 
         ctx.pushLoop(doWhile.getLabel(), condBlock, exitBlock, finallyStack.size());
 
@@ -299,7 +310,7 @@ public class StatementLowerer {
         lower(doWhile.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-            ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
         }
 
         ctx.setCurrentBlock(condBlock);
@@ -320,7 +331,7 @@ public class StatementLowerer {
         IRBlock exitBlock = ctx.createBlock();
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-        ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
         Expression cond = forStmt.getCondition();
@@ -328,7 +339,7 @@ public class StatementLowerer {
             exprLowerer.lowerCondition(cond, bodyBlock, exitBlock);
         } else {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(bodyBlock));
-            condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            condBlock.addSuccessor(bodyBlock, EdgeType.NORMAL);
         }
 
         ctx.pushLoop(forStmt.getLabel(), updateBlock, exitBlock, finallyStack.size());
@@ -337,7 +348,7 @@ public class StatementLowerer {
         lower(forStmt.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(updateBlock));
-            ctx.getCurrentBlock().addSuccessor(updateBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(updateBlock, EdgeType.NORMAL);
         }
 
         ctx.setCurrentBlock(updateBlock);
@@ -345,7 +356,7 @@ public class StatementLowerer {
             exprLowerer.lower(update);
         }
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-        updateBlock.addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        updateBlock.addSuccessor(condBlock, EdgeType.NORMAL);
 
         ctx.popLoop();
         ctx.setCurrentBlock(exitBlock);
@@ -354,9 +365,9 @@ public class StatementLowerer {
     private void lowerForEach(ForEachStmt forEach) {
         Value iterable = exprLowerer.lower(forEach.getIterable());
 
-        IRType intType = com.tonic.analysis.ssa.type.PrimitiveType.INT;
+        IRType intType = PrimitiveType.INT;
         SSAValue indexVar = ctx.newValue(intType);
-        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(indexVar, com.tonic.analysis.ssa.value.IntConstant.ZERO));
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(indexVar, IntConstant.ZERO));
         String indexName = ctx.newTempName();
         ctx.setVariable(indexName, indexVar);
 
@@ -366,7 +377,7 @@ public class StatementLowerer {
         IRBlock exitBlock = ctx.createBlock();
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-        ctx.getCurrentBlock().addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(condBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(condBlock);
         SSAValue length = ctx.newValue(intType);
@@ -376,8 +387,8 @@ public class StatementLowerer {
         SSAValue index = ctx.getVariable(indexName);
         BranchInstruction branch = new BranchInstruction(CompareOp.LT, index, length, bodyBlock, exitBlock);
         ctx.getCurrentBlock().addInstruction(branch);
-        condBlock.addSuccessor(bodyBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        condBlock.addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        condBlock.addSuccessor(bodyBlock, EdgeType.NORMAL);
+        condBlock.addSuccessor(exitBlock, EdgeType.NORMAL);
 
         ctx.pushLoop(forEach.getLabel(), updateBlock, exitBlock, finallyStack.size());
 
@@ -394,18 +405,18 @@ public class StatementLowerer {
         lower(forEach.getBody());
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(updateBlock));
-            ctx.getCurrentBlock().addSuccessor(updateBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(updateBlock, EdgeType.NORMAL);
         }
 
         ctx.setCurrentBlock(updateBlock);
         index = ctx.getVariable(indexName);
         SSAValue one = ctx.newValue(intType);
-        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(one, com.tonic.analysis.ssa.value.IntConstant.ONE));
+        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(one, IntConstant.ONE));
         SSAValue newIndex = ctx.newValue(intType);
         ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(newIndex, BinaryOp.ADD, index, one));
         ctx.setVariable(indexName, newIndex);
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(condBlock));
-        updateBlock.addSuccessor(condBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        updateBlock.addSuccessor(condBlock, EdgeType.NORMAL);
 
         ctx.popLoop();
         ctx.setCurrentBlock(exitBlock);
@@ -462,10 +473,10 @@ public class StatementLowerer {
         ctx.getCurrentBlock().addInstruction(switchInstr);
 
         for (IRBlock caseBlock : caseBlocks) {
-            ctx.getCurrentBlock().addSuccessor(caseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(caseBlock, EdgeType.NORMAL);
         }
         if (defaultBlock == exitBlock) {
-            ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
         }
 
         // A switch is a break-only scope: an unlabeled break leaves it at exitBlock, but an unlabeled continue must
@@ -486,10 +497,10 @@ public class StatementLowerer {
             if (ctx.getCurrentBlock().getTerminator() == null) {
                 if (i + 1 < cases.size()) {
                     ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(caseBlocks[i + 1]));
-                    ctx.getCurrentBlock().addSuccessor(caseBlocks[i + 1], com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                    ctx.getCurrentBlock().addSuccessor(caseBlocks[i + 1], EdgeType.NORMAL);
                 } else {
                     ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-                    ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                    ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
                 }
             }
         }
@@ -506,7 +517,7 @@ public class StatementLowerer {
             }
             for (Expression label : sc.expressionLabels()) {
                 if (constIntLabel(label) == null
-                        && !(label instanceof com.tonic.analysis.source.ast.expr.LiteralExpr)) {
+                        && !(label instanceof LiteralExpr)) {
                     return true;
                 }
             }
@@ -521,17 +532,17 @@ public class StatementLowerer {
      */
     private String enumSelectorClass(SwitchStmt switchStmt, Value selector) {
         if (selector instanceof SSAValue) {
-            com.tonic.analysis.ssa.type.IRType irType = selector.getType();
-            if (irType instanceof com.tonic.analysis.ssa.type.ReferenceType) {
-                String internal = ((com.tonic.analysis.ssa.type.ReferenceType) irType).getInternalName();
+            IRType irType = selector.getType();
+            if (irType instanceof ReferenceType) {
+                String internal = ((ReferenceType) irType).getInternalName();
                 if (internal != null && !"java/lang/Object".equals(internal)) {
                     return internal;
                 }
             }
         }
         SourceType type = switchStmt.getSelector().getType();
-        if (type instanceof com.tonic.analysis.source.ast.type.ReferenceSourceType) {
-            String name = ((com.tonic.analysis.source.ast.type.ReferenceSourceType) type).getInternalName();
+        if (type instanceof ReferenceSourceType) {
+            String name = ((ReferenceSourceType) type).getInternalName();
             String resolved = name.contains("/") ? name : ctx.getTypeResolver().resolveClassName(name);
             if (resolved != null && !"java/lang/Object".equals(resolved)) {
                 return resolved;
@@ -543,32 +554,32 @@ public class StatementLowerer {
 
     /** Dispatches an enum selector on its ordinal, the int the case keys index. */
     private Value lowerOrdinalOf(Value selector, String enumClass) {
-        SSAValue ordinal = ctx.newValue(com.tonic.analysis.ssa.type.PrimitiveType.INT);
+        SSAValue ordinal = ctx.newValue(PrimitiveType.INT);
         List<Value> args = new ArrayList<>();
         args.add(selector);
-        ctx.getCurrentBlock().addInstruction(new com.tonic.analysis.ssa.ir.InvokeInstruction(
-                ordinal, com.tonic.analysis.ssa.ir.InvokeType.VIRTUAL, enumClass, "ordinal", "()I", args));
+        ctx.getCurrentBlock().addInstruction(new InvokeInstruction(
+                ordinal, InvokeType.VIRTUAL, enumClass, "ordinal", "()I", args));
         return ordinal;
     }
 
     /** The ordinal of an enum-constant case label ({@code NAME} or {@code Type.NAME}), or null. */
     private Integer enumOrdinalLabel(Expression label, String enumClass) {
         String name = null;
-        if (label instanceof com.tonic.analysis.source.ast.expr.VarRefExpr) {
-            name = ((com.tonic.analysis.source.ast.expr.VarRefExpr) label).getName();
-        } else if (label instanceof com.tonic.analysis.source.ast.expr.FieldAccessExpr) {
-            name = ((com.tonic.analysis.source.ast.expr.FieldAccessExpr) label).getFieldName();
+        if (label instanceof VarRefExpr) {
+            name = ((VarRefExpr) label).getName();
+        } else if (label instanceof FieldAccessExpr) {
+            name = ((FieldAccessExpr) label).getFieldName();
         }
         if (name == null) {
             return null;
         }
-        return com.tonic.analysis.source.recovery.EnumConstants.ordinalByName(
+        return EnumConstants.ordinalByName(
                 ctx.getTypeResolver().getClassPool(), enumClass, name);
     }
 
     private Integer constIntLabel(Expression label) {
-        if (label instanceof com.tonic.analysis.source.ast.expr.LiteralExpr) {
-            Object v = ((com.tonic.analysis.source.ast.expr.LiteralExpr) label).getValue();
+        if (label instanceof LiteralExpr) {
+            Object v = ((LiteralExpr) label).getValue();
             if (v instanceof Integer) {
                 return (Integer) v;
             }
@@ -603,7 +614,7 @@ public class StatementLowerer {
         }
         IRBlock target = frame.breakTarget();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(target));
-        ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(target, EdgeType.NORMAL);
     }
 
     private void lowerContinue(ContinueStmt contStmt) {
@@ -614,7 +625,7 @@ public class StatementLowerer {
         }
         IRBlock target = frame.continueTarget();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(target));
-        ctx.getCurrentBlock().addSuccessor(target, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(target, EdgeType.NORMAL);
     }
 
     /**
@@ -654,7 +665,7 @@ public class StatementLowerer {
         IRBlock normalExit = finallyBlock != null ? finallyBlock : exitBlock;
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
-        ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(tryBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
         // Protect the try body and catch bodies: a return out of either must run this finally first.
@@ -667,7 +678,7 @@ public class StatementLowerer {
         IRBlock tryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
-            ctx.getCurrentBlock().addSuccessor(normalExit, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(normalExit, EdgeType.NORMAL);
         }
 
         // Variables reassigned inside the try: a fault can fire before or after the reassignment, so a handler
@@ -700,7 +711,7 @@ public class StatementLowerer {
         for (CatchClause catchClause : tryCatch.getCatches()) {
             IRBlock catchBlock = ctx.createBlock();
             catchBlocks.add(catchBlock);
-            tryBlock.addSuccessor(catchBlock, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+            tryBlock.addSuccessor(catchBlock, EdgeType.EXCEPTION);
 
             ctx.setCurrentBlock(catchBlock);
 
@@ -724,7 +735,7 @@ public class StatementLowerer {
             lower(catchClause.body());
             if (ctx.getCurrentBlock().getTerminator() == null) {
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(normalExit));
-                ctx.getCurrentBlock().addSuccessor(normalExit, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(normalExit, EdgeType.NORMAL);
             }
 
             // Register the exception table entry/entries. A multi-catch shares one handler block but
@@ -750,7 +761,7 @@ public class StatementLowerer {
             // precedence, and covering the catch blocks too so a throw inside a catch still runs the finally.
             java.util.Map<String, SSAValue> normalFinallyVars = ctx.snapshotVariables();
             IRBlock finallyHandler = ctx.createBlock();
-            tryBlock.addSuccessor(finallyHandler, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+            tryBlock.addSuccessor(finallyHandler, EdgeType.EXCEPTION);
             ctx.setCurrentBlock(finallyHandler);
             ReferenceType throwableType = new ReferenceType("java/lang/Throwable");
             SSAValue caught = ctx.newValue(throwableType);
@@ -795,7 +806,7 @@ public class StatementLowerer {
                 lower(tryCatch.getFinallyBlock());
                 if (ctx.getCurrentBlock().getTerminator() == null) {
                     ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-                    ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                    ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
                 }
             }
         }
@@ -843,7 +854,7 @@ public class StatementLowerer {
         IRBlock exitBlock = ctx.createBlock();
 
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
-        ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(tryBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
         int blocksBefore = ctx.getIrMethod().getBlocks().size();
@@ -853,7 +864,7 @@ public class StatementLowerer {
         IRBlock tryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(closeBlock));
-            ctx.getCurrentBlock().addSuccessor(closeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(closeBlock, EdgeType.NORMAL);
         }
 
         Set<IRBlock> tryBodyBlocks = new LinkedHashSet<>();
@@ -867,15 +878,15 @@ public class StatementLowerer {
         lower(closeCall(resource));
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-            ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
         }
 
-        tryBlock.addSuccessor(handlerBlock, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+        tryBlock.addSuccessor(handlerBlock, EdgeType.EXCEPTION);
         ReferenceType throwableType = new ReferenceType("java/lang/Throwable");
         String primaryName = "$twrPrimary$" + idx;
         String suppressedName = "$twrSuppressed$" + idx;
-        com.tonic.analysis.source.ast.type.SourceType throwableSrc =
-                new com.tonic.analysis.source.ast.type.ReferenceSourceType("java/lang/Throwable");
+        SourceType throwableSrc =
+                new ReferenceSourceType("java/lang/Throwable");
 
         IRBlock suppressTryBlock = ctx.createBlock();
         IRBlock suppressCatchBlock = ctx.createBlock();
@@ -887,7 +898,7 @@ public class StatementLowerer {
         ctx.declareLocal(primaryName, throwableType, false);
         ctx.setVariable(primaryName, primary);
         handlerBlock.addInstruction(SimpleInstruction.createGoto(suppressTryBlock));
-        handlerBlock.addSuccessor(suppressTryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        handlerBlock.addSuccessor(suppressTryBlock, EdgeType.NORMAL);
 
         // Close the resource, chaining a close failure into the in-flight exception, then rethrow. The close is the
         // only statement protected by the suppress handler; the rethrow (throwBlock) sits outside it and is reached
@@ -899,26 +910,26 @@ public class StatementLowerer {
         IRBlock suppressTryEnd = ctx.getCurrentBlock();
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(throwBlock));
-            ctx.getCurrentBlock().addSuccessor(throwBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(throwBlock, EdgeType.NORMAL);
         }
         Set<IRBlock> suppressBlocks = new LinkedHashSet<>();
         suppressBlocks.add(suppressTryBlock);
 
-        suppressTryBlock.addSuccessor(suppressCatchBlock, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+        suppressTryBlock.addSuccessor(suppressCatchBlock, EdgeType.EXCEPTION);
         ctx.setCurrentBlock(suppressCatchBlock);
         SSAValue suppressed = ctx.newValue(throwableType);
         suppressCatchBlock.addInstruction(SimpleInstruction.createCatch(suppressed));
         ctx.declareLocal(suppressedName, throwableType, false);
         ctx.setVariable(suppressedName, suppressed);
-        Expression addSuppressed = new com.tonic.analysis.source.ast.expr.MethodCallExpr(
-                new com.tonic.analysis.source.ast.expr.VarRefExpr(primaryName, throwableSrc), "addSuppressed",
+        Expression addSuppressed = new MethodCallExpr(
+                new VarRefExpr(primaryName, throwableSrc), "addSuppressed",
                 "java/lang/Throwable",
-                java.util.List.of(new com.tonic.analysis.source.ast.expr.VarRefExpr(suppressedName, throwableSrc)),
+                java.util.List.of(new VarRefExpr(suppressedName, throwableSrc)),
                 false, null);
         lower(new ExprStmt(addSuppressed));
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(throwBlock));
-            ctx.getCurrentBlock().addSuccessor(throwBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(throwBlock, EdgeType.NORMAL);
         }
         ExceptionHandler suppressHandler =
                 new ExceptionHandler(suppressTryBlock, suppressTryEnd, suppressCatchBlock, throwableType);
@@ -937,12 +948,12 @@ public class StatementLowerer {
 
     /** A {@code resource.close()} statement, with a fresh receiver copy so it can be emitted on several paths. */
     private Statement closeCall(Expression resource) {
-        return new ExprStmt(new com.tonic.analysis.source.ast.expr.MethodCallExpr(copyResource(resource), "close",
+        return new ExprStmt(new MethodCallExpr(copyResource(resource), "close",
                 resourceOwner(resource), new java.util.ArrayList<>(), false, null));
     }
 
     private String resourceOwner(Expression resource) {
-        com.tonic.analysis.source.ast.type.SourceType type = resource.getType();
+        SourceType type = resource.getType();
         if (type != null) {
             IRType ir = type.toIRType();
             if (ir instanceof ReferenceType) {
@@ -955,10 +966,10 @@ public class StatementLowerer {
     }
 
     private Expression copyResource(Expression resource) {
-        if (resource instanceof com.tonic.analysis.source.ast.expr.VarRefExpr) {
-            com.tonic.analysis.source.ast.expr.VarRefExpr ref =
-                    (com.tonic.analysis.source.ast.expr.VarRefExpr) resource;
-            return new com.tonic.analysis.source.ast.expr.VarRefExpr(ref.getName(), ref.getType());
+        if (resource instanceof VarRefExpr) {
+            VarRefExpr ref =
+                    (VarRefExpr) resource;
+            return new VarRefExpr(ref.getName(), ref.getType());
         }
         return resource;
     }
@@ -981,7 +992,7 @@ public class StatementLowerer {
         IRBlock tryBlock = ctx.createBlock();
         IRBlock exitBlock = ctx.createBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(tryBlock));
-        ctx.getCurrentBlock().addSuccessor(tryBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(tryBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(tryBlock);
         int blocksBeforeBody = ctx.getIrMethod().getBlocks().size();
@@ -992,7 +1003,7 @@ public class StatementLowerer {
         if (ctx.getCurrentBlock().getTerminator() == null) {
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createMonitorExit(monitor));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(exitBlock));
-            ctx.getCurrentBlock().addSuccessor(exitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            ctx.getCurrentBlock().addSuccessor(exitBlock, EdgeType.NORMAL);
         }
 
         Set<IRBlock> bodyBlocks = new LinkedHashSet<>();
@@ -1005,7 +1016,7 @@ public class StatementLowerer {
         // Catch-all release/rethrow so an exception escaping the body still frees the monitor, and so the
         // re-decompile recognizes the synchronized block via the catch-all monitorexit/rethrow handler.
         IRBlock handler = ctx.createBlock();
-        tryBlock.addSuccessor(handler, com.tonic.analysis.ssa.cfg.EdgeType.EXCEPTION);
+        tryBlock.addSuccessor(handler, EdgeType.EXCEPTION);
         ctx.setCurrentBlock(handler);
         SSAValue caught = ctx.newValue(new ReferenceType("java/lang/Throwable"));
         handler.addInstruction(SimpleInstruction.createCatch(caught));
@@ -1029,18 +1040,18 @@ public class StatementLowerer {
             this.monitor = monitor;
         }
         @Override
-        public com.tonic.analysis.source.ast.ASTNode getParent() {
+        public ASTNode getParent() {
             return null;
         }
         @Override
-        public void setParent(com.tonic.analysis.source.ast.ASTNode parent) {
+        public void setParent(ASTNode parent) {
         }
         @Override
-        public com.tonic.analysis.source.ast.SourceLocation getLocation() {
-            return com.tonic.analysis.source.ast.SourceLocation.UNKNOWN;
+        public SourceLocation getLocation() {
+            return SourceLocation.UNKNOWN;
         }
         @Override
-        public <T> T accept(com.tonic.analysis.source.visitor.SourceVisitor<T> visitor) {
+        public <T> T accept(SourceVisitor<T> visitor) {
             throw new UnsupportedOperationException("synthetic monitor-exit cleanup is lowered directly");
         }
     }
@@ -1090,7 +1101,7 @@ public class StatementLowerer {
 
         IRBlock entry = irRegion.getEntryBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(entry));
-        ctx.getCurrentBlock().addSuccessor(entry, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(entry, EdgeType.NORMAL);
 
         IRBlock exitBlock = null;
         for (IRBlock block : blocks) {

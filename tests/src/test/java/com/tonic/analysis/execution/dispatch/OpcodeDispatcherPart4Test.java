@@ -5,7 +5,7 @@ import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
 import com.tonic.analysis.instruction.*;
-import com.tonic.parser.ConstPool;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.testutil.StubDispatchContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ class OpcodeDispatcherPart4Test {
         }
 
         @Override
-        public void accept(com.tonic.analysis.visitor.AbstractBytecodeVisitor visitor) {}
+        public void accept(AbstractBytecodeVisitor visitor) {}
 
         @Override
         public void write(java.io.DataOutputStream dos) {}
@@ -43,8 +43,8 @@ class OpcodeDispatcherPart4Test {
 
     private static class SimpleStackFrame {
         private Instruction currentInstruction;
-        private ConcreteStack stack;
-        private ConcreteLocals locals;
+        private final ConcreteStack stack;
+        private final ConcreteLocals locals;
         private int pc;
 
         public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals) {
@@ -220,8 +220,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayBoolean() {
         stack.pushInt(5);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 4, 5);
-        assertEquals(NewArrayInstruction.ArrayType.T_BOOLEAN, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 4, 5);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_BOOLEAN, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -229,8 +229,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayChar() {
         stack.pushInt(10);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 5, 10);
-        assertEquals(NewArrayInstruction.ArrayType.T_CHAR, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 5, 10);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_CHAR, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -238,8 +238,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayFloat() {
         stack.pushInt(8);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 6, 8);
-        assertEquals(NewArrayInstruction.ArrayType.T_FLOAT, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 6, 8);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_FLOAT, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -247,8 +247,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayDouble() {
         stack.pushInt(12);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 7, 12);
-        assertEquals(NewArrayInstruction.ArrayType.T_DOUBLE, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 7, 12);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_DOUBLE, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -256,8 +256,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayByte() {
         stack.pushInt(20);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 8, 20);
-        assertEquals(NewArrayInstruction.ArrayType.T_BYTE, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 8, 20);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_BYTE, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -265,8 +265,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayShort() {
         stack.pushInt(15);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 9, 15);
-        assertEquals(NewArrayInstruction.ArrayType.T_SHORT, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 9, 15);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_SHORT, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -274,8 +274,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayInt() {
         stack.pushInt(25);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 10, 25);
-        assertEquals(NewArrayInstruction.ArrayType.T_INT, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 10, 25);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_INT, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }
@@ -283,8 +283,8 @@ class OpcodeDispatcherPart4Test {
     @Test
     void testNewArrayLong() {
         stack.pushInt(30);
-        NewArrayInstruction instr = new NewArrayInstruction(0xBC, 0, 11, 30);
-        assertEquals(NewArrayInstruction.ArrayType.T_LONG, instr.getArrayType());
+        NewPrimitiveArrayInstruction instr = new NewPrimitiveArrayInstruction(0xBC, 0, 11, 30);
+        assertEquals(NewPrimitiveArrayInstruction.ArrayType.T_LONG, instr.getArrayType());
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.NEW_ARRAY, result);
     }

@@ -4,13 +4,13 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -199,12 +199,12 @@ class DeadVariableEliminatorTest {
     @Test
     void fieldStoreReceiverIsNotTreatedAsDead() {
         VarDeclStmt decl = new VarDeclStmt(
-            new com.tonic.analysis.source.ast.type.ReferenceSourceType("Holder"),
+            new ReferenceSourceType("Holder"),
             "h",
             LiteralExpr.ofNull()
         );
         FieldAccessExpr field = FieldAccessExpr.instanceField(
-            new VarRefExpr("h", new com.tonic.analysis.source.ast.type.ReferenceSourceType("Holder")),
+            new VarRefExpr("h", new ReferenceSourceType("Holder")),
             "value",
             "Holder",
             PrimitiveSourceType.INT

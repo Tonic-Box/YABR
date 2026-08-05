@@ -9,10 +9,14 @@ import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.constpool.Utf8Item;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
@@ -255,9 +259,9 @@ class RecursiveHandlerTest {
         ClassFile classFile = mock(ClassFile.class);
         when(classFile.getClassName()).thenReturn(owner);
 
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
-        com.tonic.parser.constpool.Utf8Item nameItem = mock(com.tonic.parser.constpool.Utf8Item.class);
-        com.tonic.parser.constpool.Utf8Item descItem = mock(com.tonic.parser.constpool.Utf8Item.class);
+        ConstPool constPool = mock(ConstPool.class);
+        Utf8Item nameItem = mock(Utf8Item.class);
+        Utf8Item descItem = mock(Utf8Item.class);
         when(nameItem.getValue()).thenReturn(name);
         when(descItem.getValue()).thenReturn(desc);
         doReturn(nameItem).when(constPool).getItem(1);
@@ -266,7 +270,7 @@ class RecursiveHandlerTest {
 
         MethodEntry method = spy(new MethodEntry(classFile, access, 1, 2, new ArrayList<>()));
 
-        com.tonic.parser.attribute.CodeAttribute codeAttr = mock(com.tonic.parser.attribute.CodeAttribute.class);
+        CodeAttribute codeAttr = mock(CodeAttribute.class);
         when(codeAttr.getMaxLocals()).thenReturn(10);
         when(codeAttr.getMaxStack()).thenReturn(10);
         when(codeAttr.getCode()).thenReturn(new byte[] { (byte)0xB1 });

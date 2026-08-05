@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
@@ -204,7 +205,7 @@ public class DeadStoreEliminator implements ASTTransform {
         if (expr instanceof VarRefExpr) {
             out.add(((VarRefExpr) expr).getName());
         }
-        for (com.tonic.analysis.source.ast.ASTNode child : expr.getChildren()) {
+        for (ASTNode child : expr.getChildren()) {
             if (child instanceof Expression) {
                 collectVarReads((Expression) child, out);
             }
@@ -219,7 +220,7 @@ public class DeadStoreEliminator implements ASTTransform {
                 || expr instanceof MethodCallExpr || expr instanceof NewExpr) {
             return true;
         }
-        for (com.tonic.analysis.source.ast.ASTNode child : expr.getChildren()) {
+        for (ASTNode child : expr.getChildren()) {
             if (child instanceof Expression && readsHeap((Expression) child)) {
                 return true;
             }

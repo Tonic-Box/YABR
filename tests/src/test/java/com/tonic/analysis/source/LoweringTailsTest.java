@@ -3,16 +3,16 @@ package com.tonic.analysis.source;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.testutil.TestClassLoader;
 import com.tonic.testutil.TestUtils;
-import org.junit.jupiter.api.Test;
-
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -189,7 +189,7 @@ class LoweringTailsTest {
 
     private static Object invokeWith(byte[] userBytes, String userName, byte[] depBytes, String depName)
             throws Exception {
-        com.tonic.testutil.TestClassLoader loader = new com.tonic.testutil.TestClassLoader();
+        TestClassLoader loader = new TestClassLoader();
         loader.defineClass(depName, depBytes);
         return loader.defineClass(userName, userBytes).getMethod("check").invoke(null);
     }

@@ -7,13 +7,12 @@ import com.tonic.analysis.source.ast.decl.ParameterDecl;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.analysis.source.lower.ASTLowerer;
 import com.tonic.analysis.source.lower.TypeResolver;
+import com.tonic.analysis.source.parser.JavaParser;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-import org.junit.jupiter.api.Test;
-
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -23,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -120,7 +120,7 @@ public class DemoJarRecompileSweepTest {
     /** Mirrors SourceCompiler.lowerToClassFile: re-lower each method of the decompiled source into the class. */
     private static byte[] recompile(ClassFile original, ClassPool pool, String source,
                                     String name, Map<String, String> failures) throws Exception {
-        CompilationUnit cu = com.tonic.analysis.source.parser.JavaParser.create().parse(source);
+        CompilationUnit cu = JavaParser.create().parse(source);
         if (!(cu.getPrimaryType() instanceof ClassDecl)) {
             return original.write();   // interfaces/enums/annotations: leave as-is
         }

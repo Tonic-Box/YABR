@@ -156,8 +156,8 @@ public class InstructionTranslator {
             case 0xB8: translateInvokeStatic((InvokeStaticInstruction) instr, state, block); break;
             case 0xB9: translateInvokeInterface((InvokeInterfaceInstruction) instr, state, block); break;
             case 0xBA: translateInvokeDynamic((InvokeDynamicInstruction) instr, state, block); break;
-            case 0xBB: translateNew((com.tonic.analysis.instruction.NewInstruction) instr, state, block); break;
-            case 0xBC: translateNewArray((com.tonic.analysis.instruction.NewArrayInstruction) instr, state, block); break;
+            case 0xBB: translateNew((NewObjectInstruction) instr, state, block); break;
+            case 0xBC: translateNewArray((NewPrimitiveArrayInstruction) instr, state, block); break;
             case 0xBD: translateANewArray((ANewArrayInstruction) instr, state, block); break;
             case 0xBE: translateArrayLength(state, block); break;
             case 0xBF: translateAThrow(state, block); break;
@@ -972,7 +972,7 @@ public class InstructionTranslator {
         }
     }
 
-    private void translateNew(com.tonic.analysis.instruction.NewInstruction instr, AbstractState state, IRBlock block) {
+    private void translateNew(NewObjectInstruction instr, AbstractState state, IRBlock block) {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(instr.getClassIndex());
         String className = classRef.getClassName();
         SSAValue result = new SSAValue(new ReferenceType(className));
@@ -980,7 +980,7 @@ public class InstructionTranslator {
         state.push(result);
     }
 
-    private void translateNewArray(com.tonic.analysis.instruction.NewArrayInstruction instr, AbstractState state, IRBlock block) {
+    private void translateNewArray(NewPrimitiveArrayInstruction instr, AbstractState state, IRBlock block) {
         Value length = state.pop();
         IRType elemType = getNewArrayElementType(instr.getArrayType().getCode());
         SSAValue result = new SSAValue(new ArrayType(elemType));

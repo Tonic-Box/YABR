@@ -10,7 +10,6 @@ import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.value.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -897,7 +896,7 @@ public class ControlFlowSimplifier implements ASTTransform {
      */
     private static final SideEffectDetector TAIL_GUARD_PURITY = new SideEffectDetector() {
         @Override
-        public Boolean visitMethodCall(com.tonic.analysis.source.ast.expr.MethodCallExpr expr) {
+        public Boolean visitMethodCall(MethodCallExpr expr) {
             switch (expr.getMethodName()) {
                 case "equals":
                 case "equalsIgnoreCase":
@@ -915,7 +914,7 @@ public class ControlFlowSimplifier implements ASTTransform {
             if (expr.getReceiver() != null && expr.getReceiver().accept(this)) {
                 return true;
             }
-            for (com.tonic.analysis.source.ast.expr.Expression arg : expr.getArguments()) {
+            for (Expression arg : expr.getArguments()) {
                 if (arg.accept(this)) {
                     return true;
                 }

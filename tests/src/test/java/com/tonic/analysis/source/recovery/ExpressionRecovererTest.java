@@ -2,8 +2,6 @@ package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
-import com.tonic.analysis.source.ast.type.ReferenceSourceType;
-import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -15,13 +13,12 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
+import com.tonic.util.AccessBuilder;
+import java.io.IOException;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -1269,7 +1266,7 @@ class ExpressionRecovererTest {
 
         @Test
         void recoverGetFieldInstruction() throws IOException {
-            int publicAccess = new com.tonic.util.AccessBuilder().setPublic().build();
+            int publicAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .field(publicAccess, "value", "I")
                 .publicMethod("getValue", "()I")

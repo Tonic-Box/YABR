@@ -1,8 +1,8 @@
 package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
+import com.tonic.analysis.source.recovery.NameRecoveryStrategy;
 import com.tonic.analysis.ssa.transform.IRTransform;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +25,7 @@ public class DecompilerConfig {
      */
     private final List<IRTransform> additionalTransforms;
     /** How variable names are recovered: from debug info where present, or synthetic regardless. */
-    private final com.tonic.analysis.source.recovery.NameRecoveryStrategy nameRecoveryStrategy;
+    private final NameRecoveryStrategy nameRecoveryStrategy;
 
     private DecompilerConfig(Builder builder) {
         this.emitterConfig = builder.emitterConfig;
@@ -46,7 +46,7 @@ public class DecompilerConfig {
      * the other modes produce the same names whether or not a class was compiled with debug info, which is what
      * output compared across obfuscated and non-obfuscated builds needs.
      */
-    public com.tonic.analysis.source.recovery.NameRecoveryStrategy getNameRecoveryStrategy() {
+    public NameRecoveryStrategy getNameRecoveryStrategy() {
         return nameRecoveryStrategy;
     }
 
@@ -70,8 +70,8 @@ public class DecompilerConfig {
     public static class Builder {
         private SourceEmitterConfig emitterConfig = SourceEmitterConfig.defaults();
         private final List<IRTransform> transforms = new ArrayList<>();
-        private com.tonic.analysis.source.recovery.NameRecoveryStrategy nameRecoveryStrategy =
-                com.tonic.analysis.source.recovery.NameRecoveryStrategy.PREFER_DEBUG_INFO;
+        private NameRecoveryStrategy nameRecoveryStrategy =
+                NameRecoveryStrategy.PREFER_DEBUG_INFO;
 
         private Builder() {}
 
@@ -137,9 +137,9 @@ public class DecompilerConfig {
 
         /** Sets how variable names are recovered. */
         public Builder nameRecoveryStrategy(
-                com.tonic.analysis.source.recovery.NameRecoveryStrategy strategy) {
+                NameRecoveryStrategy strategy) {
             this.nameRecoveryStrategy = strategy == null
-                    ? com.tonic.analysis.source.recovery.NameRecoveryStrategy.PREFER_DEBUG_INFO
+                    ? NameRecoveryStrategy.PREFER_DEBUG_INFO
                     : strategy;
             return this;
         }

@@ -3,7 +3,6 @@ package com.tonic.analysis.simulation;
 import com.tonic.analysis.simulation.listener.*;
 import com.tonic.analysis.simulation.metrics.*;
 import com.tonic.analysis.simulation.state.SimValue;
-import com.tonic.analysis.ssa.type.PrimitiveType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -95,7 +94,7 @@ class MetricsTest {
         AllocationListener listener = new AllocationListener();
         listener.onSimulationStart(null);
 
-        // Simulate allocations (would normally come from NewInstruction events)
+        // Simulate allocations (would normally come from NewObjectInstruction events)
         // For now just test the metrics container
         AllocationMetrics metrics = AllocationMetrics.from(listener);
 

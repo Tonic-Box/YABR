@@ -142,7 +142,7 @@ public class ArgumentTypeAnalyzer {
     private static boolean isControlFlow(Instruction instr) {
         return instr instanceof GotoInstruction
             || instr instanceof ConditionalBranchInstruction
-            || instr instanceof ReturnInstruction
+            || instr instanceof MethodReturnInstruction
             || instr instanceof TableSwitchInstruction
             || instr instanceof LookupSwitchInstruction
             || instr instanceof ATHROWInstruction;
@@ -191,8 +191,8 @@ public class ArgumentTypeAnalyzer {
             || instr instanceof CALoadInstruction
             || instr instanceof SALoadInstruction
             || instr instanceof CheckCastInstruction
-            || instr instanceof NewInstruction
-            || instr instanceof NewArrayInstruction
+            || instr instanceof NewObjectInstruction
+            || instr instanceof NewPrimitiveArrayInstruction
             || instr instanceof ANewArrayInstruction) {
             return ArgumentType.DYNAMIC;
         }

@@ -5,14 +5,15 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.LocalVariableTypeTableAttribute;
 import com.tonic.parser.attribute.table.LocalVariableTableEntry;
+import com.tonic.parser.attribute.table.LocalVariableTypeTableEntry;
 import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.testutil.TestUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -262,15 +263,15 @@ class LocalVariableTableEmissionTest {
                 + " if (n > 0) { xs.add(\"x\"); } return xs.size(); } }", "f");
         MethodEntry method = lastClass.getMethods().stream()
                 .filter(m -> m.getName().equals("f")).findFirst().orElseThrow();
-        com.tonic.parser.attribute.LocalVariableTypeTableAttribute lvtt = null;
+        LocalVariableTypeTableAttribute lvtt = null;
         for (Attribute a : method.getCodeAttribute().getAttributes()) {
-            if (a instanceof com.tonic.parser.attribute.LocalVariableTypeTableAttribute) {
-                lvtt = (com.tonic.parser.attribute.LocalVariableTypeTableAttribute) a;
+            if (a instanceof LocalVariableTypeTableAttribute) {
+                lvtt = (LocalVariableTypeTableAttribute) a;
             }
         }
         assertNotNull(lvtt, "a generic declaration synthesizes a LocalVariableTypeTable");
         boolean found = false;
-        for (com.tonic.parser.attribute.table.LocalVariableTypeTableEntry e : lvtt.getLocalVariableTypeTable()) {
+        for (LocalVariableTypeTableEntry e : lvtt.getLocalVariableTypeTable()) {
             if ("xs".equals(utf8(lastClass, e.getNameIndex()))
                     && "Ljava/util/List<Ljava/lang/String;>;".equals(utf8(lastClass, e.getSignatureIndex()))) {
                 found = true;

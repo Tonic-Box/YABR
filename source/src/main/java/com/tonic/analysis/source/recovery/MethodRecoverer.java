@@ -8,6 +8,7 @@ import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
+import com.tonic.analysis.ssa.lift.BytecodeLifter;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.MethodEntry;
@@ -124,7 +125,7 @@ public class MethodRecoverer {
         // missed and loops degrade to plain conditionals. The edges are removed again so the
         // structural analysis and statement recovery walk only real control flow.
         List<IRBlock[]> excEdges =
-            com.tonic.analysis.ssa.lift.BytecodeLifter.addExceptionEdges(irMethod);
+            BytecodeLifter.addExceptionEdges(irMethod);
 
         dominatorTree = new DominatorTree(irMethod);
         dominatorTree.compute();
@@ -132,7 +133,7 @@ public class MethodRecoverer {
         loopAnalysis = new LoopAnalysis(irMethod, dominatorTree);
         loopAnalysis.compute();
 
-        com.tonic.analysis.ssa.lift.BytecodeLifter.removeExceptionEdges(excEdges);
+        BytecodeLifter.removeExceptionEdges(excEdges);
 
         defUseChains = new DefUseChains(irMethod);
         defUseChains.compute();

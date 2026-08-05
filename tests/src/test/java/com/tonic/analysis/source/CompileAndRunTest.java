@@ -1,13 +1,17 @@
 package com.tonic.analysis.source;
 
+import com.tonic.analysis.CodeWriter;
+import com.tonic.analysis.instruction.Instruction;
+import com.tonic.analysis.instruction.InvokeStaticInstruction;
+import com.tonic.analysis.instruction.InvokeVirtualInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -119,15 +123,15 @@ public class CompileAndRunTest {
         assertNotNull(len, "len() should be compiled");
 
         boolean foundVirtualLength = false;
-        for (com.tonic.analysis.instruction.Instruction instr : new com.tonic.analysis.CodeWriter(len).getInstructions()) {
-            if (instr instanceof com.tonic.analysis.instruction.InvokeStaticInstruction) {
+        for (Instruction instr : new CodeWriter(len).getInstructions()) {
+            if (instr instanceof InvokeStaticInstruction) {
                 assertNotEquals("length",
-                    ((com.tonic.analysis.instruction.InvokeStaticInstruction) instr).getMethodName(),
+                    ((InvokeStaticInstruction) instr).getMethodName(),
                     "length() must not be lowered to invokestatic");
             }
-            if (instr instanceof com.tonic.analysis.instruction.InvokeVirtualInstruction) {
-                com.tonic.analysis.instruction.InvokeVirtualInstruction call =
-                    (com.tonic.analysis.instruction.InvokeVirtualInstruction) instr;
+            if (instr instanceof InvokeVirtualInstruction) {
+                InvokeVirtualInstruction call =
+                    (InvokeVirtualInstruction) instr;
                 if ("length".equals(call.getMethodName())) {
                     foundVirtualLength = true;
                     assertEquals("java/lang/String", call.getOwnerClass());

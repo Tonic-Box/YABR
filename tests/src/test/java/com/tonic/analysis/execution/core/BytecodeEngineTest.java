@@ -1,24 +1,19 @@
 package com.tonic.analysis.execution.core;
 
-import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.heap.HeapManager;
-import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.heap.SimpleHeapManager;
+import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -303,7 +298,7 @@ class BytecodeEngineTest {
         MethodEntry method = mock(MethodEntry.class);
         CodeAttribute codeAttr = mock(CodeAttribute.class);
         ClassFile classFile = mock(ClassFile.class);
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
+        ConstPool constPool = mock(ConstPool.class);
 
         when(method.getCodeAttribute()).thenReturn(codeAttr);
         when(method.getName()).thenReturn("testMethod");
@@ -322,7 +317,7 @@ class BytecodeEngineTest {
         MethodEntry method = mock(MethodEntry.class);
         CodeAttribute codeAttr = mock(CodeAttribute.class);
         ClassFile classFile = mock(ClassFile.class);
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
+        ConstPool constPool = mock(ConstPool.class);
 
         when(method.getCodeAttribute()).thenReturn(codeAttr);
         when(method.getName()).thenReturn("testMethod");

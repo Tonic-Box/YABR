@@ -10,22 +10,22 @@ import java.io.IOException;
 /**
  * Represents the NEW instruction (0xBB).
  */
-public class NewInstruction extends Instruction {
+public class NewObjectInstruction extends Instruction {
     private final int classIndex;
     private final ConstPool constPool;
 
     /**
-     * Constructs a NewInstruction.
+     * Constructs a NewObjectInstruction.
      *
      * @param constPool The constant pool associated with the class.
      * @param opcode    The opcode of the instruction.
      * @param offset    The bytecode offset of the instruction.
      * @param classIndex The constant pool index for the class reference.
      */
-    public NewInstruction(ConstPool constPool, int opcode, int offset, int classIndex) {
+    public NewObjectInstruction(ConstPool constPool, int opcode, int offset, int classIndex) {
         super(opcode, offset, 3);
         if (opcode != 0xBB) {
-            throw new IllegalArgumentException("Invalid opcode for NewInstruction: " + opcode);
+            throw new IllegalArgumentException("Invalid opcode for NewObjectInstruction: " + opcode);
         }
         this.classIndex = classIndex;
         this.constPool = constPool;

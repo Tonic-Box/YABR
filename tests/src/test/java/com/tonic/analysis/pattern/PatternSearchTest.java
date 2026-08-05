@@ -1,22 +1,19 @@
 package com.tonic.analysis.pattern;
 
 import com.tonic.analysis.Bytecode;
-import com.tonic.analysis.ssa.SSA;
+import com.tonic.analysis.instruction.PopInstruction;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import com.tonic.util.ReturnType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -76,7 +73,7 @@ class PatternSearchTest {
     }
 
     @Test
-    void inMethodReturnsThis() throws IOException {
+    void inMethodReturnsThis() {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testMethod", "V");
 
@@ -302,7 +299,7 @@ class PatternSearchTest {
     }
 
     @Test
-    void findPotentialNullDereferencesHandlesNoCode() throws IOException {
+    void findPotentialNullDereferencesHandlesNoCode() {
         // Create a fresh class without default constructor/clinit for isolation
         ClassPool emptyPool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().setAbstract().build();
@@ -378,7 +375,7 @@ class PatternSearchTest {
         bc.addIConst(42);
         bc.addInvokeStatic("java/lang/String", "valueOf", "(I)Ljava/lang/String;");
         // Use pop via CodeWriter since Bytecode doesn't have addPop
-        bc.getCodeWriter().appendInstruction(new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+        bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
         bc.addReturn(ReturnType.RETURN);
         bc.finalizeBytecode();
     }

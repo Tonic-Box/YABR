@@ -6,17 +6,17 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
+import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,15 +26,15 @@ class LambdaRecoveryTest {
 
     @BeforeEach
     void setUp() {
-        com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
-        com.tonic.analysis.ssa.value.SSAValue.resetIdCounter();
+        IRBlock.resetIdCounter();
+        SSAValue.resetIdCounter();
     }
 
     private String uniqueClassName() {
         return "com/test/LambdaTest" + classCounter.incrementAndGet();
     }
 
-    private Expression recoverInvokeDynamic(ClassFile cf, String methodName) throws IOException {
+    private Expression recoverInvokeDynamic(ClassFile cf, String methodName) {
         MethodEntry method = findMethod(cf, methodName);
         IRMethod ir = TestUtils.liftMethod(method);
         DefUseChains defUse = new DefUseChains(ir);
@@ -63,8 +63,7 @@ class LambdaRecoveryTest {
                 return method;
             }
         }
-        fail("Method not found: " + name);
-        return null;
+        throw new AssertionError("Method not found: " + name);
     }
 
     @Nested

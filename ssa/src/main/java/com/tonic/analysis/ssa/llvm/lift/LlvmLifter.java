@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.value.SSAValue;
-
 import java.util.List;
 
 /**
@@ -30,16 +29,6 @@ import java.util.List;
  */
 public final class LlvmLifter {
 
-    private final LlvmLifterConfig config;
-
-    public LlvmLifter() {
-        this(LlvmLifterConfig.defaults());
-    }
-
-    public LlvmLifter(LlvmLifterConfig config) {
-        this.config = config != null ? config : LlvmLifterConfig.defaults();
-    }
-
     /**
      * Lifts the first {@code define} function found in {@code llvmModuleText} and returns it as an
      * {@link IRMethod}. Throws {@link LlvmLiftException} if no function is found.
@@ -60,7 +49,7 @@ public final class LlvmLifter {
         List<IRMethod> result = new java.util.ArrayList<>(parsed.size());
         for (ParsedFunction pf : parsed) {
             SSAValue.resetIdCounter();
-            com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
+            IRBlock.resetIdCounter();
             IRInstruction.resetIdCounter();
             FunctionLifter fl = new FunctionLifter(pf);
             IRMethod method = fl.lift();

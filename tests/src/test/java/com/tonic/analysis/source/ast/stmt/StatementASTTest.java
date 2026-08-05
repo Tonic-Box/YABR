@@ -1,19 +1,38 @@
 package com.tonic.analysis.source.ast.stmt;
 
 import com.tonic.analysis.source.ast.SourceLocation;
+import com.tonic.analysis.source.ast.expr.ArrayAccessExpr;
+import com.tonic.analysis.source.ast.expr.ArrayInitExpr;
+import com.tonic.analysis.source.ast.expr.BinaryExpr;
+import com.tonic.analysis.source.ast.expr.CastExpr;
+import com.tonic.analysis.source.ast.expr.ClassExpr;
+import com.tonic.analysis.source.ast.expr.DynamicConstantExpr;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
+import com.tonic.analysis.source.ast.expr.InstanceOfExpr;
+import com.tonic.analysis.source.ast.expr.InvokeDynamicExpr;
+import com.tonic.analysis.source.ast.expr.LambdaExpr;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
+import com.tonic.analysis.source.ast.expr.MethodCallExpr;
+import com.tonic.analysis.source.ast.expr.MethodRefExpr;
+import com.tonic.analysis.source.ast.expr.NewArrayExpr;
+import com.tonic.analysis.source.ast.expr.NewExpr;
+import com.tonic.analysis.source.ast.expr.SuperExpr;
+import com.tonic.analysis.source.ast.expr.TernaryExpr;
+import com.tonic.analysis.source.ast.expr.ThisExpr;
+import com.tonic.analysis.source.ast.expr.UnaryExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
+import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -125,102 +144,102 @@ class StatementASTTest {
         }
 
         @Override
-        public String visitLiteral(com.tonic.analysis.source.ast.expr.LiteralExpr expr) {
+        public String visitLiteral(LiteralExpr expr) {
             return "visitLiteral";
         }
 
         @Override
-        public String visitVarRef(com.tonic.analysis.source.ast.expr.VarRefExpr expr) {
+        public String visitVarRef(VarRefExpr expr) {
             return "visitVarRef";
         }
 
         @Override
-        public String visitFieldAccess(com.tonic.analysis.source.ast.expr.FieldAccessExpr expr) {
+        public String visitFieldAccess(FieldAccessExpr expr) {
             return "visitFieldAccess";
         }
 
         @Override
-        public String visitArrayAccess(com.tonic.analysis.source.ast.expr.ArrayAccessExpr expr) {
+        public String visitArrayAccess(ArrayAccessExpr expr) {
             return "visitArrayAccess";
         }
 
         @Override
-        public String visitMethodCall(com.tonic.analysis.source.ast.expr.MethodCallExpr expr) {
+        public String visitMethodCall(MethodCallExpr expr) {
             return "visitMethodCall";
         }
 
         @Override
-        public String visitNew(com.tonic.analysis.source.ast.expr.NewExpr expr) {
+        public String visitNew(NewExpr expr) {
             return "visitNew";
         }
 
         @Override
-        public String visitNewArray(com.tonic.analysis.source.ast.expr.NewArrayExpr expr) {
+        public String visitNewArray(NewArrayExpr expr) {
             return "visitNewArray";
         }
 
         @Override
-        public String visitArrayInit(com.tonic.analysis.source.ast.expr.ArrayInitExpr expr) {
+        public String visitArrayInit(ArrayInitExpr expr) {
             return "visitArrayInit";
         }
 
         @Override
-        public String visitBinary(com.tonic.analysis.source.ast.expr.BinaryExpr expr) {
+        public String visitBinary(BinaryExpr expr) {
             return "visitBinary";
         }
 
         @Override
-        public String visitUnary(com.tonic.analysis.source.ast.expr.UnaryExpr expr) {
+        public String visitUnary(UnaryExpr expr) {
             return "visitUnary";
         }
 
         @Override
-        public String visitCast(com.tonic.analysis.source.ast.expr.CastExpr expr) {
+        public String visitCast(CastExpr expr) {
             return "visitCast";
         }
 
         @Override
-        public String visitInstanceOf(com.tonic.analysis.source.ast.expr.InstanceOfExpr expr) {
+        public String visitInstanceOf(InstanceOfExpr expr) {
             return "visitInstanceOf";
         }
 
         @Override
-        public String visitTernary(com.tonic.analysis.source.ast.expr.TernaryExpr expr) {
+        public String visitTernary(TernaryExpr expr) {
             return "visitTernary";
         }
 
         @Override
-        public String visitLambda(com.tonic.analysis.source.ast.expr.LambdaExpr expr) {
+        public String visitLambda(LambdaExpr expr) {
             return "visitLambda";
         }
 
         @Override
-        public String visitMethodRef(com.tonic.analysis.source.ast.expr.MethodRefExpr expr) {
+        public String visitMethodRef(MethodRefExpr expr) {
             return "visitMethodRef";
         }
 
         @Override
-        public String visitThis(com.tonic.analysis.source.ast.expr.ThisExpr expr) {
+        public String visitThis(ThisExpr expr) {
             return "visitThis";
         }
 
         @Override
-        public String visitSuper(com.tonic.analysis.source.ast.expr.SuperExpr expr) {
+        public String visitSuper(SuperExpr expr) {
             return "visitSuper";
         }
 
         @Override
-        public String visitClass(com.tonic.analysis.source.ast.expr.ClassExpr expr) {
+        public String visitClass(ClassExpr expr) {
             return "visitClass";
         }
 
         @Override
-        public String visitDynamicConstant(com.tonic.analysis.source.ast.expr.DynamicConstantExpr expr) {
+        public String visitDynamicConstant(DynamicConstantExpr expr) {
             return "visitDynamicConstant";
         }
 
         @Override
-        public String visitInvokeDynamic(com.tonic.analysis.source.ast.expr.InvokeDynamicExpr expr) {
+        public String visitInvokeDynamic(InvokeDynamicExpr expr) {
             return "visitInvokeDynamic";
         }
 
@@ -235,12 +254,12 @@ class StatementASTTest {
         }
 
         @Override
-        public String visitArrayType(com.tonic.analysis.source.ast.type.ArraySourceType type) {
+        public String visitArrayType(ArraySourceType type) {
             return "visitArrayType";
         }
 
         @Override
-        public String visitVoidType(com.tonic.analysis.source.ast.type.VoidSourceType type) {
+        public String visitVoidType(VoidSourceType type) {
             return "visitVoidType";
         }
     }

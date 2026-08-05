@@ -1,21 +1,23 @@
 package com.tonic.analysis.source.lower;
 
-import com.tonic.analysis.source.ast.decl.TypeDecl;
+import com.tonic.analysis.frame.TypeState;
+import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.FieldDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
+import com.tonic.analysis.source.ast.decl.InterfaceDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
-import com.tonic.analysis.frame.TypeState;
+import com.tonic.analysis.source.ast.decl.TypeDecl;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.FieldRefItem;
+import com.tonic.parser.constpool.Item;
 import com.tonic.util.Modifiers;
-
 import java.lang.reflect.Method;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -133,11 +135,11 @@ public class TypeResolver {
         if (current == null || ownerClass == null) {
             return null;
         }
-        for (com.tonic.parser.constpool.Item<?> item : current.getConstPool().getItems()) {
-            if (!(item instanceof com.tonic.parser.constpool.FieldRefItem)) {
+        for (Item<?> item : current.getConstPool().getItems()) {
+            if (!(item instanceof FieldRefItem)) {
                 continue;
             }
-            com.tonic.parser.constpool.FieldRefItem ref = (com.tonic.parser.constpool.FieldRefItem) item;
+            FieldRefItem ref = (FieldRefItem) item;
             if (ownerClass.replace('/', '.').equals(ref.getClassName()) && fieldName.equals(ref.getName())) {
                 return parseDescriptor(ref.getDescriptor());
             }
@@ -155,10 +157,10 @@ public class TypeResolver {
             return ownerClass;
         }
         List<SourceType> typeParams;
-        if (currentClassDecl instanceof com.tonic.analysis.source.ast.decl.ClassDecl) {
-            typeParams = ((com.tonic.analysis.source.ast.decl.ClassDecl) currentClassDecl).getTypeParameters();
-        } else if (currentClassDecl instanceof com.tonic.analysis.source.ast.decl.InterfaceDecl) {
-            typeParams = ((com.tonic.analysis.source.ast.decl.InterfaceDecl) currentClassDecl).getTypeParameters();
+        if (currentClassDecl instanceof ClassDecl) {
+            typeParams = ((ClassDecl) currentClassDecl).getTypeParameters();
+        } else if (currentClassDecl instanceof InterfaceDecl) {
+            typeParams = ((InterfaceDecl) currentClassDecl).getTypeParameters();
         } else {
             return ownerClass;
         }

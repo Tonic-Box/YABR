@@ -194,7 +194,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
     }
 
     @Override
-    public void visit(NewInstruction instr) {
+    public void visit(NewObjectInstruction instr) {
         reference(instr.getClassIndex());
     }
 
@@ -219,7 +219,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor {
     }
 
     @Override
-    public void visit(NewArrayInstruction instr) {
+    public void visit(NewPrimitiveArrayInstruction instr) {
         sb.append(atypeDescription(instr.getTypeCode()));
     }
 

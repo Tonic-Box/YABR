@@ -7,11 +7,11 @@ import com.tonic.analysis.ssa.type.ArrayType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.*;
+import com.tonic.analysis.ssa.visitor.IRVisitor;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -1331,7 +1331,7 @@ class StateTransitionsTest {
                 }
 
                 @Override
-                public <T> T accept(com.tonic.analysis.ssa.visitor.IRVisitor<T> visitor) {
+                public <T> T accept(IRVisitor<T> visitor) {
                     return null;
                 }
 
@@ -1361,7 +1361,7 @@ class StateTransitionsTest {
                 }
 
                 @Override
-                public <T> T accept(com.tonic.analysis.ssa.visitor.IRVisitor<T> visitor) {
+                public <T> T accept(IRVisitor<T> visitor) {
                     return null;
                 }
 
@@ -1387,7 +1387,7 @@ class StateTransitionsTest {
                 }
 
                 @Override
-                public <T> T accept(com.tonic.analysis.ssa.visitor.IRVisitor<T> visitor) {
+                public <T> T accept(IRVisitor<T> visitor) {
                     return null;
                 }
 

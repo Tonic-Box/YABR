@@ -2,15 +2,16 @@ package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.analysis.source.decompile.DecompilerConfig;
+import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
-import org.junit.jupiter.api.Test;
-
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -89,14 +90,14 @@ class NameRecoveryStrategyTest {
     @Test
     void theGateDecidesPerSlotAtTheAccessors() throws Exception {
         ClassFile cf = compiled();
-        com.tonic.parser.MethodEntry total = null;
-        for (com.tonic.parser.MethodEntry m : cf.getMethods()) {
+        MethodEntry total = null;
+        for (MethodEntry m : cf.getMethods()) {
             if ("total".equals(m.getName())) {
                 total = m;
             }
         }
         assertNotNull(total, "the fixture must have a total() method");
-        com.tonic.analysis.ssa.cfg.IRMethod ir = TestUtils.liftMethod(total);
+        IRMethod ir = TestUtils.liftMethod(total);
 
         int paramSlot = 0;
         int localSlot = 2;

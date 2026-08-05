@@ -872,7 +872,7 @@ public class CodeBuilder {
     }
 
     public CodeBuilder newarray(int arrayType) {
-        addOp((bc, cw) -> cw.appendInstruction(new NewArrayInstruction(NEWARRAY.getCode(), cw.getBytecodeSize(), arrayType, 0)), 2);
+        addOp((bc, cw) -> cw.appendInstruction(new NewPrimitiveArrayInstruction(NEWARRAY.getCode(), cw.getBytecodeSize(), arrayType, 0)), 2);
         return this;
     }
 

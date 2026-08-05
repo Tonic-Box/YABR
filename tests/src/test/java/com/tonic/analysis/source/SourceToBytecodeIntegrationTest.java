@@ -1,10 +1,12 @@
 package com.tonic.analysis.source;
 
+import com.tonic.analysis.CodePrinter;
 import com.tonic.analysis.source.ast.decl.*;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
+import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.analysis.source.lower.ASTLowerer;
 import com.tonic.analysis.source.parser.JavaParser;
 import com.tonic.analysis.ssa.SSA;
@@ -12,15 +14,16 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.testutil.ModernJdk;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -1204,7 +1207,7 @@ public class SourceToBytecodeIntegrationTest {
             IRMethod ir = lowerer.lower(method, className);
             new SSA(cf.getConstPool()).lower(ir, findMethod(cf, "fib"));
 
-            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String decompiled = ClassDecompiler.decompile(cf);
             int forIdx = decompiled.indexOf("for ");
             assertTrue(forIdx >= 0, "should recover a for loop");
             int bodyOpen = decompiled.indexOf('{', forIdx);
@@ -1241,7 +1244,7 @@ public class SourceToBytecodeIntegrationTest {
             IRMethod ir = lowerer.lower(cls.getMethods().get(0), ownerClass);
             new SSA(cf.getConstPool()).lower(ir, entry);
 
-            String code = com.tonic.analysis.CodePrinter.prettyPrintCode(
+            String code = CodePrinter.prettyPrintCode(
                 entry.getCodeAttribute().getCode(), cf.getConstPool());
             int getstatics = code.split("getstatic", -1).length - 1;
             assertEquals(1, getstatics, "counter++ must read the field exactly once: " + code);
@@ -1266,7 +1269,7 @@ public class SourceToBytecodeIntegrationTest {
             IRMethod ir = lowerer.lower(method, className);
             new SSA(cf.getConstPool()).lower(ir, findMethod(cf, "isPrime"));
 
-            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String decompiled = ClassDecompiler.decompile(cf);
             int forIdx = decompiled.indexOf("for ");
             assertTrue(forIdx >= 0, "should recover a for loop: " + decompiled);
             String condition = decompiled.substring(decompiled.indexOf(';', forIdx) + 1,
@@ -1524,7 +1527,7 @@ public class SourceToBytecodeIntegrationTest {
         void textBlockRoundTripMatchesJavac() throws Exception {
             // javac's text block and YABR's must produce the same String value: compile the same
             // source with corretto javac, run it, and compare to YABR's in-process result.
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String body = "return \"\"\"\n            Line1\n              indented\n            Line3\n            \"\"\";";
             String yabrSource = "class T { static String tb() { " + body + " } }";
             String expected = (String) compileClassWithFields(yabrSource, uniqueClassName())
@@ -1532,8 +1535,8 @@ public class SourceToBytecodeIntegrationTest {
 
             String javacSource = "public class TbRef { public static String tb() { " + body + " }\n"
                     + "  public static void main(String[] a) { System.out.print(tb()); } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "TbRef", javacSource);
-            String javacValue = com.tonic.testutil.ModernJdk.runVerified(17, classes, "TbRef");
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "TbRef", javacSource);
+            String javacValue = ModernJdk.runVerified(17, classes, "TbRef");
             assertEquals(javacValue, expected, "YABR text-block value must match javac's");
         }
     }
@@ -1561,25 +1564,25 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsPatternBinding() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Pat { public static String describe(Object o) {"
                     + " if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Pat", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Pat", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Pat")));
-            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String decompiled = ClassDecompiler.decompile(cf);
             assertTrue(decompiled.matches("(?s).*instanceof\\s+String\\s+\\w+.*"),
                     "must reconstruct a pattern binding `instanceof String <var>`:\n" + decompiled);
         }
 
         @Test
         void roundTripJavacToYabrAndBack() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             // javac source -> bytecode -> YABR decompile -> re-parse with YABR front-end -> run.
             String javac = "public class Pat { public static String describe(Object o) {"
                     + " if (o instanceof String s) { return \"str:\" + s.length(); } return \"other\"; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Pat", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Pat", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Pat")));
-            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String decompiled = ClassDecompiler.decompile(cf);
 
             // Strip the package/class wrapper down to the method and recompile via YABR.
             String body = decompiled.substring(decompiled.indexOf("public static String describe"));
@@ -1596,14 +1599,14 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileRendersSealedAndPermits() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             java.util.Map<String, String> src = new java.util.LinkedHashMap<>();
             src.put("Shape", "public sealed interface Shape permits Circle, Square { double area(); }");
             src.put("Circle", "public final class Circle implements Shape { public double area(){return 1.0;} }");
             src.put("Square", "public final class Square implements Shape { public double area(){return 2.0;} }");
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, src);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, src);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Shape")));
-            String decompiled = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String decompiled = ClassDecompiler.decompile(cf);
             assertTrue(decompiled.contains("sealed interface Shape"),
                     "must render the sealed modifier:\n" + decompiled);
             assertTrue(decompiled.matches("(?s).*permits\\s+Circle,\\s*Square.*"),
@@ -1624,11 +1627,11 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsRecordHeaderAndSuppressesGenerated() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public record Point(int x, int y) { public int sum() { return x + y; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Point", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Point", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Point")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
 
             assertTrue(d.contains("record Point(int x, int y)"), "must render record header:\n" + d);
             assertTrue(d.contains("public int sum()"), "must keep the user method:\n" + d);
@@ -1655,24 +1658,24 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsReturnSwitchExpression() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Sw { public static int classify(int n) {"
                     + " return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Sw", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Sw", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Sw")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
             assertTrue(d.matches("(?s).*return switch \\(arg0\\) \\{.*-> 10;.*-> 20;.*default -> 0;.*"),
                     "must reconstruct a return switch expression:\n" + d);
         }
 
         @Test
         void decompileReconstructsAssignmentSwitchExpression() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Sw { public static String name(int d) {"
                     + " String s = switch (d) { case 1 -> \"one\"; case 2 -> \"two\"; default -> \"?\"; }; return s; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Sw", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Sw", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Sw")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
             assertTrue(d.matches("(?s).*=\\s*switch \\(arg0\\) \\{.*-> \"one\";.*default -> \"\\?\";.*"),
                     "must reconstruct an assignment switch expression:\n" + d);
         }
@@ -1700,12 +1703,12 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void fullRoundTripJavacToYabr() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+            assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
             String javac = "public class Sw { public static int classify(int n) {"
                     + " return switch (n) { case 1 -> 10; case 2 -> 20; default -> 0; }; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(17, "Sw", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(17, "Sw", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Sw")));
-            String dec = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String dec = ClassDecompiler.decompile(cf);
             String body = dec.substring(dec.indexOf("public static int classify"));
             body = body.substring(0, body.indexOf("\n\t}") + 3);
             String reSource = "class T { static " + body.substring(body.indexOf("int")) + " }";
@@ -1755,15 +1758,15 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsTypePatternSwitch() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class Pat21 { static String describe(Object o) {"
                     + " return switch (o) {"
                     + "   case Integer i -> \"int:\" + i;"
                     + "   case String s -> \"str:\" + s.length();"
                     + "   default -> \"other\"; }; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "Pat21", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(21, "Pat21", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("Pat21")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
 
             // Reconstructed as a pattern switch with type-pattern arms; no dispatch-loop artifacts.
             assertFalse(d.contains("$pc$"), "must not leave a dispatch loop:\n" + d);
@@ -1776,16 +1779,16 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsAssignmentTypePatternSwitch() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class PatA { static int describe(Object o) {"
                     + " String r = switch (o) {"
                     + "   case Integer i -> \"int:\" + i;"
                     + "   case String s -> \"S\";"
                     + "   default -> \"other\"; };"
                     + " return r.length(); } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "PatA", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(21, "PatA", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("PatA")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
             assertFalse(d.contains("$pc$"), "no dispatch loop:\n" + d);
             assertFalse(d.contains("typeSwitch"), "no raw typeSwitch:\n" + d);
             assertTrue(d.matches("(?s).*=\\s*switch \\(arg0\\) \\{.*"), "expected assignment switch:\n" + d);
@@ -1796,16 +1799,16 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsRecordDeconstructionPattern() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class PatRec {"
                     + " record Point(int x, int y) {}"
                     + " static int rec(Object o) {"
                     + "   return switch (o) {"
                     + "     case Point(int x, int y) -> x + y;"
                     + "     default -> -1; }; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "PatRec", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(21, "PatRec", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("PatRec")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
 
             // The MatchException machinery is stripped and the accessor sequence folds into a
             // record-deconstruction pattern; no dispatch-loop / raw-typeSwitch / MatchException leakage.
@@ -1820,15 +1823,15 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void decompileReconstructsGuardedPattern() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             String javac = "public class PatGuard { static String guard(Object o) {"
                     + " return switch (o) {"
                     + "   case Integer i when i > 0 -> \"pos\";"
                     + "   case Integer i -> \"nonpos\";"
                     + "   default -> \"other\"; }; } }";
-            java.util.Map<String, byte[]> classes = com.tonic.testutil.ModernJdk.compile(21, "PatGuard", javac);
+            java.util.Map<String, byte[]> classes = ModernJdk.compile(21, "PatGuard", javac);
             ClassFile cf = new ClassFile(new java.io.ByteArrayInputStream(classes.get("PatGuard")));
-            String d = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+            String d = ClassDecompiler.decompile(cf);
 
             // The guard restart loop is recovered (via the $pc$ dispatch form) and folded into a `when`.
             assertFalse(d.contains("$pc$"), "no dispatch loop:\n" + d);
@@ -1889,7 +1892,7 @@ public class SourceToBytecodeIntegrationTest {
 
         @Test
         void recompilesTypePatternSwitchAndRunsOnJdk21() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             // main throws (exit != 0) on any wrong arm; runVerified passes iff -Xverify:all and all
             // arms behave. Exercises a typeSwitch indy + integer dispatch + per-arm casts.
             String src = "public class PReType {"
@@ -1906,12 +1909,12 @@ public class SourceToBytecodeIntegrationTest {
                     "java/lang/String", "java/lang/Number", "java/lang/RuntimeException");
             java.util.Map<String, byte[]> classes = new java.util.LinkedHashMap<>();
             classes.put("PReType", bytes);
-            com.tonic.testutil.ModernJdk.runVerified(21, classes, "PReType");
+            ModernJdk.runVerified(21, classes, "PReType");
         }
 
         @Test
         void recompilesGuardedPatternSwitchAndRunsOnJdk21() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             // x1: guard passes -> 1; x2: guard fails -> restart re-dispatch -> unguarded Integer arm -> 2;
             // x3: String selector -> default -> 0. Exercises the typeSwitch restart loop.
             String src = "public class PReGuard {"
@@ -1929,16 +1932,16 @@ public class SourceToBytecodeIntegrationTest {
                     "java/lang/Number", "java/lang/RuntimeException");
             java.util.Map<String, byte[]> classes = new java.util.LinkedHashMap<>();
             classes.put("PReGuard", bytes);
-            com.tonic.testutil.ModernJdk.runVerified(21, classes, "PReGuard");
+            ModernJdk.runVerified(21, classes, "PReGuard");
         }
 
         @Test
         void recompilesRecordDeconstructionSwitchAndRunsOnJdk21() throws Exception {
-            assumeTrue(com.tonic.testutil.ModernJdk.available(21), "JDK 21 not installed");
+            assumeTrue(ModernJdk.available(21), "JDK 21 not installed");
             // The record Pt is compiled by javac so its RecordAttribute is available to resolve the
             // component accessors; YABR then recompiles a deconstruction switch against it.
             java.util.Map<String, byte[]> rec =
-                    com.tonic.testutil.ModernJdk.compile(21, "Pt", "public record Pt(int x, int y) {}");
+                    ModernJdk.compile(21, "Pt", "public record Pt(int x, int y) {}");
             String src = "public class PReDec {"
                     + " public static void main(String[] a) {"
                     + "   Object o = new Pt(3, 4);"
@@ -1952,7 +1955,7 @@ public class SourceToBytecodeIntegrationTest {
             java.util.Map<String, byte[]> classes = new java.util.LinkedHashMap<>();
             classes.put("Pt", rec.get("Pt"));
             classes.put("PReDec", bytes);
-            com.tonic.testutil.ModernJdk.runVerified(21, classes, "PReDec");
+            ModernJdk.runVerified(21, classes, "PReDec");
         }
     }
 }

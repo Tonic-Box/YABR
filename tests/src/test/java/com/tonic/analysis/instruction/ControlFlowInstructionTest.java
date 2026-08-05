@@ -303,9 +303,7 @@ class ControlFlowInstructionTest {
 
             @Test
             void throwsExceptionForInvalidOpcode() {
-                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                    new ConditionalBranchInstruction(0x00, 10, (short) 5);
-                });
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new ConditionalBranchInstruction(0x00, 10, (short) 5));
 
                 assertTrue(exception.getMessage().contains("Invalid Conditional Branch opcode"));
             }
@@ -477,9 +475,7 @@ class ControlFlowInstructionTest {
 
             @Test
             void throwsExceptionForInvalidOpcode() {
-                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                    new GotoInstruction(0x00, 10, (short) 5);
-                });
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new GotoInstruction(0x00, 10, (short) 5));
 
                 assertTrue(exception.getMessage().contains("Invalid GOTO opcode"));
             }
@@ -523,7 +519,7 @@ class ControlFlowInstructionTest {
 
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 100, 0, 2, jumpOffsets);
 
-            int expectedLength = 1 + 0 + 12 + ((2 - 0 + 1) * 4);
+            int expectedLength = 1 + 12 + ((2 + 1) * 4);
             assertEquals(expectedLength, instr.getLength());
         }
 
@@ -648,9 +644,7 @@ class ControlFlowInstructionTest {
         void tableSwitchThrowsExceptionForInvalidOpcode() {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new TableSwitchInstruction(0xAB, 0, 0, 100, 0, 2, jumpOffsets);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new TableSwitchInstruction(0xAB, 0, 0, 100, 0, 2, jumpOffsets));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for TableSwitchInstruction"));
         }
@@ -678,7 +672,7 @@ class ControlFlowInstructionTest {
 
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 0, 0, 999, 2, matchOffsets);
 
-            int expectedLength = 1 + 0 + 8 + (2 * 8);
+            int expectedLength = 1 + 8 + (2 * 8);
             assertEquals(expectedLength, instr.getLength());
         }
 
@@ -689,7 +683,7 @@ class ControlFlowInstructionTest {
 
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 1, 3, 999, 1, matchOffsets);
 
-            int expectedLength = 1 + 3 + 8 + (1 * 8);
+            int expectedLength = 1 + 3 + 8 + (8);
             assertEquals(expectedLength, instr.getLength());
         }
 
@@ -785,9 +779,7 @@ class ControlFlowInstructionTest {
         void lookupSwitchThrowsExceptionForInvalidOpcode() {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new LookupSwitchInstruction(0xAA, 0, 0, 999, 0, matchOffsets);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new LookupSwitchInstruction(0xAA, 0, 0, 999, 0, matchOffsets));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for LookupSwitchInstruction"));
         }
@@ -798,7 +790,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void ireturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 10);
 
             assertEquals(0xAC, instr.getOpcode());
             assertEquals(ReturnType.IRETURN, instr.getType());
@@ -806,7 +798,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void lreturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAD, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAD, 10);
 
             assertEquals(0xAD, instr.getOpcode());
             assertEquals(ReturnType.LRETURN, instr.getType());
@@ -814,7 +806,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void freturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAE, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAE, 10);
 
             assertEquals(0xAE, instr.getOpcode());
             assertEquals(ReturnType.FRETURN, instr.getType());
@@ -822,7 +814,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void dreturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAF, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAF, 10);
 
             assertEquals(0xAF, instr.getOpcode());
             assertEquals(ReturnType.DRETURN, instr.getType());
@@ -830,7 +822,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void areturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xB0, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xB0, 10);
 
             assertEquals(0xB0, instr.getOpcode());
             assertEquals(ReturnType.ARETURN, instr.getType());
@@ -838,7 +830,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void returnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xB1, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(0xB1, instr.getOpcode());
             assertEquals(ReturnType.RETURN, instr.getType());
@@ -846,9 +838,9 @@ class ControlFlowInstructionTest {
 
         @Test
         void singleWordReturnsPopsOneValue() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction freturn = new ReturnInstruction(0xAE, 10);
-            ReturnInstruction areturn = new ReturnInstruction(0xB0, 10);
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction freturn = new MethodReturnInstruction(0xAE, 10);
+            MethodReturnInstruction areturn = new MethodReturnInstruction(0xB0, 10);
 
             assertEquals(-1, ireturn.getStackChange());
             assertEquals(-1, freturn.getStackChange());
@@ -857,8 +849,8 @@ class ControlFlowInstructionTest {
 
         @Test
         void doubleWordReturnsPropsTwoValues() {
-            ReturnInstruction lreturn = new ReturnInstruction(0xAD, 10);
-            ReturnInstruction dreturn = new ReturnInstruction(0xAF, 10);
+            MethodReturnInstruction lreturn = new MethodReturnInstruction(0xAD, 10);
+            MethodReturnInstruction dreturn = new MethodReturnInstruction(0xAF, 10);
 
             assertEquals(-2, lreturn.getStackChange());
             assertEquals(-2, dreturn.getStackChange());
@@ -866,19 +858,19 @@ class ControlFlowInstructionTest {
 
         @Test
         void voidReturnHasNoStackChange() {
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(0, returnInstr.getStackChange());
         }
 
         @Test
         void allReturnsHaveLengthOne() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction lreturn = new ReturnInstruction(0xAD, 10);
-            ReturnInstruction freturn = new ReturnInstruction(0xAE, 10);
-            ReturnInstruction dreturn = new ReturnInstruction(0xAF, 10);
-            ReturnInstruction areturn = new ReturnInstruction(0xB0, 10);
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction lreturn = new MethodReturnInstruction(0xAD, 10);
+            MethodReturnInstruction freturn = new MethodReturnInstruction(0xAE, 10);
+            MethodReturnInstruction dreturn = new MethodReturnInstruction(0xAF, 10);
+            MethodReturnInstruction areturn = new MethodReturnInstruction(0xB0, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(1, ireturn.getLength());
             assertEquals(1, lreturn.getLength());
@@ -890,8 +882,8 @@ class ControlFlowInstructionTest {
 
         @Test
         void allReturnsHaveZeroLocalChange() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(0, ireturn.getLocalChange());
             assertEquals(0, returnInstr.getLocalChange());
@@ -899,7 +891,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void returnWritesCorrectBytecode() throws IOException {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 10);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
@@ -913,9 +905,9 @@ class ControlFlowInstructionTest {
 
         @Test
         void returnToStringReturnsUpperCaseMnemonic() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction lreturn = new ReturnInstruction(0xAD, 10);
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction lreturn = new MethodReturnInstruction(0xAD, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals("IRETURN", ireturn.toString());
             assertEquals("LRETURN", lreturn.toString());
@@ -924,7 +916,7 @@ class ControlFlowInstructionTest {
 
         @Test
         void returnAcceptsVisitor() {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 10);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 10);
 
             instr.accept(visitor);
 
@@ -933,16 +925,14 @@ class ControlFlowInstructionTest {
 
         @Test
         void throwsExceptionForInvalidOpcode() {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new ReturnInstruction(0x00, 10);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new MethodReturnInstruction(0x00, 10));
 
             assertTrue(exception.getMessage().contains("Invalid Return opcode"));
         }
 
         @Test
         void constructorSetsCorrectOffset() {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 42);
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 42);
 
             assertEquals(42, instr.getOffset());
         }
@@ -976,7 +966,7 @@ class ControlFlowInstructionTest {
         }
 
         @Override
-        public void visit(ReturnInstruction instr) {
+        public void visit(MethodReturnInstruction instr) {
             visitedReturn = true;
         }
     }

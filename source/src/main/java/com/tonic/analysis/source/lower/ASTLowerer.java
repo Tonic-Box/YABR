@@ -1,11 +1,12 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.EnumDecl;
-import com.tonic.analysis.source.ast.decl.TypeDecl;
 import com.tonic.analysis.source.ast.decl.ImportDecl;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.ast.decl.ParameterDecl;
+import com.tonic.analysis.source.ast.decl.TypeDecl;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
@@ -13,41 +14,43 @@ import com.tonic.analysis.source.ast.expr.FieldAccessExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.SuperExpr;
 import com.tonic.analysis.source.ast.expr.ThisExpr;
-import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
-import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.SwitchStmt;
 import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
+import com.tonic.analysis.source.ast.transform.PatternInstanceOfDesugar;
+import com.tonic.analysis.source.ast.transform.PatternSwitchDesugar;
+import com.tonic.analysis.source.ast.transform.StringSwitchDesugar;
+import com.tonic.analysis.source.ast.transform.SwitchExpressionDesugar;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
-import com.tonic.analysis.ssa.ir.NewArrayInstruction;
-import com.tonic.analysis.ssa.ir.PhiInstruction;
-import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
+import com.tonic.analysis.ssa.ir.NewArrayInstruction;
+import com.tonic.analysis.ssa.ir.PhiInstruction;
+import com.tonic.analysis.ssa.ir.ReturnInstruction;
+import com.tonic.analysis.ssa.lift.PhiInserter;
+import com.tonic.analysis.ssa.lift.VariableRenamer;
+import com.tonic.analysis.ssa.type.IRType;
+import com.tonic.analysis.ssa.type.PrimitiveType;
+import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.DoubleConstant;
 import com.tonic.analysis.ssa.value.FloatConstant;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.LongConstant;
 import com.tonic.analysis.ssa.value.NullConstant;
-import com.tonic.analysis.ssa.lift.PhiInserter;
-import com.tonic.analysis.ssa.lift.VariableRenamer;
-import com.tonic.analysis.ssa.type.IRType;
-import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -150,10 +153,10 @@ public class ASTLowerer {
         if (body == null) {
             throw new LoweringException("Cannot lower abstract method: " + methodDecl.getName());
         }
-        new com.tonic.analysis.source.ast.transform.PatternInstanceOfDesugar().transform(body);
-        new com.tonic.analysis.source.ast.transform.PatternSwitchDesugar(classPool).transform(body);
-        new com.tonic.analysis.source.ast.transform.SwitchExpressionDesugar().transform(body);
-        new com.tonic.analysis.source.ast.transform.StringSwitchDesugar().transform(body);
+        new PatternInstanceOfDesugar().transform(body);
+        new PatternSwitchDesugar(classPool).transform(body);
+        new SwitchExpressionDesugar().transform(body);
+        new StringSwitchDesugar().transform(body);
 
         List<ParameterDecl> paramDecls = methodDecl.getParameters();
         List<SourceType> parameters = new ArrayList<>();

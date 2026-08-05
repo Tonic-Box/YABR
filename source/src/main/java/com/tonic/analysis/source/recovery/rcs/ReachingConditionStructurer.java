@@ -27,6 +27,8 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.recovery.ControlFlowContext;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
+import com.tonic.analysis.ssa.cfg.EdgeType;
+import com.tonic.analysis.ssa.cfg.ExceptionHandler;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.BinaryOp;
@@ -43,18 +45,17 @@ import com.tonic.analysis.ssa.ir.SwitchInstruction;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.IdentityHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.LinkedHashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -562,9 +563,9 @@ public final class ReachingConditionStructurer {
      * dominates.
      */
     private boolean isHandlerCode(IRBlock b) {
-        List<com.tonic.analysis.ssa.cfg.ExceptionHandler> handlers = method.getExceptionHandlers();
+        List<ExceptionHandler> handlers = method.getExceptionHandlers();
         if (handlers != null) {
-            for (com.tonic.analysis.ssa.cfg.ExceptionHandler h : handlers) {
+            for (ExceptionHandler h : handlers) {
                 IRBlock hb = h.getHandlerBlock();
                 if (hb != null && (hb == b || dom.dominates(hb, b))) {
                     return true;
@@ -1116,7 +1117,7 @@ public final class ReachingConditionStructurer {
      * region (its only outside in-flow is the separately-recovered catch clause falling through).
      */
     private boolean outsidePredsAreCatchCode(IRBlock s, IRBlock entry) {
-        List<com.tonic.analysis.ssa.cfg.ExceptionHandler> handlers = method.getExceptionHandlers();
+        List<ExceptionHandler> handlers = method.getExceptionHandlers();
         if (handlers == null || handlers.isEmpty()) {
             return false;
         }
@@ -1125,7 +1126,7 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             boolean catchCode = false;
-            for (com.tonic.analysis.ssa.cfg.ExceptionHandler h : handlers) {
+            for (ExceptionHandler h : handlers) {
                 IRBlock hb = h.getHandlerBlock();
                 if (hb != null && (hb == p || dom.dominates(hb, p))) {
                     catchCode = true;
@@ -2516,8 +2517,8 @@ public final class ReachingConditionStructurer {
                 continue;
             }
             boolean normalNonJumpExit = false;
-            for (Map.Entry<IRBlock, com.tonic.analysis.ssa.cfg.EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
-                if (e.getValue() != com.tonic.analysis.ssa.cfg.EdgeType.NORMAL
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet()) {
+                if (e.getValue() != EdgeType.NORMAL
                         || !regionStopBlocks.contains(e.getKey())) {
                     continue;
                 }

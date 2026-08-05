@@ -466,7 +466,7 @@ public class Bytecode {
      */
     public void addReturn(int returnOpcode) {
         int offset = processOffset();
-        ReturnInstruction returnInstr = new ReturnInstruction(returnOpcode, offset);
+        MethodReturnInstruction returnInstr = new MethodReturnInstruction(returnOpcode, offset);
         codeWriter.insertInstruction(processOffset(), returnInstr);
         insertBeforeOffset += returnInstr.getLength();
         Logger.info("Appended RETURN (opcode 0x" + Integer.toHexString(returnOpcode) + ") at offset " + offset);
@@ -582,7 +582,6 @@ public class Bytecode {
 
         for (Instruction instruction : codeWriter.getInstructions()) {
             if (instruction instanceof ALoadInstruction && ((ALoadInstruction) instruction).getVarIndex() == 0) {
-                ALoadInstruction aLoadInstruction = (ALoadInstruction) instruction;
                 offset += instruction.getLength();
                 continue;
             }
@@ -627,9 +626,9 @@ public class Bytecode {
 
         Instruction instruction;
         if (stringRefIndex <= 0xFF) {
-            instruction = codeWriter.insertLDC(processOffset(), stringRefIndex);
+            instruction = codeWriter.insertLDC(offset, stringRefIndex);
         } else {
-            instruction = codeWriter.insertLDCW(processOffset(), stringRefIndex);
+            instruction = codeWriter.insertLDCW(offset, stringRefIndex);
         }
         insertBeforeOffset += instruction.getLength();
     }

@@ -1,6 +1,7 @@
 package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.ASTPrinter;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
@@ -9,35 +10,38 @@ import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.CatchClause;
-import com.tonic.analysis.source.ast.stmt.IfStmt;
-import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
-import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
+import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
+import com.tonic.analysis.source.ast.stmt.SynchronizedStmt;
+import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.source.ast.transform.ArrayInitializerReconstructor;
 import com.tonic.analysis.source.ast.transform.ComparisonChainToSwitch;
-import com.tonic.analysis.source.ast.transform.ForLoopCounterFolder;
-import com.tonic.analysis.source.ast.transform.WhileToForCanonicalizer;
-import com.tonic.analysis.source.ast.transform.ScopeEscapeHoister;
 import com.tonic.analysis.source.ast.transform.ControlFlowSimplifier;
 import com.tonic.analysis.source.ast.transform.DeadStoreEliminator;
 import com.tonic.analysis.source.ast.transform.DeadVariableEliminator;
 import com.tonic.analysis.source.ast.transform.DeclarationHoister;
+import com.tonic.analysis.source.ast.transform.ForLoopCounterFolder;
 import com.tonic.analysis.source.ast.transform.PatternInstanceOfReconstructor;
-import com.tonic.analysis.source.ast.transform.SingleUseInliner;
 import com.tonic.analysis.source.ast.transform.PatternSwitchReconstructor;
+import com.tonic.analysis.source.ast.transform.RedundantAssignmentEliminator;
+import com.tonic.analysis.source.ast.transform.ScopeEscapeHoister;
+import com.tonic.analysis.source.ast.transform.SingleUseInliner;
 import com.tonic.analysis.source.ast.transform.SwitchExpressionReconstructor;
 import com.tonic.analysis.source.ast.transform.VarargsReconstructor;
+import com.tonic.analysis.source.ast.transform.WhileToForCanonicalizer;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.emit.IndentingWriter;
 import com.tonic.analysis.source.emit.SourceEmitter;
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
+import com.tonic.analysis.source.lower.TypeResolver;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
-import com.tonic.analysis.source.recovery.SyntheticLocalVariableTable;
+import com.tonic.analysis.source.recovery.NameRecoverer;
 import com.tonic.analysis.source.recovery.SwitchMapAnalyzer;
+import com.tonic.analysis.source.recovery.SyntheticLocalVariableTable;
 import com.tonic.analysis.source.recovery.TypeRecoverer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -50,24 +54,23 @@ import com.tonic.parser.FieldEntry;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
-import com.tonic.parser.attribute.LocalVariableTableAttribute;
 import com.tonic.parser.attribute.ConstantValueAttribute;
 import com.tonic.parser.attribute.ExceptionsAttribute;
+import com.tonic.parser.attribute.InnerClassesAttribute;
+import com.tonic.parser.attribute.LocalVariableTableAttribute;
 import com.tonic.parser.attribute.PermittedSubclassesAttribute;
 import com.tonic.parser.attribute.RecordAttribute;
-import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.RuntimeInvisibleAnnotationsAttribute;
+import com.tonic.parser.attribute.RuntimeVisibleAnnotationsAttribute;
 import com.tonic.parser.attribute.SignatureAttribute;
-import com.tonic.parser.attribute.InnerClassesAttribute;
-import com.tonic.parser.attribute.table.InnerClassEntry;
 import com.tonic.parser.attribute.annotation.Annotation;
 import com.tonic.parser.attribute.annotation.ElementValue;
 import com.tonic.parser.attribute.annotation.ElementValuePair;
 import com.tonic.parser.attribute.annotation.EnumConst;
+import com.tonic.parser.attribute.table.InnerClassEntry;
 import com.tonic.parser.constpool.*;
 import com.tonic.util.ClassNameUtil;
 import com.tonic.util.Modifiers;
-
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,8 +78,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.TreeMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -95,8 +98,8 @@ public class ClassDecompiler {
     private final ControlFlowSimplifier astSimplifier;
     private final DeadVariableEliminator deadVarEliminator;
     private final DeadStoreEliminator deadStoreEliminator;
-    private final com.tonic.analysis.source.ast.transform.RedundantAssignmentEliminator redundantAssignmentEliminator
-            = new com.tonic.analysis.source.ast.transform.RedundantAssignmentEliminator();
+    private final RedundantAssignmentEliminator redundantAssignmentEliminator
+            = new RedundantAssignmentEliminator();
     private final DeclarationHoister declarationHoister;
     private final SwitchExpressionReconstructor switchExprReconstructor;
     private final PatternSwitchReconstructor patternSwitchReconstructor;
@@ -761,7 +764,7 @@ public class ClassDecompiler {
         recordFieldSpan(field.getName() + field.getDesc(), spanStart, writer.getCurrentLine() - 1);
     }
 
-    private com.tonic.analysis.source.ast.type.SourceType getFieldType(FieldEntry field) {
+    private SourceType getFieldType(FieldEntry field) {
         String signature = getSignature(field.getAttributes());
         if (signature != null) {
             return typeRecoverer.recoverGenericType(signature);
@@ -1360,7 +1363,7 @@ public class ClassDecompiler {
     }
 
 
-    private static void dumpStage(String methodName, String descriptor, com.tonic.analysis.source.ast.stmt.BlockStmt body, String stage) {
+    private static void dumpStage(String methodName, String descriptor, BlockStmt body, String stage) {
         if (System.getProperty("yabr.parents") != null) {
             reportDetachedParents(body, methodName + " " + stage);
         }
@@ -1371,7 +1374,7 @@ public class ClassDecompiler {
             return;
         }
         System.err.println("[stage] " + stage);
-        System.err.println(com.tonic.analysis.source.ast.ASTPrinter.formatCompact(body));
+        System.err.println(ASTPrinter.formatCompact(body));
     }
 
     /**
@@ -1379,10 +1382,10 @@ public class ClassDecompiler {
      * the tree; the parent pointers are a cache a transform has to maintain when it moves a node, and a
      * transform that reasons about scope by walking parents silently sees the pre-move tree when it does not.
      */
-    private static void reportDetachedParents(com.tonic.analysis.source.ast.ASTNode root, String stage) {
+    private static void reportDetachedParents(ASTNode root, String stage) {
         java.util.List<String> broken = new java.util.ArrayList<>();
         root.walk(node -> {
-            for (com.tonic.analysis.source.ast.ASTNode child : node.getChildren()) {
+            for (ASTNode child : node.getChildren()) {
                 if (child != null && child.getParent() != node) {
                     broken.add(child.getClass().getSimpleName() + " under " + node.getClass().getSimpleName()
                             + " points at "
@@ -1550,7 +1553,7 @@ public class ClassDecompiler {
      * Maps a method's local slots to their LocalVariableTable names, keeping only slots whose every entry
      * agrees on a single name. Lets the signature show real parameter names that match the recovered body.
      */
-    private Map<Integer, String> unambiguousLvtNames(com.tonic.parser.MethodEntry method) {
+    private Map<Integer, String> unambiguousLvtNames(MethodEntry method) {
         // Delegates to the one live LVT-reading implementation. A parameter's name is the entry
         // covering pc 0 for its slot - exact even when the slot is later reused - with the
         // whole-slot unambiguous name as fallback; the strategy gate is NameRecoverer's own, so the
@@ -1559,8 +1562,8 @@ public class ClassDecompiler {
         if (method.getCodeAttribute() == null) {
             return result;
         }
-        com.tonic.analysis.source.recovery.NameRecoverer names =
-                new com.tonic.analysis.source.recovery.NameRecoverer(
+        NameRecoverer names =
+                new NameRecoverer(
                         null, method, decompilerConfig.getNameRecoveryStrategy());
         int maxLocals = method.getCodeAttribute().getMaxLocals();
         for (int slot = 0; slot < maxLocals; slot++) {
@@ -1581,11 +1584,11 @@ public class ClassDecompiler {
      * lowers as an implicit field store). Feeds the hoister's missing-declaration net so it never
      * manufactures a local that would shadow one of these.
      */
-    private java.util.function.Predicate<String> nonLocalNamePredicate(com.tonic.parser.MethodEntry method) {
+    private java.util.function.Predicate<String> nonLocalNamePredicate(MethodEntry method) {
         java.util.Set<String> params = parameterNamesOf(method);
         ClassPool pool = classFile.getClassPool() != null ? classFile.getClassPool() : ClassPool.getDefault();
-        com.tonic.analysis.source.lower.TypeResolver fields =
-                new com.tonic.analysis.source.lower.TypeResolver(pool, classFile.getClassName());
+        TypeResolver fields =
+                new TypeResolver(pool, classFile.getClassName());
         return n -> params.contains(n) || fields.findFieldType(classFile.getClassName(), n) != null;
     }
 
@@ -1593,7 +1596,7 @@ public class ClassDecompiler {
      * The parameter names as the signature line renders them: the unambiguous LVT name per slot with the
      * positional {@code argN} fallback.
      */
-    private java.util.Set<String> parameterNamesOf(com.tonic.parser.MethodEntry method) {
+    private java.util.Set<String> parameterNamesOf(MethodEntry method) {
         java.util.Set<String> names = new java.util.HashSet<>();
         Map<Integer, String> slotNames = unambiguousLvtNames(method);
         String desc = method.getDesc();

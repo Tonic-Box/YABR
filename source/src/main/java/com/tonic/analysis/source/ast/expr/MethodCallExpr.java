@@ -4,9 +4,9 @@ import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.NodeList;
 import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -42,7 +42,7 @@ public final class MethodCallExpr implements Expression {
         this.methodName = Objects.requireNonNull(methodName, "methodName cannot be null");
         this.ownerClass = Objects.requireNonNull(ownerClass, "ownerClass cannot be null");
         this.isStatic = isStatic;
-        this.type = type != null ? type : com.tonic.analysis.source.ast.type.VoidSourceType.INSTANCE;
+        this.type = type != null ? type : VoidSourceType.INSTANCE;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
         if (receiver != null) {

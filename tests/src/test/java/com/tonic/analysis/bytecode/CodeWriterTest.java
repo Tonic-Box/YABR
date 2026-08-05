@@ -1,20 +1,19 @@
 package com.tonic.analysis.bytecode;
-import com.tonic.analysis.ssa.SSABridge;
-
 import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.instruction.*;
+import com.tonic.analysis.ssa.SSABridge;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -315,7 +314,7 @@ class CodeWriterTest {
 
         CodeWriter cw = new CodeWriter(method);
         int offset = cw.getBytecodeSize();
-        NewInstruction instr = cw.insertNew(offset, classRefIndex);
+        NewObjectInstruction instr = cw.insertNew(offset, classRefIndex);
 
         assertNotNull(instr);
     }
@@ -728,7 +727,7 @@ class CodeWriterTest {
             MethodEntry method = classFile.createNewMethod(access, "testNewArray", "V");
             CodeWriter cw = new CodeWriter(method);
 
-            cw.appendInstruction(new NewArrayInstruction(0xBC, 0, 10, 1));
+            cw.appendInstruction(new NewPrimitiveArrayInstruction(0xBC, 0, 10, 1));
 
             assertTrue(cw.getInstructionCount() >= 1);
         }
@@ -869,7 +868,7 @@ class CodeWriterTest {
             MethodEntry method = classFile.createNewMethod(access, "testReturn", "V");
             CodeWriter cw = new CodeWriter(method);
 
-            cw.appendInstruction(new ReturnInstruction(0xB1, 0));
+            cw.appendInstruction(new MethodReturnInstruction(0xB1, 0));
 
             assertTrue(cw.endsWithReturn());
         }
@@ -880,23 +879,23 @@ class CodeWriterTest {
 
             MethodEntry method1 = classFile.createNewMethod(access, "retInt", "I");
             CodeWriter cw1 = new CodeWriter(method1);
-            cw1.appendInstruction(new ReturnInstruction(0xAC, 0));
+            cw1.appendInstruction(new MethodReturnInstruction(0xAC, 0));
 
             MethodEntry method2 = classFile.createNewMethod(access, "retLong", "J");
             CodeWriter cw2 = new CodeWriter(method2);
-            cw2.appendInstruction(new ReturnInstruction(0xAD, 0));
+            cw2.appendInstruction(new MethodReturnInstruction(0xAD, 0));
 
             MethodEntry method3 = classFile.createNewMethod(access, "retFloat", "F");
             CodeWriter cw3 = new CodeWriter(method3);
-            cw3.appendInstruction(new ReturnInstruction(0xAE, 0));
+            cw3.appendInstruction(new MethodReturnInstruction(0xAE, 0));
 
             MethodEntry method4 = classFile.createNewMethod(access, "retDouble", "D");
             CodeWriter cw4 = new CodeWriter(method4);
-            cw4.appendInstruction(new ReturnInstruction(0xAF, 0));
+            cw4.appendInstruction(new MethodReturnInstruction(0xAF, 0));
 
             MethodEntry method5 = classFile.createNewMethod(access, "retRef", "Ljava/lang/Object;");
             CodeWriter cw5 = new CodeWriter(method5);
-            cw5.appendInstruction(new ReturnInstruction(0xB0, 0));
+            cw5.appendInstruction(new MethodReturnInstruction(0xB0, 0));
 
             assertTrue(cw1.endsWithReturn() && cw2.endsWithReturn() && cw3.endsWithReturn() &&
                        cw4.endsWithReturn() && cw5.endsWithReturn());
@@ -1000,7 +999,7 @@ class CodeWriterTest {
             cw.appendInstruction(new IConstInstruction(0x04, 0, 1));
             cw.appendInstruction(new IConstInstruction(0x05, 1, 2));
             cw.appendInstruction(new ArithmeticInstruction(0x60, 2));
-            cw.appendInstruction(new ReturnInstruction(0xAC, 3));
+            cw.appendInstruction(new MethodReturnInstruction(0xAC, 3));
 
             cw.analyze();
             assertTrue(cw.getMaxStack() > 0);
@@ -1067,7 +1066,7 @@ class CodeWriterTest {
             CodeWriter cw = new CodeWriter(method);
 
             cw.appendInstruction(new IConstInstruction(0x04, 0, 1));
-            cw.appendInstruction(new ReturnInstruction(0xAC, 1));
+            cw.appendInstruction(new MethodReturnInstruction(0xAC, 1));
 
             SSABridge.optimizeSSA(cw);
             assertTrue(cw.isModified());
@@ -1084,16 +1083,16 @@ class CodeWriterTest {
             CodeWriter cw = new CodeWriter(method);
 
             cw.appendInstruction(new NopInstruction(0x00, 0));
-            cw.appendInstruction(new ReturnInstruction(0xB1, 1));
+            cw.appendInstruction(new MethodReturnInstruction(0xB1, 1));
 
             final int[] visitCount = {0};
-            cw.accept(new com.tonic.analysis.visitor.AbstractBytecodeVisitor() {
+            cw.accept(new AbstractBytecodeVisitor() {
                 @Override
                 public void visit(NopInstruction instr) {
                     visitCount[0]++;
                 }
                 @Override
-                public void visit(ReturnInstruction instr) {
+                public void visit(MethodReturnInstruction instr) {
                     visitCount[0]++;
                 }
             });

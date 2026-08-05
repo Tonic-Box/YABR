@@ -1,7 +1,9 @@
 package com.tonic.analysis.bytecode;
 
 import com.tonic.analysis.CodeWriter;
+import com.tonic.analysis.ConstPoolRemapper;
 import com.tonic.analysis.MethodGrafter;
+import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
@@ -11,6 +13,7 @@ import com.tonic.analysis.ssa.SSA;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.testutil.ModernJdk;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import org.junit.jupiter.api.Test;
@@ -67,11 +70,11 @@ class MethodGraftTest {
     @Test
     void graftsInvokeDynamicByCopyingBootstrap() throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(
-                com.tonic.testutil.ModernJdk.available(17), "JDK 17 not installed");
+                ModernJdk.available(17), "JDK 17 not installed");
         // javac compiles `"v" + n` to a StringConcatFactory invokedynamic; graft must copy + remap its
         // bootstrap method into the target's BootstrapMethods. (Loaded on the Java 11 test JVM, which
         // has StringConcatFactory.)
-        java.util.Map<String, byte[]> javac = com.tonic.testutil.ModernJdk.compile(
+        java.util.Map<String, byte[]> javac = ModernJdk.compile(
                 17, "Sound", "public class Sound { public static String tag(int n) { return \"v\" + n; } }");
         ClassPool pool = TestUtils.emptyPool();
         for (String cn : new String[]{"java/lang/Object", "java/lang/String"}) {
@@ -100,10 +103,10 @@ class MethodGraftTest {
         ClassFile game = compile(pool, "Game",
                 "public class Game { public static String run() { return \"old\"; } }");
 
-        com.tonic.analysis.ConstPoolRemapper remapper =
-                new com.tonic.analysis.ConstPoolRemapper(sound, game);
+        ConstPoolRemapper remapper =
+                new ConstPoolRemapper(sound, game);
         CodeWriter srcWriter = new CodeWriter(method(sound, "src"));
-        java.util.List<com.tonic.analysis.instruction.Instruction> body = new java.util.ArrayList<>();
+        java.util.List<Instruction> body = new java.util.ArrayList<>();
         srcWriter.getInstructions().forEach(body::add);
         CodeWriter.ClonedRange cloned = srcWriter.cloneRangeWithTargets(
                 body.get(0), body.get(body.size() - 1), 0, game.getConstPool(), remapper::remap);

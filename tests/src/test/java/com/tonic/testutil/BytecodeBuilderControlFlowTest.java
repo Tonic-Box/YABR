@@ -1,19 +1,19 @@
 package com.tonic.testutil;
 
 import com.tonic.analysis.CodeWriter;
-import com.tonic.analysis.instruction.Instruction;
-import com.tonic.analysis.instruction.ConditionalBranchInstruction;
 import com.tonic.analysis.instruction.GotoInstruction;
+import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
-import org.junit.jupiter.api.Test;
-
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -485,13 +485,13 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(method);
 
         // Verify exception table was created
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertNotNull(code);
         assertFalse(code.getExceptionTable().isEmpty(), "Exception table should not be empty");
         assertEquals(1, code.getExceptionTable().size(), "Should have one exception handler");
 
         // Verify exception table entry details
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry = code.getExceptionTable().get(0);
+        ExceptionTableEntry entry = code.getExceptionTable().get(0);
         assertTrue(entry.getStartPc() >= 0, "Start PC should be valid");
         assertTrue(entry.getEndPc() > entry.getStartPc(), "End PC should be after start PC");
         assertTrue(entry.getHandlerPc() >= 0, "Handler PC should be valid");
@@ -529,11 +529,11 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(method);
 
         // Verify exception table
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertFalse(code.getExceptionTable().isEmpty());
 
         // Verify catch-all has catchType = 0
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry = code.getExceptionTable().get(0);
+        ExceptionTableEntry entry = code.getExceptionTable().get(0);
         assertEquals(0, entry.getCatchType(), "Catch-all handler should have catchType = 0");
     }
 
@@ -577,12 +577,12 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(method);
 
         // Verify multiple exception handlers
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertEquals(2, code.getExceptionTable().size(), "Should have two exception handlers");
 
         // Verify both handlers cover the same try block
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry1 = code.getExceptionTable().get(0);
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry2 = code.getExceptionTable().get(1);
+        ExceptionTableEntry entry1 = code.getExceptionTable().get(0);
+        ExceptionTableEntry entry2 = code.getExceptionTable().get(1);
         assertEquals(entry1.getStartPc(), entry2.getStartPc(), "Both handlers should have same start");
         assertEquals(entry1.getEndPc(), entry2.getEndPc(), "Both handlers should have same end");
         assertNotEquals(entry1.getHandlerPc(), entry2.getHandlerPc(), "Handlers should be different");
@@ -632,7 +632,7 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(method);
 
         // Verify nested exception handlers
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertEquals(2, code.getExceptionTable().size(), "Should have two exception handlers");
 
         // Verify IR can handle exception table

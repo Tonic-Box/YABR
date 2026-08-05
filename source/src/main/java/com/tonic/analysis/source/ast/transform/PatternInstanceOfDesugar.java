@@ -5,9 +5,9 @@ import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.CastExpr;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.InstanceOfExpr;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.TernaryExpr;
-import com.tonic.analysis.source.ast.expr.InstanceOfExpr;
 import com.tonic.analysis.source.ast.expr.UnaryExpr;
 import com.tonic.analysis.source.ast.expr.UnaryOperator;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
@@ -15,8 +15,9 @@ import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.IfStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
+import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -138,7 +139,7 @@ public class PatternInstanceOfDesugar implements ASTTransform {
         String tmp = test.getPatternVariable() + "$src";
         SourceType operandType = test.getExpression().getType() != null
                 ? test.getExpression().getType()
-                : com.tonic.analysis.source.ast.type.ReferenceSourceType.OBJECT;
+                : ReferenceSourceType.OBJECT;
         enclosing.add(index, new VarDeclStmt(operandType, tmp, test.getExpression()));
         test.withExpression(new VarRefExpr(tmp, operandType));
         return 1;
@@ -173,7 +174,7 @@ public class PatternInstanceOfDesugar implements ASTTransform {
                 hoisted.add(new VarDeclStmt(type, name, guarded));
                 return new BinaryExpr(BinaryOperator.NE,
                         new VarRefExpr(name, type), LiteralExpr.ofNull(),
-                        com.tonic.analysis.source.ast.type.PrimitiveSourceType.BOOLEAN);
+                        PrimitiveSourceType.BOOLEAN);
             }
         }
         return e;

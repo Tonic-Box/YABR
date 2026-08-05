@@ -3,17 +3,19 @@ package com.tonic.analysis.execution.debug;
 import com.tonic.analysis.execution.core.BytecodeContext;
 import com.tonic.analysis.execution.core.BytecodeResult;
 import com.tonic.analysis.execution.heap.HeapManager;
+import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -58,16 +60,12 @@ class DebugSessionTest {
 
     @Test
     void testRejectsNullContext() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DebugSession(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new DebugSession(null));
     }
 
     @Test
     void testRejectsNullBreakpointManager() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DebugSession(context, null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new DebugSession(context, null));
     }
 
     @Test
@@ -88,9 +86,7 @@ class DebugSessionTest {
 
         session.start(method);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.start(method);
-        });
+        assertThrows(IllegalStateException.class, () -> session.start(method));
     }
 
     @Test
@@ -120,18 +116,14 @@ class DebugSessionTest {
     void testCannotStopWhenIdle() {
         DebugSession session = new DebugSession(context);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stop();
-        });
+        assertThrows(IllegalStateException.class, session::stop);
     }
 
     @Test
     void testCannotStepWhenIdle() {
         DebugSession session = new DebugSession(context);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stepInto();
-        });
+        assertThrows(IllegalStateException.class, session::stepInto);
     }
 
     @Test
@@ -142,9 +134,7 @@ class DebugSessionTest {
         session.start(method);
         session.stop();
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stepInto();
-        });
+        assertThrows(IllegalStateException.class, session::stepInto);
     }
 
     @Test
@@ -155,9 +145,7 @@ class DebugSessionTest {
         session.start(method);
         session.resume();
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stepInto();
-        });
+        assertThrows(IllegalStateException.class, session::stepInto);
     }
 
     @Test
@@ -273,9 +261,7 @@ class DebugSessionTest {
 
         session.start(method);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.getResult();
-        });
+        assertThrows(IllegalStateException.class, session::getResult);
 
         session.stop();
         BytecodeResult result = session.getResult();
@@ -486,9 +472,7 @@ class DebugSessionTest {
         session.start(method);
         session.resume();
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.resume();
-        });
+        assertThrows(IllegalStateException.class, session::resume);
     }
 
     @Test
@@ -508,9 +492,7 @@ class DebugSessionTest {
 
         session.start(method);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.pause();
-        });
+        assertThrows(IllegalStateException.class, session::pause);
     }
 
     @Test
@@ -567,8 +549,8 @@ class DebugSessionTest {
     private MethodEntry createMockMethod() {
         MethodEntry method = mock(MethodEntry.class);
         CodeAttribute codeAttr = mock(CodeAttribute.class);
-        com.tonic.parser.ClassFile classFile = mock(com.tonic.parser.ClassFile.class);
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
+        ClassFile classFile = mock(ClassFile.class);
+        ConstPool constPool = mock(ConstPool.class);
 
         when(method.getCodeAttribute()).thenReturn(codeAttr);
         when(method.getName()).thenReturn("testMethod");
@@ -614,7 +596,7 @@ class DebugSessionTest {
         }
 
         @Override
-        public void onException(DebugSession session, com.tonic.analysis.execution.heap.ObjectInstance exception) {
+        public void onException(DebugSession session, ObjectInstance exception) {
             exceptionCalled = true;
         }
 

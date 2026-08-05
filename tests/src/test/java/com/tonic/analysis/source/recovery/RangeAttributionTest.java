@@ -1,21 +1,27 @@
 package com.tonic.analysis.source.recovery;
 
+import com.tonic.analysis.source.decompile.ClassDecompiler;
 import com.tonic.analysis.ssa.SSA;
+import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
+import com.tonic.analysis.ssa.ir.IRInstruction;
+import com.tonic.analysis.ssa.util.IRMethodCloner;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.table.LocalVariableTableEntry;
 import com.tonic.parser.attribute.table.LvtSupport;
-import org.junit.jupiter.api.Test;
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -76,7 +82,7 @@ class RangeAttributionTest {
         // returns the WRONG name; the exact rule binds at the boundary where the store takes effect.
         CodeAttribute code = m.getCodeAttribute();
         LocalVariableTableAttribute lvt = lvtOf(m);
-        List<com.tonic.parser.attribute.table.LocalVariableTableEntry> entries = new ArrayList<>();
+        List<LocalVariableTableEntry> entries = new ArrayList<>();
         int codeLen = code.getCode().length;
         int storePc = 3;
         int boundary = 4;
@@ -100,18 +106,18 @@ class RangeAttributionTest {
         MethodEntry m = (MethodEntry) fx[1];
         IRMethod ir = new SSA(cf.getConstPool()).lift(m);
         int stamped = 0;
-        for (com.tonic.analysis.ssa.cfg.IRBlock b : ir.getBlocks()) {
-            for (com.tonic.analysis.ssa.ir.IRInstruction i : b.getInstructions()) {
+        for (IRBlock b : ir.getBlocks()) {
+            for (IRInstruction i : b.getInstructions()) {
                 if (i.getBytecodeOffset() >= 0) {
                     stamped++;
                 }
             }
         }
         assumeTrue(stamped > 0, "the lift stamps offsets");
-        IRMethod cloned = new com.tonic.analysis.ssa.util.IRMethodCloner().clone(ir);
+        IRMethod cloned = new IRMethodCloner().clone(ir);
         int clonedStamped = 0;
-        for (com.tonic.analysis.ssa.cfg.IRBlock b : cloned.getBlocks()) {
-            for (com.tonic.analysis.ssa.ir.IRInstruction i : b.getInstructions()) {
+        for (IRBlock b : cloned.getBlocks()) {
+            for (IRInstruction i : b.getInstructions()) {
                 if (i.getBytecodeOffset() >= 0) {
                     clonedStamped++;
                 }
@@ -132,12 +138,12 @@ class RangeAttributionTest {
         CodeAttribute code = m.getCodeAttribute();
         LocalVariableTableAttribute lvt = lvtOf(m);
         int codeLen = code.getCode().length;
-        List<com.tonic.parser.attribute.table.LocalVariableTableEntry> entries =
+        List<LocalVariableTableEntry> entries =
                 new ArrayList<>(lvt.getLocalVariableTable());
         entries.add(LvtSupport.entry(cf.getConstPool(), 0, "reused", "I", codeLen - 2, 2));
         lvt.setLocalVariableTable(entries);
 
-        String d1 = com.tonic.analysis.source.decompile.ClassDecompiler.decompile(cf);
+        String d1 = ClassDecompiler.decompile(cf);
         assertTrue(d1.contains("f(int a)"), "the entry covering pc 0 names the parameter, ambiguity notwithstanding:\n" + d1);
     }
 }

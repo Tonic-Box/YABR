@@ -280,7 +280,7 @@ public final class OpcodeDispatcher {
                 return dispatchConditionalBranch(frame, stack, context, (ConditionalBranchInstruction) instruction);
 
             case 0xA7:
-                return dispatchGoto(frame, context, (GotoInstruction) instruction);
+                return dispatchGoto(context, (GotoInstruction) instruction);
 
             case 0xA8:
                 throw new UnsupportedOperationException("jsr is not supported (legacy)");
@@ -289,49 +289,49 @@ public final class OpcodeDispatcher {
                 throw new UnsupportedOperationException("ret is not supported (legacy)");
 
             case 0xAA:
-                return dispatchTableSwitch(frame, stack, context, (TableSwitchInstruction) instruction);
+                return dispatchTableSwitch(stack, context, (TableSwitchInstruction) instruction);
 
             case 0xAB:
-                return dispatchLookupSwitch(frame, stack, context, (LookupSwitchInstruction) instruction);
+                return dispatchLookupSwitch(stack, context, (LookupSwitchInstruction) instruction);
 
             case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: case 0xB1:
-                return dispatchReturn(frame, stack, (ReturnInstruction) instruction);
+                return dispatchReturn();
 
             case 0xB2: case 0xB4:
-                return dispatchGetField(frame, stack, context, (GetFieldInstruction) instruction);
+                return dispatchGetField(context, (GetFieldInstruction) instruction);
 
             case 0xB3: case 0xB5:
-                return dispatchPutField(frame, stack, context, (PutFieldInstruction) instruction);
+                return dispatchPutField(context, (PutFieldInstruction) instruction);
 
             case 0xB6:
-                return dispatchInvokeVirtual(frame, stack, context, (InvokeVirtualInstruction) instruction);
+                return dispatchInvokeVirtual(context, (InvokeVirtualInstruction) instruction);
 
             case 0xB7:
-                return dispatchInvokeSpecial(frame, stack, context, (InvokeSpecialInstruction) instruction);
+                return dispatchInvokeSpecial(context, (InvokeSpecialInstruction) instruction);
 
             case 0xB8:
-                return dispatchInvokeStatic(frame, stack, context, (InvokeStaticInstruction) instruction);
+                return dispatchInvokeStatic(context, (InvokeStaticInstruction) instruction);
 
             case 0xB9:
-                return dispatchInvokeInterface(frame, stack, context, (InvokeInterfaceInstruction) instruction);
+                return dispatchInvokeInterface(context, (InvokeInterfaceInstruction) instruction);
 
             case 0xBA:
-                return dispatchInvokeDynamic(frame, stack, context, (InvokeDynamicInstruction) instruction);
+                return dispatchInvokeDynamic(context, (InvokeDynamicInstruction) instruction);
 
             case 0xBB:
-                return dispatchNew(frame, stack, context, (NewInstruction) instruction);
+                return dispatchNew(context, (NewObjectInstruction) instruction);
 
             case 0xBC:
-                return dispatchNewArray(frame, stack, context, (NewArrayInstruction) instruction);
+                return dispatchNewArray(stack, context, (NewPrimitiveArrayInstruction) instruction);
 
             case 0xBD:
-                return dispatchANewArray(frame, stack, context, (ANewArrayInstruction) instruction);
+                return dispatchANewArray(stack, context, (ANewArrayInstruction) instruction);
 
             case 0xBE:
                 return dispatchArrayLength(frame, stack, instruction);
 
             case 0xBF:
-                return dispatchAThrow(frame, stack, instruction);
+                return dispatchAThrow();
 
             case 0xC0:
                 return dispatchCheckCast(frame, stack, context, (CheckCastInstruction) instruction);
@@ -346,13 +346,13 @@ public final class OpcodeDispatcher {
                 return dispatchMonitorExit(frame, stack, instruction);
 
             case 0xC4:
-                return dispatchWide(frame, stack, locals, context, (WideInstruction) instruction);
+                return dispatchWide(frame, stack, locals, (WideInstruction) instruction);
 
             case 0xC5:
-                return dispatchMultiANewArray(frame, stack, context, (MultiANewArrayInstruction) instruction);
+                return dispatchMultiANewArray(stack, context, (MultiANewArrayInstruction) instruction);
 
             case 0xC8:
-                return dispatchGotoW(frame, context, (GotoInstruction) instruction);
+                return dispatchGotoW(context, (GotoInstruction) instruction);
 
             case 0xC9:
                 throw new UnsupportedOperationException("jsr_w is not supported (legacy)");
@@ -1202,7 +1202,7 @@ public final class OpcodeDispatcher {
 
     private DispatchResult dispatchI2L(StackFrame frame, ConcreteStack stack, Instruction instruction) {
         int value = stack.popInt();
-        stack.pushLong((long) value);
+        stack.pushLong(value);
         frame.advancePC(instruction.getLength());
         return DispatchResult.CONTINUE;
     }
@@ -1218,7 +1218,7 @@ public final class OpcodeDispatcher {
             }
             case I2D: {
                 int value = stack.popInt();
-                stack.pushDouble((double) value);
+                stack.pushDouble(value);
                 break;
             }
             case L2I: {
@@ -1248,7 +1248,7 @@ public final class OpcodeDispatcher {
             }
             case F2D: {
                 float value = stack.popFloat();
-                stack.pushDouble((double) value);
+                stack.pushDouble(value);
                 break;
             }
             case D2I: {
@@ -1458,19 +1458,19 @@ public final class OpcodeDispatcher {
         }
     }
 
-    private DispatchResult dispatchGoto(StackFrame frame, DispatchContext context, GotoInstruction instruction) {
+    private DispatchResult dispatchGoto(DispatchContext context, GotoInstruction instruction) {
         int target = instruction.getOffset() + instruction.getBranchOffset();
         context.setBranchTarget(target);
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchGotoW(StackFrame frame, DispatchContext context, GotoInstruction instruction) {
+    private DispatchResult dispatchGotoW(DispatchContext context, GotoInstruction instruction) {
         int target = instruction.getOffset() + instruction.getBranchOffsetWide();
         context.setBranchTarget(target);
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchTableSwitch(StackFrame frame, ConcreteStack stack, DispatchContext context, TableSwitchInstruction instruction) {
+    private DispatchResult dispatchTableSwitch(ConcreteStack stack, DispatchContext context, TableSwitchInstruction instruction) {
         int index = stack.popInt();
         int target;
 
@@ -1489,7 +1489,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchLookupSwitch(StackFrame frame, ConcreteStack stack, DispatchContext context, LookupSwitchInstruction instruction) {
+    private DispatchResult dispatchLookupSwitch(ConcreteStack stack, DispatchContext context, LookupSwitchInstruction instruction) {
         int key = stack.popInt();
         int target;
 
@@ -1504,11 +1504,11 @@ public final class OpcodeDispatcher {
         return DispatchResult.BRANCH;
     }
 
-    private DispatchResult dispatchReturn(StackFrame frame, ConcreteStack stack, ReturnInstruction instruction) {
+    private DispatchResult dispatchReturn() {
         return DispatchResult.RETURN;
     }
 
-    private DispatchResult dispatchGetField(StackFrame frame, ConcreteStack stack, DispatchContext context, GetFieldInstruction instruction) {
+    private DispatchResult dispatchGetField(DispatchContext context, GetFieldInstruction instruction) {
         FieldInfo fieldInfo = new FieldInfo(
             instruction.getOwnerClass(),
             instruction.getFieldName(),
@@ -1519,7 +1519,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.FIELD_GET;
     }
 
-    private DispatchResult dispatchPutField(StackFrame frame, ConcreteStack stack, DispatchContext context, PutFieldInstruction instruction) {
+    private DispatchResult dispatchPutField(DispatchContext context, PutFieldInstruction instruction) {
         FieldInfo fieldInfo = new FieldInfo(
             instruction.getOwnerClass(),
             instruction.getFieldName(),
@@ -1530,7 +1530,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.FIELD_PUT;
     }
 
-    private DispatchResult dispatchInvokeVirtual(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeVirtualInstruction instruction) {
+    private DispatchResult dispatchInvokeVirtual(DispatchContext context, InvokeVirtualInstruction instruction) {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1542,7 +1542,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchInvokeSpecial(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeSpecialInstruction instruction) {
+    private DispatchResult dispatchInvokeSpecial(DispatchContext context, InvokeSpecialInstruction instruction) {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1555,7 +1555,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchInvokeStatic(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeStaticInstruction instruction) {
+    private DispatchResult dispatchInvokeStatic(DispatchContext context, InvokeStaticInstruction instruction) {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1567,7 +1567,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchInvokeInterface(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeInterfaceInstruction instruction) {
+    private DispatchResult dispatchInvokeInterface(DispatchContext context, InvokeInterfaceInstruction instruction) {
         MethodInfo methodInfo = new MethodInfo(
             instruction.getOwnerClass(),
             instruction.getMethodName(),
@@ -1579,13 +1579,13 @@ public final class OpcodeDispatcher {
         return DispatchResult.INVOKE;
     }
 
-    private DispatchResult dispatchNew(StackFrame frame, ConcreteStack stack, DispatchContext context, NewInstruction instruction) {
+    private DispatchResult dispatchNew(DispatchContext context, NewObjectInstruction instruction) {
         String className = instruction.resolveClass();
         context.setPendingNewClass(className);
         return DispatchResult.NEW_OBJECT;
     }
 
-    private DispatchResult dispatchNewArray(StackFrame frame, ConcreteStack stack, DispatchContext context, NewArrayInstruction instruction) {
+    private DispatchResult dispatchNewArray(ConcreteStack stack, DispatchContext context, NewPrimitiveArrayInstruction instruction) {
         int count = stack.popInt();
         context.setPendingArrayDimensions(new int[]{count});
 
@@ -1606,7 +1606,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.NEW_ARRAY;
     }
 
-    private DispatchResult dispatchANewArray(StackFrame frame, ConcreteStack stack, DispatchContext context, ANewArrayInstruction instruction) {
+    private DispatchResult dispatchANewArray(ConcreteStack stack, DispatchContext context, ANewArrayInstruction instruction) {
         int count = stack.popInt();
         context.setPendingArrayDimensions(new int[]{count});
         String className = instruction.resolveClass();
@@ -1629,7 +1629,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchAThrow(StackFrame frame, ConcreteStack stack, Instruction instruction) {
+    private DispatchResult dispatchAThrow() {
         return DispatchResult.ATHROW;
     }
 
@@ -1670,7 +1670,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchWide(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, DispatchContext context, WideInstruction instruction) {
+    private DispatchResult dispatchWide(StackFrame frame, ConcreteStack stack, ConcreteLocals locals, WideInstruction instruction) {
         Opcode op = instruction.getModifiedOpcode();
         int varIndex = instruction.getVarIndex();
 
@@ -1729,7 +1729,7 @@ public final class OpcodeDispatcher {
         return DispatchResult.CONTINUE;
     }
 
-    private DispatchResult dispatchMultiANewArray(StackFrame frame, ConcreteStack stack, DispatchContext context, MultiANewArrayInstruction instruction) {
+    private DispatchResult dispatchMultiANewArray(ConcreteStack stack, DispatchContext context, MultiANewArrayInstruction instruction) {
         int dimensions = instruction.getDimensions();
         int[] counts = new int[dimensions];
 
@@ -1742,9 +1742,8 @@ public final class OpcodeDispatcher {
         return DispatchResult.NEW_ARRAY;
     }
 
-    private DispatchResult dispatchInvokeDynamic(StackFrame frame, ConcreteStack stack, DispatchContext context, InvokeDynamicInstruction instruction) {
+    private DispatchResult dispatchInvokeDynamic(DispatchContext context, InvokeDynamicInstruction instruction) {
         int bootstrapMethodIndex = instruction.getBootstrapMethodAttrIndex();
-        int nameAndTypeIndex = instruction.getNameAndTypeIndex();
         int cpIndex = instruction.getCpIndex();
 
         String methodSignature = instruction.resolveMethod();

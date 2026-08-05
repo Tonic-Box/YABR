@@ -3,13 +3,14 @@ package com.tonic.analysis.source.ast.transform;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.UnaryExpr;
 import com.tonic.analysis.source.ast.expr.UnaryOperator;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -123,19 +124,19 @@ public class ForLoopCounterFolder implements ASTTransform {
     }
 
     private Expression defaultInitFor(SourceType type) {
-        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.LONG) {
-            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofLong(0L);
+        if (type == PrimitiveSourceType.LONG) {
+            return LiteralExpr.ofLong(0L);
         }
-        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.FLOAT) {
-            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofFloat(0f);
+        if (type == PrimitiveSourceType.FLOAT) {
+            return LiteralExpr.ofFloat(0f);
         }
-        if (type == com.tonic.analysis.source.ast.type.PrimitiveSourceType.DOUBLE) {
-            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofDouble(0d);
+        if (type == PrimitiveSourceType.DOUBLE) {
+            return LiteralExpr.ofDouble(0d);
         }
-        if (type instanceof com.tonic.analysis.source.ast.type.PrimitiveSourceType) {
-            return com.tonic.analysis.source.ast.expr.LiteralExpr.ofInt(0);
+        if (type instanceof PrimitiveSourceType) {
+            return LiteralExpr.ofInt(0);
         }
-        return com.tonic.analysis.source.ast.expr.LiteralExpr.ofNull();
+        return LiteralExpr.ofNull();
     }
 
     private void collectHoistedCounters(Statement s, Map<String, List<Segment>> byVar) {
@@ -188,7 +189,7 @@ public class ForLoopCounterFolder implements ASTTransform {
             // and the loop; only a constant is insensitive to that reordering, so a computed
             // initializer folds only when the declaration directly precedes the loop.
             if (initIdx != forIndex - 1
-                    && !(decl.getInitializer() instanceof com.tonic.analysis.source.ast.expr.LiteralExpr)) {
+                    && !(decl.getInitializer() instanceof LiteralExpr)) {
                 return null;
             }
             return new Segment(var, decl.getType(), f, decl, decl.getInitializer(), list);

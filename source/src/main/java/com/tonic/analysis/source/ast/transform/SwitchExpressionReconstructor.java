@@ -1,7 +1,7 @@
 package com.tonic.analysis.source.ast.transform;
 
-import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
@@ -16,7 +16,7 @@ import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.SwitchCase;
 import com.tonic.analysis.source.ast.stmt.SwitchStmt;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
-
+import com.tonic.analysis.source.ast.type.SourceType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -173,7 +173,7 @@ public class SwitchExpressionReconstructor implements ASTTransform {
             return null;
         }
         String varName = decl.getName();
-        com.tonic.analysis.source.ast.type.SourceType type = decl.getType();
+        SourceType type = decl.getType();
         List<SwitchExpr.Arm> arms = new ArrayList<>();
         for (SwitchCase c : sw.getCases()) {
             Expression result = singleAssignmentValue(c.statements(), varName);

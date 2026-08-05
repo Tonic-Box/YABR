@@ -5,7 +5,7 @@ import com.tonic.analysis.instruction.ATHROWInstruction;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.instruction.InstructionFactory;
 import com.tonic.analysis.instruction.MultiANewArrayInstruction;
-import com.tonic.analysis.instruction.NewInstruction;
+import com.tonic.analysis.instruction.NewObjectInstruction;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.ConstructorDecl;
@@ -102,8 +102,8 @@ class D1OracleTest {
             byte[] code = m.getCodeAttribute().getCode();
             for (Instruction instr : InstructionFactory.parse(code, cf.getConstPool())) {
                 String key = null;
-                if (instr instanceof NewInstruction) {
-                    String c = ((NewInstruction) instr).resolveClass();
+                if (instr instanceof NewObjectInstruction) {
+                    String c = ((NewObjectInstruction) instr).resolveClass();
                     if (c != null && (c.contains("StringBuilder") || c.contains("StringBuffer"))) continue;
                     key = "new:" + c;
                 } else if (instr instanceof ANewArrayInstruction) {

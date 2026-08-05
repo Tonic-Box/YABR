@@ -4,17 +4,18 @@ import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
 import com.tonic.analysis.source.parser.JavaParser;
+import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
+import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
+import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,8 +26,8 @@ class LambdaLoweringTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
-        com.tonic.analysis.ssa.value.SSAValue.resetIdCounter();
+        IRBlock.resetIdCounter();
+        SSAValue.resetIdCounter();
         ConstPool constPool = new ConstPool();
         ClassPool classPool = new ClassPool();
         lowerer = new ASTLowerer(constPool, classPool);

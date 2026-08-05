@@ -50,27 +50,21 @@ classFile.accept(new MyClassVisitor());
 
 ### Visiting Constant Pool Items
 
+Constant pool items arrive through the single `visitConstPoolItem` hook; dispatch on the item type:
+
 ```java
 public class ConstPoolVisitor extends AbstractClassVisitor {
 
     @Override
-    public void visitUtf8(Utf8Item item) {
-        System.out.println("UTF8: " + item.getValue());
-    }
-
-    @Override
-    public void visitClassRef(ClassRefItem item) {
-        System.out.println("Class: " + item.getClassName());
-    }
-
-    @Override
-    public void visitMethodRef(MethodRefItem item) {
-        System.out.println("Method: " + item.getOwner() + "." + item.getName());
-    }
-
-    @Override
-    public void visitFieldRef(FieldRefItem item) {
-        System.out.println("Field: " + item.getOwner() + "." + item.getName());
+    public void visitConstPoolItem(Item<?> item) {
+        if (item instanceof Utf8Item) {
+            System.out.println("UTF8: " + ((Utf8Item) item).getValue());
+        } else if (item instanceof ClassRefItem) {
+            System.out.println("Class: " + ((ClassRefItem) item).getClassName());
+        } else if (item instanceof MethodRefItem) {
+            MethodRefItem m = (MethodRefItem) item;
+            System.out.println("Method: " + m.getOwner() + "." + m.getName());
+        }
     }
 }
 ```
@@ -101,7 +95,7 @@ public class MyBytecodeVisitor extends AbstractBytecodeVisitor {
     }
 
     @Override
-    public void visit(ReturnInstruction instr) {
+    public void visit(MethodReturnInstruction instr) {
         System.out.println("RETURN at offset " + instr.getOffset());
         super.visit(instr);
     }
@@ -123,7 +117,7 @@ The visitor has access to `codeWriter` for modifications:
 public class LoggingVisitor extends AbstractBytecodeVisitor {
 
     @Override
-    public void visit(ReturnInstruction instruction) {
+    public void visit(MethodReturnInstruction instruction) {
         super.visit(instruction);
 
         // Insert logging before each return
@@ -157,7 +151,7 @@ void visit(RetInstruction instr)
 void visit(ConditionalBranchInstruction instr)    // if<cond>, if_icmp<cond>, if_acmp<cond>, ifnull, ifnonnull
 void visit(TableSwitchInstruction instr)
 void visit(LookupSwitchInstruction instr)
-void visit(ReturnInstruction instr)
+void visit(MethodReturnInstruction instr)
 
 // Method calls
 void visit(InvokeVirtualInstruction instr)
@@ -171,8 +165,8 @@ void visit(GetFieldInstruction instr)
 void visit(PutFieldInstruction instr)
 
 // Object operations
-void visit(NewInstruction instr)
-void visit(NewArrayInstruction instr)
+void visit(NewObjectInstruction instr)
+void visit(NewPrimitiveArrayInstruction instr)
 void visit(ANewArrayInstruction instr)
 void visit(MultiANewArrayInstruction instr)
 void visit(CheckCastInstruction instr)
@@ -285,7 +279,7 @@ public class InstrumentingVisitor extends AbstractClassVisitor {
 public class MethodInstrumenter extends AbstractBytecodeVisitor {
 
     @Override
-    public void visit(ReturnInstruction instruction) {
+    public void visit(MethodReturnInstruction instruction) {
         // Add instrumentation before return
         Bytecode bc = new Bytecode(codeWriter);
         bc.setInsertBefore(true);
@@ -349,7 +343,7 @@ public class LoggingVisitor extends AbstractBytecodeVisitor {
     }
 
     @Override
-    public void visit(ReturnInstruction instruction) {
+    public void visit(MethodReturnInstruction instruction) {
         super.visit(instruction);
 
         // Add exit logging before each return

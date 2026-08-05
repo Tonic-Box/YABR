@@ -1,5 +1,7 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.expr.LiteralExpr;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
@@ -8,6 +10,8 @@ import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
+import com.tonic.analysis.source.visitor.SourceVisitor;
+import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -18,11 +22,10 @@ import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -777,21 +780,21 @@ class StatementLowererTest {
             }
 
             @Override
-            public com.tonic.analysis.source.ast.ASTNode getParent() {
+            public ASTNode getParent() {
                 return null;
             }
 
             @Override
-            public void setParent(com.tonic.analysis.source.ast.ASTNode parent) {
+            public void setParent(ASTNode parent) {
             }
 
             @Override
-            public com.tonic.analysis.source.ast.SourceLocation getLocation() {
-                return com.tonic.analysis.source.ast.SourceLocation.UNKNOWN;
+            public SourceLocation getLocation() {
+                return SourceLocation.UNKNOWN;
             }
 
             @Override
-            public <T> T accept(com.tonic.analysis.source.visitor.SourceVisitor<T> visitor) {
+            public <T> T accept(SourceVisitor<T> visitor) {
                 return null;
             }
         };
@@ -855,18 +858,13 @@ class StatementLowererTest {
 
         lowerer.lower(tryCatch);
 
-        // Verify exception edges are created
         long exceptionEdges = irMethod.getBlocks().stream()
-            .flatMap(b -> b.getSuccessors().stream())
-            .filter(b -> {
-                // Check if any predecessor has exception edge to this block
-                return b.getPredecessors().stream().anyMatch(pred ->
-                    pred.getSuccessors().stream().anyMatch(s -> s == b)
-                );
-            })
+            .flatMap(b -> b.getSuccessorEdgeTypes().values().stream())
+            .filter(t -> t == EdgeType.EXCEPTION)
             .count();
 
-        assertTrue(exceptionEdges >= 0); // At least exception flow exists
+        assertTrue(exceptionEdges > 0);
+        assertFalse(irMethod.getExceptionHandlers().isEmpty());
     }
 
     // ========== Variable Scoping Tests ==========

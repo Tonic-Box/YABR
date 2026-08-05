@@ -7,11 +7,12 @@ import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.Utf8Item;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -48,9 +49,7 @@ class DelegatingHandlerTest {
 
     @Test
     void testConstructorWithNullCallback() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DelegatingHandler(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new DelegatingHandler(null));
     }
 
     @Test
@@ -250,17 +249,15 @@ class DelegatingHandlerTest {
         ClassFile classFile = mock(ClassFile.class);
         when(classFile.getClassName()).thenReturn(owner);
 
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
-        com.tonic.parser.constpool.Utf8Item nameItem = mock(com.tonic.parser.constpool.Utf8Item.class);
-        com.tonic.parser.constpool.Utf8Item descItem = mock(com.tonic.parser.constpool.Utf8Item.class);
+        ConstPool constPool = mock(ConstPool.class);
+        Utf8Item nameItem = mock(Utf8Item.class);
+        Utf8Item descItem = mock(Utf8Item.class);
         when(nameItem.getValue()).thenReturn(name);
         when(descItem.getValue()).thenReturn(desc);
         doReturn(nameItem).when(constPool).getItem(1);
         doReturn(descItem).when(constPool).getItem(2);
         when(classFile.getConstPool()).thenReturn(constPool);
 
-        MethodEntry method = new MethodEntry(classFile, access, 1, 2, new ArrayList<>());
-
-        return method;
+        return new MethodEntry(classFile, access, 1, 2, new ArrayList<>());
     }
 }

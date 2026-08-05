@@ -116,9 +116,9 @@ TypeState state = new TypeState(maxLocals, maxStack);
 // UNINITIALIZED - new object before <init>
 ```
 
-## FrameComputer Workflow
+## FrameGenerator Workflow
 
-The `FrameComputer` class performs the actual computation:
+The `FrameGenerator` class performs the actual computation:
 
 1. **Initialize** - Set initial state from method signature
 2. **Iterate** - Process each instruction, updating type state
