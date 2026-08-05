@@ -78,14 +78,17 @@ public interface RegionRecoveryBridge
     List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ);
 
     /**
-     * As {@link #lowerPhisOnEdge}, but restricted to the loop's for-induction counter phis (whose init the
-     * declaration pass does not emit). For a region-entry loop's out-of-region pre-header edge, where the
-     * other phi inits were already emitted by the surrounding recovery.
+     * Copies for the operand-stack merge phis of {@code succ} whose incoming on this edge is produced by no
+     * instruction in {@code pred}. The structured path materializes an arm's contribution while recovering the
+     * instruction that computes it, so an arm carrying an already-computed value (a ternary arm that just
+     * reloads a local) emits nothing and the merge reads a stale temporary.
      *
      * @param pred the source block of the edge
-     * @param succ the loop header the edge enters
-     * @return the induction counter init copies for that edge
+     * @param succ the merge block whose stack phis are lowered
+     * @return the copies that arm owes the merge, empty when the arm already produced them
      */
+    List<Statement> stackPhiCopiesOnEdge(IRBlock pred, IRBlock succ);
+
     List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ);
 
     /**

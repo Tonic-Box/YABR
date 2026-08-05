@@ -14246,6 +14246,80 @@ public class StatementRecoverer implements RegionRecoveryBridge
         return false;
     }
 
+    /**
+     * Copies for {@code succ}'s operand-stack merge phis whose incoming on this edge no instruction in
+     * {@code pred} produces. {@link #phiCopyForDeclaredMerge} materializes an arm's contribution while
+     * recovering the instruction that computes it, which covers an arm that computes something; an arm whose
+     * contribution is a value computed elsewhere (the {@code k} of {@code cond ? k : -k}) has no such
+     * instruction, so without this the merge reads whatever the temporary last held.
+     *
+     * @param pred the source block of the edge
+     * @param succ the merge block whose stack phis are lowered
+     * @return the copies that arm owes the merge, empty when the arm already produced them
+     */
+    @Override
+    public List<Statement> stackPhiCopiesOnEdge(IRBlock pred, IRBlock succ)
+    {
+        List<Statement> copies = new ArrayList<>();
+        for (PhiInstruction phi : succ.getPhiInstructions())
+        {
+            SSAValue result = phi.getResult();
+            if (result == null || !isStackMergePhi(result) || result.getUses().isEmpty())
+            {
+                continue;
+            }
+            Value incoming = phi.getIncoming(pred);
+            if (!(incoming instanceof SSAValue))
+            {
+                continue;
+            }
+            SSAValue in = (SSAValue) incoming;
+            IRInstruction inDef = in.getDefinition();
+            // Produced in this block: the instruction's own recovery already emitted the copy.
+            if (inDef != null && inDef.getBlock() == pred)
+            {
+                continue;
+            }
+            if (inDef == null && !isParameterOrThisRef(in))
+            {
+                continue;
+            }
+            if (inDef != null && (inDef.getBlock() == null
+                    || !analyzer.getDominatorTree().dominates(inDef.getBlock(), pred)))
+            {
+                continue;
+            }
+            String target = context.getExpressionContext().getVariableName(result);
+            if (target == null || !context.getExpressionContext().isDeclared(target))
+            {
+                continue;
+            }
+            SourceType type = getLocalSlotUnifiedType(target);
+            if (type == null)
+            {
+                type = typeRecoverer.recoverType(result);
+            }
+            if (!copyTypeCompatible(type, incoming))
+            {
+                continue;
+            }
+            Expression rhs = exprRecoverer.recoverOperand(incoming, type);
+            if (rhs instanceof VarRefExpr && target.equals(((VarRefExpr) rhs).getName()))
+            {
+                continue;
+            }
+            copies.add(new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                    new VarRefExpr(target, type, result), rhs, type)));
+        }
+        return copies;
+    }
+
+    /** Whether the value is an operand-stack merge phi result, which the lifter names {@code stack_phi_N}. */
+    private boolean isStackMergePhi(SSAValue value)
+    {
+        return value.getName() != null && value.getName().startsWith("stack_phi_");
+    }
+
     private List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ, boolean inductionOnly)
     {
         List<Statement> copies = new ArrayList<>();

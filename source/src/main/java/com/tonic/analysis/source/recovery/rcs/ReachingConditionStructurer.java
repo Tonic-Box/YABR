@@ -37,6 +37,7 @@ import com.tonic.analysis.ssa.ir.BranchInstruction;
 import com.tonic.analysis.ssa.ir.ConstantInstruction;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
+import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.ir.SimpleInstruction;
 import com.tonic.analysis.ssa.ir.SimpleOp;
@@ -1725,6 +1726,17 @@ public final class ReachingConditionStructurer
                     new VarRefExpr(cachedTemp, PrimitiveSourceType.BOOLEAN), cachedCond,
                     PrimitiveSourceType.BOOLEAN)));
         }
+        // An arm that merges into a stack phi owes the merge its contribution. The instruction-level
+        // materialization only covers an arm that computes the value; one that just carries an existing
+        // value (the `k` of `cond ? k : -k`) produces no instruction, so the copy is emitted here.
+        if (b.getSuccessors().size() == 1)
+        {
+            IRBlock only = b.getSuccessors().iterator().next();
+            if (only != b)
+            {
+                own.addAll(bridge.stackPhiCopiesOnEdge(b, only));
+            }
+        }
         if (!duplicating)
         {
             bridge.markRegionBlockProcessed(b, own);
@@ -2798,8 +2810,44 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when {@code block}'s terminator ends the method (a return or an athrow).
+     * Follows a chain of empty forwarding blocks (a lone unconditional jump, no phi anyone reads) from
+     * {@code start} and returns the block the chain lands on, or {@code start} when it forwards nowhere.
      */
+    private IRBlock followEmptyForwarding(IRBlock start)
+    {
+        IRBlock current = start;
+        Set<IRBlock> seen = new HashSet<>();
+        while (seen.add(current) && current.getSuccessors().size() == 1)
+        {
+            boolean empty = current.getPhiInstructions().stream()
+                    .allMatch(phi -> phi.getResult() == null || phi.getResult().getUses().isEmpty());
+            IRInstruction term = current.getTerminator();
+            for (IRInstruction i : current.getInstructions())
+            {
+                if (i != term && !(i instanceof PhiInstruction))
+                {
+                    empty = false;
+                    break;
+                }
+            }
+            if (term instanceof ReturnInstruction)
+            {
+                empty = false;
+            }
+            if (!empty)
+            {
+                return current;
+            }
+            IRBlock next = current.getSuccessors().iterator().next();
+            if (next == current)
+            {
+                return current;
+            }
+            current = next;
+        }
+        return current;
+    }
+
     private boolean isTerminalBlock(IRBlock block)
     {
         IRInstruction term = block.getTerminator();
@@ -3771,6 +3819,22 @@ public final class ReachingConditionStructurer
             return null;
         }
         List<Statement> out = new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
+        // A break that reaches a natural terminal (return/throw) only through empty forwarding blocks has
+        // nowhere to land: the loop excludes terminal exits from its break targets, so nothing is emitted
+        // after the loop and a bare `break` would fall off the method. Inline the terminal instead.
+        if (jump.kind == ControlFlowContext.JumpKind.BREAK && jump.loopHeader == null)
+        {
+            IRBlock terminal = followEmptyForwarding(target);
+            if (terminal != null && terminal != target && isTerminalBlock(terminal))
+            {
+                List<Statement> inlined = bridge.recoverSimpleBlock(terminal);
+                if (!inlined.isEmpty())
+                {
+                    out.addAll(inlined);
+                    return out;
+                }
+            }
+        }
         if (jump.kind == ControlFlowContext.JumpKind.CONTINUE)
         {
             out.add(jump.loopHeader != null
