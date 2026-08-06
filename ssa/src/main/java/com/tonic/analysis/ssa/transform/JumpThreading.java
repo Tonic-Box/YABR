@@ -10,10 +10,6 @@ import java.util.*;
 
 /**
  * Jump threading optimization.
- * Eliminates redundant jump chains by threading through empty goto blocks.
- * For example:
- *   goto A; A: goto B  -&gt;  goto B
- *   if (cond) goto A; A: goto B  -&gt;  if (cond) goto B
  */
 public class JumpThreading implements IRTransform
 {
@@ -118,9 +114,6 @@ public class JumpThreading implements IRTransform
 
     /**
      * Updates phi nodes at the ultimate target when threading through a bypassed block.
-     * When we thread from 'source' through 'bypassed' to 'ultimate', any phi at 'ultimate'
-     * that has an incoming value from 'bypassed' needs to be updated to have that value
-     * come from 'source' instead.
      * @param source the block that is being threaded (the new direct predecessor)
      * @param bypassed the original intermediate block being bypassed
      * @param ultimate the ultimate target block containing phis to update
@@ -140,7 +133,6 @@ public class JumpThreading implements IRTransform
 
     /**
      * Follows a chain of empty goto blocks to find the ultimate target.
-     * An empty goto block has no phi instructions and only a goto instruction.
      */
     private IRBlock findUltimateTarget(IRBlock block)
     {

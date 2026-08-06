@@ -18,7 +18,7 @@ public class FLoadInstruction extends Instruction implements LocalVarInstruction
      * Constructs an FLoadInstruction.
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to load. For FLOAD_0-3, this is 0-3 respectively.
+     * @param varIndex The index of the local variable to load.
      */
     public FLoadInstruction(int opcode, int offset, int varIndex)
     {

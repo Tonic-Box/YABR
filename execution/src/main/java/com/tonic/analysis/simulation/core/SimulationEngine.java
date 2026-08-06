@@ -17,19 +17,6 @@ import java.util.*;
 
 /**
  * Main simulation engine for executing abstract interpretation.
- *
- *The SimulationEngine executes a method's IR instructions while tracking
- * execution state and notifying registered listeners of events.
- *
- *Example usage:
- * <pre>
- * SimulationContext ctx = SimulationContext.forMethod(method);
- * SimulationEngine engine = new SimulationEngine(ctx);
- * StackOperationListener stackListener = new StackOperationListener();
- * engine.addListener(stackListener);
- * SimulationResult result = engine.simulate(irMethod);
- * System.out.println("Max stack depth: " + result.getMaxStackDepth());
- * </pre>
  */
 public class SimulationEngine
 {

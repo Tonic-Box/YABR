@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for field read instrumentation.
- * Hooks are called after GETFIELD/GETSTATIC instructions.
  */
 public class FieldReadHook implements Hook
 {

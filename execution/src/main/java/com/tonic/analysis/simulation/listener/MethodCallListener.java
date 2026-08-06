@@ -8,8 +8,8 @@ import com.tonic.analysis.ssa.ir.InvokeType;
 import java.util.*;
 
 /**
- * Simulation listener that counts method calls by invoke kind and by target, optionally recording
- * the call sequence. Counters reset at each simulation start.
+ * Simulation listener that counts method calls by invoke kind and by target, optionally recording the call
+ * sequence.
  */
 public class MethodCallListener extends AbstractListener
 {

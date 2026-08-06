@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for field write instrumentation.
- * Hooks are called before PUTFIELD/PUTSTATIC instructions.
  */
 public class FieldWriteHook implements Hook
 {

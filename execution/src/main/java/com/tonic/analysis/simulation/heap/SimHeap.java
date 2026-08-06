@@ -67,8 +67,7 @@ public final class SimHeap
     }
 
     /**
-     * Allocates an object and builds the reference value pointing at it; the heap produced by the allocation is
-     * discarded, so this is only sound in MUTABLE mode.
+     * Allocates an object and builds the reference value pointing at it.
      * @param site the allocating instruction
      * @param type the allocated type, unused
      * @param refFactory builds the reference value for the site

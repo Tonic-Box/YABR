@@ -1,5 +1,6 @@
 package com.tonic.analysis.cpg.query;
 
+import java.util.Set;
 import com.tonic.analysis.cpg.CodePropertyGraph;
 import com.tonic.analysis.cpg.edge.CPGEdge;
 import com.tonic.analysis.cpg.edge.CPGEdgeType;
@@ -15,8 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Fluent, stream-backed traversal over a CPG; each step returns a new query and the
- * underlying stream is single-use, so a query chain terminates exactly once.
+ * Fluent, stream-backed traversal over a CPG.
  */
 public class CPGQuery
 {
@@ -450,31 +450,25 @@ public class CPGQuery
     }
 
     /**
-     * Keeps only nodes for which the sub-query yields a result.
-     * @param subQuery the existence condition
+     * Keeps only the nodes the sub-query also yields.
+     * @param subQuery the query whose nodes are kept
      * @return a query positioned on the matching nodes
      */
     public CPGQuery where(CPGQuery subQuery)
     {
-        List<CPGNode> collected = currentNodes.collect(Collectors.toList());
-        return new CPGQuery(cpg, collected.stream().filter(node -> {
-            CPGQuery nodeQuery = new CPGQuery(cpg, Stream.of(node));
-            return nodeQuery.exists();
-        }));
+        Set<CPGNode> matched = subQuery.currentNodes.collect(Collectors.toSet());
+        return new CPGQuery(cpg, currentNodes.filter(matched::contains));
     }
 
     /**
-     * Keeps only nodes for which the sub-query yields no result.
-     * @param subQuery the absence condition
+     * Keeps only the nodes the sub-query does not yield.
+     * @param subQuery the query whose nodes are dropped
      * @return a query positioned on the matching nodes
      */
     public CPGQuery whereNot(CPGQuery subQuery)
     {
-        List<CPGNode> collected = currentNodes.collect(Collectors.toList());
-        return new CPGQuery(cpg, collected.stream().filter(node -> {
-            CPGQuery nodeQuery = new CPGQuery(cpg, Stream.of(node));
-            return !nodeQuery.exists();
-        }));
+        Set<CPGNode> matched = subQuery.currentNodes.collect(Collectors.toSet());
+        return new CPGQuery(cpg, currentNodes.filter(node -> !matched.contains(node)));
     }
 
     /**

@@ -177,8 +177,7 @@ public class MethodRecoverer
     }
 
     /**
-     * Reserves {@code names} so that {@link #baseNameForSlot} never returns them. Must be called
-     * before {@link #initializeRecovery()}.
+     * Reserves {@code names} so that {@link #baseNameForSlot} never returns them.
      *
      * @param names the names to reserve
      */
@@ -218,13 +217,8 @@ public class MethodRecoverer
     }
 
     /**
-     * Removes compiler-synthesized exception handlers that rethrow caught failures as
-     * {@code java.lang.MatchException}. {@code javac} wraps the record-component accessor
-     * invocations of a record deconstruction pattern in such a handler so that an accessor
-     * throwing surfaces as a {@code MatchException}; this machinery has no idiomatic source
-     * form, so the handler region is pruned before structuring. The protected accessor
-     * sequence then recovers as a straight-line deconstruction the pattern-switch
-     * reconstructor folds into {@code case Type(...)}.
+     * Removes compiler-synthesized exception handlers that rethrow caught failures as {@code
+     * java.lang.MatchException}.
      */
     private void stripSyntheticMatchExceptionHandlers()
     {
@@ -301,9 +295,8 @@ public class MethodRecoverer
     }
 
     /**
-     * Records the local slots of the receivers of the (component-accessor) invocations protected by
-     * a record-deconstruction's MatchException handler. The cast that defines such a slot is the
-     * deconstruction's synthetic temp.
+     * Records the local slots of the receivers of the (component-accessor) invocations protected by a
+     * record-deconstruction's MatchException handler.
      */
     private void collectDeconstructionTemps(IRBlock tryStart, java.util.Set<Integer> slots)
     {
@@ -358,8 +351,6 @@ public class MethodRecoverer
 
     /**
      * Assigns variable names to all SSA values using the name recoverer.
-     * When a bytecode slot is reused with an incompatible type (e.g., int then StringBuilder),
-     * assigns unique names to avoid type unification issues.
      */
     private void assignVariableNames()
     {
@@ -485,7 +476,6 @@ public class MethodRecoverer
 
     /**
      * Assigns names to method parameters.
-     * For instance methods, the first parameter (slot 0) is 'this'.
      */
     private void assignParameterNames()
     {
@@ -521,9 +511,7 @@ public class MethodRecoverer
     }
 
     /**
-     * Recovers a fallback name for the result of an instruction. Local loads are
-     * named by the slot partition; this covers loads the partition could not place
-     * (e.g. a read with no reaching definition) and all other result instructions.
+     * Recovers a fallback name for the result of an instruction.
      */
     private String recoverNameForInstruction(IRInstruction instr)
     {

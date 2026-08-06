@@ -4,9 +4,7 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
 /**
- * Determines whether an expression (or any sub-expression) has side effects. Conservative: unknown
- * expression kinds are assumed to have side effects. Shared by the AST cleanup transforms so they
- * agree on what is safe to remove or reorder.
+ * Determines whether an expression (or any sub-expression) has side effects.
  */
 public class SideEffectDetector extends AbstractSourceVisitor<Boolean>
 {

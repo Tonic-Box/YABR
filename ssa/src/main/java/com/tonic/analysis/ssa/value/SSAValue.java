@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Represents a value defined by an SSA instruction.
- * Each SSAValue has exactly one definition point.
  */
 public class SSAValue implements Value
 {
@@ -171,10 +170,7 @@ public class SSAValue implements Value
     }
 
     /**
-     * Identity by {@code id}. Ids are unique within a method (the counter is reset
-     * per lift in {@link com.tonic.analysis.ssa.lift.BytecodeLifter}), so this is
-     * equivalent to object identity in every collection scope, while giving
-     * deterministic hashing/iteration order across runs.
+     * Identity by {@code id}.
      */
     @Override
     public boolean equals(Object o)

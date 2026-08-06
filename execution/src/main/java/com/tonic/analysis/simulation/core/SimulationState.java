@@ -142,7 +142,6 @@ public final class SimulationState
 
     /**
      * Get the top value, accounting for wide types.
-     * If top is a wide second slot, returns the value below it.
      * @return the topmost whole value
      */
     public SimValue peekValue()
@@ -433,7 +432,6 @@ public final class SimulationState
 
     /**
      * Merge this state with another for control flow convergence.
-     * Uses set-based union for heap merging.
      * @param other the incoming state, may be null
      * @return the merged state, or this one when other is null; this state's position is kept
      */

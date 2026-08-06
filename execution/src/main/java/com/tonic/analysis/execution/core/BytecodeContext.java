@@ -165,8 +165,7 @@ public final class BytecodeContext
         }
 
         /**
-         * Overrides the default per-mode invocation handler. Used to intercept every call
-         * ({@link ExecutionMode#RECURSIVE} only).
+         * Overrides the default per-mode invocation handler.
          * @param invocationHandler the handler to use, or null for the mode default
          * @return this builder
          */

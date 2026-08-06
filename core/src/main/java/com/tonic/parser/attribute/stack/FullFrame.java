@@ -10,7 +10,6 @@ import java.util.List;
 
 /**
  * Represents a FullFrame in the StackMapTable attribute.
- * Contains complete type information for all local variables and stack items.
  */
 public class FullFrame extends StackMapFrame
 {

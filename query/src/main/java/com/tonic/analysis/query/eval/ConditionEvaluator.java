@@ -17,10 +17,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Interprets a {@link Condition} against a {@link Subject}. The single evaluation engine: walks
- * accessor paths through the {@link AttributeRegistry}, applies operators over {@link Value}s, and
- * folds quantifier/count streams - no per-keyword dispatch. Matches record navigation evidence into
- * the subject's {@link EvalContext}.
+ * Interprets a {@link Condition} against a {@link Subject}.
  */
 public final class ConditionEvaluator implements Condition.Visitor<Boolean>
 {
@@ -301,10 +298,7 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean>
     }
 
     /**
-     * Transitive subtype test ({@code class isSubtypeOf java.lang.Applet}). The left accessor resolves to a class
-     * subject (a {@code FIND classes} subject directly, or a {@code FIND methods} subject's owner via the
-     * {@code class} stream); the right operand is a type literal. Walks the shared class hierarchy
-     * (superclass chain + interfaces); best-effort - unresolved ancestors stop the walk.
+     * Transitive subtype test ({@code class isSubtypeOf java.lang.Applet}).
      */
     private Boolean evaluateSubtype(Accessor lhs, Operand operand)
     {

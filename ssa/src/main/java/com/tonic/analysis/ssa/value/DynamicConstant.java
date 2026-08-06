@@ -6,9 +6,6 @@ import java.util.Objects;
 
 /**
  * Represents a dynamic constant loaded via ldc (condy).
- * Corresponds to CONSTANT_Dynamic in the constant pool (Java 11+).
- * Dynamic constants are computed at runtime using a bootstrap method,
- * similar to invokedynamic but for constants rather than method calls.
  */
 public final class DynamicConstant extends Constant
 {

@@ -11,7 +11,6 @@ import java.util.Objects;
 
 /**
  * Represents a reference type (class or interface) in the source AST.
- * Supports generic type arguments for representing parameterized types.
  */
 public final class ReferenceSourceType implements SourceType
 {
@@ -98,9 +97,8 @@ public final class ReferenceSourceType implements SourceType
     }
 
     /**
-     * Gets the fully qualified name in Java format (e.g., "java.lang.String", or "Outer.Inner" for a
-     * nested class). A {@code $} separating a named nested class is rendered as {@code .}; an
-     * anonymous/local marker ({@code $1}) is left intact since it cannot be named in source anyway.
+     * Gets the fully qualified name in Java format (e.g., "java.lang.String", or "Outer.Inner" for a nested
+     * class).
      * @return the dotted source-form name
      */
     public String getFullyQualifiedName()
@@ -126,7 +124,6 @@ public final class ReferenceSourceType implements SourceType
 
     /**
      * Gets the simple class name (e.g., "String").
-     * For inner classes, preserves the outer$inner format (e.g., "SessionManager$Session").
      * @return the name with the package stripped
      */
     public String getSimpleName()

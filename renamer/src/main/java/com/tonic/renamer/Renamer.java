@@ -14,22 +14,6 @@ import java.util.Set;
 
 /**
  * Main API for renaming classes, methods, and fields in a ClassPool.
- *
- *Usage example:
- * <pre>{@code
- * Renamer renamer = new Renamer(classPool);
- * renamer.mapClass("com/old/MyClass", "com/new/RenamedClass")
- *        .mapMethodInHierarchy("com/old/Service", "process", "(I)V", "handle")
- *        .mapField("com/old/Model", "data", "Ljava/lang/String;", "content")
- *        .apply();
- * }</pre>
- *
- *The renamer:
- * - Updates all constant pool references across all classes in the pool
- * - Handles method overrides when using {@link #mapMethodInHierarchy}
- * - Updates descriptors containing renamed class types
- * - Updates generic signatures
- * - Updates invokedynamic/bootstrap method references
  */
 public class Renamer
 {
@@ -76,8 +60,6 @@ public class Renamer
 
     /**
      * Maps a method to a new name with hierarchy propagation.
-     * This will rename the method in the specified class AND all overrides/implementations
-     * in subclasses and interface implementations.
      * @param owner      The internal name of the class owning the method
      * @param name       The old method name
      * @param descriptor The method descriptor
@@ -116,7 +98,6 @@ public class Renamer
 
     /**
      * Applies all rename mappings.
-     * Validates first and throws RenameException if validation fails.
      * @throws RenameException if validation fails or an error occurs during renaming
      */
     public void apply()
@@ -150,7 +131,6 @@ public class Renamer
 
     /**
      * Applies all rename mappings without validation.
-     * Use with caution - prefer {@link #apply()} for safety.
      */
     public void applyUnsafe()
     {
@@ -205,7 +185,6 @@ public class Renamer
 
     /**
      * Returns the current mapping store.
-     * Useful for inspecting or modifying mappings.
      * @return The MappingStore
      */
     public MappingStore getMappings()
@@ -226,7 +205,6 @@ public class Renamer
 
     /**
      * Returns the class hierarchy.
-     * Builds it if not already built.
      * @return The ClassHierarchy
      */
     public ClassHierarchy getHierarchy()

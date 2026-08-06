@@ -337,8 +337,7 @@ public class PostDominatorTree
     }
 
     /**
-     * Finds the merge point for an if-then-else by finding the immediate post-dominator
-     * of the branch block. The merge point is the first block all paths must pass through.
+     * Finds the merge point for an if-then-else by finding the immediate post-dominator of the branch block.
      * @param branchBlock the block containing the conditional branch
      * @return the merge point block, or null if not found
      */

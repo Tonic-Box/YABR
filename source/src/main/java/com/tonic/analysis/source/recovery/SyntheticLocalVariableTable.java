@@ -21,13 +21,7 @@ import java.util.Map;
 
 /**
  * Builds a {@code LocalVariableTable} for a STRIPPED method from the decompiler's recovered slot model, keyed
- * to the method's ORIGINAL bytecode offsets. Used to inject named locals into a class that has no debug info:
- * the names are exactly the ones the decompiler renders in source ({@code local{slot}}, scope-aware, or a real
- * name when an LVT was present), so a live debugger reading this table shows locals matching the decompilation.
- *
- * Each distinct {@code (slot, recovered-name)} pair becomes one entry - parameters and the receiver span the
- * whole method, body locals span the offsets of their loads/stores. Compiler temps that never occupy a JVM
- * local slot get no entry. The attribute is added to the original {@code Code} without changing any bytecode.
+ * to the method's ORIGINAL bytecode offsets.
  */
 public final class SyntheticLocalVariableTable
 {

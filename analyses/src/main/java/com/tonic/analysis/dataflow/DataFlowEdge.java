@@ -4,7 +4,6 @@ import java.util.Objects;
 
 /**
  * An edge in the data flow graph connecting two nodes.
- * Represents data flowing from source to target.
  */
 public class DataFlowEdge
 {

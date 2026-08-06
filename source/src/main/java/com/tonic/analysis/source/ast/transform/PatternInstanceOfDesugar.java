@@ -22,17 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Desugars pattern-matching {@code instanceof} (Java 16) for the source-to-bytecode front end: it is
- * the inverse of {@link PatternInstanceOfReconstructor}. A pattern binding is rewritten into a classic
- * {@code instanceof} test plus an injected {@code T t = (T) x;} declaration placed where the binding
- * is in scope, so the existing instanceof/cast/declaration lowering handles it with no special cases.
- * - {@code if (x instanceof T t) THEN} -&gt; {@code if (x instanceof T) { T t = (T) x; THEN }}
- * - {@code if (!(x instanceof T t)) GUARD; REST} -&gt; inject {@code T t = (T) x;} after the if.
- * - {@code if (x instanceof T t && REST)} -&gt; hoist {@code T t = x instanceof T ? (T) x : null;}
- *       before the if and test {@code t != null} in place - the binding is visible to the remaining
- *       conjuncts and both branches, and {@code t != null} is equivalent to the original test for a
- *       pure operand (a null or non-matching x both yield null).
- * Restricted to simple ({@code VarRefExpr}) operands so the operand can be safely re-referenced.
+ * Desugars pattern-matching {@code instanceof} (Java 16) for the source-to-bytecode front end.
  */
 public class PatternInstanceOfDesugar implements ASTTransform
 {
@@ -149,9 +139,7 @@ public class PatternInstanceOfDesugar implements ASTTransform
     }
 
     /**
-     * Ensures a pattern test's operand can be re-referenced by the injected binding: a plain
-     * variable already can (returns 0); any other operand is evaluated ONCE into a hoisted temp
-     * before the if, and the test is retargeted at the temp (returns 1, the statements inserted).
+     * Ensures a pattern test's operand can be re-referenced by the injected binding.
      */
     private int stabilizeOperand(InstanceOfExpr test, List<Statement> enclosing, int index)
     {
@@ -169,9 +157,8 @@ public class PatternInstanceOfDesugar implements ASTTransform
     }
 
     /**
-     * Rewrites every pattern test on an {@code &&} spine into a {@code t != null} check, hoisting
-     * {@code T t = x instanceof T ? (T) x : null;} for each. Only {@code &&} nodes are descended:
-     * a binding under {@code ||} is not definitely assigned where it would be read.
+     * Rewrites every pattern test on an {@code &&} spine into a {@code t != null} check, hoisting {@code T t = x
+     * instanceof T ? (T) x : null;} for each.
      */
     private Expression rewriteAndSpine(Expression e, List<Statement> hoisted)
     {

@@ -1,6 +1,5 @@
 package com.tonic.analysis.simulation.listener;
 
-import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.NewArrayInstruction;
@@ -10,8 +9,8 @@ import com.tonic.analysis.ssa.type.IRType;
 import java.util.*;
 
 /**
- * Simulation listener that counts object and array allocations by type, optionally recording each
- * allocation site. Counters reset at each simulation start.
+ * Simulation listener that counts object and array allocations by type, optionally recording each allocation
+ * site.
  */
 public class AllocationListener extends AbstractListener
 {
@@ -20,7 +19,7 @@ public class AllocationListener extends AbstractListener
     private int arrayAllocationCount;
     private final Map<String, Integer> allocationsByType;
     private final List<AllocationSite> allocationSites;
-    private boolean trackSites;
+    private final boolean trackSites;
 
     /**
      * Creates a listener that also records allocation sites.

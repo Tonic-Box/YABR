@@ -62,18 +62,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Reaching-condition control-flow structurer: the DREAM-style ("No More Gotos") replacement for
- * schema-based structural analysis. It emits each block exactly once, placing it under its immediate
- * dominator, so a tail shared by sibling branches is recovered faithfully - once, guarded by the
- * disjunction of the conditions that reach it - instead of being dropped (the schema structurer's
- * failure mode).
- *
- *Introduced incrementally: this stage structures whole exception-handler-free, switch-free methods,
- * including reducible loops (as {@code while (true)} with break/continue). Branch nesting is recovered
- * from the dominator tree and edge reachability; a shared merge is guarded by its reaching condition,
- * computed with the {@link BoolFormulaFactory} boolean engine. Anything outside this scope (a switch, an
- * exception handler, irreducible flow, or a shared-tail guard that would duplicate a side-effecting
- * condition) is declined by returning {@code null} so the caller keeps its existing recovery.
+ * Reaching-condition control-flow structurer: the DREAM-style ("No More Gotos") replacement for schema-based
+ * structural analysis.
  */
 public final class ReachingConditionStructurer
 {
@@ -97,10 +87,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * A snapshot of one structuring pass's per-region state, taken around a try node's delegate recovery -
-     * which re-enters {@link #tryStructureRegion} for the try body's own pass - and restored afterwards so
-     * the outer pass's emit continues on its own region. The monotonic guard-temp counter is intentionally
-     * NOT part of the snapshot: nested passes advance it so hoisted temp names stay unique method-wide.
+     * A snapshot of one structuring pass's per-region state, taken around a try node's delegate recovery.
      */
     private static final class PassState
     {
@@ -200,9 +187,9 @@ public final class ReachingConditionStructurer
     private final Map<IRBlock, TryNodeDescriptor> tryNodes = new HashMap<>();
     private boolean tryNodesEnabled;
     private Set<IRBlock> regionStopBlocks;
-    /** Set by the host while structuring a finally-protected body: a boundary terminal past the stops has
-     * the (de-duplicated) finally between it and the region, so absorbing it into the region would move its
-     * evaluation before the finally. The host's continuation recovery places it instead. */
+    /**
+     * Set by the host while structuring a finally-protected body.
+     */
     private boolean suppressBoundaryTerminalAbsorption;
     private Set<IRBlock> skippedBoundaries = new LinkedHashSet<>();
 
@@ -217,13 +204,13 @@ public final class ReachingConditionStructurer
         this.suppressBoundaryTerminalAbsorption = suppress;
     }
 
-    /** Stop blocks the host permits this offer to inline ONCE at the region's convergence onto them:
-     * straight terminal tails shared with the enclosing structure. The enclosing recovery re-emits its
-     * own copy on the paths reaching a tail from outside the region - exclusive paths, each executing
-     * the tail at most once, mirroring the walking recovery's converging-terminal duplication. */
+    /**
+     * Stop blocks the host permits this offer to inline ONCE at the region's convergence onto them.
+     */
     private Set<IRBlock> boundaryDuplicableTails = Collections.emptySet();
-    /** Placement per admitted tail: the region block whose whole subtree converges on the tail; the
-     * tail's statements follow that block's structured children. Computed in prepareRegion. */
+    /**
+     * Placement per admitted tail.
+     */
     private final Map<IRBlock, IRBlock> boundaryTailPlacement = new HashMap<>();
 
     /**
@@ -240,9 +227,7 @@ public final class ReachingConditionStructurer
     private List<IRBlock> blockOfAtom;
     private Set<IRBlock> pureConditionBlock;
     /**
-     * Blocks whose branch condition reached the output as a real {@code if}. A reaching-condition guard only
-     * ever re-states conditions the emitted structure already evaluates, so this records which ones it does -
-     * the fact is about a block's emitted form and stays true once established, hence no per-region reset.
+     * Blocks whose branch condition reached the output as a real {@code if}.
      */
     private final Set<IRBlock> materializedConditions = new HashSet<>();
     private Set<IRBlock> exceptionFreeConditionBlock;
@@ -253,8 +238,10 @@ public final class ReachingConditionStructurer
     /** Shared tails whose over-cost guard is instead resolved by duplicating the (small, closed) tail at each
      * reaching branch - populated in the validate pass, consumed by emit. */
     private Set<IRBlock> duplicatedTails;
-    /** True while re-emitting a duplicated tail's subtree, so its blocks are recovered afresh and never marked
-     * processed (each reaching predecessor re-emits its own copy). */
+    /**
+     * True while re-emitting a duplicated tail's subtree, so its blocks are recovered afresh and never marked
+     * processed.
+     */
     private boolean duplicating;
     /**
      * Remaining per-region duplication budget (statements * sites), so several eligible tails cannot multiply.
@@ -285,10 +272,7 @@ public final class ReachingConditionStructurer
     private static final long MAX_REGION_DUP = 20_000L;
 
     /**
-     * Cap on the number of expression nodes a single shared-tail guard may render to. A guard built from a
-     * clean short-circuit condition is tiny; only a reconvergent BDD whose shared subgraph is NOT
-     * exception-free (so it cannot be hoisted into a temporary) can approach this, and that region declines
-     * to the fallback rather than emit a super-linear condition.
+     * Cap on the number of expression nodes a single shared-tail guard may render to.
      */
     private static final long GUARD_COST_CAP = 20_000L;
 
@@ -318,10 +302,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Side-effect-free preflight: prepares the region exactly as {@link #tryStructureRegion} would and
-     * returns the STOP blocks its flow exits into, or null when the region declines. A caller that plans
-     * to emit only up to one designated continuation must verify no OTHER stop is reachable - a region cut
-     * mid-structure by a foreign stop would silently drop the code beyond it.
+     * Side-effect-free preflight.
      * @param entry the region's single entry block
      * @param stopBlocks blocks that bound the region
      * @return the stops the region's flow exits into, or null when the region is declined
@@ -332,9 +313,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * As above; with {@code allowTryNodes} the probe models each try in the region as an opaque node,
-     * matching what a subsequent {@code tryStructureRegion(entry, stops, true)} would structure - without
-     * it, a region containing any try fails the probe outright and the caller never consults the engine.
+     * As above; with {@code allowTryNodes} the probe models each try in the region as an opaque node.
+     *
      * @param entry the region's single entry block
      * @param stopBlocks blocks that bound the region
      * @param allowTryNodes model each try as one opaque node instead of declining the region
@@ -432,10 +412,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Whether the most recently probed region flows into {@code bound} through a back edge - the
-     * region is an enclosing loop's body tail whose continuation is the loop header itself. Such a
-     * region probes as exitless (back edges are never exits), yet its bounded offer is sound: the
-     * region ends in the loop's continue and the caller resumes at the already-processed header.
+     * Whether the most recently probed region flows into {@code bound} through a back edge - the region is an
+     * enclosing loop's body tail whose continuation is the loop header itself.
      * @param bound the candidate continuation block
      * @return true when some region block reaches it over a back edge
      */
@@ -459,10 +437,9 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * As {@link #tryStructureRegion(IRBlock, Set)}, and with {@code allowTryNodes} set additionally treats
-     * each try in the region as an opaque composite node (delegated to the host's try/catch recovery at its
-     * structural position) instead of declining the region. Offered separately so the linear staging path,
-     * which is preferred for sequentially-shaped regions, is consulted first.
+     * As {@link #tryStructureRegion(IRBlock, Set)}; with {@code allowTryNodes} each try in the region
+     * becomes an opaque composite node.
+     *
      * @param entry the region's single entry block
      * @param stopBlocks blocks that bound the region
      * @param allowTryNodes structure each try as one opaque node instead of declining the region
@@ -555,8 +532,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Collects, atomizes and validates the region - everything up to (but excluding) the emit pass. Safe
-     * to repeat: it only writes this pass's own fields, never shared recovery state.
+     * Collects, atomizes and validates the region - everything up to (but excluding) the emit pass.
      */
     private boolean prepareRegion(IRBlock entry, Set<IRBlock> stopBlocks)
     {
@@ -628,11 +604,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Whether cutting the region at {@code split} yields a faithful sequence. The head (already prepared,
-     * with {@code split} as a stop) must fall through only to the cut: no skipped boundary and no direct
-     * exit to a base stop may bypass it - such a path would wrongly run the tail's text. Every predecessor
-     * of the cut must be head code (region or node-consumed blocks), catch code falling through to the
-     * join, or tail code the cut dominates (a back edge of a loop the tail owns).
+     * Whether cutting the region at {@code split} yields a faithful sequence.
      */
     private boolean soundSequenceCut(IRBlock split, Set<IRBlock> baseStops)
     {
@@ -669,9 +641,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Whether {@code b} is exception-handler code: a live handler entry block, a RETIRED one (a
-     * de-duplicated finally's scaffolding, whose text the owning clause recovers), or a block either
-     * dominates.
+     * Whether {@code b} is exception-handler code.
      */
     private boolean isHandlerCode(IRBlock b)
     {
@@ -727,8 +697,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Side-effect-free dry run mirroring {@link #emit}: throws {@link BailToLegacy} for an unsafe guard
-     * or an unstructurable loop, without touching recovery state or creating labels.
+     * Side-effect-free dry run mirroring {@link #emit}.
      */
     private void validate(IRBlock b)
     {
@@ -786,9 +755,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Side-effect-free dry run mirroring {@link #emitTry}: no region block outside the node may jump into
-     * its consumed blocks, and the join it owns must validate. A node doubling as a loop header is routed
-     * (or declined) by {@link #validate} before this runs.
+     * Side-effect-free dry run mirroring {@link #emitTry}.
      */
     private void validateTryNode(IRBlock b)
     {
@@ -827,8 +794,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when the node itself must emit its join: the join's immediate dominator is the node or lies in
-     * its consumed blocks, so no other region block's dominator walk places it.
+     * True when the node itself must emit its join.
      */
     private boolean nodeOwnsAfter(IRBlock b, TryNodeDescriptor node)
     {
@@ -844,7 +810,7 @@ public final class ReachingConditionStructurer
 
     /**
      * Side-effect-free dry run mirroring {@link #emitSwitch}: pushes the switch scope, validates each case body,
-     * then the merge. Throws {@link BailToLegacy} for a case shape the engine cannot place.
+     * then the merge.
      */
     private void validateSwitch(IRBlock b)
     {
@@ -881,11 +847,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Declines to the legacy walk when a case body leaves via an edge the engine cannot place: anything other than
-     * staying in the case, a back edge, a loop break/continue, a switch merge / sibling-case fall-through, or a method
-     * terminal. The unhandled shape is a case that jumps to the loop's latch/update block (a {@code continue} whose
-     * target is distinct from the header), which the while(true) continue model does not yet cover; the legacy walk
-     * recovers it correctly.
+     * Declines to the legacy walk when a case body leaves via an edge the engine cannot place.
      */
     private void requireCaseExitsPlaceable(SwitchDescriptor.CaseSpec spec)
     {
@@ -1000,11 +962,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Admits each host-flagged boundary tail the region flows into: finds the placement block - the
-     * lowest common dominator of the tail's in-region predecessors - and verifies the placement's whole
-     * region subtree converges on the tail (every model path reaches it and nothing else escapes), so
-     * appending the tail's statements after that block's structured children is plain fall-through.
-     * A flagged tail the region cannot host this way fails the region.
+     * Admits each host-flagged boundary tail the region flows into.
      */
     private boolean placeBoundaryTails()
     {
@@ -1093,10 +1051,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Gathers the single-entry region: blocks reachable from {@code entry} without crossing a stop block,
-     * following reducible loop back edges only forward (the header is already in the region). Fails (returns
-     * false) if the region contains a switch, an irreducible (non-back-edge) cycle, or a block the entry does
-     * not dominate - shapes this stage does not structure.
+     * Gathers the single-entry region.
      */
     private boolean collectRegion(IRBlock entry, Set<IRBlock> stopBlocks)
     {
@@ -1344,8 +1299,7 @@ public final class ReachingConditionStructurer
 
     /**
      * True when every predecessor of {@code s} that the region entry does not dominate is catch code - an
-     * exception handler's entry block or a block such an entry dominates. Such a merge belongs to this
-     * region (its only outside in-flow is the separately-recovered catch clause falling through).
+     * exception handler's entry block or a block such an entry dominates.
      */
     private boolean outsidePredsAreCatchCode(IRBlock s, IRBlock entry)
     {
@@ -1415,8 +1369,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The predecessors of {@code n} in the structuring model: its CFG predecessors (consumed blocks are
-     * never in the region, so a join's real predecessors drop out) plus each try node whose join it is.
+     * The predecessors of {@code n} in the structuring model.
      */
     private List<IRBlock> modelPredecessors(IRBlock n)
     {
@@ -1456,8 +1409,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The decoded descriptor for a switch block, or null when the decoder does not own the shape. Cached per
-     * structuring pass so the collect, validate and emit passes share one decode (and see the same case set).
+     * The decoded descriptor for a switch block, or null when the decoder does not own the shape.
      */
     private SwitchDescriptor switchDescriptor(IRBlock b)
     {
@@ -1472,8 +1424,6 @@ public final class ReachingConditionStructurer
 
     /**
      * True when the edge {@code from -> to} is a loop back edge, i.e. its target dominates its source.
-     * Computed from dominance rather than the {@code EdgeType.BACK} stamp, which is unreliable after the
-     * exception edges are added and removed around loop analysis.
      */
     private boolean isBackEdge(IRBlock from, IRBlock to)
     {
@@ -1481,16 +1431,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * When a shared tail's reaching-condition guard would blow up (non-hoistable, over the cost cap), try to
-     * resolve it by DUPLICATING the tail at each reaching branch instead of emitting one guarded copy - exactly
-     * what the legacy engine does for the obfuscator's small shared blocks. Registers {@code c} as a duplicated
-     * tail (consumed by {@link #emit}) when it is safe and bounded; returns false to keep the caller's decline.
-     *
-     *Eligible only when the tail subtree is: small ({@link #MAX_TAIL_BLOCKS}); CLOSED - every outward edge is
-     * a method terminal, a back edge, or a loop break/continue, so duplicating it can never reach another shared
-     * continuation (the anti-cascade invariant); re-recovery-safe ({@link RegionRecoveryBridge#isDuplicationSafe})
-     * so re-emitting each block is byte-identical and duplicates no field/array store or call; every branch pure;
-     * and within the per-tail and per-region duplication budgets.
+     * Resolves a shared tail whose reaching-condition guard would blow up by duplicating the tail at each
+     * reaching branch.
      */
     private boolean tryRegisterDuplicableTail(IRBlock c)
     {
@@ -1654,10 +1596,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when {@code block}'s branch condition has no side effect, so it is safe to re-emit inside a
-     * shared-tail guard. Precise: impure only when recovering the condition would inline an allocation or
-     * call into it (a side effect duplicating it would repeat). A call whose result is a named local, or
-     * one that does not feed the branch operands, leaves the condition a pure re-emittable expression.
+     * True when {@code block}'s branch condition has no side effect, so it is safe to re-emit inside a shared-tail
+     * guard.
      */
     private boolean isPureCondition(IRBlock block)
     {
@@ -1667,12 +1607,7 @@ public final class ReachingConditionStructurer
     // emission
 
     /**
-     * True when the loop at {@code header} lies OUTSIDE the try node at the same block: every back edge to
-     * the header originates outside the node's consumed blocks, so the iteration wraps the try (the retry
-     * shape) and emitLoop may own it with the node as the body's head. A back edge from INSIDE the consumed
-     * set means the try wraps the loop - javac's protected range starts at the loop's first instruction -
-     * and loop-first emission would invert the nesting, running the finally on every iteration instead of
-     * once on exit.
+     * True when the loop at {@code header} lies OUTSIDE the try node at the same block.
      */
     private boolean loopWrapsTryNode(IRBlock header, TryNodeDescriptor node)
     {
@@ -1751,8 +1686,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The rendering of a branch block's condition inside a guard: the raw recovered expression, or - for a
-     * cached side-effecting condition - the boolean temporary assigned at the block's own position.
+     * The rendering of a branch block's condition inside a guard.
      */
     private Expression guardCondition(IRBlock block, boolean negate)
     {
@@ -1766,11 +1700,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Emits an opaque try node: the whole try/catch is recovered by the host machinery at this structural
-     * position (which marks the consumed blocks emitted), then the node continues at its join - emitted here
-     * when the node owns it, realized as the enclosing loop's break/continue when the join is a loop
-     * boundary, or left to the join's own dominator placement otherwise. A delegate that cannot recover the
-     * shape falls back to the legacy walk over just the node's span.
+     * Emits an opaque try node.
      */
     private List<Statement> emitTry(IRBlock b)
     {
@@ -1860,8 +1790,7 @@ public final class ReachingConditionStructurer
 
     /**
      * Emits a native {@code switch}, structuring each case body in-region so its exits become the enclosing loop's
-     * break/continue, a fall-through to the next case, or a bare break out of the switch. The selector, labels and
-     * merge come from the decoder; the merge - the switch's remaining dominator child - then follows in sequence.
+     * break/continue, a fall-through to the next case, or a bare break out of the switch.
      */
     private List<Statement> emitSwitch(IRBlock b)
     {
@@ -1971,11 +1900,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The immediate post-switch join that bounds the case bodies: the switch header's dominator-tree child, nearest
-     * in reverse-postorder, that a case body reaches by an ordinary edge. When the switch is enclosed in an {@code if}
-     * whose merge the cases share, that join is dominated by the {@code if}, not the switch, so no dominator-child
-     * qualifies; the decoder's own merge (computed by reachability, not dominance) then names it. Null when no such
-     * join exists (every case returns/throws or falls through).
+     * The immediate post-switch join that bounds the case bodies.
      */
     private IRBlock switchMerge(IRBlock header, SwitchDescriptor desc)
     {
@@ -2015,10 +1940,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The single block that every non-terminal case body leaves to - where the breaking cases converge - or null when
-     * they leave to different blocks or none does. Used only when neither dominance nor the decoder names a merge: a
-     * switch with a single non-terminal case, or one whose merge is a tail shared with sibling switches, still has a
-     * definite break target (the block each surviving case reaches on leaving the switch); this finds it.
+     * The single block that every non-terminal case body leaves to - where the breaking cases converge - or null
+     * when they leave to different blocks or none does.
      */
     private IRBlock caseConvergence(SwitchDescriptor desc)
     {
@@ -2091,10 +2014,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Emits a natural loop as {@code while (true) { ... }} with the exit edge lowered to {@code break}
-     * and the back edge to {@code continue}. The header's own condition therefore surfaces inside the
-     * body as {@code if (exit) break;}; the single non-terminal exit becomes the continuation after the
-     * loop. Terminal (return/throw) exits stay inlined in the body.
+     * Emits a natural loop.
      */
     private List<Statement> emitLoop(IRBlock header)
     {
@@ -2230,10 +2150,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when {@code exit} is reached only by leaving this loop: every predecessor is a loop block or a
-     * break-path block the header dominates (so control can arrive at {@code exit} only after entering the
-     * loop). A predecessor outside the loop that the header does not dominate - the false edge of an enclosing
-     * {@code if} - means {@code exit} is a shared tail beyond the loop, placed by the outer structuring.
+     * True when {@code exit} is reached only by leaving this loop.
      */
     private boolean exitExclusiveToLoop(IRBlock exit, IRBlock header, Set<IRBlock> loopBlocks)
     {
@@ -2248,12 +2165,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The loop's {@code for}-update latch: the header's SOLE back-edge predecessor when it holds a unit induction
-     * step ({@code i = i +/- 1}), else null. Requiring the update to be the only back-edge source distinguishes a
-     * genuine counted loop - where every path (including any {@code continue}) routes through the update before the
-     * header - from a {@code while} whose {@code continue} jumps straight to the header and skips a tail increment;
-     * the latter is not a {@code for} and keeps its {@code while}. A switch case whose {@code continue} lands on the
-     * latch (rather than on the switch's own merge/tail) is a step-running {@code continue} and is recovered as one.
+     * The loop's {@code for}-update latch.
      */
     private IRBlock inductionLatch(IRBlock header)
     {
@@ -2332,14 +2244,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Builds a {@code for} when the lifted-condition loop body ends in an induction step ({@code i++} /
-     * {@code i = i +/- c}) - moving the step to the update slot pins its position ({@code for (; c; i++) { body }}
-     * equals {@code while (c) { body; i++ }}), which is a round-trip fixed point where a body-tail increment is not.
-     * A {@code continue} would run the update in a {@code for} but skip it in a {@code while}, so a plain loop with a
-     * {@code continue} keeps its {@code while}. When {@code forLatch} holds, the loop is counted (its sole back edge
-     * is the induction update, so every {@code continue} runs it) and lifts to {@code for} even with {@code continue}s
-     * present - which is the only shape a switch case's step-running {@code continue} can take. Otherwise a
-     * {@code while}.
+     * Builds a {@code for} when the lifted-condition loop body ends in an induction step.
      */
     private Statement buildLoop(Expression cond, List<Statement> body, boolean lifted, String selfLabel, boolean forLatch)
     {
@@ -2356,10 +2261,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The {@code for}-update for a trailing {@code +/- 1} induction step, always normalized to {@code x++}
-     * / {@code x--}, or null. The step is recovered in several equivalent shapes - {@code x++},
-     * {@code x = x + 1}, and the mis-recovered declaration {@code int x = x + 1} - and the update slot must
-     * read the same in every round trip regardless of which shape appeared, so all are normalized here.
+     * The {@code for}-update for a trailing {@code +/- 1} induction step, always normalized to {@code x++} /
+     * {@code x--}, or null.
      */
     private Expression asInductionStep(Statement s)
     {
@@ -2426,11 +2329,7 @@ public final class ReachingConditionStructurer
 
     /**
      * Whether {@code stmts} holds a {@code continue} that targets THIS loop, whose label is {@code selfLabel}
-     * (null when the loop has none). An unlabeled continue targets this loop only at its own nesting level - one
-     * inside a nested loop belongs to that inner loop ({@code insideNestedLoop} tracks the crossing); a labeled
-     * continue targets this loop only when its label matches, from any depth. Such a continue runs a
-     * {@code for}-update it would skip as a {@code while} tail step, so its presence keeps the loop a
-     * {@code while}.
+     * (null when the loop has none).
      */
     private boolean continuesThisLoop(List<Statement> stmts, String selfLabel, boolean insideNestedLoop)
     {
@@ -2611,12 +2510,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Whether an unlabeled {@code break} would actually land on {@code target}. A pure conditional header
-     * whose exit edge falls to a TERMINAL block is lifted to {@code while (cond)} with that terminal tail
-     * as the loop's after-text - so a {@code break} jumps to the terminal tail, NOT to a continuation some
-     * other exit chain reaches. javac never produces that combination for a real {@code break} (the header's
-     * false edge and every break land on one place); such a divergent chain is an arm that terminates on its
-     * own and must be inlined where its branch leaves the loop, which returning no break target arranges.
+     * Whether an unlabeled {@code break} would actually land on {@code target}.
      */
     private boolean breakReachesAfterLoop(IRBlock header, IRBlock target, Set<IRBlock> loopBlocks)
     {
@@ -2641,10 +2535,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when {@code header}, followed through a chain of pure {@code goto} connector blocks, lands on a boundary of
-     * an enclosing {@code switch}. javac routes a nested switch's non-matching path straight to the enclosing case,
-     * while the recompiler inserts an empty {@code goto} block on that edge; resolving the chain makes both recover
-     * to the same fall-through, a round-trip fixed point.
+     * True when {@code header}, followed through a chain of pure {@code goto} connector blocks, lands on a
+     * boundary of an enclosing {@code switch}.
      */
     private boolean resolvesToEnclosingBoundary(IRBlock header, Set<IRBlock> enclosing)
     {
@@ -2693,12 +2585,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Resolves where an exit settles. A block dominated only by the header (or lying outside the loop) is a real
-     * break continuation and is returned as-is. A block dominated by an INNER loop block is a body region - a guard
-     * or branch deep in the body, {@code if (cond) { ...; ... }} - which is emitted inline on that branch, not broken
-     * to; it settles at the single block on the frontier of its dominance region (where all its paths leave that
-     * region and rejoin the loop's real continuation), returns {@code null} when that region is self-contained (every
-     * path returns/throws within it), or throws when the region itself leaves to several distinct continuations.
+     * Resolves where an exit settles.
      */
     private IRBlock settleExit(IRBlock end, IRBlock header, Set<IRBlock> loopBlocks)
     {
@@ -2724,9 +2611,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * The frontier of {@code entry}'s dominance region: the blocks reached from that region (following non-back
-     * edges) that {@code entry} does not dominate - where the region rejoins code shared with the rest of the method.
-     * A loop block on the frontier is kept so the caller can decline an exit region that re-enters the loop.
+     * The frontier of {@code entry}'s dominance region.
      */
     private Set<IRBlock> regionFrontier(IRBlock entry, Set<IRBlock> loopBlocks)
     {
@@ -2761,10 +2646,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Follows a chain of linear exit intermediates from {@code v}: non-loop blocks with exactly one predecessor and
-     * one successor whose successor continues out of the loop. Stops at the first block that branches, merges (more
-     * than one predecessor - the join where exits meet), or re-enters the loop. Returns {@code v} when it is not
-     * such an intermediate.
+     * Follows a chain of linear exit intermediates from {@code v}.
      */
     private IRBlock followExitIntermediates(IRBlock v, Set<IRBlock> loopBlocks)
     {
@@ -2784,9 +2666,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when the terminal block {@code term} (a return or throw outside the region) carries a value
-     * defined inside the region. Such a terminal is the region's own exit - the value it returns was
-     * computed here - so it cannot be dropped to the boundary.
+     * True when the terminal block {@code term} (a return or throw outside the region) carries a value defined
+     * inside the region.
      */
     private boolean terminalDependsOnRegion(IRBlock term)
     {
@@ -2866,10 +2747,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Structures the dominator-tree children of {@code b}. When {@code b} is a two-way branch the
-     * children split into then-only, else-only, and shared (reached from both arms); the first two nest
-     * inside the {@code if}/{@code else}, and each shared child is emitted once afterward guarded by its
-     * reaching condition.
+     * Structures the dominator-tree children of {@code b}.
      */
     private List<Statement> structureChildren(IRBlock b)
     {
@@ -2960,8 +2838,9 @@ public final class ReachingConditionStructurer
         return out;
     }
 
-    /** Appends each admitted boundary tail placed at {@code b}: the whole subtree converges on it, so its
-     * freshly recovered statements follow as plain fall-through. */
+    /**
+     * Appends each admitted boundary tail placed at {@code b}.
+     */
     private void appendPlacedBoundaryTails(IRBlock b, List<Statement> out)
     {
         for (Map.Entry<IRBlock, IRBlock> e : boundaryTailPlacement.entrySet())
@@ -2982,12 +2861,6 @@ public final class ReachingConditionStructurer
 
     /**
      * Which arm of a two-way branch to emit as a leading guard clause, or -1 to keep the two-armed form.
-     * Returns 0 (guard the true arm) or 1 (guard the false arm) when both arms are non-empty and at least one
-     * exits: the exiting arm becomes the guard so the other flows flat. When both exit, a single-statement exit
-     * is guarded against a multi-statement body - a choice independent of branch orientation, so the two
-     * equivalent orientations of a shape recover to the same guard clause (a round-trip fixed point). Returns -1
-     * when an arm is empty, neither exits, or both exits have no stable single-vs-multi distinction, leaving the
-     * caller's bytecode-lowering two-armed form.
      */
     private int guardedArm(List<Statement> trueStmts, List<Statement> falseStmts)
     {
@@ -3054,10 +2927,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Emits a shared merge child once. If it is reached unconditionally from {@code dominator} - or by
-     * fall-through past an exiting guard-clause whose condition has a side effect - it follows in sequence;
-     * otherwise it is wrapped in {@code if (reachingCondition)}. A guard that would repeat a side-effecting
-     * condition without the fall-through escape was already declined in {@link #validate}.
+     * Emits a shared merge child once.
      */
     private List<Statement> emitSharedTail(IRBlock shared, IRBlock dominator, boolean last)
     {
@@ -3113,11 +2983,9 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when some region block under {@code dominator} completes the region NORMALLY - a normal edge to
-     * a region stop block that is NOT an enclosing loop/switch jump target - on a path that does not reach
-     * {@code tail}. Such a path's emitted form has no exit statement (its fall-through IS the region end),
-     * so an unguarded terminal tail after it would wrongly execute. A jump exit (break/continue) emits its
-     * own transfer and never falls into the tail; at method level the region has no stop blocks at all.
+     * True when some region block under {@code dominator} completes the region NORMALLY - a normal edge to a
+     * region stop block that is NOT an enclosing loop/switch jump target - on a path that does not reach {@code
+     * tail}.
      */
     private boolean regionCompletesNormallySkipping(IRBlock tail, IRBlock dominator)
     {
@@ -3258,12 +3126,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Caches every side-effecting condition a guard references: the block's condition is evaluated ONCE,
-     * into a boolean temporary assigned at the block's own position, and every guard mention renders as the
-     * temporary - so re-stating the guard cannot repeat the side effect. Unexecuted atoms keep the
-     * temporary's default; a reaching condition's value never depends on them (some executed conjunct
-     * already falsifies every disjunct off the taken path). A shape whose impure condition sits on a loop
-     * header or a non-branch terminator has no single assignment point here and still fails to legacy.
+     * Caches every side-effecting condition a guard references.
      */
     private void requireGuardPure(BoolFormula guard)
     {
@@ -3309,12 +3172,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when an impure atom's OTHER edge leaves the region for a skipped boundary. The fall-through
-     * unguard assumes the condition was already emitted as an exit test (`if (c) continue; tail`), so
-     * re-stating it would repeat the side effect - but an edge to a skipped boundary emits NOTHING: the
-     * enclosing structure owns that continuation. Unguarding there erases the condition evaluation
-     * entirely, side effects included; the guard must be kept (its impure atoms are cached into
-     * temporaries by the purity machinery, evaluated once at their own position).
+     * True when an impure atom's OTHER edge leaves the region for a skipped boundary.
      */
     private boolean impureAtomExitsToSkippedBoundary(BoolFormula guard)
     {
@@ -3337,10 +3195,8 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when every side-effecting atom of the guard names a block whose condition already reached the
-     * output as an {@code if}, so re-stating the guard evaluates nothing that has not run. A pure atom is
-     * trivially safe to drop; an impure one whose block never emitted its own condition is not, because the
-     * guard would then be the only evaluation of that condition.
+     * True when every side-effecting atom of the guard names a block whose condition already reached the output as
+     * an {@code if}, so re-stating the guard evaluates nothing that has not run.
      */
     private boolean impureAtomsAlreadyEmitted(BoolFormula guard)
     {
@@ -3375,12 +3231,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when an impure (side-effecting) atom appears under a disjunction ({@code OR}) in the guard - the
-     * block is the {@code then} of a compound {@code a || cmp()} condition, reached when EITHER disjunct holds,
-     * so the guard is the natural {@code if} that evaluates the condition once. Such a guard must be kept;
-     * unguarding it (as if the block were a fall-through past an exit test) drops the condition and its side
-     * effect. A fall-through tail's guard is instead a conjunction of negated exit conditions, with no impure
-     * atom under an OR.
+     * True when an impure atom appears under a disjunction in the guard.
      */
     private boolean impureAtomUnderDisjunction(Nnf n, boolean underOr)
     {
@@ -3404,11 +3255,7 @@ public final class ReachingConditionStructurer
 
     /**
      * True when the shared tail {@code c} is reached from {@code dominator} purely by fall-through - every
-     * in-region path from {@code dominator} that does not reach {@code c} first exits (a {@code
-     * continue}/{@code break}/{@code return}/{@code throw}). Such a tail needs no guard: it is emitted after
-     * the dominator's subtree, and control arrives there exactly when it did not already exit. This is the
-     * guard-clause shape {@code if (cond) continue; tail} - guarding {@code tail} with the complement of
-     * {@code cond} would be redundant, and would wrongly re-emit a side-effecting {@code cond}.
+     * in-region path from {@code dominator} that does not reach {@code c} first exits.
      */
     private boolean reachedByFallThrough(IRBlock c, IRBlock dominator)
     {
@@ -3460,23 +3307,7 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * Renders a reaching-condition BDD into an AST condition with common-subexpression elimination. A BDD is
-     * a hash-consed DAG, so a subformula reached along several paths is one shared node; rendering it as a
-     * plain expression tree would re-expand that node once per path - exponential for a reconvergent
-     * (control-flow-flattened) region. This emitter renders each genuinely-shared internal node once, as a
-     * boolean temporary {@code boolean cseN = ...;} that later references reuse, keeping the output linear in
-     * BDD size. A node with a constant branch is a plain {@code &&}/{@code ||}; a genuine if-then-else expands
-     * to {@code (c && high) || (!c && low)} - identical to the pre-CSE emitter.
-     *
-     *Absorbed terms disappear ({@code a || (!a && b)} becomes {@code a || b}). When nothing is shared -
-     * every non-reconvergent method - no temporary is produced and the output is byte-for-byte the pre-CSE
-     * expression.
-     *
-     *A shared node is hoisted into a temporary only when its whole subtree is exception-free
-     * ({@link #subtreeExceptionFree}); hoisting a condition out of its short-circuit position evaluates it
-     * unconditionally, so a subexpression that could throw (a division, a field/array access that could NPE)
-     * must stay inline to preserve which inputs throw. A shared but non-hoistable subgraph large enough to
-     * blow up is declined in {@link #validate} via the {@link #GUARD_COST_CAP} cost gate.
+     * Renders a reaching-condition BDD into an AST condition with common-subexpression elimination.
      */
     private final class BddEmitter
     {
@@ -3502,7 +3333,7 @@ public final class ReachingConditionStructurer
         }
 
         /**
-         * The number of expression nodes this guard would render to, capped at {@link #GUARD_COST_CAP}. Pure.
+         * The number of expression nodes this guard would render to, capped at {@link #GUARD_COST_CAP}.
          */
         long cost()
         {
@@ -3761,8 +3592,7 @@ public final class ReachingConditionStructurer
 
     /**
      * The statements realized on the edge {@code from -> target} when the edge does not recurse into a nested
-     * subtree: a loop break/continue, or a duplicated tail landed here. Null for an ordinary forward edge whose
-     * target is a dominator-child structured in sequence.
+     * subtree.
      */
     private List<Statement> edgeExit(IRBlock from, IRBlock target)
     {
@@ -3799,9 +3629,7 @@ public final class ReachingConditionStructurer
 
     /**
      * True when the edge {@code from -> target} is a switch case body jumping to the enclosing counted loop's
-     * for-update latch, past the switch's own merge/tail: a step-running {@code continue}. Scoped to a case body
-     * (dominated by a case header of the innermost switch) and to a latch distinct from that switch's merge, so an
-     * ordinary fall-through from the merge/tail to the update is not mistaken for a continue.
+     * for-update latch, past the switch's own merge/tail.
      */
     private boolean isCaseContinueToLatch(IRBlock from, IRBlock target)
     {

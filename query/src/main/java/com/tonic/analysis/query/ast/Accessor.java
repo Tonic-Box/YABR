@@ -4,9 +4,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * An immutable, fluent path of {@link Step}s that projects a value (or a sub-subject stream) from a
- * subject - e.g. {@code arg(0).value}, {@code call.descriptor}, {@code method.modifiers}. Pure data:
- * the evaluator interprets it against the attribute registry.
+ * An immutable, fluent path of {@link Step}s that projects a value (or a sub-subject stream) from a subject -
+ * e.g. {@code arg(0).value}, {@code call.descriptor}, {@code method.modifiers}.
  */
 public final class Accessor
 {

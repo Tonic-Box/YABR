@@ -10,13 +10,6 @@ import java.util.*;
 
 /**
  * Def-use query over the values observed by a simulation run.
- *
- * <pre>{@code
- * ValueFlowQuery query = ValueFlowQuery.from(result);
- * IRInstruction origin = query.getDefiningInstruction(value);
- * List<IRInstruction> uses = query.getUses(value);
- * boolean flows = query.flowsTo(source, target);
- * }</pre>
  */
 public class ValueFlowQuery
 {

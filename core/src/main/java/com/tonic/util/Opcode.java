@@ -342,8 +342,7 @@ public enum Opcode
      */
     DASTORE(0x52, "dastore", 0),
     /**
-     * Pops an array reference, an int index and a reference value, and stores the value at that
-     * index; throws ArrayStoreException if the value is not assignable to the component type.
+     * Pops an array reference, an int index and a reference value, and stores the value at that index.
      */
     AASTORE(0x53, "aastore", 0),
     /**
@@ -477,13 +476,11 @@ public enum Opcode
      */
     LREM(0x71, "lrem", 0),
     /**
-     * Pops two floats and pushes the remainder of a truncating division, taking the sign of the
-     * dividend; this is not the IEEE 754 remainder operation.
+     * Pops two floats and pushes the remainder of a truncating division, taking the sign of the dividend.
      */
     FREM(0x72, "frem", 0),
     /**
-     * Pops two doubles and pushes the remainder of a truncating division, taking the sign of the
-     * dividend; this is not the IEEE 754 remainder operation.
+     * Pops two doubles and pushes the remainder of a truncating division, taking the sign of the dividend.
      */
     DREM(0x73, "drem", 0),
     /**
@@ -718,8 +715,7 @@ public enum Opcode
      */
     GOTO(0xA7, "goto", 2),
     /**
-     * Pushes the address of the following instruction and branches by the signed 16-bit offset;
-     * part of the obsolete subroutine mechanism once used for finally blocks.
+     * Pushes the address of the following instruction and branches by the signed 16-bit offset.
      */
     JSR(0xA8, "jsr", 2),
     /**
@@ -728,13 +724,12 @@ public enum Opcode
      */
     RET(0xA9, "ret", 1),
     /**
-     * Pops an int and branches through a table of offsets covering a contiguous key range, or to
-     * the default offset; its operands are aligned to a four-byte boundary and vary in length.
+     * Pops an int and branches through a table of offsets covering a contiguous key range, or to the default
+     * offset.
      */
     TABLESWITCH(0xAA, "tableswitch", -1),
     /**
-     * Pops an int and branches through a sorted table of key-offset pairs, or to the default
-     * offset; its operands are aligned to a four-byte boundary and vary in length.
+     * Pops an int and branches through a sorted table of key-offset pairs, or to the default offset.
      */
     LOOKUPSWITCH(0xAB, "lookupswitch", -1),
 
@@ -797,19 +792,17 @@ public enum Opcode
      */
     INVOKESTATIC(0xB8, "invokestatic", 2),
     /**
-     * Pops the receiver and arguments and invokes an interface method resolved against the
-     * receiver's runtime class; the third operand byte is the argument word count and the fourth
-     * is always zero.
+     * Pops the receiver and arguments and invokes an interface method resolved against the receiver's runtime
+     * class.
      */
     INVOKEINTERFACE(0xB9, "invokeinterface", 4),
     /**
-     * Invokes the dynamically linked target of a call site, running its bootstrap method on first
-     * execution; the last two operand bytes are always zero.
+     * Invokes the dynamically linked target of a call site, running its bootstrap method on first execution.
      */
     INVOKEDYNAMIC(0xBA, "invokedynamic", 4),
     /**
-     * Allocates an uninitialized instance of the class named by the two-byte constant pool index
-     * and pushes the reference; a constructor must still be invoked on it.
+     * Allocates an uninitialized instance of the class named by the two-byte constant pool index and pushes the
+     * reference.
      */
     NEW(0xBB, "new", 2),
     /**
@@ -832,8 +825,8 @@ public enum Opcode
      */
     ATHROW(0xBF, "athrow", 0),
     /**
-     * Checks the reference on top of the stack against the type named by the two-byte constant
-     * pool index, leaving it in place or throwing ClassCastException; null always passes.
+     * Checks the reference on top of the stack against the type named by the two-byte constant pool index, leaving
+     * it in place or throwing ClassCastException.
      */
     CHECKCAST(0xC0, "checkcast", 2),
     /**
@@ -855,8 +848,7 @@ public enum Opcode
      */
     WIDE(0xC4, "wide", -1), // variable-length
     /**
-     * Pops one int length per dimension and pushes a new multidimensional array; the operands are
-     * a two-byte class index and a one-byte dimension count.
+     * Pops one int length per dimension and pushes a new multidimensional array.
      */
     MULTIANEWARRAY(0xC5, "multianewarray", 3),
     /**

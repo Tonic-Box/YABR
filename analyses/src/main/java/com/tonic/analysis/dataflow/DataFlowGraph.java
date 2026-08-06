@@ -11,7 +11,6 @@ import java.util.*;
 
 /**
  * A data flow graph for a single method.
- * Built from SSA form using def-use chains.
  */
 public class DataFlowGraph
 {

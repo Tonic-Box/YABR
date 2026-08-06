@@ -79,8 +79,6 @@ public class ClassHierarchy
 
     /**
      * Finds all classes that declare or inherit a method with the given signature.
-     * This is used to find all classes that need to be updated when renaming a method
-     * through the hierarchy.
      * @param className  The starting class name
      * @param methodName The method name
      * @param descriptor The method descriptor

@@ -19,18 +19,6 @@ import java.util.Set;
 
 /**
  * Folds a dispatch written as a nested chain of constant equality guards back into a {@code switch}:
- * <pre>
- *   if (x != 10) { if (x != 20) { ... return -1; } return 2; } return 1;
- *   ==&gt;  switch (x) { case 10: return 1; case 20: return 2; ...; default: return -1; }
- * </pre>
- * javac compiles a small/sparse {@code switch} (or an {@code if}-chain a programmer wrote) as a chain of
- * {@code selector == const} comparisons; the schema structurer reconstructs the {@code switch} at recovery
- * time, but the reaching-condition engine emits the faithful nested {@code if}s. Recovering the same
- * {@code switch} here keeps the two engines' output in step.
- *
- *Converted only when it is provably equivalent: the same side-effect-free selector is compared against
- * distinct int constants, there are at least {@link #MIN_CASES} cases, and every case body ends in a
- * {@code return}/{@code throw} (so no case falls through). Anything else is left as {@code if}s.
  */
 public class ComparisonChainToSwitch implements ASTTransform
 {
@@ -70,9 +58,6 @@ public class ComparisonChainToSwitch implements ASTTransform
 
     /**
      * If {@code stmts} is a nested equality-guard chain, returns the equivalent {@code switch}; else null.
-     * The chain is {@code [ if (sel != C) { REST } , ...caseBody ]} where {@code caseBody} (the statements
-     * after the {@code if}) is the {@code case C} body and {@code REST} is the next link; the innermost
-     * {@code REST} that no longer matches is the {@code default} body.
      */
     private SwitchStmt tryBuildSwitch(List<Statement> stmts)
     {

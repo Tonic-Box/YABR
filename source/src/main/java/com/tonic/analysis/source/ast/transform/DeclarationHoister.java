@@ -9,19 +9,6 @@ import java.util.*;
 
 /**
  * Moves variable declarations closer to their first use.
- * This transform identifies variable declarations at the start of a method
- * that are initialized with default values (0, null, etc.) and moves them
- * to just before their first use. This produces more natural-looking code.
- * Example before:
- *   long local3 = 0L;
- *   long local5 = 0L;
- *   int local7 = 0;
- *   while (local3 &lt; arg0) { ... }
- *   local5 = System.nanoTime();
- * Example after:
- *   long local3 = 0L;
- *   while (local3 &lt; arg0) { ... }
- *   long local5 = System.nanoTime();
  */
 public class DeclarationHoister implements ASTTransform
 {
@@ -314,9 +301,7 @@ public class DeclarationHoister implements ASTTransform
 
     /**
      * If {@code varName} is used inside exactly one block of an {@code if} statement (and not its controlling
-     * condition), returns that block's statement list as a sink target; otherwise null. Only {@code if} arms
-     * are eligible - loop bodies re-run (a loop-carried variable must not be re-initialized) and switches drive
-     * pattern reconstruction - so the variable's lifetime is genuinely confined to a block that executes once.
+     * condition), returns that block's statement list as a sink target.
      */
     private List<Statement> getSinkTargetBlock(Statement stmt, String varName)
     {

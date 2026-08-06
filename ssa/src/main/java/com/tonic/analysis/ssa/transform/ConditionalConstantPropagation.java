@@ -5,14 +5,8 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.value.*;
 
-import java.util.*;
-
 /**
  * Conditional Constant Propagation (CCP) optimization transform.
- * Propagates constants through conditional branches, eliminating unreachable code:
- * - if (true) { A } else { B } -&gt; A (remove else branch)
- * - if (false) { A } else { B } -&gt; B (remove if branch)
- * - Evaluates constant comparisons at compile time
  */
 public class ConditionalConstantPropagation implements IRTransform
 {
@@ -49,10 +43,12 @@ public class ConditionalConstantPropagation implements IRTransform
                     block.removeInstruction(branch);
                     block.insertInstruction(idx, gotoInstr);
 
-                    block.removeSuccessor(deadBlock);
-                    deadBlock.getPredecessors().remove(block);
-
-                    removePhiEntriesFromBlock(targetBlock, deadBlock);
+                    if (targetBlock != deadBlock)
+                    {
+                        block.removeSuccessor(deadBlock);
+                        deadBlock.getPredecessors().remove(block);
+                        removePhiEntriesForRemovedEdge(block, deadBlock);
+                    }
 
                     changed = true;
                 }
@@ -157,14 +153,14 @@ public class ConditionalConstantPropagation implements IRTransform
         return null;
     }
 
-    private void removePhiEntriesFromBlock(IRBlock block, IRBlock deadPredecessor)
+    /**
+     * Drops the incoming values that {@code removedSuccessor}'s phis carried for {@code from}.
+     */
+    private void removePhiEntriesForRemovedEdge(IRBlock from, IRBlock removedSuccessor)
     {
-        for (IRBlock succ : deadPredecessor.getSuccessors())
+        for (PhiInstruction phi : removedSuccessor.getPhiInstructions())
         {
-            for (PhiInstruction phi : succ.getPhiInstructions())
-            {
-                phi.removeIncoming(deadPredecessor);
-            }
+            phi.removeIncoming(from);
         }
     }
 }

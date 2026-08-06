@@ -5,11 +5,6 @@ import java.util.List;
 
 /**
  * Accumulates the body lines of one LLVM function and vends synthesized temporary names.
- *
- *SSA values are named {@code %v{id}} directly from their {@code SSAValue} id (so phi
- * forward-references and loop back-edges resolve symbolically with no ordering pass). Synthesized
- * intermediates (3-way compare expansion, multi-step conversions) use {@code %t{n}} from
- * {@link #freshTemp()} - a namespace disjoint from {@code %v} ids, so they can never collide.
  */
 final class LlvmFunctionBuilder
 {
@@ -43,9 +38,7 @@ final class LlvmFunctionBuilder
     }
 
     /**
-     * A fresh synthesized block label name, e.g. {@code L0} (referenced as {@code %L0}). Used for
-     * {@code invoke} normal-destination continuations and landingpad blocks - disjoint from the
-     * {@code B{id}} labels minted from IR block ids.
+     * A fresh synthesized block label name, e.g. {@code L0} (referenced as {@code %L0}).
      */
     String freshLabel()
     {

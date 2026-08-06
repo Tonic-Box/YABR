@@ -6,12 +6,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Collects the static fields referenced during lowering and renders module-level global variables
- * for them. Static fields lower to real LLVM globals (so static-field programs stay self-contained
- * and {@code lli}-runnable); a field whose owning class is among those defined in the module gets a
- * defined {@code zeroinitializer} global, otherwise an {@code external global}.
- *
- *Keyed by mangled symbol (deduped); rendered in sorted order for deterministic module output.
+ * Collects the static fields referenced during lowering and renders module-level global variables for them.
  */
 final class GlobalCollector
 {
@@ -36,8 +31,7 @@ final class GlobalCollector
     }
 
     /**
-     * Renders the global definitions. A field whose owner is in {@code definedOwnerClasses} is
-     * defined here ({@code zeroinitializer}); anything else is declared {@code external}.
+     * Renders the global definitions.
      */
     List<String> renderGlobals(Set<String> definedOwnerClasses)
     {

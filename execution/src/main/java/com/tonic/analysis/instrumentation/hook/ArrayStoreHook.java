@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for array store instrumentation.
- * Hooks are called before array store instructions (*ASTORE).
  */
 public class ArrayStoreHook implements Hook
 {

@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for method call interception.
- * Hooks can be called before or after calls to specific methods.
  */
 public class MethodCallHook implements Hook
 {

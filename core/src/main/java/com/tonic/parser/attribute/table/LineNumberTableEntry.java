@@ -2,7 +2,6 @@ package com.tonic.parser.attribute.table;
 
 /**
  * Represents an entry in the LineNumberTable attribute.
- * Maps bytecode offsets to source code line numbers for debugging.
  */
 public class LineNumberTableEntry
 {

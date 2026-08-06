@@ -1,8 +1,8 @@
 package com.tonic.analysis.ssa.llvm;
 
 /**
- * An LLVM operand: a typed register reference ({@code %vN}), synthesized temporary ({@code %tN}),
- * or inline constant literal. Pairs the rendered operand text with its {@link LlvmType}.
+ * An LLVM operand: a typed register reference ({@code %vN}), synthesized temporary ({@code %tN}), or inline
+ * constant literal.
  */
 final class LlvmValue
 {

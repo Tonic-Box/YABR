@@ -25,12 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Rewrites a {@code switch} over {@code String} labels into the two-switch dispatch the JVM can execute:
- * the selector is evaluated once into a temporary, a first switch over {@code hashCode()} narrows to an
- * {@code equals} check per literal (same-hash literals chain within one case) assigning a dense index,
- * and a second switch over the index carries the ORIGINAL case bodies verbatim - breaks, continues and
- * fall-through included. The bytecode switch instruction only dispatches on ints, so a String switch that
- * reaches lowering undesugared loses every case (no label converts) and dispatches straight to default.
+ * Rewrites a {@code switch} over {@code String} labels into the two-switch dispatch the JVM can execute.
  */
 public class StringSwitchDesugar implements ASTTransform
 {

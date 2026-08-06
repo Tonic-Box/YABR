@@ -9,7 +9,6 @@ import com.tonic.parser.constpool.Utf8Item;
 
 /**
  * Filter based on annotation presence.
- * Matches classes/methods that have (or don't have) specific annotations.
  */
 public class AnnotationFilter implements InstrumentationFilter
 {

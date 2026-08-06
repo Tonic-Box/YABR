@@ -11,7 +11,6 @@ import java.util.stream.Stream;
 
 /**
  * Base interface for all AST nodes in the source representation.
- * Implemented by Statement, Expression, and SourceType hierarchies.
  */
 public interface ASTNode
 {
@@ -43,10 +42,7 @@ public interface ASTNode
     <T> T accept(SourceVisitor<T> visitor);
 
     /**
-     * Clears the parent of a node that {@code parent} no longer holds. Replacing one child with another must
-     * not orphan the old one when it has already been re-attached - a new condition built AROUND the old one,
-     * or two children swapped, both leave the "former" child still in the tree. Anything reasoning about
-     * scope by walking parents reads such a node as living outside every block it is actually inside.
+     * Clears the parent of a node that {@code parent} no longer holds.
      * @param formerChild the node the parent used to hold, may be null
      * @param parent the node that replaced it
      */
@@ -67,9 +63,7 @@ public interface ASTNode
     }
 
     /**
-     * Lists the direct children a node holds, in source order. Overridden by every node that has
-     * any; the traversal helpers on this interface are built on it, so a node that omits a child
-     * here is invisible to all of them.
+     * Lists the direct children a node holds, in source order.
      *
      * @return the direct children, empty for a leaf
      */
@@ -240,7 +234,6 @@ public interface ASTNode
 
     /**
      * Creates a deep clone of this node and its entire subtree.
-     * The cloned tree has no parent (becomes a new root).
      * @return a deep copy of this node
      */
     default ASTNode deepClone()
@@ -260,7 +253,6 @@ public interface ASTNode
 
     /**
      * Removes this node from its parent.
-     * Only works for nodes in lists (e.g., statements in blocks, arguments in calls).
      * @return true if removal was successful
      */
     default boolean remove()

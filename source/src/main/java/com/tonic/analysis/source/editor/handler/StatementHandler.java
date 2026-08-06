@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Base interface for handling statements during AST editing.
- * Implementations receive each statement and can return a replacement action.
  */
 @FunctionalInterface
 public interface StatementHandler

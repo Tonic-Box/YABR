@@ -10,12 +10,6 @@ import java.util.List;
 
 /**
  * Strength Reduction optimization transform.
- * Replaces expensive operations with cheaper equivalents:
- * - x * 2^n  -&gt;  x &lt;&lt; n  (multiplication by power of 2)
- * - x / 2^n  -&gt;  x &gt;&gt; n  (division by power of 2, positive only)
- * - x % 2^n  -&gt;  x &amp; (2^n - 1)  (modulo by power of 2, positive only)
- * - x * 0    -&gt;  0
- * - x * 1    -&gt;  x
  */
 public class StrengthReduction implements IRTransform
 {
@@ -35,16 +29,11 @@ public class StrengthReduction implements IRTransform
         {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (int i = 0; i < instructions.size(); i++)
-            {
-                IRInstruction instr = instructions.get(i);
-
-                if (instr instanceof BinaryOpInstruction)
-                {
+            for (IRInstruction instr : instructions) {
+                if (instr instanceof BinaryOpInstruction) {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     IRInstruction replacement = tryReduce(binOp);
-                    if (replacement != null)
-                    {
+                    if (replacement != null) {
                         replacement.setBlock(block);
                         int idx = block.getInstructions().indexOf(instr);
                         block.removeInstruction(instr);

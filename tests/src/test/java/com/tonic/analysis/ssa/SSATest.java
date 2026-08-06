@@ -1,7 +1,6 @@
 package com.tonic.analysis.ssa;
 
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
@@ -227,13 +226,6 @@ class SSATest
     void withLoopPredicationAddsTransform()
     {
         SSA result = ssa.withLoopPredication();
-        assertSame(ssa, result);
-    }
-
-    @Test
-    void withInductionVariableSimplificationAddsTransform()
-    {
-        SSA result = ssa.withInductionVariableSimplification();
         assertSame(ssa, result);
     }
 

@@ -10,19 +10,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Collapses the multi-step synthesized temporaries the YABR lowerer emits back to the single IR
- * instructions they originated from.
- *
- *Three patterns, all recognised by structure on the raw RHS strings stored in
- * {@link FunctionLifter#temps}:
- * - Shift - optional {@code zext} + {@code and %amount, 31|63} + {@code shl|ashr|lshr %value, %t<mask>}
- *       -&gt; {@link BinaryOpInstruction}(SHL|SHR|USHR, value, original-amount).
- * - Narrowing conversion - {@code trunc i32 %src to i8|i16} +
- *       {@code sext|zext i8|i16 %t to i32} -&gt; {@link UnaryOpInstruction}(I2B|I2C|I2S, src).
- * - 3-way compare - 4-line integer form or 6-line float/double-with-NaN form
- *       -&gt; {@link BinaryOpInstruction}(LCMP|FCMPL|FCMPG|DCMPL|DCMPG, left, right).
- * Unrecognised {@code %t<n>} temporaries that ended up used as SSA-value operands are left in
- * place; DCE in the subsequent {@code SSA.withDeadCodeElimination()} pass prunes unused ones.
+ * Collapses the multi-step synthesized temporaries the YABR lowerer emits back to the single IR instructions
+ * they originated from.
  */
 final class TempFoldingPass
 {

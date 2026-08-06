@@ -20,7 +20,6 @@ public final class NewExpr implements Expression
 
     /**
      * The enclosing instance for inner class creation (e.g., outer.new Inner()).
-     * Null for regular class instantiation.
      */
     private Expression enclosingInstance;
     /**

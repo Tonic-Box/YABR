@@ -7,11 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A decoded, structuring-ready view of a native int/enum {@code switch}: everything the switch decoders own
- * (selector expression, enum-constant labels, merge block, case ordering) resolved up front, so the
- * reaching-condition engine can structure the case bodies itself rather than delegating them to the opaque
- * legacy switch recovery. Produced by {@link RegionRecoveryBridge#decodeSwitch(IRBlock)}, which returns null
- * for shapes the engine does not own (string, pattern, comparison-chain synthesized switches).
+ * A decoded, structuring-ready view of a native int/enum {@code switch}.
  */
 public final class SwitchDescriptor
 {
@@ -109,9 +105,7 @@ public final class SwitchDescriptor
     }
 
     /**
-     * One case of a decoded switch. A non-default case carries either integer labels or (for an enum switch whose
-     * constants resolved) expression labels, and the entry block of its body. The default case has {@code isDefault}
-     * set and a null {@code header} when it is empty (its target is the merge).
+     * One case of a decoded switch.
      */
     public static final class CaseSpec
     {

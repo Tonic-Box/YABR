@@ -160,10 +160,7 @@ public abstract class IRInstruction
     }
 
     /**
-     * Identity by {@code id}. Each instruction gets a unique id from the counter
-     * (reset per lift in {@link com.tonic.analysis.ssa.lift.BytecodeLifter}; copies
-     * receive fresh ids), so this matches object identity in every collection scope
-     * while giving deterministic hashing/iteration order across runs.
+     * Identity by {@code id}.
      */
     @Override
     public boolean equals(Object o)
@@ -179,7 +176,6 @@ public abstract class IRInstruction
 
     /**
      * Creates a copy of this instruction with new result and operands.
-     * Subclasses should override for proper deep copying.
      * @param newResult the new result value (may be null)
      * @param newOperands the new operand values
      * @return a copy of this instruction, or null if copying not supported
@@ -191,7 +187,6 @@ public abstract class IRInstruction
 
     /**
      * Replaces a target block in terminator instructions.
-     * Only meaningful for branch/jump instructions.
      * @param oldTarget the block to replace
      * @param newTarget the replacement block
      */

@@ -157,8 +157,8 @@ public class SimValue
     }
 
     /**
-     * Folds a collection into one value, unioning points-to sets and widening
-     * disagreeing null states to MAYBE_NULL; the type and source come from the first element.
+     * Folds a collection into one value, unioning points-to sets and widening disagreeing null states to
+     * MAYBE_NULL.
      *
      * @param values values to merge
      * @return null if the collection is null or empty, the sole element if there is one,
@@ -177,7 +177,6 @@ public class SimValue
 
         Iterator<SimValue> it = values.iterator();
         SimValue first = it.next();
-        IRType mergedType = first.type;
         Set<AllocationSite> mergedPointsTo = new HashSet<>(first.pointsTo);
         NullState mergedNullState = first.nullState;
 
@@ -188,7 +187,7 @@ public class SimValue
             mergedNullState = mergeNullStates(mergedNullState, other.nullState);
         }
 
-        return new SimValue(mergedType, first.sourceInstruction, null, null, mergedPointsTo, mergedNullState);
+        return new SimValue(first.type, first.sourceInstruction, null, null, mergedPointsTo, mergedNullState);
     }
 
     private static NullState mergeNullStates(NullState a, NullState b)
@@ -362,8 +361,8 @@ public class SimValue
     }
 
     /**
-     * Merges another value into this one, unioning points-to sets and widening
-     * disagreeing null states to MAYBE_NULL; the SSA value and constant are dropped.
+     * Merges another value into this one, unioning points-to sets and widening disagreeing null states to
+     * MAYBE_NULL.
      *
      * @param other value to merge, may be null
      * @return this value if the other is null or equal, otherwise the merged value

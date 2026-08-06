@@ -9,7 +9,6 @@ import java.io.IOException;
 
 /**
  * Base class for stack map frames in the StackMapTable attribute.
- * Stack map frames describe the type state at specific bytecode offsets.
  */
 public abstract class StackMapFrame
 {

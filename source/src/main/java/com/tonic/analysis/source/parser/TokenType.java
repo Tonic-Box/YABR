@@ -56,8 +56,7 @@ public enum TokenType
 
     // Keywords (Java 11)
     /**
-     * Modifier for a type or method declared without an implementation. First of the reserved
-     * words, so it opens the range isKeyword accepts.
+     * Modifier for a type or method declared without an implementation.
      */
     ABSTRACT,
     /**
@@ -264,8 +263,7 @@ public enum TokenType
      */
     VOLATILE,
     /**
-     * Introduces a while loop, and closes a do-while. Last of the reserved words, so it ends the
-     * range isKeyword accepts.
+     * Introduces a while loop, and closes a do-while.
      */
     WHILE,
 
@@ -400,8 +398,7 @@ public enum TokenType
 
     // Compound Assignment
     /**
-     * Adds to the target in place; also the in-place string append. First of the compound
-     * assignments, which are the range isAssignmentOperator accepts.
+     * Adds to the target in place; also the in-place string append.
      */
     PLUS_EQ,        // +=
     /**
@@ -441,8 +438,7 @@ public enum TokenType
      */
     GT_GT_EQ,       // >>=
     /**
-     * Zero-filling right-shifts the target in place. Last of the compound assignments, which are
-     * the range isAssignmentOperator accepts.
+     * Zero-filling right-shifts the target in place.
      */
     GT_GT_GT_EQ,    // >>>=
 

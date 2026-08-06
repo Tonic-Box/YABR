@@ -7,7 +7,6 @@ import java.io.IOException;
 
 /**
  * Represents a SameLocals1StackItemFrame in the StackMapTable attribute.
- * Used when the frame has the same locals as the previous frame and one stack item.
  */
 public class SameLocals1StackItemFrame extends StackMapFrame
 {

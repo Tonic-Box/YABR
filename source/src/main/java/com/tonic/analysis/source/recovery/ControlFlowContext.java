@@ -224,9 +224,7 @@ public class ControlFlowContext
     }
 
     /**
-     * Marks a block as emitted so it is not recovered a second time. Setting the
-     * "yabr.debug.mark" system property to a bytecode offset dumps a stack trace
-     * the first time that block is marked.
+     * Marks a block as emitted so it is not recovered a second time.
      *
      * @param block the block to mark
      * @throws NumberFormatException if "yabr.debug.mark" is not an integer
@@ -251,10 +249,8 @@ public class ControlFlowContext
     }
 
     /**
-     * Clears the emitted-block marks and their cached statements so a fresh recovery pass over the same
-     * method starts clean. The legacy walk is self-idempotent (it tracks visited blocks locally), but the
-     * reaching-condition engine reads these marks to emit each block once - without a reset, a second
-     * {@code recover()} on the same instance would see every block already emitted and produce nothing.
+     * Clears the emitted-block marks and their cached statements so a fresh recovery pass over the same method
+     * starts clean.
      */
     public void resetProcessedBlocks()
     {
@@ -335,9 +331,7 @@ public class ControlFlowContext
     }
 
     /**
-     * An enclosing loop: its header (label anchor), continue-target (latch/increment) and exit block. {@code depth}
-     * is the number of enclosing break/continue scopes (loops and switches) at push time, so a jump can tell whether
-     * this loop is the innermost break scope across both stacks.
+     * An enclosing loop: its header (label anchor), continue-target (latch/increment) and exit block.
      */
     public static final class LoopFrame
     {
@@ -357,9 +351,7 @@ public class ControlFlowContext
     }
 
     /**
-     * An enclosing {@code switch}: its {@code merge} (where a case ends and control leaves the switch) and its
-     * {@code caseHeaders} (the sibling case entries, i.e. fall-through targets). A switch captures an unlabeled
-     * {@code break} but not an unlabeled {@code continue}.
+     * An enclosing {@code switch}.
      */
     public static final class SwitchFrame
     {
@@ -382,7 +374,7 @@ public class ControlFlowContext
     public enum JumpKind { BREAK, CONTINUE }
 
     /**
-     * A break/continue jump. {@code loopHeader} is null for the innermost loop (unlabeled), else the labeled target.
+     * A break/continue jump.
      */
     public static final class LoopJump
     {
@@ -433,11 +425,7 @@ public class ControlFlowContext
     }
 
     /**
-     * As {@link #pushLoop(IRBlock, IRBlock, IRBlock)} but records the loop's {@code for}-update latch (the unit
-     * induction step that back-edges to the header). The latch is exposed via {@link #innermostLoopLatch()} so a
-     * switch case whose {@code continue} jumps past the switch's own tail to the update can be recognized; it is
-     * deliberately NOT a {@link #classifyLoopJump} continue-target, since a plain loop body reaches its update by
-     * ordinary fall-through and must not be rewritten into explicit {@code continue}s.
+     * As {@link #pushLoop(IRBlock, IRBlock, IRBlock)} but records the loop's {@code for}-update latch.
      *
      * @param header the loop header, used as the label anchor
      * @param continueTarget where a continue jumps to
@@ -514,10 +502,7 @@ public class ControlFlowContext
     }
 
     /**
-     * The boundaries - case headers and merge - of every currently enclosing {@code switch}. Captured before a
-     * nested switch is pushed, this identifies the targets that belong to an OUTER switch (its next case reached by
-     * fall-through, or its merge): a nested switch must emit such a target as an empty fall-through and not claim it
-     * as one of its own case bodies, else the outer cases nest wrongly inside the inner switch.
+     * The boundaries - case headers and merge - of every currently enclosing {@code switch}.
      *
      * @return the case headers and merges of every enclosing switch
      */
@@ -536,9 +521,8 @@ public class ControlFlowContext
     }
 
     /**
-     * True when {@code block} lies in a case body of the innermost enclosing switch (is dominated by one of its case
-     * headers). Distinguishes a case-body edge to the loop latch (a {@code continue} that skips the switch's tail)
-     * from the switch merge's own fall-through to the latch (the merge is dominated by no single case header).
+     * True when {@code block} lies in a case body of the innermost enclosing switch (is dominated by one of its
+     * case headers).
      *
      * @param block the block to locate
      * @return true if a case header of the innermost switch dominates it
@@ -561,12 +545,7 @@ public class ControlFlowContext
     }
 
     /**
-     * Classifies a control-flow edge into {@code target}: a {@code break} when {@code target} is a loop's exit, a
-     * {@code continue} when it is a loop's continue-target. A jump is unlabeled only when its loop is the innermost
-     * scope of the relevant kind: for {@code break}, the innermost of all loops and switches (an enclosing loop broken
-     * across a switch or inner loop is labeled, since a bare {@code break} would leave the switch or inner loop); for
-     * {@code continue}, the innermost loop (switches do not capture {@code continue}). Returns null when {@code target}
-     * is not a loop boundary.
+     * Classifies a control-flow edge into {@code target}.
      *
      * @param target the edge destination
      * @return the loop jump and its label anchor, or null when the target is not a loop boundary
@@ -590,10 +569,7 @@ public class ControlFlowContext
     }
 
     /**
-     * Classifies an edge into {@code target} relative to the innermost {@code switch}: {@code BREAK_SWITCH} when it is
-     * that switch's merge (the case ends and control leaves the switch), {@code FALL_THROUGH} when it is a sibling case
-     * header. Returns null when {@code target} is not an innermost-switch boundary. A loop boundary takes precedence and
-     * must be classified with {@link #classifyLoopJump} first.
+     * Classifies an edge into {@code target} relative to the innermost {@code switch}.
      *
      * @param target the edge destination
      * @return the switch jump, or null when the target is not an innermost-switch boundary
@@ -654,7 +630,6 @@ public class ControlFlowContext
 
     /**
      * Pops the current stop blocks from the stack.
-     * Used when exiting a control structure.
      */
     public void popStopBlocks()
     {
@@ -887,7 +862,6 @@ public class ControlFlowContext
 
     /**
      * Represents a field by its owner class and field name.
-     * Used for semantic identity tracking across SSAValues.
      */
     public static class FieldKey
     {

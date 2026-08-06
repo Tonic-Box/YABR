@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for method entry instrumentation.
- * Hooks are called at the beginning of methods, before any user code executes.
  */
 public class MethodEntryHook implements Hook
 {

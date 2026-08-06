@@ -1,10 +1,8 @@
 package com.tonic.analysis.source.recovery.rcs;
 
 /**
- * A node of a reduced, ordered, hash-consed binary decision diagram (ROBDD) over boolean variables
- * identified by a non-negative {@code var} index (a lower index sits higher in the diagram). Because
- * {@link BddFactory} interns every node and never creates a node whose branches are identical, two
- * formulas are logically equivalent iff they are the same object - equivalence is reference identity.
+ * A node of a reduced, ordered, hash-consed binary decision diagram (ROBDD) over boolean variables identified
+ * by a non-negative {@code var} index.
  */
 final class Bdd
 {

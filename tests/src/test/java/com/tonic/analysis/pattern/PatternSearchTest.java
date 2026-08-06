@@ -119,13 +119,6 @@ class PatternSearchTest
         assertSame(search, result);
     }
 
-    @Test
-    void withTypeInferenceReturnsThis()
-    {
-        PatternSearch result = search.withTypeInference();
-        assertSame(search, result);
-    }
-
     // Basic Pattern Search Tests
 
     @Test
@@ -374,7 +367,6 @@ class PatternSearchTest
             .inClass("com/test/SearchTestClass")
             .withCallGraph()
             .withDependencies()
-            .withTypeInference()
             .limit(100);
 
         assertSame(search, result);

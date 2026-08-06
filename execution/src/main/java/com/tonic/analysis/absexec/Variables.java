@@ -1,8 +1,7 @@
 package com.tonic.analysis.absexec;
 
 /**
- * The abstract local-variable table: an array of {@link VarCtx} indexed by slot. Copy-constructed when a
- * {@link Frame} forks at a branch.
+ * The abstract local-variable table: an array of {@link VarCtx} indexed by slot.
  */
 public final class Variables
 {

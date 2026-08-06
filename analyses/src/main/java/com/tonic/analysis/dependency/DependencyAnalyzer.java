@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 /**
  * Analyzes class dependencies by scanning constant pools.
- * Provides queries for dependency relationships and circular dependency detection.
  */
 public class DependencyAnalyzer
 {

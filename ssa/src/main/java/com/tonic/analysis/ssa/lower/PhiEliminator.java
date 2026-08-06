@@ -10,10 +10,7 @@ import com.tonic.analysis.ssa.value.*;
 import java.util.*;
 
 /**
- * Eliminates phi functions by inserting copies in predecessor blocks, splitting critical edges
- * where needed. An incomplete phi (fewer incoming values than predecessors) also gets
- * default-value copies on the missing paths, since the verifier requires every local slot to be
- * initialized on all control-flow paths.
+ * Eliminates phi functions by inserting copies in predecessor blocks, splitting critical edges where needed.
  */
 public class PhiEliminator
 {
@@ -33,13 +30,7 @@ public class PhiEliminator
     }
 
     /**
-     * Finds phis whose value can stay on the operand stack across the merge instead of being spilled to a local
-     * (javac's shape for a short-circuit boolean used as a value). Eligible when: the merge holds only this phi;
-     * every predecessor's sole successor is the merge, reached by an unconditional goto that leaves exactly the
-     * incoming value on top of the stack (the incoming is the predecessor's last non-terminator instruction and
-     * its only use is this phi); and the phi result is consumed within the merge as the first stack operand of
-     * its first instruction (so it is never buried under an unrelated push). Records the result and incoming
-     * values so the register allocator skips slots for them and the emitter keeps them stack-resident.
+     * Finds phis whose value can stay on the operand stack across the merge instead of being spilled to a local.
      */
     private Set<PhiInstruction> findStackResidentPhis(IRMethod method)
     {
@@ -206,10 +197,8 @@ public class PhiEliminator
     }
 
     /**
-     * Whether {@code pred}'s last real instruction produces {@code value} for this merge alone - the case
-     * where the value is simply left where it already is. Anything else (a parameter, a value shared with
-     * other uses, one computed earlier) is re-materialized onto the stack at the predecessor's tail by
-     * {@link #materializeForeignIncomings} instead.
+     * Whether {@code pred}'s last real instruction produces {@code value} for this merge alone - the case where
+     * the value is simply left where it already is.
      */
     private boolean producedAtTail(IRBlock pred, SSAValue value)
     {
@@ -230,8 +219,7 @@ public class PhiEliminator
 
     /**
      * Rewrites each incoming that is not already sitting on the predecessor's stack into a copy at the
-     * predecessor's tail. The copy's result is stack-resident, so the emitter pushes the source and leaves it
-     * on top - exactly what the merge expects - while the source itself keeps its slot and its other uses.
+     * predecessor's tail.
      */
     private void materializeForeignIncomings(PhiInstruction phi)
     {
@@ -464,7 +452,7 @@ public class PhiEliminator
     /**
      * Whether {@code src} (following its operand chain within {@code pred}) reads a merge phi result other than
      * {@code selfPhi} - i.e. this copy's value depends on a different loop-carried variable that another copy on
-     * the same edge overwrites. Phi results are read boundaries: the walk stops at any of them.
+     * the same edge overwrites.
      */
     private boolean readsOtherMergePhi(Value src, SSAValue selfPhi, Set<SSAValue> mergePhiResults, IRBlock pred)
     {

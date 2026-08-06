@@ -19,12 +19,6 @@ import static com.tonic.util.Opcode.*;
 
 /**
  * Generates StackMapTable frames for a method.
- * Uses FULL_FRAME for all entries (simple and always valid).
- * Usage:
- * <pre>
- * FrameGenerator gen = new FrameGenerator(constPool);
- * List&lt;StackMapFrame&gt; frames = gen.computeFrames(methodEntry);
- * </pre>
  */
 public class FrameGenerator
 {
@@ -102,9 +96,7 @@ public class FrameGenerator
     }
 
     /**
-     * Computes the true {@code max_stack} over the method's control-flow graph: the peak operand-stack
-     * depth (in slots) across every reachable program point - including loop back-edges, join points,
-     * and exception-handler entry states. Unlike a linear textual scan this never under-reports.
+     * Computes the true {@code max_stack} over the method's control-flow graph.
      * @param method the method to analyze
      * @return the CFG-correct max_stack in slots (0 if the method has no code)
      */
@@ -119,9 +111,8 @@ public class FrameGenerator
     }
 
     /**
-     * The max operand-stack depth (slots) observed by the most recent {@link #computeFrames} /
-     * {@link #computeMaxStack} run. Valid only after the worklist has run (i.e. when the method had
-     * frame targets, or after {@link #computeMaxStack}).
+     * The max operand-stack depth (slots) observed by the most recent {@link #computeFrames} / {@link
+     * #computeMaxStack} run.
      *
      * @return the observed peak stack depth in slots
      */
@@ -228,8 +219,8 @@ public class FrameGenerator
     }
 
     /**
-     * Whether this instruction transfers control unconditionally, so the following instruction cannot be
-     * reached by fall-through and begins a new basic block (requiring a frame).
+     * Whether this instruction transfers control unconditionally, so the following instruction cannot be reached
+     * by fall-through and begins a new basic block.
      */
     private boolean isUnconditionalTransfer(Instruction instr)
     {

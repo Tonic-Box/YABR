@@ -18,7 +18,7 @@ public class DStoreInstruction extends Instruction implements LocalVarInstructio
      * Constructs a DStoreInstruction.
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to store. For DSTORE_0-3, this is 0-3 respectively.
+     * @param varIndex The index of the local variable to store.
      */
     public DStoreInstruction(int opcode, int offset, int varIndex)
     {

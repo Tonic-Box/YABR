@@ -6,10 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shared primitives for emitting {@code LocalVariableTable} entries, used by both LVT builders: the
- * lowering-side one (source-local model + register allocation) and the recovery-side one (decompiler slot
- * partition + original offsets). Keeps entry construction, well-formedness validation, and same-slot overlap
- * removal in one place so the two builders don't duplicate them.
+ * Shared primitives for emitting {@code LocalVariableTable} entries, used by both LVT builders.
  */
 public final class LvtSupport
 {

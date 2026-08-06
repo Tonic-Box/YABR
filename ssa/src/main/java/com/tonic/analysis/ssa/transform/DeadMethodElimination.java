@@ -13,12 +13,6 @@ import static com.tonic.util.Opcode.*;
 
 /**
  * Dead method elimination optimization.
- * Removes private methods that are never called from the class.
- * This is typically run after method inlining to clean up helper methods
- * that have been fully inlined.
- * Note: This only removes private methods to ensure we don't break
- * external callers. Public, protected, and package-private methods
- * are preserved as they may be called from outside the class.
  */
 public class DeadMethodElimination implements ClassTransform
 {
@@ -154,12 +148,7 @@ public class DeadMethodElimination implements ClassTransform
             return true;
         }
 
-        if (!Modifier.isPrivate(access))
-        {
-            return true;
-        }
-
-        return false;
+        return !Modifier.isPrivate(access);
     }
 
     /**
@@ -212,7 +201,7 @@ public class DeadMethodElimination implements ClassTransform
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception ignored)
         {
         }
         return null;
@@ -252,7 +241,7 @@ public class DeadMethodElimination implements ClassTransform
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception ignored)
         {
         }
         return null;
@@ -292,7 +281,7 @@ public class DeadMethodElimination implements ClassTransform
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception ignored)
         {
         }
         return null;

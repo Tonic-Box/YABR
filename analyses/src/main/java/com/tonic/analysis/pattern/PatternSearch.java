@@ -14,10 +14,7 @@ import com.tonic.analysis.typeinference.TypeState;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Fluent search API over a ClassPool for code patterns, optionally backed by call-graph,
@@ -31,7 +28,6 @@ public class PatternSearch
     private final List<MethodEntry> targetMethods;
     private CallGraph callGraph;
     private DependencyAnalyzer dependencyAnalyzer;
-    private boolean useTypeInference;
     private int maxResults = Integer.MAX_VALUE;
 
     /**
@@ -43,7 +39,6 @@ public class PatternSearch
         this.classPool = classPool;
         this.targetClasses = new ArrayList<>();
         this.targetMethods = new ArrayList<>();
-        this.useTypeInference = false;
     }
 
     // Scope Configuration
@@ -84,8 +79,15 @@ public class PatternSearch
      */
     public PatternSearch inPackage(String packagePrefix)
     {
-        // Would need to iterate classPool's internal list
-        // For now, this is a placeholder - implementation depends on ClassPool API
+        String prefix = packagePrefix.replace('.', '/');
+        for (ClassFile cf : classPool.getClasses())
+        {
+            String name = cf.getClassName();
+            if (name != null && name.replace('.', '/').startsWith(prefix))
+            {
+                targetClasses.add(cf);
+            }
+        }
         return this;
     }
 
@@ -170,17 +172,6 @@ public class PatternSearch
     public PatternSearch withDependencies()
     {
         this.dependencyAnalyzer = new DependencyAnalyzer(classPool);
-        return this;
-    }
-
-    /**
-     * Enables type inference so nullability-aware searches can run.
-     *
-     * @return this search
-     */
-    public PatternSearch withTypeInference()
-    {
-        this.useTypeInference = true;
         return this;
     }
 
@@ -455,7 +446,6 @@ public class PatternSearch
 
     /**
      * Finds calls and field reads whose receiver type inference cannot prove non-null.
-     * Methods that fail to lift or analyze are skipped.
      *
      * @return one result per suspect dereference, up to the result limit
      */

@@ -133,8 +133,7 @@ public final class TypeUtils
      */
     public static boolean isBoolean(SourceType type)
     {
-        return type instanceof PrimitiveSourceType &&
-               ((PrimitiveSourceType) type) == PrimitiveSourceType.BOOLEAN;
+        return type == PrimitiveSourceType.BOOLEAN;
     }
 
     /**
@@ -216,7 +215,6 @@ public final class TypeUtils
 
     /**
      * Joins two types: primitives by numeric promotion, anything else to Object.
-     * No hierarchy walk is done, so unequal references never join tighter than Object.
      *
      * @param a the first type, or null
      * @param b the second type, or null
@@ -259,8 +257,7 @@ public final class TypeUtils
     }
 
     /**
-     * Decides assignability by identity, primitive widening, or a reference going
-     * to Object. No hierarchy walk is done, so other reference pairs report false.
+     * Decides assignability by identity, primitive widening, or a reference going to Object.
      *
      * @param from the source type
      * @param to the target type
@@ -279,10 +276,7 @@ public final class TypeUtils
         if (isReference(from) && to instanceof ReferenceSourceType)
         {
             ReferenceSourceType refTo = (ReferenceSourceType) to;
-            if ("java/lang/Object".equals(refTo.getInternalName()))
-            {
-                return true;
-            }
+            return "java/lang/Object".equals(refTo.getInternalName());
         }
 
         return false;

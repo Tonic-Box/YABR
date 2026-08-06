@@ -15,8 +15,7 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**
- * A class-level transform that replaces calls to private, final, and static methods with the
- * callee's body; it runs over the whole class because resolving call targets needs every method.
+ * A class-level transform that replaces calls to private, final, and static methods with the callee's body.
  */
 public class MethodInlining implements ClassTransform
 {
@@ -54,7 +53,7 @@ public class MethodInlining implements ClassTransform
             if (method.getName().startsWith("<")) continue;
 
             currentDepth = 0;
-            if (inlineMethodCalls(classFile, ssa, method, methodMap, className))
+            if (inlineMethodCalls(ssa, method, methodMap, className))
             {
                 changed = true;
             }
@@ -66,7 +65,7 @@ public class MethodInlining implements ClassTransform
     /**
      * Processes a method to inline eligible call sites.
      */
-    private boolean inlineMethodCalls(ClassFile classFile, SSA ssa, MethodEntry caller, Map<String, MethodEntry> methodMap, String className)
+    private boolean inlineMethodCalls(SSA ssa, MethodEntry caller, Map<String, MethodEntry> methodMap, String className)
     {
         boolean changed = false;
         boolean madeProgress;
@@ -87,7 +86,7 @@ public class MethodInlining implements ClassTransform
 
             for (InlineCandidate candidate : candidates)
             {
-                if (inlineCall(ssa, callerIR, candidate, methodMap))
+                if (inlineCall(ssa, callerIR, candidate))
                 {
                     madeProgress = true;
                     changed = true;
@@ -177,23 +176,18 @@ public class MethodInlining implements ClassTransform
             return false;
         }
 
-        if (code.getExceptionTable().size() > 0)
+        if (!code.getExceptionTable().isEmpty())
         {
             return false;
         }
 
-        if (currentDepth >= MAX_INLINE_DEPTH)
-        {
-            return false;
-        }
-
-        return true;
+        return currentDepth < MAX_INLINE_DEPTH;
     }
 
     /**
      * Performs the actual inlining of a call site.
      */
-    private boolean inlineCall(SSA ssa, IRMethod callerIR, InlineCandidate candidate, Map<String, MethodEntry> methodMap)
+    private boolean inlineCall(SSA ssa, IRMethod callerIR, InlineCandidate candidate)
     {
         currentDepth++;
 
@@ -220,7 +214,7 @@ public class MethodInlining implements ClassTransform
                 return false;
             }
 
-            IRBlock continuationBlock = splitBlockAtInvoke(callerIR, callBlock, invokeIndex, invoke);
+            IRBlock continuationBlock = splitBlockAtInvoke(callerIR, callBlock, invokeIndex);
 
             SSAValue resultValue = invoke.getResult();
             handleReturns(clonedCallee, resultValue, continuationBlock);
@@ -288,20 +282,13 @@ public class MethodInlining implements ClassTransform
             entryBlock.insertInstruction(0, copies.get(i));
         }
 
-        removeDeadLocalInstructions(clonedCallee, replacedParams);
+        removeDeadLocalInstructions(clonedCallee);
     }
 
     /**
      * Removes ALL LoadLocalInstruction and StoreLocalInstruction from inlined code.
-     * After SSA conversion, LoadLocalInstruction and StoreLocalInstruction are artifacts
-     * that were used during lifting but are no longer needed. The VariableRenamer has
-     * already replaced their results with SSA values. Keeping them causes incorrect
-     * bytecode to be emitted because:
-     * 1. LoadLocalInstruction references stale local indices from the original callee
-     * 2. StoreLocalInstruction stores to indices that don't exist in the caller's frame
-     * In proper SSA form, all data flow is through SSAValue uses, not local variable slots.
      */
-    private void removeDeadLocalInstructions(IRMethod method, Set<SSAValue> replacedValues)
+    private void removeDeadLocalInstructions(IRMethod method)
     {
         for (IRBlock block : method.getBlocks())
         {
@@ -329,7 +316,7 @@ public class MethodInlining implements ClassTransform
     /**
      * Splits a block at the invoke instruction, creating a continuation block.
      */
-    private IRBlock splitBlockAtInvoke(IRMethod callerIR, IRBlock callBlock, int invokeIndex, InvokeInstruction invoke)
+    private IRBlock splitBlockAtInvoke(IRMethod callerIR, IRBlock callBlock, int invokeIndex)
     {
         IRBlock continuationBlock = new IRBlock("continue_" + inlineCount);
         callerIR.addBlock(continuationBlock);
@@ -369,7 +356,6 @@ public class MethodInlining implements ClassTransform
 
     /**
      * Handles return instructions in the inlined code.
-     * Replaces returns with gotos to the continuation block.
      */
     private void handleReturns(IRMethod clonedCallee, SSAValue resultValue, IRBlock continuationBlock)
     {

@@ -8,8 +8,7 @@ import java.util.*;
 import java.util.function.Predicate;
 
 /**
- * Intraprocedural slicer over a program dependence graph; interprocedural edges are never
- * followed, and control or data dependences can each be switched off.
+ * Intraprocedural slicer over a program dependence graph.
  */
 public class PDGSlicer
 {

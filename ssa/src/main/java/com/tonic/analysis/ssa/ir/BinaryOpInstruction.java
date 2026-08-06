@@ -123,8 +123,7 @@ public class BinaryOpInstruction extends IRInstruction
     }
 
     /**
-     * Swaps the two operands in place. Valid only for commutative ops; the operand set is unchanged so the
-     * use-lists need no update. Lets a canonical-ordering pass reorder {@code a op b} to {@code b op a}.
+     * Swaps the two operands in place.
      */
     public void swapOperands()
     {

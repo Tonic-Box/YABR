@@ -26,11 +26,6 @@ import com.tonic.util.DescriptorUtil;
 /**
  * Computes the operand-stack / local-variable effect of one bytecode instruction during abstract execution,
  * building the def-use links on the {@link InsnContext} and driving branch/jump/stop on the {@link Frame}.
- *
- *Mirrors the opcode dispatch of the SSA lifter's {@code InstructionTranslator} but produces def-use
- * instead of SSA. Each value (including long/double) is one logical {@link StackCtx}, so pop/push counts are
- * simple. Instructions the deobfuscators inspect (fields, constants, multiplies, dup/swap, loads/stores,
- * branches) are modelled precisely; the rest fall back to {@link Instruction#getStackChange()}.
  */
 final class EffectDispatcher
 {
@@ -105,7 +100,7 @@ final class EffectDispatcher
             case 0x5B: dupX2(ictx, stack); return; // dup_x2
             case 0x5C: dup2(ictx, stack); return; // dup2
             case 0x5D: case 0x5E: dup2Generic(ictx, stack, op); return; // dup2_x1 / dup2_x2 (conservative)
-            case 0x5F: swap(ictx, stack); return; // swap
+            case 0x5F: swap(stack); return; // swap
 
             // binary arithmetic / logic: pop 2, push 1 (wide for long/double)
             case 0x60: case 0x64: case 0x68: case 0x6C: case 0x70: // i: add/sub/mul/div/rem
@@ -414,7 +409,7 @@ final class EffectDispatcher
         }
     }
 
-    private static void swap(InsnContext ictx, Stack stack)
+    private static void swap(Stack stack)
     {
         StackCtx a = stack.pop();
         StackCtx b = stack.pop();

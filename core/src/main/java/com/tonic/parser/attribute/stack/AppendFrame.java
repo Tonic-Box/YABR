@@ -10,7 +10,6 @@ import java.util.List;
 
 /**
  * Represents an AppendFrame in the StackMapTable attribute.
- * Used when the frame has additional local variables compared to the previous frame.
  */
 public class AppendFrame extends StackMapFrame
 {

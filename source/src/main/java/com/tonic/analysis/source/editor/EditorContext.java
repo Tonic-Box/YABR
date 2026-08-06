@@ -10,8 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Traversal context handed to AST editor handlers: the method being edited, the current
- * location within it, and helpers for building replacements.
+ * Traversal context handed to AST editor handlers.
  */
 public class EditorContext
 {

@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for array instantiation expressions.
- * Use this to intercept and transform array creation.
  */
 @FunctionalInterface
 public interface NewArrayHandler

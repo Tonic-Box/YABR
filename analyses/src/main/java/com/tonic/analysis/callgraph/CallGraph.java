@@ -204,7 +204,6 @@ public class CallGraph
 
     /**
      * Computes all methods reachable from the given entry points.
-     * This is useful for dead code detection.
      * @param entryPoints the methods to start from
      * @return all methods reachable via the call graph
      */
@@ -263,7 +262,6 @@ public class CallGraph
 
     /**
      * Finds all methods that are not reachable from the given entry points.
-     * These are potentially dead methods.
      * @param entryPoints the methods to start from
      * @return methods that are not reachable
      */
@@ -285,7 +283,6 @@ public class CallGraph
 
     /**
      * Finds methods with no callers (potential dead code).
-     * Excludes constructors, static initializers, and main methods.
      *
      * @return in-pool methods that no call site targets
      */
@@ -355,7 +352,6 @@ public class CallGraph
 
     /**
      * Gets all possible targets for a virtual/interface call.
-     * Uses the class hierarchy to resolve polymorphic dispatch.
      * @param owner      the declared owner class
      * @param name       the method name
      * @param descriptor the method descriptor

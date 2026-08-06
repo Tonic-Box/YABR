@@ -18,15 +18,6 @@ import java.util.Map;
 
 /**
  * Folds a loop counter's hoisted declaration back into the {@code for}-init:
- * <pre>
- *   int j = 0; for (j = 1; j &lt;= N; j++) { ... }   ==&gt;   for (int j = 1; j &lt;= N; j++) { ... }
- * </pre>
- * javac scopes such a counter to the loop; the recovery instead lifts it to method scope with a synthetic
- * {@code = 0} default init javac never wrote - which both diverges from javac and drifts on round trip (the
- * method-scope declaration's slot-based ordering relative to other hoisted locals is unstable).
- *
- *Only folded when the counter is used <em>exclusively</em> within that one {@code for} (its init, condition,
- * update, and body), so scoping it to the loop and dropping the (now dead) outer declaration changes nothing.
  */
 public class ForLoopCounterFolder implements ASTTransform
 {
@@ -86,16 +77,6 @@ public class ForLoopCounterFolder implements ASTTransform
 
     /**
      * Folds a counter whose init sits <em>before</em> an empty-init {@code for} into a loop-scoped declaration:
-     * <pre>
-     *   i = 0; for (; i &lt; n; i++) { ... }   ==&gt;   for (int i = 0; i &lt; n; i++) { ... }
-     * </pre>
-     * Unlike {@link #transform}, this handles the counter with no declaration at all (the init is a bare
-     * assignment) and a slot shared by several sibling loops - each {@code i = 0; for (...)} segment becomes its
-     * own {@code for (int i = 0; ...)}, which is legal because each scoped counter is confined to its loop.
-     *
-     *Only folded when every reference to the counter lies within one of these loop segments (its own
-     * {@code for} plus the {@code i = INIT} immediately before it), so scoping each to its loop and dropping any
-     * outer declaration is behavior-preserving.
      */
     private boolean foldHoistedInitCounters(BlockStmt root)
     {
@@ -182,9 +163,8 @@ public class ForLoopCounterFolder implements ASTTransform
     }
 
     /**
-     * A {@code for} with an empty init slot and a single {@code v++}/{@code v--}/{@code v = v +/- c} update,
-     * preceded (nearest-touch, allowing unrelated statements in between) by {@code v = INIT} or
-     * {@code T v = INIT;} where {@code INIT} does not read {@code v}; else null.
+     * A {@code for} with an empty init slot and a single induction update, preceded by an assignment or
+     * declaration of the counter; else null.
      */
     private Segment asHoistedCounter(ForStmt f, int forIndex, List<Statement> list)
     {

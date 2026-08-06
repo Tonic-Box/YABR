@@ -5,9 +5,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * The universal scalar produced by attribute resolution and carried by query literals, as a
- * closed set of nested variants discriminated by {@link #kind()}. {@link #ABSENT} means
- * "statically unknown" and compares false against everything, keeping evaluation total.
+ * The universal scalar produced by attribute resolution and carried by query literals, as a closed set of
+ * nested variants discriminated by {@link #kind()}.
  */
 public interface Value
 {

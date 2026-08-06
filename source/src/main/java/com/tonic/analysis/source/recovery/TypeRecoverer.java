@@ -71,7 +71,6 @@ public class TypeRecoverer
 
     /**
      * Recovers a source type from an SSAValue, considering its defining instruction.
-     * This handles cases where the IR type is INT but the actual semantic type is BOOLEAN.
      * @param ssa the SSA value, may be null or untyped
      * @return the recovered type, void when there is nothing to recover from
      */
@@ -244,9 +243,6 @@ public class TypeRecoverer
 
     /**
      * Computes a common supertype for a collection of types.
-     * For incompatible reference types, returns Object.
-     * For primitives, returns the widest type in the numeric promotion hierarchy.
-     * For identical types, returns that type.
      * @param types the collection of types to unify
      * @return the common supertype
      */
@@ -358,7 +354,6 @@ public class TypeRecoverer
 
     /**
      * Computes common type for array types.
-     * Returns Object[] if element types are incompatible.
      */
     private SourceType computeCommonArrayType(Set<SourceType> types)
     {
@@ -388,7 +383,6 @@ public class TypeRecoverer
 
     /**
      * Computes common type for reference types.
-     * Without full class hierarchy, returns Object for incompatible types.
      */
     private SourceType computeCommonReferenceType(Set<SourceType> types)
     {
@@ -470,7 +464,6 @@ public class TypeRecoverer
 
     /**
      * Recovers a source type from a JVM generic signature.
-     * Generic signatures include parameterized types like List&lt;String&gt;.
      * @param signature the signature to parse, may be null or empty
      * @return the parsed type, void when the signature is empty
      */

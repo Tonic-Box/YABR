@@ -4,7 +4,6 @@ import java.util.Objects;
 
 /**
  * Identifies a specific field for field-sensitive tracking.
- * Composed of owner class, field name, and field descriptor.
  */
 public final class FieldKey
 {

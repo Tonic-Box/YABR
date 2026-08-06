@@ -10,18 +10,6 @@ import java.util.*;
 
 /**
  * Inlines single-use temporary variables into their usage site.
- * This transform identifies variable declarations where the variable is used
- * exactly once and inlines the initializer expression at the usage site.
- * Example before:
- *   boolean flag2 = local1.isSuccess();
- *   if (!flag2) { ... }
- * Example after:
- *   if (!local1.isSuccess()) { ... }
- * Safety conditions:
- * - Variable must be used exactly once
- * - No intervening statements with side effects that could affect the result
- * - Usage must be in same scope or nested scope (not a loop body for non-loop vars)
- * - Initializer expression must be safe to move (no order-dependent side effects)
  */
 public class SingleUseInliner implements ASTTransform
 {
@@ -57,11 +45,7 @@ public class SingleUseInliner implements ASTTransform
     }
 
     /**
-     * Counts references anywhere in the method to the exact SSA value {@code ssa}. The per-list use
-     * scan sees only the declaration's own statement list; a recovered capture can be referenced
-     * from a guard in a DIFFERENT subtree under the same name and the same underlying value -
-     * deleting the declaration would orphan those. SSA identity distinguishes that hazard from
-     * ordinary same-named shadow ranges, which are different values.
+     * Counts references anywhere in the method to the exact SSA value {@code ssa}.
      */
     private int countSsaRefs(SSAValue ssa)
     {
@@ -81,11 +65,7 @@ public class SingleUseInliner implements ASTTransform
     }
 
     /**
-     * Counts assignments (plain, compound, increment/decrement) targeting {@code varName} anywhere
-     * in the method. A reused name can have another occupant's bare assignment in a sibling subtree
-     * that this declaration is the sole declaration for - removing it would orphan that write into
-     * an undeclared-variable error, so any method-wide write blocks the inline-and-remove. A true
-     * single-use temp is never re-assigned, so ordinary inlining is unaffected.
+     * Counts assignments (plain, compound, increment/decrement) targeting {@code varName} anywhere in the method.
      */
     private int countMethodWideWrites(String varName)
     {

@@ -198,8 +198,7 @@ public class AbstractState
     }
 
     /**
-     * Replaces the value at a stack slot in place. Used by stack merging to make the stored
-     * state reflect a newly created phi.
+     * Replaces the value at a stack slot in place.
      * @param index stack slot index
      * @param value replacement value
      */

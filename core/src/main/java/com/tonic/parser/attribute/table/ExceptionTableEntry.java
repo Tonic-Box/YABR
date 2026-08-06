@@ -2,7 +2,6 @@ package com.tonic.parser.attribute.table;
 
 /**
  * Represents an entry in the exception table of a Code attribute.
- * Describes a try-catch block with handler location and exception type.
  */
 public class ExceptionTableEntry
 {

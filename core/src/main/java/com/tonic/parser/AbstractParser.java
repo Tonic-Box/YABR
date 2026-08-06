@@ -7,7 +7,6 @@ import java.math.BigInteger;
 
 /**
  * An abstract parser for reading various data types from a byte array.
- * Supports both signed and unsigned read operations.
  */
 public abstract class AbstractParser
 {

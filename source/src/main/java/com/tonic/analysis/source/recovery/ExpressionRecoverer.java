@@ -302,15 +302,6 @@ public class ExpressionRecoverer
 
     /**
      * True when inlining a side-effecting definition at its use would move it past another side effect.
-     * Bytecode may leave a call's result on the stack across an unrelated statement; rendering that value
-     * at the use site then prints the two calls in the opposite order to the one the program performs, so
-     * the value must instead take a name and stay where it is.
-     * Only the operands of the use itself may sit in between: those are the evaluation of the same
-     * expression, so inlining reproduces their order exactly. Anything else with an effect - a void call,
-     * an allocation, a store - is a statement of its own and must keep its position.
-     * Scoped to a definition and use in the SAME block, and never to a phi use: a value that crosses a
-     * block boundary or merges at a phi is placed by the machinery that owns those forms (slot naming,
-     * phi copies), and second-guessing it here would drop the value instead of moving it.
      *
      * @param value the candidate for inlining, may be null
      * @return true if the value must take a name and stay where it is defined
@@ -326,9 +317,7 @@ public class ExpressionRecoverer
     }
 
     /**
-     * The same-block effect scan of {@link #inliningWouldReorderEffects} without the single-use gate:
-     * true when rendering {@code def}'s value at {@code use} would move it past another observable
-     * effect. Callers that tolerate extra uses (a store paired with its merge phi) gate on this directly.
+     * The same-block effect scan of {@link #inliningWouldReorderEffects} without the single-use gate.
      *
      * @param def the defining instruction
      * @param use the instruction the value would be rendered at
@@ -387,9 +376,7 @@ public class ExpressionRecoverer
     }
 
     /**
-     * True when the instruction reads state a side effect can change - a field or array load. The value it
-     * produced is the one BEFORE any intervening call or store, so rendering it later re-reads the mutated
-     * state: {@code double a = g.time; g.setTime(x); use(a)} must not become {@code use(g.time)}.
+     * True when the instruction reads state a side effect can change - a field or array load.
      */
     private boolean readsMutableState(IRInstruction instr)
     {
@@ -444,11 +431,8 @@ public class ExpressionRecoverer
     }
 
     /**
-     * True when recovering {@code value} as an operand would inline an allocation or call - a side effect
-     * that must not be duplicated by re-emitting the expression. Mirrors {@link #recoverOperand}'s inline
-     * decisions exactly (a materialized, non-force-inlined value renders as a named reference; otherwise
-     * {@link #shouldInlineExpression} governs), so the answer matches what emission actually produces. A
-     * pure query: it inspects definitions, use counts, and materialization without recovering anything.
+     * True when recovering {@code value} as an operand would inline an allocation or call - a side effect that
+     * must not be duplicated by re-emitting the expression.
      *
      * @param value the operand to inspect
      * @return true if recovering it as an operand would inline an allocation or call
@@ -496,9 +480,8 @@ public class ExpressionRecoverer
     }
 
     /**
-     * A call with no observable side effect, safe to re-evaluate if a guard duplicates it: the immutable
-     * {@code String} query methods. The call's operands are still checked by the caller's recursion, so a
-     * side-effecting receiver or argument keeps the whole operand impure.
+     * A call with no observable side effect, safe to re-evaluate if a guard duplicates it: the immutable {@code
+     * String} query methods.
      */
     private boolean isSideEffectFreeCall(InvokeInstruction invoke)
     {
@@ -523,12 +506,7 @@ public class ExpressionRecoverer
     }
 
     /**
-     * True when recovering {@code value} as an operand would inline an operation that can throw at runtime
-     * (a division/remainder, a field/array access or arraylength that can NPE/AIOOBE, a checkcast, or a
-     * call/allocation). Mirrors {@link #operandInlinesSideEffect}'s inline decisions exactly: a value that
-     * renders as a plain variable reference (materialized, or not inlined) is exception-free regardless of
-     * how it was computed. Used to decide whether a shared sub-condition may be hoisted OUT of its
-     * short-circuit position into an unconditionally-evaluated temporary without changing observable throws.
+     * True when recovering {@code value} as an operand would inline an operation that can throw at runtime.
      *
      * @param value the operand to inspect
      * @return true if recovering it as an operand would inline an operation that can throw
@@ -573,7 +551,7 @@ public class ExpressionRecoverer
     }
 
     /**
-     * Whether the operation {@code def} itself (once inlined) can throw. Operand hazards are checked separately.
+     * Whether the operation {@code def} itself (once inlined) can throw.
      */
     private boolean defMayThrowInlined(IRInstruction def)
     {
@@ -684,7 +662,6 @@ public class ExpressionRecoverer
 
     /**
      * Resolves a DynamicConstant (CONDY) to a DynamicConstantExpr with bootstrap info.
-     * This is extracted to allow use from both recoverConstant and the inner RecoveryVisitor.
      */
     private Expression resolveDynamicConstant(DynamicConstant dc)
     {
@@ -792,7 +769,6 @@ public class ExpressionRecoverer
 
     /**
      * Attempts to collapse a StringBuilder chain into a string concatenation expression.
-     * Pattern: new StringBuilder().append(a).append(b).toString() -&gt; a + b
      */
     private Expression tryCollapseStringBuilder(MethodCallExpr call)
     {
@@ -1121,7 +1097,6 @@ public class ExpressionRecoverer
 
         /**
          * Handles invokedynamic instructions which typically create lambda expressions or method references.
-         * Attempts to generate proper method references or lambda expressions with correct bodies.
          */
         private Expression handleInvokeDynamic(InvokeInstruction instr)
         {
@@ -1488,10 +1463,8 @@ public class ExpressionRecoverer
         }
 
         /**
-         * Retypes a concat operand to the char/boolean the indy descriptor declares, when the
-         * recovered value came back as its int computational form (materialized locals never see
-         * the type hint). A char casts; a boolean becomes {@code v != 0} - both concatenate as the
-         * source type intended, unlike a bare int.
+         * Retypes a concat operand to the char/boolean the indy descriptor declares, when the recovered value came
+         * back as its int computational form.
          */
         private Expression coerceConcatOperand(Expression operand, String paramType)
         {
@@ -1521,7 +1494,6 @@ public class ExpressionRecoverer
 
         /**
          * Resolves a DynamicConstant (CONDY) to a method call expression.
-         * For unknown bootstrap methods, returns a DynamicConstantExpr with bootstrap info.
          */
         private Expression resolveDynamicConstantExpression(DynamicConstant dc)
         {
@@ -1754,7 +1726,6 @@ public class ExpressionRecoverer
 
         /**
          * Generates a lambda body by decompiling the synthetic lambda method.
-         * Maps captured variables and lambda parameters to produce the actual body.
          */
         private ASTNode generateLambdaBody(MethodHandleConstant handle, InvokeInstruction instr, List<LambdaParameter> params, String samDescriptor)
         {
@@ -1925,8 +1896,6 @@ public class ExpressionRecoverer
 
         /**
          * Finds the SSA value for a given local slot using the method's parameters.
-         * After SSA lifting, LoadLocalInstruction no longer exists in the IR - parameters
-         * are tracked directly in IRMethod.getParameters().
          */
         private SSAValue findSSAForSlot(IRMethod method, int slot)
         {

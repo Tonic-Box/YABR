@@ -1,14 +1,7 @@
 package com.tonic.analysis.ssa.llvm.lift;
 
 /**
- * Inverse of {@link com.tonic.analysis.ssa.llvm.SymbolMangler}: parses a quoted LLVM global symbol
- * back to its {@code (owner, name, descriptor)} components.
- *
- *The mangled form is {@code @"owner.name descriptor"} where owner uses {@code /}-separated
- * internal names, name is the method name, and descriptor is the full JVM method descriptor.
- * The descriptor always starts with {@code (}, which is the split point.
- *
- *Escapes (\5C -&gt; \, \22 -&gt; ") are reversed on parse.
+ * Inverse of {@code SymbolMangler}: parses a mangled LLVM global symbol back to its components.
  */
 final class SymbolDemangle
 {
@@ -32,9 +25,7 @@ final class SymbolDemangle
     }
 
     /**
-     * Parses a symbol string. Accepts {@code @"..."} form or a bare-unquoted form.
-     * Returns null if the symbol doesn't match the method-symbol pattern (e.g., it's a
-     * {@code jvm_*} ABI symbol).
+     * Parses a symbol string.
      */
     static Symbol parse(String symbol)
     {

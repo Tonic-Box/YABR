@@ -6,7 +6,6 @@ import com.tonic.analysis.ssa.type.*;
 
 /**
  * Sealed interface representing source-level types.
- * Provides bidirectional conversion with the IR type system.
  */
 public interface SourceType extends ASTNode
 {

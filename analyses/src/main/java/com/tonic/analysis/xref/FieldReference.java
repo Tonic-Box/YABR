@@ -4,7 +4,6 @@ import java.util.Objects;
 
 /**
  * Identifies a specific field by owner class, name, and descriptor.
- * Used as a key for field-based xref lookups.
  */
 public class FieldReference
 {

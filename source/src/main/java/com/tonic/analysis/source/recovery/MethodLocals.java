@@ -9,9 +9,7 @@ import java.util.List;
 
 /**
  * The parameter slot layout of a method: which local slots hold the receiver and parameters, and how those map
- * to parameter indices. Computed once from the method's SSA parameter list - which includes the receiver as the
- * first entry for an instance method - so the {@code long}/{@code double} two-slot accounting lives in exactly
- * one place rather than being re-derived in the recovery context, the slot partition and the method recoverer.
+ * to parameter indices.
  */
 public final class MethodLocals
 {
@@ -95,7 +93,6 @@ public final class MethodLocals
 
     private static boolean isWide(IRType type)
     {
-        return type instanceof PrimitiveType
-                && (((PrimitiveType) type) == PrimitiveType.LONG || ((PrimitiveType) type) == PrimitiveType.DOUBLE);
+        return (type == PrimitiveType.LONG || type == PrimitiveType.DOUBLE);
     }
 }

@@ -99,7 +99,6 @@ public class ClassHierarchyBuilder
 
     /**
      * Rebuilds the hierarchy after class renames.
-     * This is necessary because class names have changed.
      * @param classPool The ClassPool with renamed classes
      * @return The rebuilt ClassHierarchy
      */

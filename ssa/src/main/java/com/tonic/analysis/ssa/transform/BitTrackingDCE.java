@@ -10,8 +10,6 @@ import java.util.*;
 
 /**
  * Bit-Tracking Dead Code Elimination (BDCE).
- * Tracks which bits of a value are actually used downstream and
- * eliminates operations on bits that are never used.
  */
 public class BitTrackingDCE implements IRTransform
 {
@@ -36,7 +34,7 @@ public class BitTrackingDCE implements IRTransform
 
         seedDemandedBits(method);
 
-        propagateDemandedBits(method);
+        propagateDemandedBits();
 
         return eliminateDeadOps(method);
     }
@@ -138,7 +136,7 @@ public class BitTrackingDCE implements IRTransform
         }
     }
 
-    private void propagateDemandedBits(IRMethod method)
+    private void propagateDemandedBits()
     {
         while (!inWorklist.isEmpty())
         {

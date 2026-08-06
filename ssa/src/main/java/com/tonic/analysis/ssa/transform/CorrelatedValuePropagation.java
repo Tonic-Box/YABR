@@ -10,8 +10,6 @@ import java.util.*;
 
 /**
  * Correlated Value Propagation (CVP).
- * Uses control flow to derive facts about values. When passing a branch
- * like if (x &lt; 10), CVP knows x is in range [MIN, 9] in the true branch.
  */
 public class CorrelatedValuePropagation implements IRTransform
 {

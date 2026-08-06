@@ -74,10 +74,7 @@ public class LdcInstruction extends Instruction
     private final ConstPool constPool;
 
     /**
-     * Constructs an LdcInstruction. The physical encoding (narrow {@code ldc} vs wide {@code ldc_w}) is
-     * derived from {@code cpIndex}: a one-byte {@code ldc} cannot hold an index above 255, so such an
-     * index transparently widens to {@code ldc_w}. This makes index truncation impossible no matter how
-     * large the target constant pool has grown.
+     * Constructs an LdcInstruction.
      * @param constPool The constant pool associated with the class.
      * @param opcode    The nominal opcode (ignored; the form is derived from {@code cpIndex}).
      * @param offset    The bytecode offset of the instruction.

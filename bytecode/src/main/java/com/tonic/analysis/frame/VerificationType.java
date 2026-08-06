@@ -5,8 +5,7 @@ import com.tonic.parser.attribute.stack.VerificationTypeInfo;
 import java.util.Objects;
 
 /**
- * A verification type in a StackMapTable frame, as a sealed hierarchy: primitive types are enum
- * constants, reference types are subclasses carrying their extra data.
+ * A verification type in a StackMapTable frame, as a sealed hierarchy.
  */
 public abstract class VerificationType
 {
@@ -30,9 +29,7 @@ public abstract class VerificationType
     public static final VerificationType UNINITIALIZED_THIS = Primitives.UNINITIALIZED_THIS;
 
     /**
-     * Holds the primitive singletons. Constructing the {@link PrimitiveType} instances here, rather than in
-     * {@code VerificationType}'s own static initializer, keeps the superclass initializer free of subclass
-     * references and so avoids the class-loading deadlock that pattern can introduce.
+     * Holds the primitive singletons.
      */
     private static final class Primitives
     {

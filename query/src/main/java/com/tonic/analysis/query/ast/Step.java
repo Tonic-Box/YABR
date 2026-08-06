@@ -3,10 +3,8 @@ package com.tonic.analysis.query.ast;
 import java.util.Objects;
 
 /**
- * One segment of an {@link Accessor} path: a keyword atom optionally indexed (e.g. {@code value},
- * {@code arg(0)}). Whether a step resolves to a scalar attribute or a sub-subject stream is decided
- * by the attribute registry from {@code (subjectKind, keyword)} - the step itself carries no
- * behavior, which is what keeps the vocabulary open.
+ * One segment of an {@link Accessor} path: a keyword atom optionally indexed (e.g. {@code value}, {@code
+ * arg(0)}).
  */
 public final class Step
 {

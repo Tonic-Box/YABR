@@ -104,7 +104,7 @@ public class QueryBatchRunner
 
     /**
      * Evaluates the plan's condition over every class or method the scope filter admits, then applies the query's
-     * ordering and limit; stops early on cancellation or budget exhaustion.
+     * ordering and limit.
      * @param plan the planned query
      * @param listener notified of phase start, progress every 200 methods, and completion, or null
      * @return the matches and whether the run was cancelled

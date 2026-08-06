@@ -4,7 +4,6 @@ import java.util.*;
 
 /**
  * Immutable representation of local variable slots during simulation.
- * All operations return new LocalState instances.
  */
 public final class LocalState
 {

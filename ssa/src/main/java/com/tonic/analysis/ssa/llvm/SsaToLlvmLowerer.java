@@ -14,13 +14,6 @@ import java.util.Map;
 
 /**
  * Lowers one {@link IRMethod} (in true SSA form, post-lift) to a textual LLVM IR {@code define}.
- * Dispatches per-instruction via {@link AbstractIRVisitor}; supported visitors emit LLVM lines into
- * {@link LlvmFunctionBuilder}, everything else routes to {@link UnsupportedLowering}.
- *
- *Scope (v1): constants, integer/float arithmetic + conversions, phis, integer branches,
- * switch, return, goto, and static invokes. The visitor emits native LLVM {@code phi} (no SSA
- * destruction) and names every SSA value {@code %v{id}}, so loop back-edge/forward references in
- * phis resolve symbolically with no ordering pass.
  */
 final class SsaToLlvmLowerer extends AbstractIRVisitor<Void>
 {
@@ -78,7 +71,7 @@ final class SsaToLlvmLowerer extends AbstractIRVisitor<Void>
     }
 
     /**
-     * Lowers the method to its complete {@code define ... { ... }} text.
+     * Lowers the method to its complete LLVM function definition.
      */
     String lowerFunction()
     {
@@ -722,8 +715,6 @@ final class SsaToLlvmLowerer extends AbstractIRVisitor<Void>
 
     /**
      * Emits a call result line; {@code callee} is a mangled symbol or a function-pointer register.
-     * Inside a covered try region the call becomes an {@code invoke} unwinding to the region's
-     * landingpad, with a fresh continuation label for the normal path.
      */
     private void emitCall(InvokeInstruction invoke, LlvmType retTy, String callee, String args)
     {

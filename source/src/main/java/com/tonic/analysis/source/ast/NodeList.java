@@ -71,9 +71,7 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     }
 
     /**
-     * Detaches an element this list no longer holds, unless something else has already taken it. Moving a
-     * statement between blocks adds it to the new one before removing it from the old, and clearing the
-     * parent unconditionally at that point orphans a node that is still very much in the tree.
+     * Detaches an element this list no longer holds, unless something else has already taken it.
      */
     private void releaseIfStillOurs(T element)
     {

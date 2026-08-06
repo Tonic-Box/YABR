@@ -6,9 +6,6 @@ import java.util.List;
 
 /**
  * The boolean expression tree of a query's {@code WHERE} clause - the only place booleans live.
- * A closed composite ({@link And}, {@link Or}, {@link Not}, {@link Group}, {@link Comparison},
- * {@link Quantifier}, {@link True}) visited via {@link Visitor} for evaluation/planning. Adding a new
- * queryable fact adds a registry entry, never a node here.
  */
 public interface Condition
 {
@@ -90,7 +87,7 @@ public interface Condition
     }
 
     /**
-     * Existence/universality of a sub-condition over a sub-subject stream. {@code ANY == has}.
+     * Existence/universality of a sub-condition over a sub-subject stream.
      */
     enum Quant { ANY, ALL, NONE }
 
@@ -163,7 +160,7 @@ public interface Condition
     }
 
     /**
-     * {@code accessor OP operand} - the single generic leaf. A bare accessor uses op == null.
+     * {@code accessor OP operand} - the single generic leaf.
      */
     final class Comparison implements Condition
     {
@@ -204,7 +201,7 @@ public interface Condition
     }
 
     /**
-     * {@code has|any|all|none <stream> where (body)}. {@code count(...) OP n} desugars to a Comparison.
+     * {@code has|any|all|none <stream> where (body)}.
      */
     final class Quantifier implements Condition
     {
@@ -291,9 +288,7 @@ public interface Condition
     }
 
     /**
-     * {@code SEQUENCE [ e1, e2, .. ]} - an ordered, unanchored regex over the method's instruction
-     * stream. Each {@link Element} carries a per-instruction matcher condition plus repetition bounds;
-     * a gap ({@code ..}) and any-one ({@code _}) are just {@link True} matchers with different bounds.
+     * {@code SEQUENCE [ e1, e2, .. ]} - an ordered, unanchored regex over the method's instruction stream.
      */
     final class Sequence implements Condition
     {

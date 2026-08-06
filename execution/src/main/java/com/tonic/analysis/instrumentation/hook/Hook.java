@@ -34,7 +34,6 @@ public interface Hook
 
     /**
      * Gets the priority for ordering multiple hooks at the same point.
-     * Lower values execute first.
      *
      * @return the ordering priority
      */

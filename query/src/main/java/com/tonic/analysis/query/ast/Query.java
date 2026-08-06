@@ -1,7 +1,7 @@
 package com.tonic.analysis.query.ast;
 
 /**
- * Root query AST node. A query is either FIND or SHOW.
+ * Root query AST node.
  */
 public interface Query
 {

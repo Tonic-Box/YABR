@@ -7,8 +7,7 @@ import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
 /**
- * Native handlers for the reflection surface: ClassLoader, Executable, Field, Module
- * and Reference intrinsics, mostly returning synthesized objects or null.
+ * Native handlers for the reflection surface.
  */
 public final class ReflectionHandlers implements NativeHandlerProvider
 {

@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for exception interception.
- * Hooks are called in exception handlers.
  */
 public class ExceptionHook implements Hook
 {

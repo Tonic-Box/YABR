@@ -4,7 +4,6 @@ import com.tonic.analysis.source.ast.stmt.BlockStmt;
 
 /**
  * Interface for AST-level transformations that improve decompiled output quality.
- * Transforms run after IR recovery but before source emission.
  */
 public interface ASTTransform
 {

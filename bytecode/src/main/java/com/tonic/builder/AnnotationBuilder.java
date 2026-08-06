@@ -13,13 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fluent builder for a single annotation. Accumulates element-value pairs and materializes a
- * {@link Annotation} against a constant pool, hiding the element-value tag rules and index
- * bookkeeping the class-file format requires.
- * Use {@link #of(String)} to build one standalone (for a nested value or to
- * {@link #attachTo(MemberEntry, ConstPool) attach} to an already-loaded member), or obtain one
- * bound to a parent via the {@code annotate(...)} method on {@link ClassBuilder},
- * {@link FieldBuilder}, or {@link MethodBuilder}; {@link #end()} returns to that parent.
+ * Fluent builder for a single annotation.
  * @param <P> the parent builder type returned by {@link #end()} ({@link Void} when standalone)
  */
 public class AnnotationBuilder<P>
@@ -548,9 +542,7 @@ public class AnnotationBuilder<P>
     }
 
     /**
-     * Normalizes a class-literal value to a type descriptor. Raw descriptors (array {@code [...},
-     * primitive/{@code void} single letters, or an object {@code L...;}) pass through; anything else
-     * is treated as a class name.
+     * Normalizes a class-literal value to a type descriptor.
      */
     private static String toClassDescriptor(String type)
     {

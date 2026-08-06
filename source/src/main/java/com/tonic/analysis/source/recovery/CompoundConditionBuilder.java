@@ -16,16 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Reconstructs the boolean expression of a short-circuit compound condition from its control-flow
- * DAG. The condition is a set of two-way branch blocks (each a single sub-condition) that all decide
- * between exactly two exits: {@code trueExit} (the whole condition is true) and {@code falseExit} (it
- * is false). Every {@code &&} / {@code ||} nesting, in any mix, is a series-parallel DAG over these
- * blocks; this builder walks it and folds it back into a single expression.
- *
- *Only clean series-parallel short-circuit conditions are reconstructed; any shape that would need
- * a select/ternary to express (a genuine non-short-circuit diamond) makes {@link #build} return null,
- * so the caller falls back to its existing recovery and the output is always a plain {@code &&}/{@code ||}
- * chain.
+ * Reconstructs the boolean expression of a short-circuit compound condition from its control-flow DAG.
  */
 final class CompoundConditionBuilder
 {
@@ -113,9 +104,8 @@ final class CompoundConditionBuilder
     }
 
     /**
-     * Reconstructs the condition guarding {@code header} that is true exactly when control reaches
-     * {@code trueExit} (and false when it reaches {@code falseExit}), over the given condition blocks.
-     * Returns null when the shape is not a clean short-circuit chain.
+     * Reconstructs the condition guarding {@code header} that is true exactly when control reaches {@code
+     * trueExit} (and false when it reaches {@code falseExit}), over the given condition blocks.
      */
     static Expression build(IRBlock header, IRBlock trueExit, IRBlock falseExit, Set<IRBlock> region, ConditionResolver resolver)
     {
@@ -170,8 +160,8 @@ final class CompoundConditionBuilder
     }
 
     /**
-     * True when the condition DAG is a clean series-parallel short-circuit condition that
-     * {@link #build} can reconstruct (no cycle, no genuine ternary). Structural only - no resolver.
+     * True when the condition DAG is a clean series-parallel short-circuit condition that {@link #build} can
+     * reconstruct.
      */
     static boolean isReconstructible(IRBlock header, IRBlock trueExit, IRBlock falseExit, Set<IRBlock> region)
     {

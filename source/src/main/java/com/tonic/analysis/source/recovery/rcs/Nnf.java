@@ -3,14 +3,7 @@ package com.tonic.analysis.source.recovery.rcs;
 import java.util.List;
 
 /**
- * A node of a negation-normal-form boolean formula over integer atoms: {@code AND}/{@code OR} are
- * flattened n-ary nodes and negation lives only on {@code LEAF}s. This is the syntactic layer that
- * preserves the short-circuit shape built during structuring (the {@link Bdd} layer is canonical but
- * reorders by variable and loses that shape). {@link NnfFactory} interns every node, so structurally
- * equal formulas are the same object and operand de-duplication is an identity check.
- *
- *This is the same algebra as {@code CompoundConditionBuilder.Node}, generalized from an
- * {@code IRBlock} leaf to an integer atom so it can carry any predicate.
+ * A node of a negation-normal-form boolean formula over integer atoms.
  */
 final class Nnf
 {

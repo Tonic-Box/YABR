@@ -9,11 +9,6 @@ import java.util.*;
 
 /**
  * Common Subexpression Elimination (CSE) optimization transform.
- * Identifies identical expressions computed multiple times and reuses
- * the first computed result:
- * - a = x + y; b = x + y; -&gt; a = x + y; b = a;
- * Works within basic blocks (local CSE). For commutative operations,
- * operand order is normalized for matching.
  */
 public class CommonSubexpressionElimination implements IRTransform
 {

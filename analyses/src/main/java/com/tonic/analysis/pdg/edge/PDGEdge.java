@@ -4,8 +4,7 @@ import com.tonic.analysis.pdg.node.PDGNode;
 import com.tonic.analysis.ssa.value.SSAValue;
 
 /**
- * A directed dependence edge in a program dependence graph; identity is the
- * source id, target id and dependence type, so parallel edges of one type collapse.
+ * A directed dependence edge in a program dependence graph.
  */
 public class PDGEdge
 {

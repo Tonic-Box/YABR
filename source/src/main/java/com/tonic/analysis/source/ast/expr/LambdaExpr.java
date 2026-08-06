@@ -25,10 +25,8 @@ public final class LambdaExpr implements Expression
     private final SourceLocation location;
     private ASTNode parent;
     /**
-     * The synthetic implementation method this lambda was reconstructed from, as {@code name + desc}
-     * (e.g. {@code lambda$foo$0()V}), or null when it could not be identified. Lets the decompiler key
-     * the inlined body's offset-&gt;line entries under the lambda's own method rather than the enclosing
-     * method's offset space.
+     * The synthetic implementation method this lambda was reconstructed from, as {@code name + desc} (e.g. {@code
+     * lambda$foo$0()V}), or null when it could not be identified.
      */
     private String implMethodKey;
 

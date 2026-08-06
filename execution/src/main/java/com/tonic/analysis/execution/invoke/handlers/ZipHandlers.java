@@ -6,15 +6,30 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-import java.util.zip.CRC32;
-import java.util.zip.Adler32;
 
 /**
- * Native handlers for java.util.zip: CRC32 and Adler32 checksums computed with the real
- * JDK implementations, plus Inflater and Deflater intrinsics.
+ * Native handlers for java.util.zip.
  */
 public final class ZipHandlers implements NativeHandlerProvider
 {
+
+    private static final int ADLER_BASE = 65521;
+    private static final int[] CRC32_TABLE = buildCrc32Table();
+
+    private static int[] buildCrc32Table()
+    {
+        int[] table = new int[256];
+        for (int i = 0; i < 256; i++)
+        {
+            int c = i;
+            for (int bit = 0; bit < 8; bit++)
+            {
+                c = (c & 1) != 0 ? 0xEDB88320 ^ c >>> 1 : c >>> 1;
+            }
+            table[i] = c;
+        }
+        return table;
+    }
 
     @Override
     public void register(NativeRegistry registry)
@@ -35,9 +50,8 @@ public final class ZipHandlers implements NativeHandlerProvider
                 }
                 Object crcObj = receiver.getField("java/util/zip/CRC32", "crc", "J");
                 long crc = crcObj instanceof Long ? (Long) crcObj : 0L;
-                CRC32 temp = new CRC32();
-                temp.update(args[0].asInt());
-                receiver.setField("java/util/zip/CRC32", "crc", "J", temp.getValue());
+                byte[] one = {(byte) args[0].asInt()};
+                receiver.setField("java/util/zip/CRC32", "crc", "J", crc32(crc, one, 0, 1));
                 return null;
             });
 
@@ -51,20 +65,16 @@ public final class ZipHandlers implements NativeHandlerProvider
                 ArrayInstance arr = (ArrayInstance) args[1].asReference();
                 int off = args[2].asInt();
                 int len = args[3].asInt();
-                CRC32 temp = new CRC32();
                 byte[] bytes = new byte[len];
                 for (int i = 0; i < len; i++)
                 {
                     bytes[i] = arr.getByte(off + i);
                 }
-                temp.update(bytes);
-                return ConcreteValue.intValue((int) temp.getValue());
+                return ConcreteValue.intValue((int) crc32(crc, bytes, 0, len));
             });
 
         registry.register("java/util/zip/CRC32", "updateByteBuffer", "(JJII)I",
-            (receiver, args, ctx) -> {
-                return ConcreteValue.intValue(0);
-            });
+            (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
         registry.register("java/util/zip/CRC32", "getValue", "()J",
             (receiver, args, ctx) -> {
@@ -96,9 +106,9 @@ public final class ZipHandlers implements NativeHandlerProvider
                     throw new NativeException("java/lang/NullPointerException", "Adler32.update on null");
                 }
                 Object adlerObj = receiver.getField("java/util/zip/Adler32", "adler", "J");
-                Adler32 temp = new Adler32();
-                temp.update(args[0].asInt());
-                receiver.setField("java/util/zip/Adler32", "adler", "J", temp.getValue());
+                long adler = adlerObj instanceof Long ? (Long) adlerObj : 1L;
+                byte[] one = {(byte) args[0].asInt()};
+                receiver.setField("java/util/zip/Adler32", "adler", "J", adler32(adler, one, 0, 1));
                 return null;
             });
 
@@ -111,20 +121,16 @@ public final class ZipHandlers implements NativeHandlerProvider
                 ArrayInstance arr = (ArrayInstance) args[1].asReference();
                 int off = args[2].asInt();
                 int len = args[3].asInt();
-                Adler32 temp = new Adler32();
                 byte[] bytes = new byte[len];
                 for (int i = 0; i < len; i++)
                 {
                     bytes[i] = arr.getByte(off + i);
                 }
-                temp.update(bytes);
-                return ConcreteValue.intValue((int) temp.getValue());
+                return ConcreteValue.intValue((int) adler32(args[0].asLong(), bytes, 0, len));
             });
 
         registry.register("java/util/zip/Adler32", "updateByteBuffer", "(JJII)I",
-            (receiver, args, ctx) -> {
-                return ConcreteValue.intValue(1);
-            });
+            (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
         registry.register("java/util/zip/Adler32", "getValue", "()J",
             (receiver, args, ctx) -> {
@@ -147,12 +153,38 @@ public final class ZipHandlers implements NativeHandlerProvider
             });
     }
 
+    /**
+     * Continues a CRC-32 over {@code len} bytes.
+     */
+    private static long crc32(long crc, byte[] bytes, int off, int len)
+    {
+        int c = (int) ~crc;
+        for (int i = 0; i < len; i++)
+        {
+            c = CRC32_TABLE[(c ^ bytes[off + i]) & 0xFF] ^ (c >>> 8);
+        }
+        return ~c & 0xFFFFFFFFL;
+    }
+
+    /**
+     * Continues an Adler-32 over {@code len} bytes.
+     */
+    private static long adler32(long adler, byte[] bytes, int off, int len)
+    {
+        long a = adler & 0xFFFF;
+        long b = adler >>> 16 & 0xFFFF;
+        for (int i = 0; i < len; i++)
+        {
+            a = (a + (bytes[off + i] & 0xFF)) % ADLER_BASE;
+            b = (b + a) % ADLER_BASE;
+        }
+        return b << 16 | a;
+    }
+
     private void registerInflaterHandlers(NativeRegistry registry)
     {
         registry.register("java/util/zip/Inflater", "init", "(Z)J",
-            (receiver, args, ctx) -> {
-                return ConcreteValue.longValue(System.nanoTime());
-            });
+            (receiver, args, ctx) -> ConcreteValue.longValue(System.nanoTime()));
 
         registry.register("java/util/zip/Inflater", "initBytes", "(J[BII)V", (receiver, args, ctx) -> null);
 
@@ -179,9 +211,7 @@ public final class ZipHandlers implements NativeHandlerProvider
     private void registerDeflaterHandlers(NativeRegistry registry)
     {
         registry.register("java/util/zip/Deflater", "init", "(IIZ)J",
-            (receiver, args, ctx) -> {
-                return ConcreteValue.longValue(System.nanoTime());
-            });
+            (receiver, args, ctx) -> ConcreteValue.longValue(System.nanoTime()));
 
         registry.register("java/util/zip/Deflater", "initBytes", "(J[BII)V", (receiver, args, ctx) -> null);
 

@@ -1,9 +1,7 @@
 package com.tonic.analysis.query.eval;
 
 /**
- * The type of entity an evaluation is currently bound to. Attribute resolvers are registered per
- * {@code (SubjectKind, keyword)}, so the same keyword (e.g. {@code name}, {@code type}) reuses across
- * kinds with kind-appropriate behavior.
+ * The type of entity an evaluation is currently bound to.
  */
 public enum SubjectKind
 {

@@ -79,8 +79,7 @@ public enum Operator
     }
 
     /**
-     * Applies this operator, dispatching on {@link ValueKind}; incompatible kinds, a null side,
-     * an {@link ValueKind#ABSENT} side and the relational operators all yield false.
+     * Applies this operator, dispatching on {@link ValueKind}.
      *
      * @param lhs the left operand
      * @param rhs the right operand

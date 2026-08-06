@@ -20,17 +20,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * Evaluates the data-flow relations {@link Operator#FLOWS_TO}/{@link Operator#FLOWS_FROM} over a
- * method's SSA IR. {@code A flowsTo B} holds when a value produced at endpoint {@code A} reaches
- * endpoint {@code B} along def-use edges (forward reachability); {@code flowsFrom} is the same
- * relation with the roles swapped.
- *
- *Endpoints are resolved from accessors against the current {@link Subject}: {@code param(n)} (a
- * parameter value) and {@code return} (any returned value) are method-global; {@code arg(n)} resolves
- * against a {@link Subject.CallSubject} (the call's nth argument, receiver excluded) and {@code insn}
- * against a {@link Subject.InstructionSubject} (the value the instruction defines), both mapped to SSA
- * via {@code IRInstruction.getBytecodeOffset()}. An endpoint that cannot be resolved is empty and the
- * relation is {@code false}.
+ * Evaluates the data-flow relations {@link Operator#FLOWS_TO}/{@link Operator#FLOWS_FROM} over a method's SSA
+ * IR.
  */
 final class DataFlowAnalysis
 {
@@ -184,9 +175,7 @@ final class DataFlowAnalysis
     }
 
     /**
-     * A resolved data-flow endpoint. As a source it contributes {@link #seeds} to start the forward
-     * walk; as a sink it is reached when the walk hits an instruction matching {@link #matcher} or a
-     * value in {@link #values}.
+     * A resolved data-flow endpoint.
      */
     private static final class Endpoint
     {

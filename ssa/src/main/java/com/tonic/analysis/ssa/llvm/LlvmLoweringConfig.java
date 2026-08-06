@@ -12,15 +12,11 @@ public final class LlvmLoweringConfig
     public enum ObjectModel
     {
         /**
-         * Computational subset only: references, fields, arrays, allocation, dispatch, casts,
-         * exceptions, and monitors route to {@link UnsupportedLowering}; output is self-contained
-         * and lli-runnable.
+         * Computational subset only.
          */
         NONE,
         /**
-         * Full construct set: references map to opaque ptr and object operations lower to calls
-         * into a jvm_* runtime ABI; output is valid IR but needs a runtime library implementing
-         * the ABI and EH personality.
+         * Full construct set.
          */
         RUNTIME_ABI
     }

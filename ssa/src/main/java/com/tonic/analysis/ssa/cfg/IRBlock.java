@@ -282,7 +282,6 @@ public class IRBlock
 
     /**
      * Sets the terminator instruction for this block.
-     * If a terminator already exists, it will be replaced.
      * @param terminator the terminator instruction to set
      */
     public void setTerminator(IRInstruction terminator)
@@ -373,10 +372,7 @@ public class IRBlock
     }
 
     /**
-     * Identity by {@code id}. Ids are unique within a method (the counter is reset
-     * per lift in {@link com.tonic.analysis.ssa.lift.BytecodeLifter}), so this is
-     * equivalent to object identity in every collection scope, while giving
-     * deterministic hashing/iteration order across runs.
+     * Identity by {@code id}.
      */
     @Override
     public boolean equals(Object o)

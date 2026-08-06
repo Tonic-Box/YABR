@@ -8,11 +8,8 @@ import java.util.List;
 
 /**
  * Records one execution of one {@link Instruction} by the abstract {@link Execution} - its operand-stack pops
- * and pushes (with def-use links back to the {@code InsnContext} that produced each value) and its local reads.
- * A faithful, value-domain-free port of RuneLite's {@code net.runelite.asm.execution.InstructionContext}
- * onto YABR's instruction model. We do not track abstract values (the only consumer that needed them was
- * opaque-dead-branch removal, which the ModArith port does not use); constants are read directly from the
- * pushing instruction via {@link #resolve} / def-use.
+ * and pushes (with def-use links back to the {@code InsnContext} that produced each value) and its local
+ * reads.
  */
 public final class InsnContext
 {
@@ -128,11 +125,7 @@ public final class InsnContext
     }
 
     /**
-     * Follows def-use to the instruction that actually produced this context's value: through a putfield/store
-     * to the value being stored, and through a load to the instruction that stored the loaded local (or this
-     * context, for a parameter / unknown source). Dup and swap are transparent in this engine (their outputs
-     * keep the original pusher), so they need no handling here. Port of RuneLite's
-     * {@code InstructionContext.resolve}.
+     * Follows def-use to the instruction that actually produced this context's value.
      *
      * @return the producing context, or this one when the chain ends here
      */

@@ -346,13 +346,11 @@ public final class Lexer
         }
         else if (suffix == 'f' || suffix == 'F')
         {
-            isFloat = true;
             advance();
             return makeNumberToken(TokenType.FLOAT_LITERAL);
         }
         else if (suffix == 'd' || suffix == 'D')
         {
-            isFloat = true;
             advance();
             return makeNumberToken(TokenType.DOUBLE_LITERAL);
         }
@@ -564,11 +562,7 @@ public final class Lexer
     }
 
     /**
-     * Scans a text block (Java 15, JLS 3.10.6). The opening {@code "} was consumed by the dispatch;
-     * this consumes the remaining {@code ""}, the optional whitespace + required line terminator,
-     * the raw content up to the closing {@code """}, then applies line-terminator normalization,
-     * incidental-whitespace stripping, and escape processing. Emits a normal STRING_LITERAL so the
-     * parser/lowerer need no text-block-specific handling.
+     * Scans a text block (Java 15, JLS 3.10.6).
      */
     private Token scanTextBlock()
     {
@@ -641,9 +635,7 @@ public final class Lexer
     }
 
     /**
-     * Removes incidental white space from raw (LF-normalized) text-block content: strips the common
-     * leading-whitespace prefix (computed over all non-blank lines plus the last line, which carries
-     * the closing delimiter's indentation) and trailing white space from every line.
+     * Removes incidental white space from raw (LF-normalized) text-block content.
      */
     private static String stripIncidentalWhitespace(String raw)
     {

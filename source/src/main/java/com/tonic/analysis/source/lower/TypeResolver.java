@@ -20,6 +20,7 @@ import com.tonic.util.Modifiers;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Resolves source-level type, field and method references to JVM names and descriptors, consulting the
@@ -189,9 +190,7 @@ public class TypeResolver
     }
 
     /**
-     * Last resort for a field on a class absent from both the pool and the running JVM (e.g. a binding
-     * class the original code was compiled against a stub of): the CURRENT class's own constant pool
-     * still carries the original FieldRef with its descriptor, which the original compilation proved.
+     * Last resort for a field on a class absent from both the pool and the running JVM.
      */
     private SourceType fieldTypeFromOriginalPool(String ownerClass, String fieldName)
     {
@@ -318,12 +317,8 @@ public class TypeResolver
     }
 
     /**
-     * Resolves a parsed declared type (a current-class field type taken from the source AST) to its fully-qualified
-     * internal form via {@link #resolveInternalName} - imports, same package, nested {@code $}. The AST holds the
-     * bare name as written ({@code AuthenticationAttemptTracker}); left unresolved, callers that use it as a method
-     * owner miss the FQN-keyed {@link ClassPool} and the call's return type falls back to {@code Object}, producing
-     * invalid bytecode (an {@code Object} where an {@code int}/return value is expected). Mirrors the FQN that the
-     * ClassFile-descriptor branch already yields for non-current classes.
+     * Resolves a parsed declared type (a current-class field type taken from the source AST) to its
+     * fully-qualified internal form via {@link #resolveInternalName} - imports, same package, nested {@code $}.
      */
     private SourceType resolveDeclaredType(SourceType type)
     {
@@ -508,10 +503,7 @@ public class TypeResolver
     }
 
     /**
-     * Finds an already-declared synthetic lambda method by position. The compiler numbers lambdas with
-     * a per-class counter (e.g. {@code lambda$showError$3}) that a regenerated per-method name cannot
-     * reproduce, so a round trip matches on enclosing method plus in-method index instead, recovering
-     * the real name and parameter types.
+     * Finds an already-declared synthetic lambda method by position.
      *
      * @param ownerClass internal name of the class declaring the lambda
      * @param enclosingMethod the method the lambda appears in
@@ -737,10 +729,7 @@ public class TypeResolver
 
     /**
      * Resolves a method's return type by reflecting a classpath-available class - the fallback for JDK/library
-     * classes not loaded into the {@link ClassPool} (e.g. {@code javax.swing.SwingUtilities} from the java.desktop
-     * module). Without this, an unresolved return defaults to {@code Object}, producing a wrong descriptor (e.g.
-     * {@code invokeLater(Runnable)Object}) and a {@code NoSuchMethodError} at run time. Matches by name + parameter
-     * count; bails (returns null) when overloads of that arity disagree on the return type, or the class is absent.
+     * classes not loaded into the {@link ClassPool}.
      */
     private SourceType reflectMethodReturnType(String ownerClass, String methodName, int paramCount)
     {
@@ -775,9 +764,8 @@ public class TypeResolver
     }
 
     /**
-     * Resolves a field's declared type by reflecting a classpath-available class - the fallback for JDK/library fields
-     * not in the {@link ClassPool} (e.g. {@code java.awt.Color.DARK_GRAY}). Returns null when the class or field is
-     * absent. Uses getField so inherited public fields resolve too.
+     * Resolves a field's declared type by reflecting a classpath-available class - the fallback for JDK/library
+     * fields not in the {@link ClassPool}.
      */
     private SourceType reflectFieldType(String ownerClass, String fieldName)
     {
@@ -933,8 +921,7 @@ public class TypeResolver
     /**
      * Resolves the declared descriptor of the best-matching overload, choosing among same-arity candidates by
      * argument-type compatibility (exact descriptor, then primitive/reference kind) and searching the superclass
-     * and interfaces. This yields the real signature the verifier requires for the emitted invoke (e.g.
-     * {@code Map.put(Object,Object)}, not the caller's {@code (String,String)}).
+     * and interfaces.
      *
      * @param ownerClass internal name of the receiver class
      * @param methodName the method name to match
@@ -989,9 +976,7 @@ public class TypeResolver
     }
 
     /**
-     * Resolves the declared type of a constructor parameter that expects a functional argument. A lambda
-     * argument cannot type itself, and the one interface-typed slot among same-arity overloads is where
-     * it fits ({@code Thread(Runnable)} vs {@code Thread(String)}).
+     * Resolves the declared type of a constructor parameter that expects a functional argument.
      *
      * @param ownerClass internal name of the class being constructed
      * @param arity the number of constructor arguments
@@ -1106,8 +1091,7 @@ public class TypeResolver
     }
 
     /**
-     * Whether {@code args} fits {@code params} read as a varargs signature: the fixed parameters taken in
-     * order, then every remaining argument accepted by the trailing array's component type.
+     * Whether {@code args} fits {@code params} read as a varargs signature.
      */
     private boolean expandedVarargsAccepts(Class<?>[] params, Class<?>[] args)
     {
@@ -1283,11 +1267,7 @@ public class TypeResolver
     }
 
     /**
-     * Scores how well {@code method} matches the call argument types: exact descriptor (+2) beats same-kind (+1); any
-     * incompatible parameter disqualifies (-1). A varargs method is also considered in its EXPANDED form (fixed
-     * parameters + the array component repeated for the trailing args), with a small penalty so a non-varargs exact
-     * match wins ties. The exact-arity (direct-array) interpretation of a varargs method only applies when the last
-     * argument is actually an array.
+     * Scores how well {@code method} matches the call argument types.
      */
     private int scoreMethodMatch(MethodEntry method, List<IRType> argTypes)
     {
@@ -1406,9 +1386,7 @@ public class TypeResolver
 
     /**
      * Whether a classpath-available method with this descriptor is declared varargs - the fallback for a callee
-     * the {@link ClassPool} does not hold, mirroring {@link #resolveMethodDescriptorViaReflection}. Without it
-     * a varargs call resolved by reflection is never packed into its trailing array, so the invoke carries the
-     * flat argument descriptor: the class still verifies and fails to link only when the method is called.
+     * the {@link ClassPool} does not hold, mirroring {@link #resolveMethodDescriptorViaReflection}.
      */
     private boolean reflectIsVarargsMethod(String ownerClass, String methodName, String descriptor)
     {
@@ -1740,12 +1718,8 @@ public class TypeResolver
     }
 
     /**
-     * Resolves a source-qualified name whose separators are all slashes (a naive {@code '.'->'/'} of
-     * {@code a.b.C.D}) to its true internal name, recovering the {@code $} nested-class separators. A source
-     * dot means either a package boundary or a nested-class boundary, and the two are indistinguishable
-     * syntactically; try the all-slash form, then convert trailing separators to {@code $} innermost-first until
-     * a known class is found ({@code Outer/Inner} -&gt; {@code Outer$Inner}). Falls back to the all-slash form for a
-     * name no loaded class matches, preserving the prior behavior for unresolvable external types.
+     * Resolves a source-qualified name whose separators are all slashes (a naive {@code '.'->'/'} of {@code
+     * a.b.C.D}) to its true internal name, recovering the {@code $} nested-class separators.
      */
     private String resolveDottedName(String slashName)
     {
@@ -1769,11 +1743,7 @@ public class TypeResolver
     }
 
     /**
-     * The Java-naming-convention reading of a slash-separated name whose class the pool cannot verify:
-     * lowercase segments are the package, the first capitalized segment is the outermost class, and every
-     * later segment is a nested class - so a nested reference (a/b/Outer/Inner) still resolves to its
-     * $-form binary name instead of an all-slash name that links to nothing. Returns the input unchanged
-     * when no capitalized segment is followed by further segments.
+     * The Java-naming-convention reading of a slash-separated name whose class the pool cannot verify.
      */
     private String conventionNestedName(String slashName)
     {
@@ -1886,19 +1856,12 @@ public class TypeResolver
         }
 
         String resolved = resolveFromLoadedClasses(simpleName);
-        if (resolved != null)
-        {
-            return resolved;
-        }
+        return Objects.requireNonNullElse(resolved, simpleName);
 
-        return simpleName;
     }
 
     /**
-     * Resolves a parsed type name to its fully-qualified internal name: applies imports (via
-     * {@link #resolveClassName}) for a simple name, then repairs nested-class boundaries that the source
-     * spelled with a dot - the decompiler renders {@code Outer.Inner} which naively becomes {@code Outer/Inner},
-     * but the JVM internal name is {@code Outer$Inner}. The correct boundary is found by consulting the pool.
+     * Resolves a parsed type name to its fully-qualified internal name.
      *
      * @param rawName the type name as written in source
      * @return the internal name
@@ -1909,12 +1872,10 @@ public class TypeResolver
     }
 
     /**
-     * Builds the JVM generic signature of a declared type. Type arguments recurse, and a name that is
-     * a type parameter of the current declaration renders as a type-variable use.
+     * Builds the JVM generic signature of a declared type.
      *
      * @param type the declared type
-     * @return the signature, or null when the type carries no generic information (a plain reference,
-     *         array of plain references, or primitive needs no LocalVariableTypeTable entry)
+     * @return the signature, or null when the type carries no generic information.
      */
     public String signatureOf(SourceType type)
     {
@@ -2008,8 +1969,7 @@ public class TypeResolver
     }
 
     /**
-     * Builds the descriptor of a declared parameter. A varargs parameter carries its element type in
-     * the declaration, so its descriptor is one array dimension up.
+     * Builds the descriptor of a declared parameter.
      *
      * @param param the declared parameter
      * @return the field descriptor of the parameter's type
@@ -2053,10 +2013,7 @@ public class TypeResolver
     }
 
     /**
-     * Repairs nested-class boundaries in an internal name. A name spelled with {@code /} for every separator
-     * (e.g. {@code a/b/Outer/Inner}) is corrected to use {@code $} where a {@code /}-segment is actually a
-     * nested class, identified by testing successive boundaries against the pool from the rightmost inward.
-     * Returns the input unchanged when it already resolves or no nested form is found.
+     * Repairs nested-class boundaries in an internal name.
      */
     private String normalizeNestedName(String internalName)
     {
@@ -2081,8 +2038,7 @@ public class TypeResolver
     }
 
     /**
-     * Tests whether a class is an interface, consulting the ClassPool and then reflection. Used to
-     * choose invokeinterface over invokevirtual for calls on interface-typed receivers.
+     * Tests whether a class is an interface, consulting the ClassPool and then reflection.
      *
      * @param internalName the class to look up
      * @return true if the class is an interface; false if it is not, or cannot be resolved
@@ -2122,8 +2078,7 @@ public class TypeResolver
     }
 
     /**
-     * Tests whether a class is resolvable via the pool - already loaded, or loadable from the system
-     * class path (so e.g. implicitly-imported {@code java.lang} exceptions resolve).
+     * Tests whether a class is resolvable via the pool - already loaded, or loadable from the system class path.
      *
      * @param internalName the class to look up
      * @return true if the class resolves

@@ -147,7 +147,6 @@ public class ASTMutationDemo
 
     /**
      * Mutates the AST by finding all integer literals with value 10 and changing to 100.
-     * This demonstrates modifying expressions deep within the AST.
      */
     private static BlockStmt mutateAst(BlockStmt ast)
     {

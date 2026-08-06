@@ -141,13 +141,12 @@ List<SearchResult> exceptionAllocs = search.findPattern(
 
 ## Integration with Other APIs
 
-The Pattern Search API can leverage Call Graph, Dependency Analysis, and Type Inference:
+The Pattern Search API can leverage Call Graph and Dependency Analysis:
 
 ```java
 PatternSearch search = new PatternSearch(pool)
     .withCallGraph()       // Build call graph for caller/callee queries
-    .withDependencies()    // Build dependency graph
-    .withTypeInference();  // Enable nullability-aware searches
+    .withDependencies();   // Build dependency graph
 
 // Find all callers of a method
 List<SearchResult> callers = search.findCallersOf(
@@ -159,7 +158,7 @@ List<SearchResult> callers = search.findCallersOf(
 // Find classes depending on a class
 List<SearchResult> dependents = search.findDependentsOf("java/util/List");
 
-// Find potential null pointer dereferences
+// Find potential null pointer dereferences (runs type inference itself, no setup needed)
 List<SearchResult> nullDerefs = search.findPotentialNullDereferences();
 ```
 

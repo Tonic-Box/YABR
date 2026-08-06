@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.transform;
 
+import java.util.Objects;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -9,9 +10,6 @@ import java.util.*;
 
 /**
  * Phi Constant Propagation optimization transform.
- * Simplifies phi nodes when all incoming values are identical:
- * - phi(10, 10, 10) -&gt; 10 (all paths produce same constant)
- * - phi(x, x, x) -&gt; x (all paths produce same SSA value)
  */
 public class PhiConstantPropagation implements IRTransform
 {
@@ -90,13 +88,13 @@ public class PhiConstantPropagation implements IRTransform
         {
             IntConstant icA = (IntConstant) a;
             IntConstant icB = (IntConstant) b;
-            return icA.getValue() == icB.getValue();
+            return Objects.equals(icA.getValue(), icB.getValue());
         }
         if (a instanceof LongConstant && b instanceof LongConstant)
         {
             LongConstant lcA = (LongConstant) a;
             LongConstant lcB = (LongConstant) b;
-            return lcA.getValue() == lcB.getValue();
+            return Objects.equals(lcA.getValue(), lcB.getValue());
         }
         if (a instanceof FloatConstant && b instanceof FloatConstant)
         {
@@ -110,11 +108,6 @@ public class PhiConstantPropagation implements IRTransform
             DoubleConstant dcB = (DoubleConstant) b;
             return Double.compare(dcA.getValue(), dcB.getValue()) == 0;
         }
-        if (a instanceof NullConstant && b instanceof NullConstant)
-        {
-            return true;
-        }
-
-        return false;
+        return a instanceof NullConstant && b instanceof NullConstant;
     }
 }

@@ -30,18 +30,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Symbolically re-resolves constant-pool entries from a source {@link ClassFile}'s pool into a target
- * {@link ClassFile}'s pool, returning the target index for any source index. Method/field/interface,
- * class, string and numeric constants are find-or-added; {@code invokedynamic}/dynamic constants also
- * copy and remap the referenced bootstrap method (handle + static arguments) into the target's
- * {@code BootstrapMethods} attribute.
- * Pass {@link #remap} as the {@code cpRemap} of
- * {@link CodeWriter#cloneRangeWithTargets(com.tonic.analysis.instruction.Instruction,
- * com.tonic.analysis.instruction.Instruction, int, ConstPool, java.util.function.IntUnaryOperator)} to
- * relocate a method body across pools - used by {@link MethodGrafter}, and directly when splicing a
- * source body into a method the target already owns (e.g. merging into an existing {@code <clinit>}).
- * One instance is stateful (it caches results and accumulates bootstrap entries) and is reusable
- * across several bodies sharing the same source/target pair.
+ * Symbolically re-resolves constant-pool entries from a source {@link ClassFile}'s pool into a target {@link
+ * ClassFile}'s pool, returning the target index for any source index.
  */
 public final class ConstPoolRemapper
 {

@@ -21,16 +21,6 @@ import java.util.List;
 
 /**
  * Reconstructs pattern-matching {@code instanceof} (Java 16) from the classic bytecode idiom.
- * javac compiles {@code if (x instanceof T t) ...} to an {@code instanceof} test followed by a
- * {@code checkcast}+store of {@code x} into the binding local, which YABR recovers (before single-use
- * inlining) as a {@code T t = (T) x;} declaration at the start of the binding's flow scope. This pass
- * recognizes that declaration and folds it back into the test as {@code x instanceof T t}, removing
- * the now-redundant declaration. Two shapes are handled:
- * - positive: {@code if (x instanceof T) { T t = (T) x; ... }} - scope is the then-branch;
- * - negated guard: {@code if (!(x instanceof T)) { return/throw/...; } T t = (T) x; ...} - by
- *       flow scoping the binding is in scope after a guard that always exits, so the declaration that
- *       follows the {@code if} is the binding.
- * Runs before single-use inlining so the binding is still a materialized declaration.
  */
 public class PatternInstanceOfReconstructor implements ASTTransform
 {

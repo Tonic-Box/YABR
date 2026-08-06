@@ -258,8 +258,7 @@ public class LoweringContext
 
     /**
      * The type the surrounding declaration expects of the expression being lowered - the declared type of a
-     * variable whose initializer is under way. Consulted when a call's return type cannot be resolved, so
-     * the descriptor carries what the source demands instead of degrading to Object.
+     * variable whose initializer is under way.
      */
     private final java.util.ArrayDeque<SourceType> expectedTypes =
             new java.util.ArrayDeque<>();
@@ -335,7 +334,6 @@ public class LoweringContext
 
     /**
      * Registers a parameter with its local slot index without emitting StoreLocal.
-     * Parameters are already at their slots from the method call.
      *
      * @param name parameter name
      * @param localIndex slot the parameter arrives in
@@ -350,9 +348,6 @@ public class LoweringContext
 
     /**
      * Declares a source-level local, parameter or receiver with its declared type.
-     * A fresh record is created each call so that two disjoint declarations of the same name (sequential
-     * shadowing) remain distinct LocalVariableTable entries. Subsequent assignments captured via
-     * {@link #setVariable}/{@link #registerParameter} append their SSA values to the current record.
      *
      * @param name source name of the local
      * @param type declared type
@@ -380,9 +375,7 @@ public class LoweringContext
     }
 
     /**
-     * The DECLARED type of a live source local. This is the variable's static type in the Java sense - the
-     * authority for member resolution regardless of what the last assignment's flow type narrowed or
-     * widened to.
+     * The DECLARED type of a live source local.
      *
      * @param name variable to look up
      * @return the declared type, or null when the variable was never declared
@@ -448,7 +441,6 @@ public class LoweringContext
 
     /**
      * Sets or updates a variable's SSA value.
-     * When emitLocalInstructions is enabled, also emits a StoreLocalInstruction.
      *
      * @param name variable being assigned
      * @param value value assigned to it
@@ -488,7 +480,6 @@ public class LoweringContext
 
     /**
      * Gets a variable's current SSA value.
-     * When emitLocalInstructions is enabled, also emits a LoadLocalInstruction.
      *
      * @param name variable to read
      * @return the bound value, or the value the emitted load produces
@@ -571,10 +562,7 @@ public class LoweringContext
     }
 
     /**
-     * Gets the continue target for the current or labeled loop. An unlabeled {@code continue} skips break-only
-     * scopes (a {@code switch}, whose frame carries a null continue-target) and resolves to the nearest enclosing
-     * loop's continue-target, matching Java: a {@code continue} inside a {@code switch} continues the loop, it does
-     * not leave the switch at its break target.
+     * Gets the continue target for the current or labeled loop.
      *
      * @param label loop label, or null for the innermost enclosing loop
      * @return the block the continue jumps to
@@ -639,8 +627,8 @@ public class LoweringContext
     }
 
     /**
-     * Resolves the loop frame a {@code continue} targets - the labeled frame, else the innermost frame
-     * with a continue-target (skipping break-only switch frames).
+     * Resolves the loop frame a {@code continue} targets - the labeled frame, else the innermost frame with a
+     * continue-target.
      *
      * @param label loop label, or null for the innermost enclosing loop
      * @return the frame the continue leaves to
@@ -835,10 +823,7 @@ public class LoweringContext
         public IRBlock breakTarget() { return breakTarget; }
 
         /**
-         * The lowerer's finally-stack size at the moment this loop/switch was entered. A {@code break}
-         * or {@code continue} that leaves this frame must first run every cleanup pushed after it - the
-         * {@code monitorexit} of an enclosing {@code synchronized} inside the loop, or an intervening
-         * {@code finally} - which are exactly the entries above this depth.
+         * The lowerer's finally-stack size at the moment this loop/switch was entered.
          *
          * @return the finally-stack size at the moment this frame was entered
          */

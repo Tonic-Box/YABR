@@ -10,13 +10,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Eliminates dead stores where a variable's initial value is never read.
- * Pattern detected:
- *   int x = 0;      // declaration with initializer
- *   x = something;  // immediate reassignment (no read of x between)
- * Transformed to:
- *   int x = something;  // merge into single declaration
- * This improves decompile clarity by removing redundant initializations
- * that come from SSA phi node lowering.
  */
 public class DeadStoreEliminator implements ASTTransform
 {
@@ -220,9 +213,7 @@ public class DeadStoreEliminator implements ASTTransform
     }
 
     /**
-     * Whether {@code newValue} may be evaluated before statements {@code [from, to)}: none of them
-     * declares or assigns a variable {@code newValue} references, and - when {@code newValue} reads
-     * through the heap (a field, array element, or call) - none of them has side effects.
+     * Whether {@code newValue} may be evaluated before statements {@code [from, to)}.
      */
     private boolean safeToHoistOver(List<Statement> stmts, int from, int to, Expression newValue)
     {
@@ -426,7 +417,6 @@ public class DeadStoreEliminator implements ASTTransform
 
     /**
      * Visitor that checks if a specific variable is read in an expression.
-     * Handles the special case where assignment LHS is a write, not a read.
      */
     private static class VariableReadChecker extends AbstractSourceVisitor<Void>
     {

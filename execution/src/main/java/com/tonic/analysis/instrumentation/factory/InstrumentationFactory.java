@@ -12,8 +12,6 @@ import java.util.*;
 
 /**
  * Factory for creating instrumentation IR instructions.
- * Generates the IR instruction sequences needed to call hook methods
- * with the appropriate parameters.
  */
 public class InstrumentationFactory
 {

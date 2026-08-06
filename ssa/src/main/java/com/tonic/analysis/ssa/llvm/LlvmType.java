@@ -2,9 +2,6 @@ package com.tonic.analysis.ssa.llvm;
 
 /**
  * The closed set of LLVM IR types the computational-subset lowering emits, plus rendering helpers.
- *
- *{@link #PTR} exists so the lattice is complete for the eventual reference/heap model; the v1
- * computational subset never produces it (reference types route to {@link UnsupportedLowering}).
  */
 enum LlvmType
 {

@@ -62,7 +62,6 @@ public class StackMapTableAttribute extends Attribute
 
     /**
      * Sets the frames for this StackMapTable.
-     * Used when programmatically generating frames.
      * @param frames The list of StackMapFrame entries
      */
     public void setFrames(List<StackMapFrame> frames)

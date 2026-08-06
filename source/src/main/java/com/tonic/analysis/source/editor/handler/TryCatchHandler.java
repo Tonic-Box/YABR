@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for try-catch-finally statements.
- * Use this to intercept and transform exception handling.
  */
 @FunctionalInterface
 public interface TryCatchHandler

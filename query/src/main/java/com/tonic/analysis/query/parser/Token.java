@@ -9,8 +9,7 @@ public final class Token
 {
 
     /**
-     * The lexical kinds of the query language: keywords, subject and attribute names, literals,
-     * punctuation, comparison operators, and the end-of-input marker.
+     * The lexical kinds of the query language.
      */
     public enum TokenType
     {

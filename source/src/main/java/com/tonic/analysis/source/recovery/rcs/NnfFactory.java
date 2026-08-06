@@ -3,11 +3,7 @@ package com.tonic.analysis.source.recovery.rcs;
 import java.util.*;
 
 /**
- * Builds and interns {@link Nnf} nodes for one method's structuring pass. {@code and}/{@code or}
- * flatten operands of the same kind, drop identity/absorbing constants, and de-duplicate by identity
- * (safe because every node is interned); {@code not} pushes negation to the leaves via De Morgan.
- * Operand lists are kept in ascending id order so a compound node is canonical up to commutativity,
- * which makes interning and de-duplication exact.
+ * Builds and interns {@link Nnf} nodes for one method's structuring pass.
  */
 final class NnfFactory
 {
@@ -141,7 +137,7 @@ final class NnfFactory
     }
 
     /**
-     * Evaluates {@code n} under an assignment indexed by atom. For tests and equivalence checks.
+     * Evaluates {@code n} under an assignment indexed by atom.
      */
     static boolean eval(Nnf n, boolean[] assignment)
     {

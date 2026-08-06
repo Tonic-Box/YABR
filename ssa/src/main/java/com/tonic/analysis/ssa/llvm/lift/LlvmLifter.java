@@ -7,19 +7,8 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import java.util.List;
 
 /**
- * Entry point for lifting textual LLVM IR back to YABR SSA IR, inverting
- * {@link com.tonic.analysis.ssa.llvm.LlvmLowering}.
- *
- * Only the computational subset emitted under
- * {@link com.tonic.analysis.ssa.llvm.LlvmLoweringConfig.ObjectModel#NONE} is supported; {@code jvm_*}
- * ABI calls and other runtime-model constructs are parsed best-effort and unrecognised lines are
- * silently skipped.
- * <pre>{@code
- *   IRMethod original = new SSA(cp).lift(method);
- *   String ll = new LlvmLowering().lower(original);
- *   // optionally: run opt -O2 on ll
- *   IRMethod lifted = new LlvmLifter().lift(ll);
- * }</pre>
+ * Entry point for lifting textual LLVM IR back to YABR SSA IR, inverting {@link
+ * com.tonic.analysis.ssa.llvm.LlvmLowering}.
  */
 public final class LlvmLifter
 {

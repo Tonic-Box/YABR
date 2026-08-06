@@ -7,8 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Splits a textual LLVM IR module into {@link ParsedFunction} value objects. The module format
- * produced by the YABR lowerer is strictly regular - no nested braces, no continuation lines.
+ * Splits a textual LLVM IR module into {@link ParsedFunction} value objects.
  */
 final class LlvmParser
 {

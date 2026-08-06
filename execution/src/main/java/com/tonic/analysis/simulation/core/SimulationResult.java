@@ -6,8 +6,7 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import java.util.*;
 
 /**
- * Immutable result of a simulation run: recorded state snapshots (overall and per block)
- * plus summary metrics such as instruction count and max stack depth.
+ * Immutable result of a simulation run.
  */
 public final class SimulationResult
 {

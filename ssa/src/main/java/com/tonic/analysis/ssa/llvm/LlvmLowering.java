@@ -9,8 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Entry point lowering YABR SSA IR to textual LLVM IR; unsupported constructs throw
- * {@link UnsupportedOperationException} via {@link UnsupportedLowering}.
+ * Entry point lowering YABR SSA IR to textual LLVM IR.
  */
 public final class LlvmLowering
 {

@@ -6,8 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for assignment expressions.
- * Assignments are represented as BinaryExpr with ASSIGN or compound assignment operators.
- * Use this to intercept and transform variable assignments.
  */
 @FunctionalInterface
 public interface AssignmentHandler

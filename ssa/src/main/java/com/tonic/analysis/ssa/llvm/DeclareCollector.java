@@ -7,9 +7,8 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
- * Collects the external static callees encountered during lowering and renders module-level
- * {@code declare} lines for them. Keyed by mangled symbol (deduped); rendered in sorted order for
- * deterministic module output. Symbols also {@code define}d in the module are excluded at render.
+ * Collects the external static callees encountered during lowering and renders module-level {@code declare}
+ * lines for them.
  */
 final class DeclareCollector
 {

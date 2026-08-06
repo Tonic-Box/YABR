@@ -7,7 +7,6 @@ import com.tonic.parser.constpool.Utf8Item;
 
 /**
  * Represents an entry in the InnerClasses attribute.
- * Describes the relationship between an inner class and its enclosing class.
  */
 public class InnerClassEntry
 {

@@ -12,11 +12,6 @@ import java.util.*;
 
 /**
  * Loop-Invariant Code Motion (LICM) optimization transform.
- * Moves loop-invariant computations outside the loop:
- * - An instruction is loop-invariant if all its operands are defined outside
- *   the loop or are constants
- * - Only pure computations (no side effects) are moved
- * - Instructions are moved to the loop preheader
  */
 public class LoopInvariantCodeMotion implements IRTransform
 {
@@ -50,13 +45,13 @@ public class LoopInvariantCodeMotion implements IRTransform
 
         for (Loop loop : loopAnalysis.getLoops())
         {
-            changed |= processLoop(loop, method, domTree);
+            changed |= processLoop(loop);
         }
 
         return changed;
     }
 
-    private boolean processLoop(Loop loop, IRMethod method, DominatorTree domTree)
+    private boolean processLoop(Loop loop)
     {
         IRBlock header = loop.getHeader();
 
@@ -234,11 +229,6 @@ public class LoopInvariantCodeMotion implements IRTransform
         {
             return true;
         }
-        if (instr instanceof CopyInstruction)
-        {
-            return true;
-        }
-
-        return false;
+        return instr instanceof CopyInstruction;
     }
 }

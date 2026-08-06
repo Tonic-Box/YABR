@@ -11,9 +11,6 @@ import com.tonic.util.DescriptorUtil;
 
 /**
  * Computes state transitions for IR instructions.
- *
- *Each instruction type has a specific effect on the simulation state
- * (stack and locals). This class encapsulates all transition logic.
  */
 public final class StateTransitions
 {
@@ -430,7 +427,6 @@ public final class StateTransitions
 
     /**
      * Pop a specific number of slots from the stack.
-     * This accounts for wide values taking 2 slots.
      */
     private static SimulationState popSlots(SimulationState state, int slots)
     {

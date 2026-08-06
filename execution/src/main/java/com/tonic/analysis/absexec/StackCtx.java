@@ -4,17 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One operand-stack slot during abstract execution: a link from the value to the {@link InsnContext} that
- * pushed it and the contexts that popped it. Port of RuneLite's {@code StackContext} minus the abstract-value
- * field (the ModArith port reads constants from the pushing instruction, not a value domain).
+ * One operand-stack slot during abstract execution.
  */
 public final class StackCtx
 {
 
     private final InsnContext pushed;
-    private final boolean wide; // long/double occupy a logical wide slot
+    private final boolean wide;
     private final List<InsnContext> popped = new ArrayList<>();
-    boolean removed;
 
     /**
      * Creates a slot for a pushed value.

@@ -15,7 +15,6 @@ import java.util.List;
 
 /**
  * Main entry point for SSA-form IR operations.
- * Provides methods for lifting bytecode to SSA and lowering back to bytecode.
  */
 public class SSA
 {
@@ -49,14 +48,7 @@ public class SSA
     }
 
     /**
-     * Enables exception-local resolution during lifting: protected blocks are temporarily connected to their
-     * handlers so phi insertion + renaming propagate locals live across the exception edge (params, try-body
-     * defs) into the handler, then the edges are removed. This is needed when the IR is lowered back to
-     * bytecode (e.g. deobfuscation) so a handler that uses such a local does not read a never-written slot.
-     *
-     *It is OFF by default because it adds handler phis that change control-flow shape, which the
-     * source-recovery decompiler's finally/try-catch reconstruction is sensitive to. Opt in only on paths that
-     * lift-&gt;optimize-&gt;lower.
+     * Enables exception-local resolution during lifting.
      * @return this for fluent chaining
      */
     public SSA withExceptionLocalResolution()
@@ -66,10 +58,7 @@ public class SSA
     }
 
     /**
-     * Disables LocalVariableTable emission when lowering back to bytecode. Emission is ON by default so
-     * recompiled source carries real local-variable debug names; opt out for size-sensitive or debug-free
-     * output. IR with no source-local model (e.g. the lift-&gt;lower deobfuscation path) emits no table either way,
-     * so this only affects the source-compile path.
+     * Disables LocalVariableTable emission when lowering back to bytecode.
      * @return this for fluent chaining
      */
     public SSA withoutLocalVariableTable()
@@ -131,8 +120,7 @@ public class SSA
     }
 
     /**
-     * Lowers an SSA-form IR method to textual LLVM IR (computational subset). Convenience delegate
-     * to {@link com.tonic.analysis.ssa.llvm.LlvmLowering}.
+     * Lowers an SSA-form IR method to textual LLVM IR (computational subset).
      * @param irMethod the IR method to lower
      * @return the LLVM IR module text
      */
@@ -181,10 +169,6 @@ public class SSA
 
     /**
      * Enables strength reduction optimization.
-     * Replaces expensive operations with cheaper equivalents:
-     * - x * 2^n -&gt; x &lt;&lt; n
-     * - x / 2^n -&gt; x &gt;&gt; n
-     * - x % 2^n -&gt; x &amp; (2^n - 1)
      * @return this SSA instance for chaining
      */
     public SSA withStrengthReduction()
@@ -194,10 +178,6 @@ public class SSA
 
     /**
      * Enables algebraic simplification optimization.
-     * Applies mathematical identities:
-     * - x + 0 -&gt; x, x * 1 -&gt; x, x * 0 -&gt; 0
-     * - x - x -&gt; 0, x ^ x -&gt; 0
-     * - x &amp; 0 -&gt; 0, x | 0 -&gt; x
      * @return this SSA instance for chaining
      */
     public SSA withAlgebraicSimplification()
@@ -207,8 +187,6 @@ public class SSA
 
     /**
      * Enables reassociation optimization.
-     * Reorders commutative operations to group constants together for folding.
-     * Example: (x + 5) + 10 -&gt; x + (5 + 10) -&gt; x + 15
      * @return this SSA instance for chaining
      */
     public SSA withReassociate()
@@ -218,7 +196,6 @@ public class SSA
 
     /**
      * Enables phi constant propagation optimization.
-     * Simplifies phi nodes when all incoming values are identical.
      * @return this SSA instance for chaining
      */
     public SSA withPhiConstantPropagation()
@@ -228,7 +205,6 @@ public class SSA
 
     /**
      * Enables peephole optimizations.
-     * Applies small pattern-based optimizations like double negation removal.
      * @return this SSA instance for chaining
      */
     public SSA withPeepholeOptimizations()
@@ -238,7 +214,6 @@ public class SSA
 
     /**
      * Enables common subexpression elimination.
-     * Identifies identical expressions and reuses the first computed result.
      * @return this SSA instance for chaining
      */
     public SSA withCommonSubexpressionElimination()
@@ -248,7 +223,6 @@ public class SSA
 
     /**
      * Enables null check elimination optimization.
-     * Removes redundant null checks when an object is provably non-null.
      * @return this SSA instance for chaining
      */
     public SSA withNullCheckElimination()
@@ -258,7 +232,6 @@ public class SSA
 
     /**
      * Enables conditional constant propagation optimization.
-     * Propagates constants through conditional branches, eliminating unreachable code.
      * @return this SSA instance for chaining
      */
     public SSA withConditionalConstantPropagation()
@@ -268,7 +241,6 @@ public class SSA
 
     /**
      * Enables loop-invariant code motion optimization.
-     * Moves loop-invariant computations outside the loop.
      * @return this SSA instance for chaining
      */
     public SSA withLoopInvariantCodeMotion()
@@ -278,8 +250,6 @@ public class SSA
 
     /**
      * Enables loop predication optimization.
-     * Converts loop-variant guards into loop-invariant predicates.
-     * Eliminates guards that can be proven always true for all iterations.
      * @return this SSA instance for chaining
      */
     public SSA withLoopPredication()
@@ -288,19 +258,7 @@ public class SSA
     }
 
     /**
-     * Enables induction variable simplification optimization.
-     * Simplifies loop counters and derived induction variables.
-     * @return this SSA instance for chaining
-     */
-    public SSA withInductionVariableSimplification()
-    {
-        return addTransform(new InductionVariableSimplification());
-    }
-
-    /**
      * Enables jump threading optimization.
-     * Eliminates redundant jump chains by threading through empty goto blocks.
-     * For example: goto A; A: goto B -&gt; goto B
      * @return this SSA instance for chaining
      */
     public SSA withJumpThreading()
@@ -310,8 +268,6 @@ public class SSA
 
     /**
      * Enables block merging optimization.
-     * Merges blocks with a single predecessor/successor relationship
-     * where no phi instructions are present.
      * @return this SSA instance for chaining
      */
     public SSA withBlockMerging()
@@ -321,8 +277,6 @@ public class SSA
 
     /**
      * Enables control flow reducibility transformation.
-     * Converts irreducible control flow to reducible form using node splitting,
-     * allowing the decompiler to emit structured Java code.
      * @return this SSA instance for chaining
      */
     public SSA withControlFlowReducibility()
@@ -332,8 +286,6 @@ public class SSA
 
     /**
      * Enables duplicate block merging optimization.
-     * Merges duplicate blocks created by node splitting while preserving reducibility.
-     * Use after withControlFlowReducibility() to clean up duplicated code.
      * @return this SSA instance for chaining
      */
     public SSA withDuplicateBlockMerging()
@@ -343,8 +295,6 @@ public class SSA
 
     /**
      * Enables duplicate block merging optimization with configurable aggression.
-     * Conservative mode (false): only merge when one predecessor dominates all others.
-     * Aggressive mode (true): also merge when no loop entry conflict would be created.
      * @param aggressive true for aggressive merging, false for conservative
      * @return this SSA instance for chaining
      */
@@ -355,8 +305,6 @@ public class SSA
 
     /**
      * Enables redundant copy elimination optimization.
-     * Removes identity copies (x = x), redundant load-store sequences,
-     * and propagates copy chains to their ultimate sources.
      * @return this SSA instance for chaining
      */
     public SSA withRedundantCopyElimination()
@@ -366,8 +314,6 @@ public class SSA
 
     /**
      * Enables bit-tracking dead code elimination.
-     * Tracks which bits of a value are actually used downstream and
-     * eliminates operations on bits that are never used.
      * @return this SSA instance for chaining
      */
     public SSA withBitTrackingDCE()
@@ -377,8 +323,6 @@ public class SSA
 
     /**
      * Enables correlated value propagation optimization.
-     * Uses control flow to derive facts about values - when passing a branch
-     * like if (x &lt; 10), CVP knows x is in range [MIN, 9] in the true branch.
      * @return this SSA instance for chaining
      */
     public SSA withCorrelatedValuePropagation()
@@ -399,8 +343,6 @@ public class SSA
 
     /**
      * Enables method inlining optimization.
-     * Replaces method calls with the body of the called method for
-     * private, final, and static methods within the same class.
      * @return this SSA instance for chaining
      */
     public SSA withMethodInlining()
@@ -410,7 +352,6 @@ public class SSA
 
     /**
      * Enables dead method elimination.
-     * Removes private methods that are never called after inlining.
      * @return this SSA instance for chaining
      */
     public SSA withDeadMethodElimination()
@@ -431,7 +372,6 @@ public class SSA
 
     /**
      * Enables all available optimizations.
-     * Transforms are applied in optimal order for best results.
      * @return this SSA instance for chaining
      */
     public SSA withAllOptimizations()
@@ -451,7 +391,6 @@ public class SSA
                 .withNullCheckElimination()
                 .withLoopInvariantCodeMotion()
                 .withLoopPredication()
-                .withInductionVariableSimplification()
                 .withJumpThreading()
                 .withBlockMerging()
                 .withDeadCodeElimination();
@@ -578,8 +517,6 @@ public class SSA
 
     /**
      * Runs all registered class-level transforms on a class file.
-     * Class transforms (like method inlining) have access to the entire class
-     * and can perform cross-method optimizations.
      * @param classFile the class file to transform
      * @return true if any transform modified the class
      */
@@ -598,8 +535,6 @@ public class SSA
 
     /**
      * Transforms an entire class file with all registered transforms.
-     * First runs class-level transforms (like inlining), then runs
-     * method-level transforms on each method.
      * @param classFile the class file to transform
      */
     public void transformClass(ClassFile classFile)

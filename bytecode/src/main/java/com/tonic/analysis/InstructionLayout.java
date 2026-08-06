@@ -10,9 +10,7 @@ import java.util.Map;
 import static com.tonic.util.Opcode.*;
 
 /**
- * Pure layout and classification facts about individual instructions: branch/switch tests,
- * encoded lengths, switch alignment padding, local-variable slot indices and sizes, and conditional
- * opcode inversion. Stateless; used while laying out and rewriting a method's bytecode.
+ * Pure layout and classification facts about individual instructions.
  */
 final class InstructionLayout
 {

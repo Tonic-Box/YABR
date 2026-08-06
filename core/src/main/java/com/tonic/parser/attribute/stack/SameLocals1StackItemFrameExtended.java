@@ -7,7 +7,6 @@ import java.io.IOException;
 
 /**
  * Represents a SameLocals1StackItemFrameExtended in the StackMapTable attribute.
- * Extended version with explicit offset delta and one stack item.
  */
 public class SameLocals1StackItemFrameExtended extends StackMapFrame
 {

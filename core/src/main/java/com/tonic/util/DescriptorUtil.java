@@ -7,8 +7,6 @@ import java.util.Set;
 
 /**
  * Utility class for JVM descriptor parsing and manipulation.
- * Provides methods for parsing method descriptors, type descriptors,
- * and extracting type information.
  */
 public final class DescriptorUtil
 {
@@ -255,7 +253,6 @@ public final class DescriptorUtil
 
     /**
      * Extracts all class names referenced in a descriptor (internal format).
-     * This includes parameter types, return type, and array element types.
      * @param descriptor a type or method descriptor
      * @return set of internal class names (e.g., "java/lang/String")
      */

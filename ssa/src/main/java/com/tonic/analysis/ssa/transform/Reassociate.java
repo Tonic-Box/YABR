@@ -12,9 +12,7 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Reorders commutative operations so constants group together for folding, e.g.
- * (x + 5) + 10 -&gt; x + 15. Only swaps the operands of a single binary op, putting the
- * constant on the right as the canonical form other passes match against.
+ * Reorders commutative operations so constants group together for folding, e.g. (x + 5) + 10 -&gt; x + 15.
  */
 public class Reassociate implements IRTransform
 {

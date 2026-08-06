@@ -17,7 +17,6 @@ import java.util.*;
 
 /**
  * Linear scan register allocator.
- * Assigns local variable slots to SSA values.
  */
 public class RegisterAllocator
 {
@@ -234,13 +233,7 @@ public class RegisterAllocator
     }
 
     /**
-     * Places every value of a variable named in a slot-affinity request into ONE exclusively claimed
-     * home slot. The lowering issues an affinity when a try/finally's synthetic handler reads the
-     * variable at its slot: that read is only correct if EVERY definition of the variable writes the
-     * one slot, since a fault can occur between any two of them. The group is the variable's recorded
-     * values plus the affinity values themselves (a loop-carried phi of the variable is not recorded)
-     * and the phi copies of all of those. Claiming before the linear scan makes the grouping total:
-     * the home slot is never released to the scan, so no foreign interval can land on it.
+     * Places every value of a variable named in a slot-affinity request into ONE exclusively claimed home slot.
      */
     private void allocateAffinityGroups()
     {
@@ -329,9 +322,7 @@ public class RegisterAllocator
     }
 
     /**
-     * Grows {@code members} with the merge phis that belong to the same variable: a phi whose every named
-     * incoming is already a member is this variable's own merge, not a join with another. Closing to a
-     * fixpoint picks up phis feeding phis.
+     * Grows {@code members} with the merge phis that belong to the same variable.
      */
     private void addOwnPhiMerges(Set<SSAValue> members)
     {
@@ -396,10 +387,7 @@ public class RegisterAllocator
     }
 
     /**
-     * The values sharing each source variable's home slot, phi results included. A loop-carried variable is
-     * read through its merge phi, which the variable's own value list does not carry - so this is the only
-     * view that spans the whole variable, and anything scoping a variable over the code (its debug range,
-     * say) needs it rather than the defs alone.
+     * The values sharing each source variable's home slot, phi results included.
      * @return the live map from source variable to the values in its home slot
      */
     public Map<IRMethod.SourceLocal, Set<SSAValue>> getHomeSlotGroups()
@@ -466,10 +454,6 @@ public class RegisterAllocator
 
     /**
      * Pre-allocates registers for phi results before the main allocation loop.
-     * For nested phis (where an outer phi's incoming value is an inner phi result),
-     * we coalesce them to the same slot to prevent type inconsistencies at merge points.
-     * Uses Union-Find to handle cycles correctly (e.g., nested loops where inner and
-     * outer count phis reference each other).
      */
     private void preAllocatePhiResults(Set<Integer> freeRegs)
     {
@@ -546,13 +530,7 @@ public class RegisterAllocator
     }
 
     /**
-     * Coalesces a reassignment back into its variable's slot. A value defined as {@code v = op(p, x)} where one
-     * operand {@code p} belongs to {@code v}'s OWN source variable (e.g. {@code num = num + 2},
-     * {@code sum = sum + i}) is the same variable's next value and javac keeps it in the one slot - but it has
-     * no copy/phi edge, so the linear scan would spill it to a fresh temp. Pin it to {@code p}'s slot. Only an
-     * operand of the SAME source variable qualifies (so {@code local6 = sum + local5} never coalesces across
-     * variables), and it must not interfere with a DIFFERENT variable already in that slot (same-variable
-     * occupants are temporally/path disjoint by construction, like the values javac keeps in one slot).
+     * Coalesces a reassignment back into its variable's slot.
      */
     private Object commonCopySourceGroup(List<CopyInfo> copies, Map<SSAValue, Object> group)
     {
@@ -776,8 +754,7 @@ public class RegisterAllocator
 
     /**
      * Whether {@code value}'s defining instruction reads {@code used} as an operand - i.e. {@code value} is
-     * computed from {@code used}. For a phi's incoming source this marks the loop-carried value derived from
-     * the phi ({@code v = f(phi)}), which supersedes it on the back-edge and may share its slot.
+     * computed from {@code used}.
      */
     private boolean definitionUsesValue(SSAValue value, SSAValue used)
     {
@@ -797,14 +774,7 @@ public class RegisterAllocator
     }
 
     /**
-     * Precise interference test: whether {@code a} and {@code b} are ever simultaneously live at any program
-     * point, computed from the true per-instruction liveness rather than the single conservative interval.
-     * The interval an allocator carries for a phi result is deliberately over-extended (across the loop
-     * back-edge and to cover its copies), so {@link #interferes} reports a false conflict between a phi and its
-     * own loop-carried source ({@code v = f(phi)}): the interval says the phi is live in {@code [f(phi), back
-     * edge]} where in truth it is dead (the back-edge carries the source, not the phi). Walking real liveness
-     * shows they never coexist there, so the source may share the phi slot - while a nested-loop accumulator
-     * whose phi genuinely coexists with the source is still reported as interfering.
+     * Precise interference test.
      */
     private boolean preciselyInterferes(SSAValue a, SSAValue b)
     {
@@ -846,12 +816,7 @@ public class RegisterAllocator
     }
 
     /**
-     * Per-block live-out sets recomputed to be phi-aware, because the shared {@link LivenessAnalysis} is not:
-     * phis are eliminated (their instructions cleared from blocks) before liveness runs, so a phi result has no
-     * visible definition and is computed as live everywhere backward from its uses - over-extending it across
-     * the loop back-edge so it falsely coexists with its own back-edge source. Here a phi result is a proper
-     * definition at its block entry (not live-in there, not live on the back-edge), and each predecessor edge
-     * carries the phi OPERAND supplied from that predecessor. Standard backward dataflow to a fixed point.
+     * Per-block live-out sets recomputed to be phi-aware, because the shared {@link LivenessAnalysis} is not.
      */
     private Map<IRBlock, Set<SSAValue>> phiAwareLiveOut()
     {
@@ -929,10 +894,7 @@ public class RegisterAllocator
     }
 
     /**
-     * Phi results grouped by the block that defines them, rebuilt from the phi-copy mapping. Phi instructions
-     * are cleared from their blocks during phi elimination (before allocation), but each phi-result value still
-     * points at its {@code PhiInstruction} (with its block and per-edge incoming values intact), so the phi
-     * structure needed for phi-aware liveness survives here.
+     * Phi results grouped by the block that defines them, rebuilt from the phi-copy mapping.
      */
     private Map<IRBlock, List<PhiInstruction>> phisByBlock()
     {
@@ -1261,8 +1223,6 @@ public class RegisterAllocator
 
     /**
      * Extends phi result intervals to cover all their phi copy definitions.
-     * This prevents the phi result's slot from being reused by other values
-     * before all phi copies have been executed.
      */
     private void extendPhiResultIntervals(Map<SSAValue, LiveInterval> intervals)
     {

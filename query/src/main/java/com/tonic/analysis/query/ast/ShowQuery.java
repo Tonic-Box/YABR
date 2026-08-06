@@ -4,7 +4,6 @@ import java.util.Objects;
 
 /**
  * SHOW query - displays all matching items without filtering.
- * Example: SHOW all strings DURING clinit OF classes matching /Config/
  */
 public final class ShowQuery implements Query
 {

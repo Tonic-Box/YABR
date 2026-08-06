@@ -22,14 +22,6 @@ import java.util.List;
 
 /**
  * Reconstructs switch expressions (Java 14) from the classic statement form javac lowers them to.
- * Recognizes the assignment idiom - a variable declared then assigned exactly once in every
- * (exhaustive) arm of a following switch - and folds it into an initializing switch expression:
- * <pre>
- *   T v = init; switch (sel) { case L: v = e1; break; default: v = e2; break; } ... v ...
- *     =&gt;  T v = switch (sel) { case L -&gt; e1; default -&gt; e2; }; ... v ...
- * </pre>
- * Conservative: every case body must be exactly one assignment to {@code v} (plus an optional
- * {@code break}), and the switch must have a default, so the fold is always behavior-preserving.
  */
 public class SwitchExpressionReconstructor implements ASTTransform
 {
@@ -131,9 +123,7 @@ public class SwitchExpressionReconstructor implements ASTTransform
     }
 
     /**
-     * Folds {@code T v = init; switch (sel) { case L: v = e; return v; default: return v; } [return v;]}
-     * into {@code return switch (sel) { case L -> e; default -> init; };}. Each non-default arm assigns
-     * then returns {@code v}; a {@code default: return v} yields the declared initializer.
+     * Folds a declaration followed by an assigning switch into a switch expression initializer.
      */
     private SwitchExpr tryFoldReturnSwitch(VarDeclStmt decl, SwitchStmt sw)
     {

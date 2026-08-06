@@ -10,7 +10,6 @@ import java.util.Objects;
 
 /**
  * Represents bootstrap method information for invokedynamic and constant dynamic.
- * Contains the bootstrap method handle and its static arguments.
  */
 public class BootstrapMethodInfo
 {

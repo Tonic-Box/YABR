@@ -8,9 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Assignability and category rules over verification types; class hierarchy
- * questions are answered from a class pool, and without one every reference
- * relation is assumed to hold.
+ * Assignability and category rules over verification types.
  */
 public class TypeConstraint
 {
@@ -28,7 +26,6 @@ public class TypeConstraint
 
     /**
      * Decides whether a value of one type may be stored where another is expected.
-     * Null is assignable to any reference, and everything is assignable to top.
      * @param source the type being supplied
      * @param target the type being expected
      * @return true if the assignment is allowed, false if either type is null
@@ -77,12 +74,7 @@ public class TypeConstraint
      */
     public boolean isArrayLoadValid(VerificationType arrayType, VerificationType expectedElement)
     {
-        if (!isReferenceType(arrayType))
-        {
-            return false;
-        }
-
-        return true;
+        return isReferenceType(arrayType);
     }
 
     /**
@@ -222,11 +214,7 @@ public class TypeConstraint
         {
             return true;
         }
-        if (type instanceof VerificationType.UninitializedType)
-        {
-            return true;
-        }
-        return false;
+        return type instanceof VerificationType.UninitializedType;
     }
 
     /**
@@ -256,11 +244,7 @@ public class TypeConstraint
         {
             return true;
         }
-        if (source.equals(VerificationType.DOUBLE) && target.equals(VerificationType.DOUBLE))
-        {
-            return true;
-        }
-        return false;
+        return source.equals(VerificationType.DOUBLE) && target.equals(VerificationType.DOUBLE);
     }
 
     private boolean isCompatibleReference(VerificationType source, VerificationType target)

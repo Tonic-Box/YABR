@@ -28,7 +28,6 @@ public class OperandValidator
 
     /**
      * Checks the constant pool operand of one instruction, reporting any mismatch to the collector.
-     * Opcodes without a pool operand are ignored.
      * @param opcode the opcode at the offset
      * @param offset the bytecode offset of the opcode
      * @param bytecode the method's code array

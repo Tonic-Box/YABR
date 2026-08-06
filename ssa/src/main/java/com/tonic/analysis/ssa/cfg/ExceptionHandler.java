@@ -96,10 +96,7 @@ public class ExceptionHandler
     }
 
     /**
-     * Returns the full set of blocks making up the protected (try) region, when known. Lets the exception
-     * table be regenerated as one entry per maximal contiguous PC run, which correctly handles a nested try
-     * whose body is split into non-contiguous ranges by an interleaved handler. Null when unknown (e.g.
-     * lifted handlers), in which case the {@code tryStart}/{@code tryEnd} block pair is used instead.
+     * Returns the full set of blocks making up the protected (try) region, when known.
      *
      * @return the protected blocks, or null when unknown
      */

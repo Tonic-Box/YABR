@@ -20,9 +20,10 @@ public final class VarDeclStmt implements Statement
     private Expression initializer;
     private boolean useVarKeyword;
     private boolean isFinal;
-    /** A declaration the recovery materialized for a slot-less stack value (a merge phi with no
-     * source variable behind it), as opposed to a declaration of a real local. Reconstruction
-     * passes may dissolve a synthetic carrier entirely; a real local's declaration is source shape. */
+    /**
+     * A declaration the recovery materialized for a slot-less stack value (a merge phi with no source variable
+     * behind it), as opposed to a declaration of a real local.
+     */
     private boolean synthetic;
     private SourceLocation location;
     private ASTNode parent;

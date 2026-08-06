@@ -13,7 +13,6 @@ public final class ClassNameUtil
 
     /**
      * Gets the simple class name from an internal name.
-     * Handles both package separators (/) and inner class separators ($).
      * @param internalName the internal class name (e.g., "com/foo/Bar$Inner")
      * @return the simple name (e.g., "Inner" or "Bar" if no inner class)
      */
@@ -31,7 +30,6 @@ public final class ClassNameUtil
 
     /**
      * Gets the simple class name from an internal name, ignoring inner class separators.
-     * This returns the outermost class name after the package.
      * @param internalName the internal class name (e.g., "com/foo/Bar$Inner")
      * @return the simple name without inner class handling (e.g., "Bar$Inner")
      */
@@ -86,9 +84,7 @@ public final class ClassNameUtil
     }
 
     /**
-     * Like {@link #toSourceName} but also renders a {@code $} that separates a named nested class as
-     * {@code .} (e.g. {@code com/foo/Outer$Inner} becomes {@code com.foo.Outer.Inner}). An
-     * anonymous/local marker ({@code $1}) is left intact since it cannot be named in source.
+     * Like {@link #toSourceName} but also renders a {@code $} that separates a named nested class as {@code .}.
      *
      * @param internalName the internal class name, or null
      * @return the source name, or null when the input is null

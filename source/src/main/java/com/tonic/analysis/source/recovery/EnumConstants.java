@@ -8,9 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Resolves an enum's constants by ordinal and by name. The JVM defines an enum's ordinal as its position
- * among the class's enum-flagged static fields in declaration order, so the class file alone answers both
- * directions; reflection covers platform enums whose class files are not in the pool.
+ * Resolves an enum's constants by ordinal and by name.
  */
 public final class EnumConstants
 {

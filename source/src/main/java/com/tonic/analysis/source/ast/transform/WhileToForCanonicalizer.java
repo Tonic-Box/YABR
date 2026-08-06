@@ -16,21 +16,6 @@ import java.util.List;
 
 /**
  * Canonicalizes a counted {@code while} back into a {@code for}:
- * <pre>
- *   i = 2; while (i * i &lt;= n) { body; i++; }   ==&gt;   i = 2; for (; i * i &lt;= n; i++) { body }
- * </pre>
- * The reaching-condition structurer commits to {@code while} vs {@code for} while emitting, before control-flow
- * simplification has flattened guard clauses and settled the loop body - so a loop whose increment only surfaces
- * as the body's tail after those passes (its step buried in an {@code if} arm, or trailing a redundant
- * {@code continue}) stays a {@code while}. Running here, on the final body, moves such a tail increment into the
- * {@code for}-update slot, after which {@link ForLoopCounterFolder} folds the preceding {@code i = INIT} into the
- * loop-scoped init.
- *
- *Converted only when it is behavior-preserving and a genuine counted loop: the last body statement is a
- * {@code i++}/{@code i--}/{@code i = i +/- 1} step whose variable appears in the loop condition, no
- * {@code continue} targets this loop (which would skip the step in a {@code while} but run it in a {@code for}),
- * and the condition is not the constant {@code true} (an infinite loop is not a conditional {@code for}). A lone
- * trailing {@code continue} - the fall-through to the loop end already continues - is dropped first.
  */
 public class WhileToForCanonicalizer implements ASTTransform
 {
@@ -201,9 +186,7 @@ public class WhileToForCanonicalizer implements ASTTransform
 
     /**
      * Whether {@code stmts} holds a {@code continue} that targets THIS loop (label {@code selfLabel}, null when
-     * unlabeled). An unlabeled continue targets this loop only at its own nesting level; one inside a nested loop
-     * belongs to that inner loop ({@code insideNestedLoop} tracks the crossing). A labeled continue targets this
-     * loop only when its label matches.
+     * unlabeled).
      */
     private boolean containsSelfContinue(List<Statement> stmts, String selfLabel, boolean insideNestedLoop)
     {

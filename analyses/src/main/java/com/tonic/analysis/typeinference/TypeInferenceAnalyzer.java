@@ -41,7 +41,6 @@ public class TypeInferenceAnalyzer
 
     /**
      * Seeds parameter types, indexes instanceof checks and runs the dataflow to fixpoint.
-     * Does nothing after the first call.
      */
     public void analyze()
     {
@@ -165,9 +164,6 @@ public class TypeInferenceAnalyzer
 
     /**
      * Refines value states along the edge from {@code pred}'s terminating branch into {@code succ}.
-     * Null checks (ifnull/ifnonnull, acmp against null) sharpen nullability; an instanceof check
-     * sharpens the tested value's type on the edge where the check holds. Returns a narrowed copy of
-     * {@code predExit}, or {@code predExit} unchanged when no narrowing applies.
      */
     private Map<SSAValue, TypeState> narrowOnEdge(IRBlock pred, IRBlock succ, Map<SSAValue, TypeState> predExit)
     {

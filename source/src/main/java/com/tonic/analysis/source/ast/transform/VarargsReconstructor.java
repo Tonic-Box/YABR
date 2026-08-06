@@ -37,16 +37,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Reconstructs varargs calls by collapsing an explicit trailing array argument back into individual
- * arguments. javac compiles {@code foo(a, b)} for a varargs method {@code foo(T...)} into
- * {@code foo(new T[]{a, b})}; because the array is filled element-by-element and then read by the
- * call it is materialized as a local. This transform recognises that shape --
- * {@code T[] v = new T[N]; v[0] = a; ...; v[N-1] = z; ... foo(..., v)} where {@code v} is used
- * nowhere else and the consuming call immediately follows the construction -- and rewrites the call
- * to {@code foo(..., a, ..., z)}, dropping the now-dead array construction.
- * Collapsing is applied only when the callee is resolvable (the class being decompiled or a
- * {@code java.base} class) and carries {@code ACC_VARARGS} with a parameter count matching the call.
- * Unresolvable callees keep the explicit array, which is always semantically valid.
+ * Reconstructs varargs calls by collapsing an explicit trailing array argument back into individual arguments.
  */
 public class VarargsReconstructor implements ASTTransform
 {
@@ -85,9 +76,7 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * Collapses varargs calls whose trailing argument is an inline {@code new T[]{...}} or an empty
-     * {@code new T[0]} (the form javac emits when the array is single-use and never materialized,
-     * e.g. {@code String.format("x")} -&gt; {@code String.format("x", new Object[0])}).
+     * Collapses varargs calls whose trailing argument is an inline or empty array creation.
      */
     private boolean collapseInlineArrays(BlockStmt block)
     {
@@ -119,9 +108,7 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * The varargs elements an inline array argument expands to, or {@code null} if it is not a safe
-     * inline form: an array with an initializer expands to its elements, an empty {@code new T[0]}
-     * expands to nothing, anything else (e.g. {@code new T[n]} with no initializer) is left intact.
+     * The varargs elements an inline array argument expands to, or {@code null} if it is not a safe inline form.
      */
     private List<Expression> inlineElements(NewArrayExpr array)
     {
@@ -153,9 +140,8 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * Scans a statement list (recursing into nested blocks) for one collapsible array-build group
-     * whose consumer is the immediately following statement, performs the collapse, and returns
-     * {@code true}. Returns after the first rewrite so the caller can recompute use counts.
+     * Scans a statement list (recursing into nested blocks) for one collapsible array-build group whose consumer
+     * is the immediately following statement, performs the collapse, and returns {@code true}.
      */
     private boolean process(List<Statement> stmts, Map<String, Integer> uses)
     {
@@ -203,10 +189,8 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * Matches {@code T[] v = new T[N]} followed by N consecutive constant-index stores
-     * {@code v[0..N-1] = ...} starting at {@code index}. Returns the variable name, the number of
-     * statements the group spans (declaration + stores), and the element expressions in index order,
-     * or {@code null} if the shape does not match.
+     * Matches {@code T[] v = new T[N]} followed by N consecutive constant-index stores {@code v[0..N-1] = ...}
+     * starting at {@code index}.
      */
     private ArrayBuild matchArrayBuild(List<Statement> stmts, int index, Map<String, Integer> uses)
     {
@@ -336,9 +320,8 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * If {@code s} is `T = &lt;expr&gt;` for a single-use temp {@code T} (not the array var, LHS a plain variable),
-     * returns {@code T} - a candidate element value the recompile spilled out of the array store. {@code T}
-     * must be referenced at most twice (its definition and the one store that reads it) so inlining is safe.
+     * If {@code s} is `T = &lt;expr&gt;` for a single-use temp {@code T} (not the array var, LHS a plain
+     * variable), returns {@code T} - a candidate element value the recompile spilled out of the array store.
      */
     private String elementTempName(Statement s, String varName, Map<String, Integer> uses)
     {
@@ -360,10 +343,7 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * Classifies an interleaved statement that may sit inside an array build. Returns the number of {@code
-     * varName} references it contributes if it is an inert (literal-valued) self-assignment ({@code 1}) or
-     * declaration ({@code 0}) of the array var - both safe to fold into and remove with the build - or
-     * {@code -1} if it is anything else (which ends the build).
+     * Classifies an interleaved statement that may sit inside an array build.
      */
     private int inertRefs(Statement s, String varName)
     {
@@ -391,9 +371,7 @@ public class VarargsReconstructor implements ASTTransform
     }
 
     /**
-     * Finds the method call inside {@code statement} whose last argument is a reference to
-     * {@code varName}. The caller has already verified the variable has exactly one use outside its
-     * stores, so any match here is that sole consuming use.
+     * Finds the method call inside {@code statement} whose last argument is a reference to {@code varName}.
      */
     private MethodCallExpr findConsumer(Statement statement, String varName)
     {

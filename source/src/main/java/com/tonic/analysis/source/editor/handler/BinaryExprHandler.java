@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for binary expressions (arithmetic, comparison, logical operations).
- * Use this to intercept and transform binary operations.
  */
 @FunctionalInterface
 public interface BinaryExprHandler

@@ -12,14 +12,6 @@ import java.util.regex.Pattern;
 
 /**
  * Converts a {@link ParsedFunction} into a fully-wired {@link IRMethod}.
- *
- *Two passes:
- * - Allocation - allocate {@link SSAValue} for every {@code %v<id>}, allocate
- *       {@link IRBlock} for every label, register parameters, set entry block.
- * - Construction - walk each block's lines, parse each instruction, wire
- *       CFG edges from terminators, and record pending phi arms for a final fixup.
- * Synthesized temporaries ({@code %t<n>}) are collected into a side map used by
- * {@link TempFoldingPass} to collapse multi-step expansions.
  */
 final class FunctionLifter
 {
@@ -32,11 +24,11 @@ final class FunctionLifter
         "^br i1 (%[vt]\\d+), label %([A-Za-z0-9_]+), label %([A-Za-z0-9_]+)$");
     private static final Pattern RET_VOID = Pattern.compile("^ret void$");
     private static final Pattern RET_VAL = Pattern.compile("^ret (\\S+) (.+)$");
-    private static final Pattern SWITCH = Pattern.compile("^switch (\\S+) (.+?), label %([A-Za-z0-9_]+) \\[(.*)\\]$");
+    private static final Pattern SWITCH = Pattern.compile("^switch (\\S+) (.+?), label %([A-Za-z0-9_]+) \\[(.*)]$");
     private static final Pattern SWITCH_CASE = Pattern.compile("i\\d+ (-?\\d+), label %([A-Za-z0-9_]+)");
-    private static final Pattern CALL_VOID = Pattern.compile("^call void ((?:@\"[^\"]*\"|@\\S+|%[vt]\\d+))\\((.*)\\)$");
+    private static final Pattern CALL_VOID = Pattern.compile("^call void (@\"[^\"]*\"|@\\S+|%[vt]\\d+)\\((.*)\\)$");
     private static final Pattern CALL_VAL = Pattern.compile(
-        "^(%v\\d+) = call (\\S+) ((?:@\"[^\"]*\"|@\\S+|%[vt]\\d+))\\((.*)\\)$");
+        "^(%v\\d+) = call (\\S+) (@\"[^\"]*\"|@\\S+|%[vt]\\d+)\\((.*)\\)$");
     private static final Pattern ICMP = Pattern.compile("^(%t\\d+) = icmp (\\w+) (\\S+) (.+), (.+)$");
     private static final Pattern PHI = Pattern.compile("^(%v\\d+) = phi (\\S+) (.+)$");
 
@@ -58,7 +50,6 @@ final class FunctionLifter
     private final Map<String, List<PendingPhi>> pendingPhis = new HashMap<>();
     /**
      * Raw icmp line keyed by temp register; consumed when the subsequent {@code br i1 %t<n>} is seen.
-     * Also used by {@link TempFoldingPass}.
      */
     final Map<String, TempEntry> temps = new LinkedHashMap<>();
 
@@ -642,12 +633,12 @@ final class FunctionLifter
         String op = rhs.trim().split("\\s+")[0];
         switch (op)
         {
-            case "sext":    return inferSignedExtOp(rhs, result);
+            case "sext":    return inferSignedExtOp(rhs);
             case "trunc":
             case "zext":
                 return null; // handled in TempFoldingPass
-            case "sitofp":  return inferSiToFp(rhs, result);
-            case "fptosi":  return inferFpToSi(rhs, result);
+            case "sitofp":  return inferSiToFp(rhs);
+            case "fptosi":  return inferFpToSi(rhs);
             case "fpext":   return UnaryOp.F2D;
             case "fptrunc": return UnaryOp.D2F;
             case "fneg":    return UnaryOp.NEG;
@@ -655,7 +646,7 @@ final class FunctionLifter
         }
     }
 
-    private static UnaryOp inferSignedExtOp(String rhs, SSAValue result)
+    private static UnaryOp inferSignedExtOp(String rhs)
     {
         // "sext i32 %v<src> to i64" -> I2L
         if (rhs.contains("to i64")) return UnaryOp.I2L;
@@ -663,7 +654,7 @@ final class FunctionLifter
         return null;
     }
 
-    private static UnaryOp inferSiToFp(String rhs, SSAValue result)
+    private static UnaryOp inferSiToFp(String rhs)
     {
         if (rhs.contains("to double"))
         {
@@ -672,7 +663,7 @@ final class FunctionLifter
         return rhs.contains("i64") ? UnaryOp.L2F : UnaryOp.I2F;
     }
 
-    private static UnaryOp inferFpToSi(String rhs, SSAValue result)
+    private static UnaryOp inferFpToSi(String rhs)
     {
         if (rhs.contains("to i64"))
         {
@@ -702,7 +693,7 @@ final class FunctionLifter
     private static List<String[]> parsePhiArms(String armsText)
     {
         List<String[]> result = new ArrayList<>();
-        Pattern arm = Pattern.compile("\\[([^,\\]]+),\\s*%([A-Za-z0-9_]+)\\]");
+        Pattern arm = Pattern.compile("\\[([^,\\]]+),\\s*%([A-Za-z0-9_]+)]");
         Matcher m = arm.matcher(armsText);
         while (m.find())
         {

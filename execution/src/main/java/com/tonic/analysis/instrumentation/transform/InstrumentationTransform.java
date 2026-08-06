@@ -20,7 +20,6 @@ import java.util.*;
 
 /**
  * Transform that applies instrumentation hooks to IR methods.
- * Handles method entry/exit, field access, and array operations.
  */
 public class InstrumentationTransform
 {

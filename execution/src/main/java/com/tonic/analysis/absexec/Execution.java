@@ -17,12 +17,7 @@ import java.util.function.Consumer;
 
 /**
  * A path-exploring abstract interpreter over one method's bytecode that builds operand-stack/local def-use
- * ({@link InsnContext}/{@link StackCtx}/{@link VarCtx}) without an abstract value domain. Reduced port of
- * RuneLite's {@code net.runelite.asm.execution.Execution} - intra-procedural (the deobfuscators only need
- * within-method def-use), forks a {@link Frame} per branch target, and terminates loops with a per-method
- * visited-edge guard.
- * Usage: {@code new Execution(method).addVisitor(ictx -> ...).run();}. The visitor sees every executed
- * instruction-context; {@link #wasExecuted} reports reachability.
+ * ({@link InsnContext}/{@link StackCtx}/{@link VarCtx}) without an abstract value domain.
  */
 public final class Execution
 {
@@ -46,9 +41,7 @@ public final class Execution
     }
 
     /**
-     * Builds an execution over a caller-provided instruction list. Use this when the caller will subsequently
-     * MUTATE those instructions (e.g. the in-place fold), so def-use {@link InsnContext#getInstruction()}
-     * objects are identical to the ones the caller writes back.
+     * Builds an execution over a caller-provided instruction list.
      *
      * @param method the method to interpret
      * @param insns  the decoded instruction list to interpret
@@ -133,7 +126,7 @@ public final class Execution
         }
     }
 
-    Instruction instructionAtOffset(MethodEntry m, int offset)
+    Instruction instructionAtOffset(int offset)
     {
         return byOffset.get(offset);
     }
@@ -141,7 +134,7 @@ public final class Execution
     /**
      * True (and records) if {@code from -> to} has already been traversed in this method (loop guard).
      */
-    boolean hasJumped(MethodEntry m, Instruction from, Instruction to)
+    boolean hasJumped(Instruction from, Instruction to)
     {
         long key = (((long) from.getOffset()) << 32) ^ (to.getOffset() & 0xFFFFFFFFL);
         return !jumpedEdges.add(key);

@@ -14,15 +14,11 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 
 /**
  * Lowers AST Expression nodes to IR instructions.
- * Returns the SSAValue representing the result of the expression.
  */
 public class ExpressionLowerer
 {
@@ -40,7 +36,6 @@ public class ExpressionLowerer
 
     /**
      * Lowers a condition expression for control flow (if/while/for).
-     * Creates a branch instruction directly without creating extra blocks.
      * @param condition the condition expression
      * @param trueTarget block to branch to if condition is true
      * @param falseTarget block to branch to if condition is false
@@ -51,11 +46,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Lowers {@code condition} (optionally negated) as control flow that branches to {@code trueTarget} when
-     * the (negated) condition holds, else {@code falseTarget}. A logical NOT inverts the leaf branch opcode and
-     * applies De Morgan to {@code &&}/{@code ||} - keeping the THEN block as the branch's jump target - rather
-     * than swapping the true/false targets. Swapping would make the ELSE arm the fall-through, flipping the
-     * recovered branch polarity on the round trip (javac keeps the THEN arm as the jump target).
+     * Lowers {@code condition} (optionally negated) as control flow that branches to {@code trueTarget} when the
+     * (negated) condition holds, else {@code falseTarget}.
      */
     private void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget, boolean negate)
     {
@@ -374,11 +366,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Resolves an unqualified name that is not a local variable as a read of a field
-     * declared on the current class (or inherited). The decompiler emits own-class field
-     * references as bare names; this rewrites them to the appropriate getfield/getstatic.
-     * Returns null when the name does not resolve to a field, leaving the caller to surface
-     * the original "undefined variable" error.
+     * Resolves an unqualified name that is not a local variable as a read of a field declared on the current class
+     * (or inherited).
      */
     private Value tryLowerImplicitFieldRead(String name)
     {
@@ -415,10 +404,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Stores a value into a field referenced by an unqualified name (no local variable of
-     * that name exists). Mirrors {@link #tryLowerImplicitFieldRead} for the write side of
-     * assignment, compound-assignment and increment/decrement. Returns false when the name
-     * does not resolve to a field.
+     * Stores a value into a field referenced by an unqualified name (no local variable of that name exists).
      */
     private boolean tryLowerImplicitFieldStore(String name, Value value)
     {
@@ -529,11 +515,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Infers the result type of a binary arithmetic operation from its operand IR types,
-     * following JVM numeric promotion (double &gt; float &gt; long &gt; int). Used as a fallback
-     * when the AST node lacks a resolved numeric type, which happens for hand-written source
-     * with unqualified self-references the parser could not type. Returns null for
-     * non-numeric operands.
+     * Infers the result type of a binary arithmetic operation from its operand types, following JVM numeric promotion.
      */
     private IRType arithmeticResultType(Value left, Value right)
     {
@@ -645,8 +627,7 @@ public class ExpressionLowerer
 
     /**
      * Builds a two-operand {@code makeConcatWithConstants} from already-lowered values - the fallback for a `+`
-     * the parser could not type as a concatenation. A chain nests (each `+` produces its own indy) rather than
-     * flattening into one, but re-decompiles to the same source, so it is a fixed point.
+     * the parser could not type as a concatenation.
      */
     private Value concatValues(Value left, Value right)
     {
@@ -674,8 +655,9 @@ public class ExpressionLowerer
         return result;
     }
 
-    /** A concat operand whose declared descriptor differs from its lowered value's IR type (a boolean, which the
-     *  IR carries as int - so makeConcat must be told it is a {@code Z} to render "true"/"false", not "1"/"0"). */
+    /**
+     * A concat operand whose declared descriptor differs from its lowered value's IR type.
+     */
     private static final class TypedConcatOperand
     {
         final Value value;
@@ -797,11 +779,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Records a store to a named variable, failing loudly when the name was never declared and did
-     * not resolve to a field: the value would otherwise be computed and silently discarded (emitted
-     * as a push/pop pair), turning invalid source into wrong bytecode instead of an error. A local
-     * declared without an initializer ({@code int x; x = 5;}) has a declaration record but no value
-     * yet and is accepted.
+     * Records a store to a named variable, failing loudly when the name was never declared and did not resolve to
+     * a field.
      */
     private void storeNamedVariable(String name, SSAValue value)
     {
@@ -851,10 +830,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Lowers {@code &&}/{@code ||} in value position as one branch tree into a shared {@code 1}/{@code 0}
-     * pair, exactly as a compiler does. Lowering each operator as its own materialized merge instead makes
-     * the parent branch on a value the branches just built - recovery then reads the relowered form as
-     * nested ifs staging a flag, not the compound the source wrote.
+     * Lowers {@code &&}/{@code ||} in value position as one branch tree into a shared {@code 1}/{@code 0} pair,
+     * exactly as a compiler does.
      */
     private Value lowerShortCircuit(BinaryExpr bin)
     {
@@ -1068,8 +1045,10 @@ public class ExpressionLowerer
         }
     }
 
-    /** The constant {@code 1} typed to match {@code type}, so {@code ++}/{@code --} on a long/double/float
-     * operand adds a category-correct value (e.g. {@code lconst_1}, not {@code iconst_1}). */
+    /**
+     * The constant {@code 1} typed to match {@code type}, so {@code ++}/{@code --} on a long/double/float operand
+     * adds a category-correct value.
+     */
     private static Constant oneConstant(IRType type)
     {
         if (type == PrimitiveType.LONG)
@@ -1124,10 +1103,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Whether an ordered floating-point comparison needs the NaN-reads-as-greater compare ({@code fcmpg} /
-     * {@code dcmpg}). A comparison must be false for NaN, so the bias is chosen to make the branch that
-     * follows it fail: {@code <} and {@code <=} want NaN to read as greater, {@code >} and {@code >=} want
-     * it to read as less.
+     * Whether an ordered floating-point comparison needs the NaN-reads-as-greater compare ({@code fcmpg} / {@code
+     * dcmpg}).
      */
     private static boolean nanReadsAsGreater(BinaryOperator op)
     {
@@ -1340,9 +1317,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Packs the trailing arguments of a varargs call into a fresh array of the declared component type (the decompiler
-     * renders varargs as flat arguments, but the invoke descriptor's last parameter is an array). Returns the original
-     * list unchanged for non-varargs calls or when an array is already passed explicitly for the varargs parameter.
+     * Packs the trailing arguments of a varargs call into a fresh array of the declared component type.
      */
     private List<Value> packVarargsIfNeeded(String ownerClass, String methodName, String declaredDescriptor, List<Value> loweredArgs, IRBlock argBlock, int[] argInstrStart, boolean argsSingleBlock)
     {
@@ -1398,11 +1373,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * If the varargs element arguments all lowered contiguously into {@code argBlock} (which must still be the
-     * current block), removes their instructions from the block and returns them grouped per element, so the
-     * caller can re-emit each group immediately before its array store. Returns null when the move would be
-     * unsafe - multi-block args, a changed current block, or a non-monotonic/invalid range - in which case the
-     * already-emitted values are left in place (and the scheduler materializes them, as before).
+     * Removes the varargs element arguments from {@code argBlock} and returns them grouped per element.
      */
     private List<List<IRInstruction>> extractVarargsElementGroups(IRBlock argBlock, int[] argInstrStart, int fixedCount, int count, boolean argsSingleBlock)
     {
@@ -1488,8 +1459,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Re-types a lambda argument with the functional-interface type the callee expects, when the
-     * lambda's own type is unknown (Object). Other argument kinds are returned unchanged.
+     * Re-types a lambda argument with the functional-interface type the callee expects, when the lambda's own type
+     * is unknown (Object).
      */
     private Expression retypeFunctionalArg(Expression arg, SourceType expected)
     {
@@ -1514,9 +1485,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Resolves the owning class for a virtual call on a local-variable receiver. The lowered value's IR type
-     * is authoritative (e.g. a caught exception, whose AST reference carries no declared type), so it is
-     * preferred over the AST-based {@link #resolveReceiverOwnerClass} fallback.
+     * Resolves the owning class for a virtual call on a local-variable receiver.
      */
     private String ownerClassFromValue(Value receiverValue, Expression receiver)
     {
@@ -1777,10 +1746,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Whether a bare identifier used as a receiver names a class rather than a value. It does only when it is
-     * neither a local variable nor a field of the class being lowered - a {@code static final} constant read
-     * through its own simple name ({@code MAX_VERSION.major}) is a value, and taking it for a class name makes
-     * the access static against a type that does not exist. Mirrors the same test in {@link #lowerMethodCall}.
+     * Whether a bare identifier used as a receiver names a class rather than a value.
      */
     private boolean isClassNameReceiver(VarRefExpr varRef)
     {
@@ -1853,10 +1819,7 @@ public class ExpressionLowerer
 
     /**
      * If {@code receiver} is a pure dotted-name chain that names a class in the pool, returns that class's
-     * internal name; otherwise null. The decompiler emits a static/enum member fully qualified
-     * ({@code a.b.Outer$Inner.CONST}), which the parser builds as a field-access chain rather than a type
-     * reference - so a {@code .CONST} access whose receiver is such a chain is really a static field access on
-     * the named class. A chain rooted at a local variable is a genuine field access and is left alone.
+     * internal name; otherwise null.
      */
     private String resolveQualifiedTypeReceiver(Expression receiver)
     {
@@ -1901,10 +1864,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Normalizes a field-owner class name to a fully-qualified internal name. Decompiled source
-     * refers to same-package and imported types by their simple name; this resolves such names
-     * (e.g. {@code MainFrame} -&gt; {@code osrs/dev/MainFrame}) against imports and the loaded pool so
-     * the field can be located. Already-qualified or empty names are returned unchanged.
+     * Normalizes a field-owner class name to a fully-qualified internal name.
      */
     private String normalizeOwnerClass(String ownerClass)
     {
@@ -1920,9 +1880,7 @@ public class ExpressionLowerer
     /**
      * Converts a source type to an IR type with its class name(s) resolved through the type resolver, so a simple,
      * same-package, or imported name (e.g. {@code Main} in its own package) becomes the fully-qualified internal
-     * name. Use this where a reference type names a class constant in the bytecode - {@code .class} literals, casts,
-     * and {@code instanceof} - which {@link SourceType#toIRType()} alone leaves unqualified (emitting e.g. {@code
-     * Main} instead of {@code osrs/dev/Main}, which fails to load at runtime).
+     * name.
      */
     private IRType resolveTypeForConstant(SourceType type)
     {
@@ -2328,10 +2286,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * The array type with its reference base resolved to a real internal name. The parser carries the
-     * SOURCE form - a dotted nested name ({@code com.jme3.animation.AnimationFactory.Type}) or a bare
-     * simple name - and lowering that form verbatim makes the allocation reference a class that does
-     * not exist, failing with {@code NoClassDefFoundError} the first time the method runs.
+     * The array type with its reference base resolved to a real internal name.
      */
     private SourceType resolveArrayElement(SourceType type)
     {
@@ -2354,9 +2309,8 @@ public class ExpressionLowerer
     }
 
     /**
-     * Removes {@code count} array levels from {@code arrayType}, returning the type of a value reached
-     * by {@code count} index operations (or allocated by an allocation supplying {@code count} lengths).
-     * `peel(int[][][], 1)` is {@code int[][]}; `peel(int[][], 2)` is the base {@code int}.
+     * Removes {@code count} array levels from {@code arrayType}, returning the type of a value reached by {@code
+     * count} index operations.
      */
     private IRType peelArrayType(SourceType arrayType, int count)
     {
@@ -2647,8 +2601,7 @@ public class ExpressionLowerer
     }
 
     /**
-     * Widens {@code astCommon} to the widest primitive type among the lowered operand VALUES. The AST
-     * types under-report (an unresolved call defaults to int); a value's IR type is the JVM truth.
+     * Widens {@code astCommon} to the widest primitive type among the lowered operand VALUES.
      */
     private static SourceType widestOfValues(SourceType astCommon, Value left, Value right)
     {
@@ -3171,22 +3124,14 @@ public class ExpressionLowerer
     {
         int expectedParamCount = inferExpectedParamCount(samType, kind);
         String descriptor = ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, methodName, expectedParamCount);
-        if (descriptor != null)
-        {
-            return descriptor;
-        }
-        return "()Ljava/lang/Object;";
+        return Objects.requireNonNullElse(descriptor, "()Ljava/lang/Object;");
     }
 
     private String inferConstructorDescriptor(String ownerClass, SourceType samType)
     {
         int expectedParamCount = inferExpectedParamCount(samType, MethodRefKind.CONSTRUCTOR);
         String descriptor = ctx.getTypeResolver().resolveConstructorDescriptor(ownerClass, expectedParamCount);
-        if (descriptor != null)
-        {
-            return descriptor;
-        }
-        return "()V";
+        return Objects.requireNonNullElse(descriptor, "()V");
     }
 
     private int inferExpectedParamCount(SourceType samType, MethodRefKind kind)

@@ -101,9 +101,8 @@ public class NameRecoverer
     }
 
     /**
-     * The LVT name for {@code slot} at the pc where a STORE at {@code storeOffset} takes effect - the
-     * following instruction, which is where javac opens the variable's range. This is the exact form
-     * of the old fixed-width forward probe, which a wide store or multi-byte neighbor escaped.
+     * The LVT name for {@code slot} at the pc where a STORE at {@code storeOffset} takes effect - the following
+     * instruction, which is where javac opens the variable's range.
      *
      * @param slot the local slot written
      * @param storeOffset the bytecode offset of the store
@@ -176,9 +175,7 @@ public class NameRecoverer
     }
 
     /**
-     * The LVT name for {@code slot} when every entry for that slot agrees on a single name, else null
-     * (no debug info, or the slot is reused under different names across scopes). Used to recover real
-     * variable names without risking a wrong label on a reused slot.
+     * The LVT name for {@code slot} when every entry for that slot agrees on a single name, else null.
      *
      * @param slot the local slot to name
      * @return the single agreed name, or null when the entries disagree or the strategy forbids it
@@ -189,9 +186,7 @@ public class NameRecoverer
     }
 
     /**
-     * Whether the strategy permits a recovered debug name for {@code slot}. This is the single gate the whole
-     * naming path passes through - parameter names, a slot's base name, and the partition's scope lookup all
-     * arrive here - so a strategy applies uniformly instead of holding only where a caller remembered it.
+     * Whether the strategy permits a recovered debug name for {@code slot}.
      */
     private boolean debugNamesAllowedFor(int slot)
     {
@@ -207,10 +202,9 @@ public class NameRecoverer
     }
 
     /**
-     * The LocalVariableTable name in scope for {@code slot} at bytecode {@code offset} - the entry whose
-     * {@code [startPc, startPc + length)} range contains the offset - or null when there is no debug info
-     * or no entry covers it. Unlike {@link #unambiguousDebugName} this resolves a reused slot correctly by
-     * scope, so a slot holding {@code i} in one loop and {@code builder} in another names each by position.
+     * The LocalVariableTable name in scope for {@code slot} at bytecode {@code offset} - the entry whose {@code
+     * [startPc, startPc + length)} range contains the offset - or null when there is no debug info or no entry
+     * covers it.
      *
      * @param slot the local slot to name
      * @param offset the bytecode offset the name must be in scope at
@@ -235,10 +229,9 @@ public class NameRecoverer
     }
 
     /**
-     * The LocalVariableTable type descriptor in scope for {@code slot} at bytecode {@code offset} - the
-     * declared type of the variable there (e.g. {@code "C"} for {@code char}), or null when no debug info or
-     * no entry covers it. This is the authoritative declared type javac recorded, distinct from the widened
-     * type inferred from the (int-shaped) stored values.
+     * The LocalVariableTable type descriptor in scope for {@code slot} at bytecode {@code offset} - the declared
+     * type of the variable there (e.g. {@code "C"} for {@code char}), or null when no debug info or no entry
+     * covers it.
      *
      * @param slot the local slot to type
      * @param offset the bytecode offset the entry must be in scope at

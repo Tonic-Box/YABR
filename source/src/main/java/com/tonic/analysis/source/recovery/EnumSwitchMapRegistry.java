@@ -23,10 +23,7 @@ public class EnumSwitchMapRegistry
     }
 
     /**
-     * Registers one {@code caseValue -> enumConstant} entry of a switch map. The map is keyed by the
-     * holder class that declares the {@code $SwitchMap$} field as well as the enum: javac emits a
-     * separate holder per class that switches on the enum, each with its own dense numbering, so
-     * keying by the enum alone lets one class's mapping overwrite another's and mislabels the cases.
+     * Registers one {@code caseValue -> enumConstant} entry of a switch map.
      *
      * @param holderClass the class declaring the $SwitchMap$ field
      * @param enumClassName the enum being switched on

@@ -4,7 +4,6 @@ import java.util.List;
 
 /**
  * Raw parsed representation of one LLVM {@code define} block before IR objects are constructed.
- * Each field is a string excerpt from the original text, parsed by {@link LlvmParser}.
  */
 final class ParsedFunction
 {

@@ -4,7 +4,6 @@ import java.util.Objects;
 
 /**
  * FIND query - returns matching entities with evidence.
- * Example: FIND methods WHERE has call where (name == "init")
  */
 public final class FindQuery implements Query
 {

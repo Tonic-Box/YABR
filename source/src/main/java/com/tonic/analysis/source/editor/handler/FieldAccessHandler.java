@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for field access expressions.
- * Use this to intercept and transform field accesses.
  */
 @FunctionalInterface
 public interface FieldAccessHandler

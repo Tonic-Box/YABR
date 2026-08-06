@@ -58,9 +58,7 @@ public class BytecodeEmitter
     private final Set<SSAValue> inlinedConstants;
     private final Map<SSAValue, Constant> inlinedConstantValue;
     /**
-     * Caught-exception values captured at handler entry. The lift marks each handler block with a self-copy
-     * of the value the JVM pushes onto the entry stack; this set drives the emitter to store that stack
-     * value into the value's local (an {@code astore}) so a later use re-loads it correctly.
+     * Caught-exception values captured at handler entry.
      */
     private final Set<SSAValue> handlerExceptionCaptures;
 
@@ -74,16 +72,18 @@ public class BytecodeEmitter
      * A receiver value to push just before this instruction (the start of a call argument's build window).
      */
     private final Map<IRInstruction, SSAValue> receiverPreload = new HashMap<>();
-    /** Instructions whose operand 0 was preloaded ahead of operand 1's window, so skip loading it at the use
-     *  (a call receiver before its argument, or a binary op's left operand before its computed right operand). */
+    /**
+     * Instructions whose operand 0 was preloaded ahead of operand 1's window, so skip loading it at the use.
+     */
     private final Set<IRInstruction> skipReceiver = new HashSet<>();
-    /** For an array store {@code arr[i] = new X()}: the array and index (re-loadable, loaded on-demand at the
-     *  store) pushed just before the value's construction, so the paired-new value stays resident on top of them
-     *  (javac's {@code <array>; <index>; new; dup; init; aastore}) instead of spilling to a local. Keyed by the
-     *  value's defining instruction; the store itself skips those operand loads (see {@link #skipStorePrefix}). */
+    /**
+     * For an array store {@code arr[i] = new X()}.
+     */
     private final Map<IRInstruction, List<SSAValue>> arrayStorePrefixPreload = new HashMap<>();
-    /** Array-store instructions whose array+index were preloaded ahead of the value - skip loading operands 0/1
-     *  at the store (the value, operand 2, is separately stack-resident). */
+    /**
+     * Array-store instructions whose array+index were preloaded ahead of the value - skip loading operands 0/1 at
+     * the store.
+     */
     private final Set<IRInstruction> skipStorePrefix = new HashSet<>();
     /**
      * Operand use count per value (across instructions and phis), so an unused result can be popped not stored.
@@ -329,7 +329,6 @@ public class BytecodeEmitter
 
     /**
      * Computes an optimal block ordering that maximizes fall-through opportunities.
-     * Uses a greedy algorithm that places fall-through successors immediately after their predecessors.
      */
     private List<IRBlock> computeOptimalBlockOrder()
     {
@@ -384,8 +383,6 @@ public class BytecodeEmitter
 
     /**
      * Determines the preferred fall-through successor for a block.
-     * For branches, prefers the false target as fall-through.
-     * For gotos, the only successor is the fall-through candidate.
      */
     private IRBlock getFallThroughSuccessor(IRBlock block)
     {
@@ -407,13 +404,8 @@ public class BytecodeEmitter
     }
 
     /**
-     * Identifies single-use literal constants that can be emitted inline at their use site
-     * (e.g. {@code iconst_1}) rather than materialized into a local slot and reloaded. This
-     * mirrors how javac emits constants and avoids spurious local variables on the round-trip.
-     *
-     *A constant is inlinable only when it is used exactly once and that use routes its
-     * operands through {@link #emitOperandLoads} (i.e. not a copy/goto), so the constant can
-     * be pushed at the exact point the consumer reads it, in operand order.
+     * Identifies single-use literal constants that can be emitted inline at their use site (e.g. {@code iconst_1})
+     * rather than materialized into a local slot and reloaded.
      */
     private void analyzeInlinedConstants()
     {
@@ -468,10 +460,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * Values the register allocator placed in an affinity home slot. Every definition of such a
-     * variable must materialize its store into the home slot - a try/finally's synthetic handler
-     * reads the slot at an arbitrary fault point - so these are never constant-inlined or kept
-     * stack-resident, exactly as javac stores every assignment of a source variable.
+     * Values the register allocator placed in an affinity home slot.
      */
     private Set<SSAValue> slotPinnedValues()
     {
@@ -479,8 +468,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * Constants {@link #emitConstantValue} knows how to push. Method-handle/type and dynamic
-     * constants are excluded since they have no inline push form here.
+     * Constants {@link #emitConstantValue} knows how to push.
      */
     private boolean isInlinableConstant(Constant constant)
     {
@@ -494,9 +482,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * True when an instruction's SSA operands are pushed via {@link #emitOperandLoads}. Copies
-     * (from phi elimination) and gotos read their source directly, so a constant consumed by
-     * them cannot be inlined.
+     * True when an instruction's SSA operands are pushed via {@link #emitOperandLoads}.
      */
     private boolean routesOperandsThroughLoads(IRInstruction instr)
     {
@@ -542,14 +528,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * Keeps a call argument on the operand stack instead of storing it, unless the source declared it as a
-     * local. A declared local always spills to its slot, as javac does for every assignment of a source
-     * variable: an unwritten slot carries no LocalVariableTable entry, so the variable comes back out of a
-     * decompile unnamed - and because an argument's window can span whole statements, a value held across
-     * one reads as if it were computed after it.
-     * Scoped to arguments deliberately. The other residency decisions keep a value on the stack only within
-     * a single expression, where no statement can come between its production and its use, and one of them
-     * (a loop's comparison bound) is what keeps a counted loop recoverable as a {@code for}.
+     * Keeps a call argument on the operand stack instead of storing it, unless the source declared it as a local.
      */
     private void markResident(SSAValue value)
     {
@@ -668,14 +647,8 @@ public class BytecodeEmitter
     }
 
     /**
-     * For a condition block ending in a two-operand comparison branch {@code if reg <cmp> bound} where the
-     * bound is a closed sub-computation filling the rest of the block and the first operand is loaded from a
-     * register (e.g. a loop induction variable), the register operand is pushed at the block head so the bound
-     * stays on the operand stack - matching javac's {@code iload i; <bound>; if_icmplt} rather than spilling
-     * the bound to a header local. That spill is what forces the decompiler into a {@code while(true)}+break
-     * loop (and reuses the bound's slot) on round trip. Safe because the emitter never emits a {@code dup_x}
-     * or {@code swap}, so the preloaded register stays at the bottom while the bound's closed sub-tree is
-     * computed above it.
+     * Whether a comparison branch's register operand is pushed at the block head so its bound stays on the
+     * operand stack.
      */
     private void computeBlockHeadPreloads(Map<SSAValue, Integer> useCounts)
     {
@@ -771,10 +744,8 @@ public class BytecodeEmitter
     }
 
     /**
-     * Whether operands 0..p-1 of an instruction are all stack-resident and defined in strictly increasing order
-     * ending just before {@code resultDefIdx} - so this value (operand p, computed last) sits on top of them in
-     * the exact operand order the instruction needs. This lets a call argument stay on the stack once its
-     * receiver (and earlier arguments) are already resident, instead of being spilled to a local and reloaded.
+     * Whether operands 0..p-1 are all stack-resident and defined in strictly increasing order ending just
+     * before {@code resultDefIdx}.
      */
     private boolean isPairedInitConsumer(IRInstruction invoke, List<Value> ops, List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, int consumerIdx)
     {
@@ -832,15 +803,8 @@ public class BytecodeEmitter
     }
 
     /**
-     * Whether a single-use value that is the FIRST operand (the receiver) of a later instruction can stay on
-     * the operand stack across the instructions that compute that instruction's remaining operands - matching
-     * how javac keeps a call receiver below its arguments, instead of spilling it to a (type-reused) local.
-     *
-     *Safe because (a) the emitter never emits {@code dup_x*}/{@code swap}, so nothing computed on top of
-     * the receiver can reach below it, and (b) the window between the receiver's definition and its use is
-     * "closed" - every value it produces is consumed inside the window or by the use - so it computes exactly
-     * the use's later operands and leaves the receiver undisturbed at the bottom. The later operands must all
-     * be produced within the window, in operand order, so the use sees {@code [receiver, op1, op2, ...]}.
+     * Whether a single-use receiver can stay on the operand stack across the instructions computing the
+     * remaining operands.
      */
     private boolean isReceiverStackResident(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, Map<SSAValue, Integer> useCounts, int defIdx, SSAValue result)
     {
@@ -913,11 +877,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * The next instruction after {@code afterIndex} that actually emits code. Inlined-constant
-     * definitions emit nothing (they are pushed at their use site), so they must be skipped when
-     * testing whether a value's consumer is adjacent - otherwise a single-use binop result feeding
-     * a comparison like {@code i * i <= n} or {@code n % i == 0} would be needlessly spilled to a
-     * slot just because the comparison's constant operand sits between them.
+     * The next instruction after {@code afterIndex} that actually emits code.
      */
     private IRInstruction nextEmittedInstruction(List<IRInstruction> instructions, int afterIndex)
     {
@@ -935,12 +895,6 @@ public class BytecodeEmitter
 
     /**
      * Whether an operand can be pushed after a stack-resident first operand without disturbing it.
-     * The second operand is emitted after the first is already on the stack, so it must be a single
-     * fresh push that leaves the first untouched: a constant, or any value loaded from a
-     * register/parameter. The only unsafe case is an operand that is itself stack-resident - and a
-     * second operand never is, since stack-residency keys on being the <em>first</em> operand of the
-     * immediately-following instruction (params/locals reach here with a dangling load definition,
-     * so a definition-based test is unreliable; stack-residency membership is the correct one).
      */
     private boolean isSimpleOperand(Value operand)
     {
@@ -1134,14 +1088,8 @@ public class BytecodeEmitter
     }
 
     /**
-     * Detects {@code recv.method(buildArg)} where the receiver is a re-loadable value and the single argument is
-     * built in a closed window immediately before the call (e.g. {@code setLayout(new BoxLayout(...))},
-     * {@code setBorder(BorderFactory.create...())}). The emitter would otherwise spill the argument to a local
-     * (whose slot is then reused for unrelated types, surfacing as {@code Object} on round trip) because it can't
-     * place the receiver beneath an already-built argument. Here the receiver is preloaded before the argument's
-     * build window and the argument is kept stack-resident, matching javac's {@code aload recv; <build arg>;
-     * invoke}. Safe: window and use sit in one block (no branch), so the resident argument never crosses a join,
-     * and the receiver's other uses (e.g. a constructor argument) load fresh from its slot.
+     * Detects {@code recv.method(buildArg)} where the receiver is re-loadable and the argument is built in
+     * a closed window before the call.
      */
     private void analyzeReceiverPreloads()
     {
@@ -1485,9 +1433,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * Whether the window {@code (valDef, storeIdx]} building an array store's paired-new value is self-contained:
-     * every value produced strictly inside it is consumed only inside it, so preloading the array/index ahead of
-     * {@code valDef} leaves the value's construction (and nothing else) stacked cleanly above them.
+     * Whether the window {@code (valDef, storeIdx]} building an array store's paired-new value is self-contained.
      */
     private boolean arrayStoreWindowClosed(List<IRInstruction> instructions, int valDef, int storeIdx, Map<SSAValue, Integer> useCounts, SSAValue value)
     {
@@ -1517,8 +1463,10 @@ public class BytecodeEmitter
         return true;
     }
 
-    /** The earliest def index reached from {@code value} through its in-block operands (its computation
-     *  window's start), bounded by {@code useIdx}. A register operand (no in-block def) is not part of it. */
+    /**
+     * The earliest def index reached from {@code value} through its in-block operands (its computation window's
+     * start), bounded by {@code useIdx}.
+     */
     private int windowStartIndex(SSAValue value, List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, int useIdx)
     {
         Set<SSAValue> seen = new HashSet<>();
@@ -1587,9 +1535,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * Emits a paired constructor {@code <init>}: the receiver is already on the stack (from {@code new; dup}), so only
-     * the constructor arguments are loaded; after {@code invokespecial} the initialized reference is stored as the
-     * paired {@code new}'s result.
+     * Emits a paired constructor {@code <init>}.
      */
     private void emitPairedInit(InvokeInstruction instr) throws IOException
     {
@@ -2613,9 +2559,7 @@ public class BytecodeEmitter
     }
 
     /**
-     * The accessed array's own element type - the authority for the xALOAD/xASTORE opcode. An int
-     * value stored into a byte[] still needs bastore; the value/result type is only a fallback for
-     * an array whose static type degraded to a plain reference.
+     * The accessed array's own element type - the authority for the xALOAD/xASTORE opcode.
      */
     private IRType arrayElementTypeOr(ArrayAccessInstruction instr, IRType fallback)
     {
@@ -2748,7 +2692,6 @@ public class BytecodeEmitter
 
     /**
      * For phi copy values, returns the phi result's register slot.
-     * Returns -1 if the value is not a phi copy.
      */
     private int getPhiCopyDestination(SSAValue copyValue)
     {
@@ -3030,9 +2973,8 @@ public class BytecodeEmitter
     }
 
     /**
-     * Whether a method handle's owner is an interface - the class being emitted, a pooled class, or a
-     * platform class via reflection. A static or special handle on an interface owner must reference an
-     * InterfaceMethodref rather than a Methodref, or the emitted pool is rejected as inconsistent.
+     * Whether a method handle's owner is an interface - the class being emitted, a pooled class, or a platform
+     * class via reflection.
      */
     private boolean ownerIsInterface(String owner)
     {

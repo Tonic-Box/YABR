@@ -4,7 +4,6 @@ import java.util.List;
 
 /**
  * Represents a bootstrap method entry in the BootstrapMethods attribute.
- * Used for invokedynamic instructions and constant dynamic constants.
  */
 public class BootstrapMethod
 {

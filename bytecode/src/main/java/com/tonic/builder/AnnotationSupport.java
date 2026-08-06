@@ -15,10 +15,7 @@ import java.util.Map;
 import java.util.function.IntFunction;
 
 /**
- * Shared materialization/attachment helpers for {@link AnnotationBuilder}. Centralizes the
- * "append to the existing annotations attribute of matching visibility, or create one" logic so the
- * fluent builders and standalone attach share a single implementation and never emit a duplicate
- * attribute.
+ * Shared materialization/attachment helpers for {@link AnnotationBuilder}.
  */
 final class AnnotationSupport
 {
@@ -42,9 +39,7 @@ final class AnnotationSupport
     }
 
     /**
-     * Emits a parameter-annotations attribute on a freshly-built method. {@code byIndex} maps a
-     * parameter position to its annotations; positions with no entry get an empty list, and the
-     * table is sized to the method's parameter count.
+     * Emits a parameter-annotations attribute on a freshly-built method.
      */
     static void setParameterAnnotations(MethodEntry method, ConstPool pool, Map<Integer, List<Annotation>> byIndex, int paramCount, boolean visible)
     {

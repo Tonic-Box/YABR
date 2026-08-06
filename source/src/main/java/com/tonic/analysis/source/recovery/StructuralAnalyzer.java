@@ -249,11 +249,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * True when every path into the loop reaches the header through the loop body, so the body
-     * runs before the condition is first tested - the shape of a do-while. The method entry block
-     * is excluded: control enters it directly rather than through the body, so its conditional
-     * terminator guards the first iteration (a pre-tested while) even though its only predecessor
-     * is the back-edge.
+     * True when every path into the loop reaches the header through the loop body, so the body runs before the
+     * condition is first tested - the shape of a do-while.
      */
     private boolean isDoWhilePattern(IRBlock header, LoopAnalysis.Loop loop)
     {
@@ -272,9 +269,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * The unique in-loop predecessor of the header whose conditional branch goes back to the
-     * header with its other target outside the loop - the bottom test of a do-while. Null when
-     * the back-edge structure is anything else.
+     * The unique in-loop predecessor of the header whose conditional branch goes back to the header with its other
+     * target outside the loop - the bottom test of a do-while.
      */
     private IRBlock findConditionalLatch(IRBlock header, LoopAnalysis.Loop loop)
     {
@@ -681,13 +677,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Detects a short-circuit compound condition (`A &amp;&amp; B`, `A || B`, or any mix, e.g.
-     * {@code (A || B) && C}) guarding an if/else. Such a condition is a DAG of two-way branch blocks
-     * that all decide between exactly two exits; grows that region, confirms it is a clean
-     * series-parallel short-circuit chain, and returns an IF_THEN / IF_THEN_ELSE region carrying the
-     * condition blocks so recovery can reconstruct the whole boolean expression (see
-     * {@link CompoundConditionBuilder}). Returns null for a single-condition if (no compound to
-     * reconstruct) or any shape that is not a clean two-exit short-circuit condition.
+     * Detects a short-circuit compound condition (`A &amp;&amp; B`, `A || B`, or any mix, e.g. {@code (A || B) &&
+     * C}) guarding an if/else.
      */
     private RegionInfo detectCompoundCondition(IRBlock header)
     {
@@ -836,10 +827,7 @@ public class StructuralAnalyzer
     }
 
     /**
-     * A block that contributes only to a condition: it ends in a two-way branch and every other
-     * instruction produces a value used solely within the block (feeding that branch). Blocks with a
-     * side effect (a store, a void call, a monitor) or a value consumed by other code do real work and
-     * are not part of a pure short-circuit condition.
+     * A block that contributes only to a condition.
      */
     private boolean isConditionOnlyBlock(IRBlock b)
     {
@@ -892,10 +880,7 @@ public class StructuralAnalyzer
     }
 
     /**
-     * A block that recovers to a single early-exit statement: it ends in a return or throw and does no
-     * other work (every instruction feeds that exit's value). Unlike {@link #isEarlyExitBlock} this does
-     * not require a single predecessor, so a shared {@code return} target still qualifies - the property
-     * that distinguishes a guard clause's body from the method continuation, which carries real statements.
+     * A block that recovers to a single early-exit statement.
      */
     private boolean isSingleEarlyExitBlock(IRBlock b)
     {
@@ -942,13 +927,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block is an early exit block (contains only return or throw).
-     * Early exit blocks are simple blocks that immediately exit the method
-     * without any other control flow.
-     * IMPORTANT: An early exit block must NOT be a merge point (multiple predecessors),
-     * because a merge point represents a common destination that should be visited
-     * after either branch, not skipped as an "early" exit.
-     * Also handles blocks that GOTO to a shared exit block (common in obfuscated code
-     * where all returns go through a single block).
      */
     private boolean isEarlyExitBlock(IRBlock block)
     {
@@ -994,7 +972,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block is an exit block (ends with return or throw).
-     * Unlike isEarlyExitBlock, this doesn't check predecessor count.
      */
     private boolean isExitBlock(IRBlock block)
     {
@@ -1011,12 +988,7 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Checks if a block is a PURE exit: a throw, a void return, or a trivial goto to such a
-     * block. A pure exit is terminal and carries no merged value, so it can never be a
-     * control-flow join and must not be adopted as a region's merge block - doing so makes
-     * inner branches that jump to it collapse to empty and silently vanish.
-     * A value-returning return is NOT a pure exit: its (possibly phi-merged) value must still
-     * be emitted once at a real merge point, so such blocks remain valid merges.
+     * Checks if a block is a PURE exit: a throw, a void return, or a trivial goto to such a block.
      *
      * @param block block to test
      * @return true if the block is a pure exit
@@ -1061,10 +1033,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Detects guard clause chain pattern where one branch is an early exit
-     * and the other leads to another conditional that's also a guard.
-     * This enables flat recovery like: if (bad) return; if (bad2) return; main_logic
-     * instead of: if (good) { if (good2) { main_logic } return; } return;
+     * Detects guard clause chain pattern where one branch is an early exit and the other leads to another
+     * conditional that's also a guard.
      */
     private RegionInfo detectGuardClauseChain(IRBlock block, IRBlock trueTarget, IRBlock falseTarget)
     {
@@ -1201,13 +1171,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block is a valid guard clause exit block.
-     * Unlike isEarlyExitBlock, this allows multiple predecessors because
-     * multiple guard conditions can share the same exit block (e.g., both
-     * x &lt; 0 and x &gt; 100 can jump to the same "return -1" block).
-     * However, to distinguish from nested if merge points, we require that
-     * ALL predecessors of the exit block are conditional blocks (guards).
-     * If any predecessor is a non-conditional merge block, this is likely
-     * a nested if structure, not a guard clause chain.
      */
     private boolean isGuardExitBlock(IRBlock block)
     {
@@ -1289,8 +1252,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a conditional block is part of a guard chain continuation.
-     * A guard chain continuation is a conditional where one branch is an early exit
-     * (forming another guard in the chain) OR leads to the main logic.
      */
     private boolean isGuardChainContinuation(IRBlock block)
     {
@@ -1319,10 +1280,6 @@ public class StructuralAnalyzer
 
     /**
      * Finds an alternative merge point when the post-dominator is an exit block.
-     * Looks for a block that is reachable from both branches and has multiple predecessors,
-     * indicating it's a true merge point where multiple paths converge.
-     * Example: if (a) { B } else { C; if (d) return; E } F
-     * Post-dominator might be the inner return, but F is the real merge for paths that don't return.
      */
     private IRBlock findAlternativeMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock exitMerge)
     {
@@ -1361,7 +1318,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block has non-trivial instructions (more than just jumps/returns).
-     * Blocks with actual computation are likely shared action blocks, not merge points.
      */
     private boolean hasNonTrivialInstructions(IRBlock block)
     {
@@ -1381,8 +1337,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block only has return-value setup instructions before a GOTO to a return block.
-     * In try-finally, return statements become: load value, store local, GOTO finally handler.
-     * We should treat these blocks as guard exits since they're effectively returns.
      */
     private boolean hasOnlyReturnSetupInstructions(IRBlock block)
     {
@@ -1412,7 +1366,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block is part of an indirect return pattern (in try-finally).
-     * An indirect return block sets up a return value and GOTOs to a shared handler.
      */
     private boolean isIndirectReturnBlock(IRBlock block)
     {
@@ -1451,8 +1404,6 @@ public class StructuralAnalyzer
 
     /**
      * Finds the merge point for a conditional branch using post-dominator analysis.
-     * The merge point is the immediate post-dominator of the branch block -
-     * the first block that all paths from the branch must pass through.
      * @param branchBlock the block containing the conditional branch
      * @return the merge point block, or null if not found
      */
@@ -1466,14 +1417,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Finds the immediate merge point for an if-then-else by looking at where both branches
-     * actually converge, rather than relying solely on post-dominator analysis.
-     * This handles cases where:
-     * - True branch: A -&gt; B -&gt; C
-     * - False branch: D -&gt; E -&gt; C
-     * Both reach C, so C is the immediate merge point.
-     * The post-dominator might find a block much further downstream if there are
-     * multiple exit paths (e.g., shared return blocks).
+     * Finds the immediate merge point for an if-then-else by looking at where both branches actually converge,
+     * rather than relying solely on post-dominator analysis.
      * @param trueTarget the true branch target
      * @param falseTarget the false branch target
      * @return the immediate merge point, or null if not found
@@ -1549,9 +1494,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if a block is a valid merge point for an if-then-else.
-     * A valid merge point should be reached by both branches and not be:
-     * - A shared exit block with only one meaningful predecessor path
-     * - A block that's part of a loop back-edge
      */
     private boolean isValidMergePoint(IRBlock block, IRBlock trueTarget, IRBlock falseTarget)
     {
@@ -1590,7 +1532,6 @@ public class StructuralAnalyzer
 
     /**
      * Fallback merge point finder using forward reachability.
-     * Less accurate than post-dominator but works when post-dominator unavailable.
      */
     private IRBlock findMergePointFallback(IRBlock branchBlock)
     {
@@ -1683,19 +1624,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Detects a flat if-chain pattern where sequential if-statements check the same variable
-     * against different constants. In bytecode, this appears as:
-     * if (var != const1) goto L2
-     *   ... action for const1 ...
-     *   goto merge
-     * L2:
-     *   if (var != const2) goto L3
-     *   ... action for const2 ...
-     *   goto merge
-     * L3:
-     *   ...
-     * The key insight is that the false target (L2) is the NEXT sequential check,
-     * not an else branch. The true branch doesn't fall through to L2.
+     * Detects a flat if-chain pattern where sequential if-statements check the same variable against different
+     * constants.
      * @param block the current conditional block
      * @param trueTarget the true branch target
      * @param falseTarget the false branch target
@@ -1751,12 +1681,7 @@ public class StructuralAnalyzer
     private static final int MIN_SWITCH_CASES = 3;
 
     /**
-     * Detects a comparison-chain switch: a chain of blocks each branching on
-     * {@code selector == const} / {@code selector != const} against the same value,
-     * and lowers it into a SWITCH region (case const -&gt; handler, plus default).
-     * Handles every source encoding (nested-else, no-else guards, sequential guards)
-     * uniformly because it works on the CFG. Returns null when the structure is not a
-     * clean dispatch, so the caller falls back to ordinary conditional analysis.
+     * Detects a comparison-chain switch.
      */
     private RegionInfo detectComparisonChainSwitch(IRBlock header)
     {
@@ -1837,10 +1762,7 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Matches a block whose terminator branches on {@code selector == const} /
-     * {@code selector != const} (one operand an SSA value, the other an int constant,
-     * including constants materialized by a {@link ConstantInstruction}). Returns null
-     * if the block is not such a comparison.
+     * Matches a block whose terminator branches on {@code selector == const} / {@code selector != const}.
      */
     private SwitchStep matchSwitchStep(IRBlock block)
     {
@@ -1912,9 +1834,8 @@ public class StructuralAnalyzer
     }
 
     /**
-     * True if the block does no work beyond evaluating its comparison - i.e. its only
-     * non-terminator instructions are local loads / constant materializations. Such
-     * intermediate dispatch blocks can be safely bypassed when lowering to a switch.
+     * True if the block does no work beyond evaluating its comparison - i.e. its only non-terminator instructions
+     * are local loads / constant materializations.
      */
     private boolean isPureComparisonBlock(IRBlock block)
     {
@@ -1938,8 +1859,6 @@ public class StructuralAnalyzer
 
     /**
      * Extracts the variable being compared in a branch instruction.
-     * For comparisons like (var == const) or (const == var), returns the variable.
-     * Returns null if neither operand is a constant, or if both are constants.
      */
     private SSAValue extractComparisonVariable(BranchInstruction branch)
     {
@@ -1983,7 +1902,6 @@ public class StructuralAnalyzer
 
     /**
      * Checks if two SSA values represent the same variable.
-     * This handles cases where the same local variable has different SSA versions.
      */
     private boolean isSameVariable(SSAValue v1, SSAValue v2)
     {
@@ -2126,7 +2044,6 @@ public class StructuralAnalyzer
 
     /**
      * Finds the loop whose header is the specified block.
-     * This is different from getLoop() which returns any loop containing the block.
      */
     private LoopAnalysis.Loop findLoopWithHeader(IRBlock block)
     {

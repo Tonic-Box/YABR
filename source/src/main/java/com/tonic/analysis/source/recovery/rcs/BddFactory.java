@@ -4,12 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Builds and interns {@link Bdd} nodes for one method's structuring pass. All logical operations are
- * expressed through a single memoized {@code ite} (if-then-else) so the reduced-ordered invariant and
- * the apply cache are maintained in one place; {@code and}/{@code or}/{@code not}/{@code xor} are thin
- * wrappers. Node identifiers are packed into the unique-table and cache keys, so the factory refuses to
- * grow past {@link #MAX_ID} nodes and reports {@link #overflowed()} instead - the caller then falls back
- * to the syntactic layer (still correct, only less simplified) rather than producing a wrong key.
+ * Builds and interns {@link Bdd} nodes for one method's structuring pass.
  */
 final class BddFactory
 {
@@ -20,7 +15,7 @@ final class BddFactory
     static final int TERMINAL_VAR = Integer.MAX_VALUE;
 
     /**
-     * Node-count ceiling. Ids must stay below 2^21 so three of them pack into a signed long key.
+     * Node-count ceiling.
      */
     private static final int MAX_ID = 1 << 21;
     private static final long ID_MASK = MAX_ID - 1;

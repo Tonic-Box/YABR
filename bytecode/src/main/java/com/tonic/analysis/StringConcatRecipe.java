@@ -2,12 +2,6 @@ package com.tonic.analysis;
 
 /**
  * Analysis-layer formatter for {@code StringConcatFactory.makeConcatWithConstants} recipe strings.
- * The recipe encodes a dynamic argument as {@code } and a bootstrap constant as {@code };
- * {@link #toReadable(String)} renders these as {@code {arg}}/{@code {const}} and escapes any other ISO
- * control character so the raw markers never leak into disassembly or query output.
- *
- *Intentionally decoupled from the execution-layer
- * {@code com.tonic.analysis.execution.invoke.StringConcatHandler}: this is the static-analysis view.
  */
 final class StringConcatRecipe
 {
@@ -52,9 +46,8 @@ final class StringConcatRecipe
     }
 
     /**
-     * Appends a string with its ISO control characters escaped as {@code \\uXXXX}; ordinary characters
-     * are copied verbatim. The recipe markers are not treated specially here, so this is also a safe
-     * escaper for arbitrary string constants in disassembly output.
+     * Appends a string with its ISO control characters escaped as {@code \\uXXXX}; ordinary characters are copied
+     * verbatim.
      * @param sb    the buffer to append to
      * @param value the string to escape
      */

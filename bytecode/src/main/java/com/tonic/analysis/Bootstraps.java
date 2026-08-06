@@ -16,13 +16,7 @@ import java.util.List;
 
 /**
  * Single source of truth for resolving invokedynamic/condy bootstraps from a {@link ClassFile}'s
- * BootstrapMethods attribute. Both the disassembly pretty-printer ({@link DisassemblyContext}) and the
- * query engine resolve through {@link #resolve(ClassFile, int)} so the bootstrap handle, static
- * arguments and family classification stay consistent across display and querying.
- *
- *Family classification delegates to {@link BootstrapFamilies}'s owner/name predicates so the JDK
- * bootstrap owners are written down once. Public so the query engine
- * ({@code com.tonic.analysis.query.eval}) resolves bootstraps through the same path as disassembly.
+ * BootstrapMethods attribute.
  */
 public final class Bootstraps
 {
@@ -71,9 +65,8 @@ public final class Bootstraps
     }
 
     /**
-     * Renders a loadable constant at the given index to a readable string, mirroring disassembly's
-     * constant formatting. Exposed so the query engine resolves bootstrap-argument values through the
-     * same formatter without depending on package-private {@link ConstPoolFormat}.
+     * Renders a loadable constant at the given index to a readable string, mirroring disassembly's constant
+     * formatting.
      * @param constPool the constant pool
      * @param cpIndex   the constant-pool index
      * @return a readable representation of the constant
@@ -145,9 +138,7 @@ public final class Bootstraps
     }
 
     /**
-     * Immutable resolved view of a single bootstrap method: the handle's reference kind, the resolved
-     * owner/name/descriptor of its target member, and the constant-pool indices of its static
-     * arguments.
+     * Immutable resolved view of a single bootstrap method.
      */
     public static final class BootstrapRef
     {

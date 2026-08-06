@@ -9,22 +9,6 @@ import java.util.List;
 
 /**
  * Expression-only view over ASTEditor.
- *
- * <pre>
- * ExpressionEditor editor = new ExpressionEditor(methodBody, "test", "()V", "com/example/Test");
- * // Replace all deprecated method calls
- * editor.onMethodCall((ctx, call) -&gt; {
- *     if (call.getMethodName().equals("deprecatedMethod")) {
- *         return Replacement.with(ctx.factory()
- *             .methodCall("newMethod")
- *             .on(call.getReceiver())
- *             .withArgs(call.getArguments())
- *             .build());
- *     }
- *     return Replacement.keep();
- * });
- * editor.apply();
- * </pre>
  */
 public class ExpressionEditor
 {

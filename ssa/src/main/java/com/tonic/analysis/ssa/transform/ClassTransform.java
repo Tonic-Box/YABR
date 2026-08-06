@@ -5,9 +5,6 @@ import com.tonic.parser.ClassFile;
 
 /**
  * Interface for class-level transformation passes.
- * Unlike IRTransform which operates on a single method, ClassTransform
- * has access to the entire ClassFile and can perform cross-method optimizations
- * such as method inlining and dead method elimination.
  */
 public interface ClassTransform
 {

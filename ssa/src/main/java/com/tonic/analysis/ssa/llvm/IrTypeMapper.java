@@ -9,12 +9,6 @@ import java.util.List;
 
 /**
  * Maps YABR {@link IRType}s to {@link LlvmType}s.
- *
- *All integral JVM types (boolean/byte/char/short/int) collapse to {@code i32}: the JVM computes
- * them as int on the operand stack. {@code long}-&gt;{@code i64}, {@code float}/{@code double} direct.
- * Reference and array types map to the opaque pointer {@code ptr} - the lowering is type-lattice
- * agnostic; whether object operations are actually emitted (vs rejected) is gated by the
- * {@link LlvmLoweringConfig.ObjectModel} in {@code SsaToLlvmLowerer}.
  */
 final class IrTypeMapper
 {

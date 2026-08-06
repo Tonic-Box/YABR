@@ -19,13 +19,6 @@ import java.util.Set;
 
 /**
  * Handles renaming of methods and updating all references across the ClassPool.
- * Updates:
- * - MethodEntry.name (the method declaration)
- * - MethodRefItem via NameAndType (call sites)
- * - InterfaceRefItem via NameAndType (interface calls)
- * - MethodHandleItem references (for method handles)
- * - Bootstrap method arguments (for lambdas)
- * - If propagate=true: all overrides in subclasses and implementations
  */
 public class MethodRenamer
 {
@@ -149,15 +142,9 @@ public class MethodRenamer
     }
 
     /**
-     * Expands a set of declaring owners to also include every descendant class whose virtual resolution of
-     * {@code (name, descriptor)} reaches one of those declaring owners - i.e. descendants that INHERIT the
-     * method without redeclaring it. A subclass that calls an inherited method via its own static type emits a
-     * constant-pool ref owned by the subclass, so those descendants must be treated as call-site owners too.
-     *
-     *A descendant is included only when the nearest ancestor (itself first, then up the superclass chain)
-     * that actually declares {@code (name, descriptor)} is one of {@code declaringOwners}; a descendant that
-     * redeclares the method (or resolves it to some unrelated class) is left out, so unrelated methods that
-     * merely share the name/descriptor are never renamed.
+     * Expands a set of declaring owners to also include every descendant class whose virtual resolution of {@code
+     * (name, descriptor)} reaches one of those declaring owners - i.e. descendants that INHERIT the method without
+     * redeclaring it.
      */
     private Set<String> expandToInheritingOwners(Set<String> declaringOwners, String name, String descriptor)
     {
@@ -370,7 +357,6 @@ public class MethodRenamer
 
     /**
      * Updates bootstrap method arguments that reference the renamed method.
-     * This handles lambda expressions and method references.
      */
     private void updateBootstrapMethods(ClassFile cf, String owner, String oldName, String descriptor, String newName)
     {

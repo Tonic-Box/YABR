@@ -6,8 +6,7 @@ import com.tonic.analysis.query.planner.filter.StaticFilter;
 import java.util.Objects;
 
 /**
- * Compiled query plan: the scope prefilter plus the original query, whose {@code WHERE}
- * {@link com.tonic.analysis.query.ast.Condition} the runner evaluates via the attribute registry.
+ * Compiled query plan.
  */
 public final class ProbePlan
 {

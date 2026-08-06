@@ -5,14 +5,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 
 /**
- * Decompiled source plus per-method bytecode-offset provenance: for each method (keyed
- * {@code name + descriptor}, e.g. {@code main([Ljava/lang/String;)V}, {@code <init>()V},
- * {@code <clinit>()V}) a map from bytecode offset to the 1-based line in {@link #getSource()} where
- * the statement recovered from that offset was emitted. Use {@code floorEntry}/{@code ceilingEntry}
- * to resolve an arbitrary PC to the nearest mapped statement line.
- * Each emitted member also carries its text span ({@link #getMethodSpan},
- * {@link #getFieldSpan}, {@link #getClassSpan}) - the 1-based first/last line of its full
- * declaration in {@link #getSource()} - for slicing or locating a declaration without parsing text.
+ * Decompiled source plus per-method bytecode-offset provenance.
  */
 public final class DecompileResult
 {
@@ -108,9 +101,8 @@ public final class DecompileResult
     }
 
     /**
-     * The 1-based first/last line of a member's full text in the decompiled source - annotations
-     * and signature through the closing brace (or the declaration line for abstract/native members
-     * and fields).
+     * The 1-based first/last line of a member's full text in the decompiled source - annotations and signature
+     * through the closing brace.
      */
     public static class MemberSpan
     {
@@ -151,8 +143,7 @@ public final class DecompileResult
     }
 
     /**
-     * A {@link MemberSpan} for a method or constructor. Retained as a distinct type for source and
-     * API compatibility; the span semantics live entirely in {@link MemberSpan}.
+     * A {@link MemberSpan} for a method or constructor.
      */
     public static final class MethodSpan extends MemberSpan
     {

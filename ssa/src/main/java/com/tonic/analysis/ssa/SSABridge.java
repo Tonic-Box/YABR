@@ -4,8 +4,7 @@ import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 
 /**
- * Bridges {@link CodeWriter} (the bytecode layer) and the SSA IR pipeline. This lives in the SSA
- * module so that the bytecode layer does not depend on SSA; the dependency runs ssa -&gt; bytecode.
+ * Bridges {@link CodeWriter} (the bytecode layer) and the SSA IR pipeline.
  */
 public final class SSABridge
 {

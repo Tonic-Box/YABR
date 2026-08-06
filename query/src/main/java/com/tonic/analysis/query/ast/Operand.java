@@ -3,8 +3,7 @@ package com.tonic.analysis.query.ast;
 import com.tonic.analysis.query.value.Value;
 
 /**
- * The right-hand side of a {@link Condition.Comparison}: either a literal {@link Value} or another
- * {@link Accessor} (so {@code arg(0).value == arg(1).value} works). Closed set, two nested variants.
+ * The right-hand side of a {@link Condition.Comparison}.
  */
 public interface Operand
 {

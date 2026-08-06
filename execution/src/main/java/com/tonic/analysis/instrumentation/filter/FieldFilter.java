@@ -4,7 +4,6 @@ import java.util.regex.Pattern;
 
 /**
  * Filter by field name and/or type pattern.
- * Supports exact match or wildcard patterns using '*'.
  */
 public class FieldFilter implements InstrumentationFilter
 {
@@ -166,7 +165,6 @@ public class FieldFilter implements InstrumentationFilter
 
     /**
      * Creates a filter matching a field by name.
-     * Alias for {@link #named(String)}.
      *
      * @param name the field name to match
      * @return a filter constrained to that name

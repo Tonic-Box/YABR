@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for unary expressions (negation, increment, etc.).
- * Use this to intercept and transform unary operations.
  */
 @FunctionalInterface
 public interface UnaryExprHandler

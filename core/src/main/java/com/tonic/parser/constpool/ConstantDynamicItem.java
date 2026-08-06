@@ -9,7 +9,6 @@ import java.io.IOException;
 
 /**
  * Represents a CONSTANT_Dynamic entry in the constant pool (tag 17/0x11).
- * Used by ldc/ldc_w/ldc2_w to load dynamically computed constants (Java 11+).
  */
 public class ConstantDynamicItem extends Item<ConstantDynamic>
 {

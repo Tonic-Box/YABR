@@ -11,8 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The Record attribute: the component list that marks a class as a record (there is no
- * ACC_RECORD flag), modeled so the record header can be reconstructed.
+ * The Record attribute.
  */
 public class RecordAttribute extends Attribute
 {

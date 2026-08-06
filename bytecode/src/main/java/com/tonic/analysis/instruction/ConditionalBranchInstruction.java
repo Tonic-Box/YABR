@@ -6,8 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the conditional branch instructions (IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE,
- * IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE).
+ * Represents the conditional branch instructions.
  */
 public class ConditionalBranchInstruction extends Instruction
 {

@@ -5,7 +5,6 @@ import java.util.regex.Pattern;
 
 /**
  * Scope limited to classes matching a pattern or exact name.
- * Example: IN class "Config.*" or IN class "com/example/Config"
  */
 public final class ClassScope implements Scope
 {

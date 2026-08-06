@@ -11,8 +11,6 @@ import java.util.*;
 
 /**
  * Utility class for deep-cloning IR methods.
- * Creates fresh SSAValues and IRBlocks with proper mappings.
- * Used by method inlining to clone callee IR before splicing into caller.
  */
 public class IRMethodCloner
 {
@@ -160,7 +158,6 @@ public class IRMethodCloner
 
     /**
      * Maps a value (SSAValue or Constant) to its cloned counterpart.
-     * Constants are returned as-is since they're immutable.
      */
     private Value mapValue(Value value)
     {

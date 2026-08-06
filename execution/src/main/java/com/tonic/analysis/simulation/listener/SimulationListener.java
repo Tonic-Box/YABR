@@ -14,20 +14,6 @@ import java.util.Set;
 
 /**
  * Listener interface for simulation events.
- *
- *Implement this interface to receive callbacks during simulation execution.
- * All methods have default no-op implementations, so listeners can override
- * only the methods they care about.
- *
- *Example usage:
- * <pre>
- * SimulationListener listener = new SimulationListener() {
- *     {@literal @}Override
- *     public void onStackPush(SimValue value, IRInstruction source) {
- *         System.out.println("Push: " + value);
- *     }
- * };
- * </pre>
  */
 public interface SimulationListener
 {

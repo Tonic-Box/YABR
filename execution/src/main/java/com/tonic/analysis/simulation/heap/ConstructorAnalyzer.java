@@ -6,13 +6,13 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.value.Constant;
+import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
 /**
  * Analyzes constructor bytecode to extract field assignments.
- * Used to auto-populate object fields during simulation.
  */
 public final class ConstructorAnalyzer
 {
@@ -29,10 +29,9 @@ public final class ConstructorAnalyzer
      * @param site the allocation site the object belongs to
      * @param constructor the constructor to read, may be null
      * @param constructorArgs the argument values bound to locals 1 and up
-     * @param heap the heap the object will live in
      * @return the populated object, or a bare object if the method is null or not a constructor
      */
-    public SimObject analyzeConstructor(AllocationSite site, IRMethod constructor, List<SimValue> constructorArgs, SimHeap heap)
+    public SimObject analyzeConstructor(AllocationSite site, IRMethod constructor, List<SimValue> constructorArgs)
     {
         if (constructor == null || !isConstructor(constructor))
         {
@@ -67,11 +66,27 @@ public final class ConstructorAnalyzer
             return assignments;
         }
 
-        Map<Integer, SimValue> localBindings = new HashMap<>();
-        localBindings.put(0, SimValue.ofType(IRType.fromDescriptor("L" + constructor.getOwnerClass() + ";"), null));
+        SimValue self = SimValue.ofType(IRType.fromDescriptor("L" + constructor.getOwnerClass() + ";"), null);
+
+        Map<Integer, SimValue> bySlot = new HashMap<>();
+        bySlot.put(0, self);
         for (int i = 0; i < args.size(); i++)
         {
-            localBindings.put(i + 1, args.get(i));
+            bySlot.put(i + 1, args.get(i));
+        }
+
+        // The lifter forwards a parameter's loads to the parameter value itself, so a field store reads the
+        // parameter rather than the load; bind those too or an argument never reaches the field it is
+        // assigned to.
+        Map<Integer, SimValue> byParameter = new HashMap<>();
+        List<SSAValue> parameters = constructor.getParameters();
+        if (parameters != null && !parameters.isEmpty())
+        {
+            byParameter.put(parameters.get(0).getId(), self);
+            for (int i = 0; i < args.size() && i + 1 < parameters.size(); i++)
+            {
+                byParameter.put(parameters.get(i + 1).getId(), args.get(i));
+            }
         }
 
         for (IRBlock block : blocks)
@@ -88,15 +103,15 @@ public final class ConstructorAnalyzer
                             fieldAccess.getName(),
                             fieldAccess.getDescriptor()
                         );
-                        SimValue value = resolveValue(fieldAccess.getValue(), localBindings, instr);
+                        SimValue value = resolveValue(fieldAccess.getValue(), instr, bySlot, byParameter);
                         assignments.put(fieldKey, value);
                     }
                 }
                 else if (instr instanceof StoreLocalInstruction)
                 {
                     StoreLocalInstruction store = (StoreLocalInstruction) instr;
-                    SimValue value = resolveValue(store.getValue(), localBindings, instr);
-                    localBindings.put(store.getLocalIndex(), value);
+                    SimValue value = resolveValue(store.getValue(), instr, bySlot, byParameter);
+                    bySlot.put(store.getLocalIndex(), value);
                 }
             }
         }
@@ -104,7 +119,11 @@ public final class ConstructorAnalyzer
         return assignments;
     }
 
-    private SimValue resolveValue(Value value, Map<Integer, SimValue> locals, IRInstruction instr)
+    /**
+     * The simulated value behind an operand: a constant, the value bound to the local it was loaded from,
+     * or an unconstrained value of the operand's type.
+     */
+    private SimValue resolveValue(Value value, IRInstruction instr, Map<Integer, SimValue> bySlot, Map<Integer, SimValue> byParameter)
     {
         if (value == null)
         {
@@ -115,6 +134,24 @@ public final class ConstructorAnalyzer
         {
             Constant constant = (Constant) value;
             return SimValue.constant(constant.getValue(), value.getType(), instr);
+        }
+
+        if (value instanceof SSAValue)
+        {
+            SSAValue ssaValue = (SSAValue) value;
+            SimValue parameter = byParameter.get(ssaValue.getId());
+            if (parameter != null)
+            {
+                return parameter;
+            }
+            if (ssaValue.getDefinition() instanceof LoadLocalInstruction)
+            {
+                SimValue bound = bySlot.get(((LoadLocalInstruction) ssaValue.getDefinition()).getLocalIndex());
+                if (bound != null)
+                {
+                    return bound;
+                }
+            }
         }
 
         return SimValue.ofType(value.getType(), instr);

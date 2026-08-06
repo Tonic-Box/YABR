@@ -22,16 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Desugars switch expressions (Java 14) for the source-to-bytecode front end - the inverse of
- * {@link SwitchExpressionReconstructor}. A switch expression used as a declaration initializer or a
- * return value is rewritten into the equivalent statement switch over a target variable, so the
- * existing statement-switch lowering handles it with no value-producing-switch codegen:
- * <pre>
- *   T v = switch (s) { case L -&gt; e; default -&gt; d; };
- *     =&gt;  T v; switch (s) { case L: v = e; break; default: v = d; break; }
- *   return switch (s) { ... };
- *     =&gt;  T t; switch (s) { case L: t = e; break; ... } return t;
- * </pre>
+ * Desugars switch expressions (Java 14) for the source-to-bytecode front end - the inverse of {@link
+ * SwitchExpressionReconstructor}.
  */
 public class SwitchExpressionDesugar implements ASTTransform
 {
@@ -82,7 +74,6 @@ public class SwitchExpressionDesugar implements ASTTransform
                     stmts.add(i + 2, new ReturnStmt(new VarRefExpr(tmp, type)));
                     changed = true;
                     i += 2;
-                    continue;
                 }
             }
         }

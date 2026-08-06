@@ -7,10 +7,8 @@ import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
 import com.tonic.analysis.query.value.Value;
 
 /**
- * Resolves an argument of a call to its declared type, kind and (when a constant feeds the operand)
- * literal value. The producer instruction is located by reusing {@link ArgumentTypeAnalyzer}'s cheap
- * backward stack walk; the value is read from the producer's operand. Unknown/branchy producers yield
- * {@link Value#ABSENT} for value (sound for matching, incomplete across branches).
+ * Resolves an argument of a call to its declared type, kind and (when a constant feeds the operand) literal
+ * value.
  */
 public final class ArgValueResolver
 {

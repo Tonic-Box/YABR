@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 
 /**
  * Filter by method name pattern.
- * Supports exact match or wildcard patterns using '*'.
  */
 public class MethodFilter implements InstrumentationFilter
 {

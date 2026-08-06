@@ -125,9 +125,7 @@ public class RecoveryContext
     }
 
     /**
-     * The recovered debug name a slot carries. Callers ask this instead of inspecting the shape of a name they
-     * were handed - a generated name and a recorded one are then distinguished by where they came from, not by
-     * whether they happen to start with a particular prefix.
+     * The recovered debug name a slot carries.
      *
      * @param slot local slot index
      * @return the recovered name, or null when the class carries none for the slot or the active
@@ -437,7 +435,6 @@ public class RecoveryContext
 
     /**
      * Marks a variable name as declared.
-     * If inside a branch scope, tracks it for removal when the branch ends.
      *
      * @param name variable name being declared
      */
@@ -492,9 +489,8 @@ public class RecoveryContext
     }
 
     /**
-     * Snapshots the current declared set as the method's baseline (the pre-declared parameters), so a full
-     * re-pass can restore it. Without the restore, declarations emitted by a DISCARDED earlier attempt leak
-     * into the re-pass and its stores recover as bare assignments with the declarations gone.
+     * Snapshots the current declared set as the method's baseline (the pre-declared parameters), so a full re-pass
+     * can restore it.
      */
     public void baselineDeclaredVariables()
     {
@@ -513,7 +509,6 @@ public class RecoveryContext
 
     /**
      * Marks an SSA value as materialized into a variable.
-     * After this, subsequent uses should reference the variable, not inline the expression.
      *
      * @param value value that was assigned to a variable
      */
@@ -533,7 +528,6 @@ public class RecoveryContext
 
     /**
      * Unmarks an SSA value as materialized, allowing it to be inlined again.
-     * Used when a PHI variable is collapsed to a boolean expression.
      *
      * @param value value to unmark
      */
@@ -543,9 +537,7 @@ public class RecoveryContext
     }
 
     /**
-     * Pins a value to its variable: it must always be referenced by name, never force-inlined at a use, even
-     * when it would otherwise qualify (e.g. a single-use invoke). Used for a value that feeds a phi and is also
-     * consumed elsewhere - inlining it would drop the phi variable's assignment and duplicate a side effect.
+     * Pins a value to its variable.
      *
      * @param value value to pin
      */
@@ -565,7 +557,6 @@ public class RecoveryContext
 
     /**
      * Pushes a new scope for for-loop variables.
-     * Variables declared in for-loop init will be tracked in this scope.
      */
     public void pushForLoopScope()
     {
@@ -574,7 +565,6 @@ public class RecoveryContext
 
     /**
      * Pops the current for-loop scope and removes its variables from declaredVariables.
-     * This allows the same variable name to be re-declared in subsequent for-loops.
      */
     public void popForLoopScope()
     {
@@ -590,7 +580,6 @@ public class RecoveryContext
 
     /**
      * Marks a variable as declared in a for-loop init expression.
-     * The variable will be removed from declaredVariables when the loop scope is popped.
      *
      * @param name variable name being declared
      */
@@ -605,7 +594,6 @@ public class RecoveryContext
 
     /**
      * Pushes a new scope for if-then-else branch variables.
-     * Variables declared in this branch will be tracked and removed when the scope is popped.
      */
     public void pushBranchScope()
     {
@@ -614,7 +602,6 @@ public class RecoveryContext
 
     /**
      * Pops the current branch scope and removes its variables from declaredVariables.
-     * This allows sibling branches to declare the same variable independently.
      */
     public void popBranchScope()
     {
@@ -630,7 +617,6 @@ public class RecoveryContext
 
     /**
      * Marks a variable as declared in the current scope.
-     * If inside a branch scope, tracks it for removal when the branch ends.
      *
      * @param name variable name being declared
      */

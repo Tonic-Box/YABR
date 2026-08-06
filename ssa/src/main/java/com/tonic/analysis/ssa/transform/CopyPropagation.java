@@ -102,9 +102,7 @@ public class CopyPropagation implements IRTransform
     }
 
     /**
-     * Follows a chain of copies to its ultimate source. A {@code visited} set makes this terminate even
-     * when the chain cycles - mutually referencing phi/copy values (e.g. {@code a -> b -> a} from a loop)
-     * would otherwise spin forever; on a cycle it stops at the first repeated value.
+     * Follows a chain of copies to its ultimate source.
      */
     private static Value resolve(Value value, Map<SSAValue, Value> copies)
     {

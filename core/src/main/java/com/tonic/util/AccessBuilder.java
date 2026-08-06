@@ -2,18 +2,6 @@ package com.tonic.util;
 
 /**
  * Builder class for constructing access flag integers using method chaining.
- * Utilizes the {@code Modifiers} class to set specific access flags.
- * The {@code AccessBuilder} class provides a fluent API to set various access modifiers
- * based on the JVM specification. Each method corresponds to a specific access flag
- * and modifies the internal state accordingly.
- * Example usage:
- * <pre>{@code
- * int accessFlags = new AccessBuilder()
- *                         .setPublic()
- *                         .setStatic()
- *                         .setFinal()
- *                         .build();
- * }</pre>
  */
 public final class AccessBuilder
 {
@@ -170,7 +158,6 @@ public final class AccessBuilder
 
     /**
      * Sets the {@code volatile} access flag.
-     * Note: Typically used for fields.
      * @return the current {@code AccessBuilder} instance for chaining
      */
     public AccessBuilder setVolatile()
@@ -181,7 +168,6 @@ public final class AccessBuilder
 
     /**
      * Sets the {@code transient} access flag.
-     * Note: Typically used for fields.
      * @return the current {@code AccessBuilder} instance for chaining
      */
     public AccessBuilder setTransient()

@@ -7,7 +7,6 @@ import java.io.IOException;
 
 /**
  * Represents a ChopFrame in the StackMapTable attribute.
- * Used when the frame has fewer local variables than the previous frame.
  */
 public class ChopFrame extends StackMapFrame
 {

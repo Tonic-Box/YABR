@@ -8,8 +8,7 @@ import com.tonic.parser.MethodEntry;
 import java.io.IOException;
 
 /**
- * Base visitor over a method's decoded instructions whose per-instruction visit hooks are all no-ops;
- * {@link #process} drives a {@link CodeWriter} over the method and writes the result back.
+ * Base visitor over a method's decoded instructions whose per-instruction visit hooks are all no-ops.
  */
 public abstract class AbstractBytecodeVisitor implements Visitor<MethodEntry>
 {

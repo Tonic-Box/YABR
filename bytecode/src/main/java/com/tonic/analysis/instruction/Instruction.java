@@ -52,9 +52,7 @@ public abstract class Instruction
     }
 
     /**
-     * Updates this instruction's bytecode offset. Used by {@code CodeWriter}'s relink/layout pass
-     * after a structural edit shifts instruction positions. Operand-bearing instructions whose
-     * encoding depends on the offset (branches, switches) are reconstructed rather than mutated.
+     * Updates this instruction's bytecode offset.
      * @param offset the new bytecode offset
      */
     public void setOffset(int offset)

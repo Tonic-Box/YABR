@@ -18,7 +18,6 @@ import java.util.List;
 
 /**
  * Represents a Java class file with full parsing and manipulation capabilities.
- * Provides access to constant pool, fields, methods, and class attributes.
  */
 public class ClassFile extends AbstractParser
 {
@@ -56,9 +55,7 @@ public class ClassFile extends AbstractParser
     }
 
     /**
-     * Creates a new, empty class file from scratch (no members). Use
-     * {@code com.tonic.analysis.ClassFactory#createClass} to also generate a
-     * default constructor and class initializer.
+     * Creates a new, empty class file from scratch (no members).
      * @param className the internal class name (e.g., "com/example/MyClass")
      * @param accessFlags the class access flags
      */
@@ -584,10 +581,8 @@ public class ClassFile extends AbstractParser
     }
 
     /**
-     * Rewrites every constant-pool reference to {@code fromInternal} so it resolves to
-     * {@code toInternal} (see {@link ConstPool#redirectClassReferences} for exactly what is covered),
-     * then refreshes the cached descriptor and owner-name on this class's fields and methods so they
-     * stay consistent with the rewritten pool.
+     * Rewrites every constant-pool reference to {@code fromInternal} so it resolves to {@code toInternal}.
+     *
      * @param fromInternal the current class internal name
      * @param toInternal   the new class internal name
      * @return the number of constants rewritten
@@ -672,10 +667,6 @@ public class ClassFile extends AbstractParser
 
     /**
      * Removes the StackMapTable attribute from every method, so the class serializes "frameless".
-     * Useful for tools (e.g. resource packers) that emit class versions which don't require
-     * split-verification frames, or that recompute frames downstream. Call before {@link #write()}.
-     * Note: a frameless class only loads on JVMs/verification modes that don't require a StackMapTable
-     * (class major version below 50, or {@code -Xverify:none}).
      * @return the number of StackMapTable attributes removed
      */
     public int stripStackMapTables()
@@ -776,8 +767,6 @@ public class ClassFile extends AbstractParser
 
     /**
      * Computes the constant pool count for the class file header.
-     * Per JVM spec, Long and Double entries occupy two indices.
-     * The items list already accounts for this with null entries at the second slot.
      * @return the constant pool count value
      */
     private int computeConstantPoolCount()
@@ -912,7 +901,6 @@ public class ClassFile extends AbstractParser
 
     /**
      * Creates a new method with a complete method descriptor.
-     * Use this when you have a pre-built descriptor like "(Lcom/test/ClassB;)V".
      * @param accessFlags the access flags for the method
      * @param methodName the name of the method
      * @param methodDescriptor the complete method descriptor (e.g., "(Ljava/lang/String;I)V")
@@ -928,7 +916,6 @@ public class ClassFile extends AbstractParser
 
     /**
      * Counts the number of local variable slots required for method parameters.
-     * Long (J) and double (D) types require 2 slots each.
      * @param descriptor method descriptor string
      * @return slot count for parameters
      */
@@ -972,9 +959,8 @@ public class ClassFile extends AbstractParser
     }
 
     /**
-     * Creates the structural skeleton of a new method (an empty Code attribute for
-     * concrete methods, none for abstract/native) and registers it on the class.
-     * Default body generation lives in {@code com.tonic.analysis.ClassFactory}.
+     * Creates the structural skeleton of a new method (an empty Code attribute for concrete methods, none for
+     * abstract/native) and registers it on the class.
      * @param accessFlags the access flags for the method
      * @param methodName the name of the method
      * @param methodDescriptor the method descriptor string

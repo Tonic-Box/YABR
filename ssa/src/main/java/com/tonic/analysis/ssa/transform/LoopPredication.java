@@ -12,14 +12,6 @@ import java.util.*;
 
 /**
  * Loop Predication optimization transform.
- * Converts loop-variant guards into loop-invariant predicates:
- * - Identifies guards inside loops that compare induction variables to limits
- * - When the guard condition can be proven true for all iterations, eliminates it
- * Example:
- *   for (i = 0; i &lt; n; i++) {
- *       if (i &lt; limit) { ... }  // Guard checked every iteration
- *   }
- * If n &lt;= limit, the guard is always true and can be eliminated.
  */
 public class LoopPredication implements IRTransform
 {
@@ -52,13 +44,13 @@ public class LoopPredication implements IRTransform
         boolean changed = false;
         for (Loop loop : loopAnalysis.getLoops())
         {
-            changed |= processLoop(loop, method, loopAnalysis);
+            changed |= processLoop(loop);
         }
 
         return changed;
     }
 
-    private boolean processLoop(Loop loop, IRMethod method, LoopAnalysis loopAnalysis)
+    private boolean processLoop(Loop loop)
     {
         IRBlock header = loop.getHeader();
         IRBlock preheader = findPreheader(header, loop);
@@ -82,10 +74,10 @@ public class LoopPredication implements IRTransform
             if (term instanceof BranchInstruction)
             {
                 BranchInstruction branch = (BranchInstruction) term;
-                LoopGuard guard = analyzeGuard(branch, basicIVs, loopDefinedValues, loop);
+                LoopGuard guard = analyzeGuard(branch, basicIVs, loopDefinedValues);
                 if (guard != null)
                 {
-                    changed |= tryPredicateGuard(guard, loop, preheader);
+                    changed |= tryPredicateGuard(guard, loop);
                 }
             }
         }
@@ -230,7 +222,7 @@ public class LoopPredication implements IRTransform
         return null;
     }
 
-    private LoopGuard analyzeGuard(BranchInstruction branch, List<BasicIV> ivs, Set<Integer> loopDefined, Loop loop)
+    private LoopGuard analyzeGuard(BranchInstruction branch, List<BasicIV> ivs, Set<Integer> loopDefined)
     {
         CompareOp cond = branch.getCondition();
 
@@ -313,7 +305,7 @@ public class LoopPredication implements IRTransform
         return false;
     }
 
-    private boolean tryPredicateGuard(LoopGuard guard, Loop loop, IRBlock preheader)
+    private boolean tryPredicateGuard(LoopGuard guard, Loop loop)
     {
         BasicIV iv = guard.iv;
 

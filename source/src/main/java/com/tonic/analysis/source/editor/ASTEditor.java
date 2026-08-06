@@ -11,16 +11,6 @@ import java.util.List;
 
 /**
  * Fluent editor that walks a method body, dispatching registered handlers to rewrite AST nodes.
- * <pre>
- * ASTEditor editor = new ASTEditor(methodBody, "methodName", "()V", "com/example/Class");
- * editor.onMethodCall((ctx, call) -&gt; {
- *     if (call.getMethodName().equals("oldMethod")) {
- *         return Replacement.with(ctx.factory().methodCall("newMethod").build());
- *     }
- *     return Replacement.keep();
- * });
- * editor.apply();
- * </pre>
  */
 public class ASTEditor
 {
@@ -162,7 +152,6 @@ public class ASTEditor
 
     /**
      * Registers a handler for array access expressions.
-     * The handler receives context about whether the access is a read or store operation.
      * @param handler the handler to run on every array access
      * @return this editor
      */

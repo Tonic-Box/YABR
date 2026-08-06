@@ -41,11 +41,7 @@ public class ClassPool
     private final List<ClassFile> classes = new ArrayList<>();
 
     /**
-     * Name -&gt; ClassFile index for {@link #get(String)}, avoiding a linear scan of every class per
-     * lookup (which makes callers that resolve names in a loop, e.g. hierarchy building, quadratic).
-     * A validated cache: entries can go stale when a class is renamed in place, so {@link #get} checks
-     * the cached class still carries the requested name and falls back to a linear scan otherwise.
-     * First-match wins, mirroring the previous {@code findFirst} behaviour for duplicate names.
+     * Name -&gt; ClassFile index for {@link #get(String)}, avoiding a linear scan of every class per lookup.
      */
     private final Map<String, ClassFile> byName = new HashMap<>();
 

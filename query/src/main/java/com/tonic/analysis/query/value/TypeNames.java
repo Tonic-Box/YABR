@@ -3,10 +3,7 @@ package com.tonic.analysis.query.value;
 import java.util.Map;
 
 /**
- * Normalizes the many spellings of a Java type - primitive name ({@code int}), descriptor
- * ({@code I}, {@code [I}, {@code Ljava/lang/String;}), internal name ({@code java/lang/String}) and
- * dotted name ({@code java.lang.String}) - to one canonical descriptor form so type comparisons are
- * spelling-independent.
+ * Normalizes the many spellings of a Java type to one canonical descriptor form.
  */
 public final class TypeNames
 {
@@ -23,9 +20,7 @@ public final class TypeNames
      * Reduces any accepted type spelling to its descriptor form.
      *
      * @param type the spelling to normalize, may be null
-     * @return the canonical descriptor (e.g. {@code int}/{@code I} -&gt; {@code I},
-     *         {@code java.lang.String} -&gt; {@code Ljava/lang/String;}), the trimmed input if it is
-     *         not a recognizable type spelling, or null for null input
+     * @return the canonical descriptor form of the type
      */
     public static String canonical(String type)
     {

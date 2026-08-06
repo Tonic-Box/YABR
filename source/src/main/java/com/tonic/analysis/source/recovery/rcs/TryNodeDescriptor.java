@@ -7,11 +7,7 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * A statically decoded try region treated as one opaque composite node by the reaching-condition
- * engine: the blocks the try/catch recovery will consume (the merged protected ranges plus the catch
- * blocks), and the single join the node continues at. The engine places the node under its dominator
- * like any block, models its only outgoing edge as {@code node -> after}, and delegates the node's
- * recovery to the host's try/catch machinery at emit time.
+ * A statically decoded try region treated as one opaque composite node by the reaching-condition engine.
  */
 public final class TryNodeDescriptor
 {

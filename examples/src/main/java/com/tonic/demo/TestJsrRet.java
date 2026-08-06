@@ -7,9 +7,6 @@ import com.tonic.parser.*;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.util.*;
 
-import java.io.*;
-import java.util.ArrayList;
-
 /**
  * Demo showing that the SSA framework can lift and lower legacy JSR/RET subroutine bytecode.
  */
@@ -37,20 +34,6 @@ public class TestJsrRet
 
     /**
      * Creates a simple class with a method using JSR/RET bytecode.
-     * The bytecode pattern simulates a classic try-finally using JSR:
-     * 0: iconst_1          // Push 1
-     *  1: istore_1          // Store to local 1 (result = 1)
-     *  2: jsr 8             // Jump to subroutine at offset 8
-     *  5: iload_1           // Load result
-     *  6: ireturn           // Return result
-     *  7: nop               // Padding (unreachable)
-     *  8: astore_2          // Subroutine: store return address in local 2
-     *  9: iload_1           // Load result
-     * 10: iconst_2          // Push 2
-     * 11: iadd              // Add (result += 2)
-     * 12: istore_1          // Store back
-     * 13: ret 2             // Return to caller (address in local 2)
-     * Expected behavior: method returns 3 (1 + 2)
      */
     private static void testSimpleJsrRet() throws Exception
     {

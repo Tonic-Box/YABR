@@ -8,10 +8,8 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Maps {@code (SubjectKind, keyword)} to a resolver - either a scalar {@link Attribute} or a
- * sub-subject {@link Selector}. This is the one place the query vocabulary grows: a new queryable
- * fact is a single {@code registerScalar}/{@code registerStream} call (see {@link DefaultAttributes}),
- * never a new AST node or visitor method.
+ * Maps {@code (SubjectKind, keyword)} to a resolver - either a scalar {@link Attribute} or a sub-subject
+ * {@link Selector}.
  */
 public final class AttributeRegistry
 {

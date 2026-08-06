@@ -7,17 +7,6 @@ import java.util.Objects;
 
 /**
  * Represents a MethodHandle constant loaded via ldc.
- * Corresponds to CONSTANT_MethodHandle in the constant pool.
- * Reference kinds (per JVM spec):
- * 1: REF_getField
- * 2: REF_getStatic
- * 3: REF_putField
- * 4: REF_putStatic
- * 5: REF_invokeVirtual
- * 6: REF_invokeStatic
- * 7: REF_invokeSpecial
- * 8: REF_newInvokeSpecial
- * 9: REF_invokeInterface
  */
 public final class MethodHandleConstant extends Constant
 {

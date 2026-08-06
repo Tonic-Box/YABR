@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for instanceof expressions.
- * Use this to intercept and transform type checks.
  */
 @FunctionalInterface
 public interface InstanceOfHandler

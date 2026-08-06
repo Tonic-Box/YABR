@@ -500,11 +500,6 @@ public class InstructionTranslator
 
     /**
      * Translates the pop2 instruction.
-     * pop2 pops either:
-     * - Two category-1 values (int, float, reference), OR
-     * - One category-2 value (long, double)
-     * In our SSA representation, longs and doubles are single Values with
-     * a type marker, so we check the type to determine how many pops to do.
      */
     private void translatePop2(AbstractState state)
     {
@@ -538,9 +533,7 @@ public class InstructionTranslator
     }
 
     /**
-     * dup_x2 - duplicate top value and insert two or three down:
-     * Form 1 (all category-1): ..., value3, value2, value1 -&gt; ..., value1, value3, value2, value1
-     * Form 2 (value2 is category-2): ..., value2, value1 -&gt; ..., value1, value2, value1
+     * dup_x2 - duplicate top value and insert two or three down.
      */
     private void translateDupX2(AbstractState state)
     {
@@ -566,9 +559,7 @@ public class InstructionTranslator
     }
 
     /**
-     * dup2 - duplicate top one or two values:
-     * Form 1 (category-2): ..., value -&gt; ..., value, value
-     * Form 2 (two category-1): ..., value2, value1 -&gt; ..., value2, value1, value2, value1
+     * dup2 - duplicate top one or two values.
      */
     private void translateDup2(AbstractState state)
     {
@@ -590,9 +581,7 @@ public class InstructionTranslator
     }
 
     /**
-     * dup2_x1 - duplicate top one or two values and insert beneath:
-     * Form 1 (category-2): ..., value2, value1 -&gt; ..., value1, value2, value1
-     * Form 2 (two category-1): ..., value3, value2, value1 -&gt; ..., value2, value1, value3, value2, value1
+     * dup2_x1 - duplicate top one or two values and insert beneath.
      */
     private void translateDup2X1(AbstractState state)
     {
@@ -621,11 +610,7 @@ public class InstructionTranslator
     }
 
     /**
-     * dup2_x2 - duplicate top one or two values and insert beneath:
-     * Form 1: category-2 over category-2
-     * Form 2: two category-1 over category-2
-     * Form 3: category-2 over two category-1
-     * Form 4: two category-1 over two category-1
+     * dup2_x2 - duplicate top one or two values and insert beneath.
      */
     private void translateDup2X2(AbstractState state)
     {
@@ -842,14 +827,11 @@ public class InstructionTranslator
 
     /**
      * Tracks JSR call sites: maps subroutine entry offset to list of continuation blocks.
-     * This is needed because RET returns to the continuation of the calling JSR.
      */
     private final Map<Integer, List<IRBlock>> jsrContinuations = new HashMap<>();
 
     /**
      * Translates JSR/JSR_W instructions.
-     * JSR pushes the return address (continuation offset) and jumps to the subroutine.
-     * We convert this to a GOTO to the subroutine and track the continuation for RET.
      */
     private void translateJsr(JsrInstruction instr, AbstractState state, IRBlock block)
     {
@@ -880,8 +862,6 @@ public class InstructionTranslator
 
     /**
      * Translates RET instruction.
-     * RET returns from a subroutine to the address stored in a local variable.
-     * Since we track JSR continuations, we convert RET to GOTO the continuation.
      */
     private void translateRet(IRBlock block)
     {
@@ -1015,7 +995,6 @@ public class InstructionTranslator
 
     /**
      * Extracts method reference info from either MethodRefItem or InterfaceRefItem.
-     * Since Java 8, invokestatic and invokespecial can reference InterfaceMethodRef.
      * @return array of [owner, name, descriptor]
      */
     private String[] getMethodRefInfo(int cpIndex, String opcode)

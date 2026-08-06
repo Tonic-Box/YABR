@@ -21,8 +21,6 @@ import java.util.*;
 
 /**
  * A class for analyzing and modifying the bytecode of a MethodEntry.
- * It allows iterating over bytecode instructions, inserting new instructions,
- * and automatically updating stack and local variable information.
  */
 public class CodeWriter
 {
@@ -34,11 +32,7 @@ public class CodeWriter
     protected final Map<Integer, Instruction> instructions = new TreeMap<>();
 
     /**
-     * Branch/switch instruction -&gt; the target instructions it jumps to, by identity. Index 0 is the
-     * default/sole target; for switches, indices 1..n follow in case order. Resolved at parse time and
-     * maintained across structural edits by {@link #relink}, so branch targets survive offset shifts
-     * (the internal "label" model). A null target means the original branch pointed outside any known
-     * instruction boundary and is left untouched.
+     * Branch/switch instruction -&gt; the target instructions it jumps to, by identity.
      */
     private final Map<Instruction, List<Instruction>> branchTargets = new IdentityHashMap<>();
 
@@ -169,10 +163,7 @@ public class CodeWriter
     }
 
     /**
-     * Returns a fresh, bytecode-ordered, random-access snapshot of the instructions. Identity-stable
-     * (the same {@code Instruction} objects), so {@code indexOf(handle)} resolves by identity; a
-     * snapshot rather than a live view, so it can be iterated while editing by handle. Re-call after an
-     * edit to reflect the new state.
+     * Returns a fresh, bytecode-ordered, random-access snapshot of the instructions.
      * @return the instructions in offset order
      */
     public List<Instruction> getInstructionList()
@@ -191,7 +182,6 @@ public class CodeWriter
 
     /**
      * Gets the sequential instruction index for the instruction at the given bytecode offset.
-     * This maps bytecode offset to sequential instruction number (0, 1, 2, ...).
      * @param offset The bytecode offset
      * @return The sequential instruction index, or -1 if no instruction at that offset
      */
@@ -257,7 +247,6 @@ public class CodeWriter
 
     /**
      * Finds the instruction index that contains or follows the given bytecode offset.
-     * Useful for exception handler matching.
      * @param targetOffset The bytecode offset to search for
      * @return The instruction index, or -1 if not found
      */
@@ -281,10 +270,8 @@ public class CodeWriter
     }
 
     /**
-     * Inserts an instruction before whatever instruction currently sits at {@code offset} (or appends
-     * it when {@code offset == code length}). Routes through {@link #relink}, so branch/switch targets,
-     * the exception table, and frames are all kept correct - including when the insertion point lies
-     * within a branch span (which the previous offset-only implementation corrupted).
+     * Inserts an instruction before whatever instruction currently sits at {@code offset} (or appends it when
+     * {@code offset == code length}).
      * @param offset   the bytecode offset of the instruction to insert before
      * @param newInstr the new instruction to insert
      */
@@ -314,7 +301,6 @@ public class CodeWriter
 
     /**
      * Removes an instruction, identified by handle (object identity), and relinks the method.
-     * Throws if the instruction is the target of a branch/switch (retarget or replace it instead).
      * @param handle the instruction to remove (an object currently in this method)
      */
     public void removeInstruction(Instruction handle)
@@ -340,9 +326,7 @@ public class CodeWriter
     }
 
     /**
-     * Replaces an instruction (by handle) with another, preserving control flow: any branch/switch
-     * that targeted the old instruction is retargeted to the replacement. If {@code replacement} is
-     * itself a branch, register its target first via {@link #setBranchTarget}/{@link #setSwitchTargets}.
+     * Replaces an instruction (by handle) with another, preserving control flow.
      * @param handle      the instruction to replace
      * @param replacement the new instruction
      */
@@ -369,13 +353,8 @@ public class CodeWriter
     }
 
     /**
-     * Replaces many instructions in a single relink, preserving control flow exactly as
-     * {@link #replaceInstruction} does per element. Each map entry maps an existing instruction handle to
-     * its replacement; branches/switches targeting any replaced handle are retargeted. This is O(n) in the
-     * method size rather than O(replacements &times; n) - replacing instructions one at a time relinks the
-     * whole method per call, which is quadratic when many sites are rewritten (e.g. local-slot remapping).
-     * None of the replacements may themselves be branches/switches unless their targets are registered
-     * first via {@link #setBranchTarget}/{@link #setSwitchTargets}.
+     * Replaces many instructions in a single relink, preserving control flow exactly as {@link
+     * #replaceInstruction} does per element.
      * @param replacements existing handle &rarr; replacement instruction
      */
     public void replaceInstructions(Map<Instruction, Instruction> replacements)
@@ -413,10 +392,9 @@ public class CodeWriter
     }
 
     /**
-     * Removes many instructions in a single relink, as {@link #removeInstruction} does per element but O(n) in
-     * the method size rather than O(removals &times; n) - removing one at a time relinks the whole method per
-     * call, which is quadratic when many sites are removed. None of the removed instructions may be a
-     * branch/switch target.
+     * Removes many instructions in a single relink, linear in the method size rather than quadratic in the
+     * number of removals.
+     *
      * @param handles the instruction handles to remove
      */
     public void removeInstructions(Collection<Instruction> handles)
@@ -456,11 +434,8 @@ public class CodeWriter
     }
 
     /**
-     * Replaces this method's entire instruction stream with {@code body} (e.g. a cloned/grafted body),
-     * then relinks: offsets, branch/switch targets, and frames are recomputed. Branches in {@code body}
-     * must either be self-contained (relative offsets valid for the block, as produced by
-     * {@link #cloneRange}) or have their targets registered via {@link #setBranchTarget}. The exception
-     * table is cleared (set a new one separately if needed).
+     * Replaces this method's entire instruction stream with {@code body} (e.g. a cloned/grafted body), then
+     * relinks.
      * @param body the new instruction stream, in order
      */
     public void replaceBody(List<Instruction> body)
@@ -570,12 +545,9 @@ public class CodeWriter
     }
 
     /**
-     * Splices several cloned bodies before {@code at}, chaining them so each body's continuation exits
-     * (e.g. from {@link ClonedRange#redirectReturns()}) fall through into the next body's entry and the
-     * last body's into {@code at}. Use this to fold multiple bodies before one instruction: repeated
-     * {@code insertBefore(at, ...)} would instead bind every body's continuation to {@code at}, so earlier
-     * bodies would skip later ones (a silent miscompile). External-label bindings carried by the bodies
-     * are preserved. A no-op for an empty list.
+     * Splices several cloned bodies before {@code at}, chaining them so each body's continuation exits (e.g. from
+     * {@link ClonedRange#redirectReturns()}) fall through into the next body's entry and the last body's into
+     * {@code at}.
      *
      * @param at     the instruction the last body falls through into
      * @param bodies the cloned bodies to splice, in execution order
@@ -629,9 +601,7 @@ public class CodeWriter
 
     /**
      * Fails loud if a carried branch target isn't present in the post-splice instruction set - e.g. an
-     * out-of-range branch whose target was carried by identity from another method. Out-of-range branch
-     * carry is same-method-only; this converts what would be a class-load {@code VerifyError} into a
-     * located build-time error.
+     * out-of-range branch whose target was carried by identity from another method.
      */
     private static void requireTargetsPresent(ClonedRange block, List<Instruction> order)
     {
@@ -732,8 +702,6 @@ public class CodeWriter
 
     /**
      * Inserts a block of instructions (e.g. a cloned method body) immediately before the handle.
-     * Branch targets internal to the block are honored; register any branch that targets outside the
-     * block via {@link #setBranchTarget} before calling.
      *
      * @param handle the instruction to insert before
      * @param block  the instructions, in order
@@ -788,9 +756,8 @@ public class CodeWriter
     }
 
     /**
-     * Registers the target of a (typically newly created) branch instruction by identity, so that the
-     * relink pass can compute its relative offset. Use this when building branches that jump to an
-     * existing instruction handle rather than via a raw relative offset.
+     * Registers the target of a (typically newly created) branch instruction by identity, so that the relink pass
+     * can compute its relative offset.
      *
      * @param branch the branch instruction
      * @param target the instruction it jumps to
@@ -825,10 +792,8 @@ public class CodeWriter
     }
 
     /**
-     * Snapshots this writer's full instruction list and its by-identity branch/switch targets into a
-     * {@link ClonedRange}, so an externally-assembled body can be spliced into another method via
-     * {@link #insertBefore(Instruction, ClonedRange)} / {@link #replaceBody(ClonedRange)}. The
-     * snapshot reuses the live instruction objects; the target map is copied defensively.
+     * Snapshots this writer's full instruction list and its by-identity branch/switch targets into a {@link
+     * ClonedRange}.
      *
      * @return the snapshot, carrying no exception regions
      */
@@ -838,9 +803,7 @@ public class CodeWriter
     }
 
     /**
-     * As {@link #toClonedRange()} but also carries exception regions. Each entry's PCs are interpreted
-     * against this writer's own layout and bound by instruction identity, so a try/catch survives being
-     * spliced at any offset/alignment.
+     * As {@link #toClonedRange()} but also carries exception regions.
      *
      * @param regionEntries the exception-table entries to carry, PCs against this writer's layout
      * @return the snapshot
@@ -851,12 +814,7 @@ public class CodeWriter
     }
 
     /**
-     * As {@link #toClonedRange(List)} but also records branches whose targets lie outside the snippet:
-     * {@code externalOffsets} (branch offsets per external label name, bound at splice via
-     * {@link ClonedRange#bindLabel}) and {@code continuationOffsets} (branches that fall through into
-     * the host, auto-bound to the splice successor). Offsets are interpreted against this writer's
-     * layout; these branches are omitted from the auto-resolved target snapshot as they have no
-     * in-snippet target.
+     * As {@link #toClonedRange(List)} but also records branches whose targets lie outside the snippet.
      *
      * @param regionEntries       the exception-table entries to carry, PCs against this writer's layout
      * @param externalOffsets     branch offsets per external label name, bound at splice time
@@ -936,11 +894,7 @@ public class CodeWriter
     }
 
     /**
-     * A cloned instruction range: the fresh instructions, the by-identity targets of any branch/switch
-     * among them, and any exception regions (also by identity). Splicing it via
-     * {@link #insertBefore(Instruction, ClonedRange)} / {@link #replaceBody(ClonedRange)} carries all of
-     * these into the host so they relink correctly regardless of where (and at what 4-byte alignment)
-     * the block lands.
+     * A cloned instruction range.
      */
     public static final class ClonedRange
     {
@@ -995,16 +949,9 @@ public class CodeWriter
         }
 
         /**
-         * Rewrites every cloned {@code return} into a continuation exit (a placeholder {@code goto}
-         * recorded as a continuation branch), so an inlined body's returns fall through to the splice
-         * successor instead of returning from the host. Branches that targeted a rewritten return are
-         * repointed at its goto. Opt-in: leave it off to relocate a body whose returns should stay
-         * returns. Must be spliced via {@code insertBefore}/{@code insertAfter} (which supply the
-         * successor); {@code replaceBody} has none and will reject the continuation. To fold several
-         * such bodies before one instruction, use
-         * {@link CodeWriter#insertChainBefore(Instruction, java.util.List)} - repeated
-         * {@code insertBefore(at, ...)} would bind every body's continuation to {@code at}, so earlier
-         * bodies would skip later ones.
+         * Rewrites every cloned {@code return} into a continuation exit (a placeholder {@code goto} recorded as a
+         * continuation branch), so an inlined body's returns fall through to the splice successor instead of returning
+         * from the host.
          * @return this range
          */
         public ClonedRange redirectReturns()
@@ -1039,12 +986,9 @@ public class CodeWriter
     }
 
     /**
-     * Clones a contiguous instruction range {@code [from, to]} (inclusive) into a fresh list, shifting
-     * every local-variable index by {@code localOffset} and recomputing branch/switch relative offsets
-     * for the cloned block's own layout (the inliner's "clone with label remap + local offset"). The
-     * returned block is translation-invariant for branch-only blocks; for blocks containing a
-     * {@code switch}, prefer {@link #cloneRangeWithTargets} + the {@link ClonedRange} splice overloads,
-     * which carry targets by identity and are correct at any alignment.
+     * Clones a contiguous instruction range {@code [from, to]} into a fresh list, shifting every local
+     * index by {@code localOffset}.
+     *
      * @param from        first instruction of the range (a handle in this method)
      * @param to          last instruction of the range (inclusive)
      * @param localOffset value added to every local-variable index in the clone
@@ -1056,11 +1000,9 @@ public class CodeWriter
     }
 
     /**
-     * As {@link #cloneRange(Instruction, Instruction, int)} but returns a {@link ClonedRange} that also
-     * carries each cloned branch/switch's targets by identity, and remaps every constant-pool reference
-     * through {@code cpRemap} (old index &rarr; new index in {@code targetPool}) - used by cross-class
-     * grafting to re-resolve operands into the target pool ({@code ldc} widens to {@code ldc_w} if a
-     * remapped index exceeds 255).
+     * As {@link #cloneRange(Instruction, Instruction, int)}, but carries branch/switch targets by identity
+     * and remaps constant-pool references into {@code targetPool}.
+     *
      * @param from        first instruction (inclusive)
      * @param to          last instruction (inclusive)
      * @param localOffset value added to every local-variable index
@@ -1201,10 +1143,8 @@ public class CodeWriter
     }
 
     /**
-     * Re-emits a local-variable instruction (any compact/general/wide load, store, iinc or ret) with
-     * its index shifted by {@code localOffset}, choosing the canonical narrowest encoding: the compact
-     * {@code xload_<n>} form for index 0-3, the general form for 4-255, and the {@code wide} form for
-     * index (or iinc constant) beyond a byte. Returns null when {@code i} is not a local-variable op.
+     * Re-emits a local-variable instruction (any compact/general/wide load, store, iinc or ret) with its index
+     * shifted by {@code localOffset}, choosing the canonical narrowest encoding.
      */
     private Instruction remapLocalVar(Instruction i, int localOffset)
     {
@@ -1338,9 +1278,8 @@ public class CodeWriter
     }
 
     /**
-     * Rebuilds a constant-pool-referencing instruction with its index remapped into {@code pool} via
-     * {@code cpRemap}. Returns null for instructions that carry no cp reference. {@code ldc} widens to
-     * {@code ldc_w} if the remapped index exceeds a byte.
+     * Rebuilds a constant-pool-referencing instruction with its index remapped into {@code pool} via {@code
+     * cpRemap}.
      */
     private Instruction remapCpBearing(Instruction i, ConstPool pool, java.util.function.IntUnaryOperator cpRemap)
     {
@@ -1415,12 +1354,7 @@ public class CodeWriter
 
 
     /**
-     * Recomputes the layout of an edited instruction stream and writes back correct bytecode. Given
-     * the new ordered instruction list (the result of an insert/remove/replace), this assigns fresh
-     * offsets (recomputing switch padding), relinks every branch/switch to its target by identity (so
-     * targets survive arbitrary shifts), remaps the exception table, drops now-stale debug tables, and
-     * regenerates the StackMapTable. This is the single correct backend for all structural edits and
-     * fixes the prior gap where branch/switch targets were not recomputed after a shift.
+     * Recomputes the layout of an edited instruction stream and writes back correct bytecode.
      * @param newOrder the instructions in their new order; survivors keep identity, new ones are spliced in
      */
     private void relink(List<Instruction> newOrder)
@@ -1429,10 +1363,8 @@ public class CodeWriter
     }
 
     /**
-     * As {@link #relink(List)} but with the exception table supplied by identity ({@code regions},
-     * resolved by the caller against the correct baseline) rather than read from the current table.
-     * The table is rebuilt from each region's post-layout offsets, which is robust against the offset
-     * collisions a freshly spliced block would otherwise cause in an offset-keyed remap.
+     * As {@link #relink(List)} but with the exception table supplied by identity ({@code regions}, resolved by the
+     * caller against the correct baseline) rather than read from the current table.
      */
     private void relink(List<Instruction> newOrder, List<ExceptionRegionRef> regions)
     {
@@ -1541,11 +1473,8 @@ public class CodeWriter
 
 
     /**
-     * Widens any branch whose target span exceeds the signed 16-bit range, iterating to a fixpoint
-     * (widths only grow, so it converges): {@code goto -> goto_w}, and a conditional branch becomes an
-     * inverted conditional skipping a {@code goto_w} to the original target. Switch offsets are 32-bit
-     * and never overflow. {@code jsr} has no modeled wide form and raises an exception (obsolete since
-     * Java 6). Mutates {@code order} and {@link #branchTargets}; returns the (possibly grown) list.
+     * Widens any branch whose target span exceeds the signed 16-bit range, iterating to a fixpoint (widths only
+     * grow, so it converges).
      */
     private void widenBranches(List<Instruction> order)
     {
@@ -1733,7 +1662,7 @@ public class CodeWriter
     }
 
     /**
-     * Remaps exception-table PCs through the old-&gt;new offset map. catch_type is a cp index, unchanged.
+     * Remaps exception-table PCs through the old-&gt;new offset map.
      */
     private List<ExceptionRegionRef> resolveExistingTable()
     {
@@ -1772,9 +1701,7 @@ public class CodeWriter
     }
 
     /**
-     * Binds one entry to instruction identities: start/handler by exact offset, and the protected
-     * region's last instruction (inclusive) as the greatest offset below the exclusive end_pc. Returns
-     * {@code null} if any boundary cannot be resolved.
+     * Binds one entry to instruction identities.
      */
     private static ExceptionRegionRef resolveRegion(ExceptionTableEntry ex, Map<Integer, Instruction> byOffset)
     {
@@ -1850,10 +1777,9 @@ public class CodeWriter
     }
 
     /**
-     * Computes {@code max_stack} over the control-flow graph (via {@link FrameGenerator}) and raises the
-     * method's value if the linear estimate under-counts - correct for loops, joins, and handler entry
-     * states where a textual scan can miss the true peak. Best-effort: a failure leaves the existing
-     * value untouched.
+     * Computes {@code max_stack} over the control-flow graph (via {@link FrameGenerator}) and raises the method's
+     * value if the linear estimate under-counts - correct for loops, joins, and handler entry states where a
+     * textual scan can miss the true peak.
      *
      * @return the resulting max_stack
      */
@@ -1958,9 +1884,6 @@ public class CodeWriter
 
     /**
      * Serializes the (already-relinked) instructions back to the method WITHOUT the dataflow max-stack pass.
-     * For callers that make many edits across passes and recompute frames/max-stack once at the end (e.g. a
-     * deferred {@code computeFrames}); avoids paying the per-write {@link #computeMaxStack} dataflow. Uses the
-     * cheap linear {@link #analyze()} for a provisional max-stack/locals bound only.
      */
     public void writeWithoutMaxStack()
     {
@@ -2428,9 +2351,7 @@ public class CodeWriter
     }
 
     /**
-     * Re-reads this writer's instruction list from the underlying CodeAttribute. Call this after
-     * the method's bytecode has been mutated externally (for example by the SSA lowerer) so the
-     * writer reflects the new code.
+     * Re-reads this writer's instruction list from the underlying CodeAttribute.
      */
     public void reload()
     {

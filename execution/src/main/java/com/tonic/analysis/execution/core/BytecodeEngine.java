@@ -884,10 +884,7 @@ public final class BytecodeEngine
     }
 
     /**
-     * Pushes a default return value (if any) for a stubbed call and advances the PC, without popping
-     * anything. Used when the arguments and receiver have already been consumed by the caller, so the
-     * pop-ful {@link #stubInvoke} would double-pop (underflowing at a bare {@code aload_0; invokespecial
-     * <init>} site, or silently corrupting the stack elsewhere).
+     * Pushes a default return value (if any) for a stubbed call and advances the PC, without popping anything.
      */
     private void pushStubResult(StackFrame frame, String descriptor)
     {

@@ -22,11 +22,6 @@ import java.util.Map;
 
 /**
  * Bytecode disassembler for converting raw bytecode into human-readable format.
- *
- *Decoding is delegated to {@link InstructionFactory} (the single bytecode decoder) and operand
- * formatting to {@link InstructionRenderer}, so this class only lays out the per-instruction lines
- * and, for the verbose profile, interleaves line numbers, local-variable and stack-frame markers,
- * and the exception table.
  */
 public class CodePrinter
 {
@@ -61,8 +56,6 @@ public class CodePrinter
 
     /**
      * Disassembles a method's {@link CodeAttribute} with the enrichments selected by {@code options}.
-     * With {@link DisassemblyOptions#terse()} the output matches {@link #prettyPrintCode(byte[],
-     * ConstPool)}.
      * @param codeAttribute the method's Code attribute
      * @param options       the enrichments to include
      * @return the disassembled method

@@ -13,7 +13,6 @@ import java.util.List;
 
 /**
  * Represents the Constant Pool of a Java class file.
- * Parses and stores all constant pool entries.
  */
 public class ConstPool
 {
@@ -292,8 +291,7 @@ public class ConstPool
     }
 
     /**
-     * Finds or adds a Utf8Item for the value and returns its constant-pool index. Convenience for the
-     * common {@code getIndexOf(findOrAddUtf8(value))} pairing.
+     * Finds or adds a Utf8Item for the value and returns its constant-pool index.
      * @param value The UTF-8 string to find or add.
      * @return the 1-based constant-pool index of the Utf8Item.
      */
@@ -304,8 +302,6 @@ public class ConstPool
 
     /**
      * Always adds a new Utf8Item with the specified value.
-     * Unlike findOrAddUtf8, this never reuses existing entries.
-     * Use this when the value must not be affected by later constant pool modifications.
      * @param value The UTF-8 string to add.
      * @return The newly added Utf8Item.
      */
@@ -570,9 +566,8 @@ public class ConstPool
     }
 
     /**
-     * Canonicalizes every reference to class {@code fromInternal} so it names {@code toInternal} - the
-     * complete form of {@link #redirectClassReferences}. See that method for what is (and isn't)
-     * rewritten. Internal names use {@code '/'} (e.g. {@code "pkg/A"}). Idempotent.
+     * Canonicalizes every reference to class {@code fromInternal} so it names {@code toInternal} - the complete
+     * form of {@link #redirectClassReferences}.
      * @param fromInternal the current class internal name
      * @param toInternal   the new class internal name
      * @return the count of constants rewritten
@@ -583,16 +578,8 @@ public class ConstPool
     }
 
     /**
-     * Rewrites every constant-pool reference to class {@code fromInternal} so it resolves to
-     * {@code toInternal}, leaving no live constant naming {@code fromInternal}. This covers all
-     * reference kinds, because they share a {@code CONSTANT_Class}: {@code new}/{@code checkcast}/
-     * {@code instanceof}/{@code anewarray} operands, exception {@code catch_type}, member-ref owners,
-     * and {@code invokedynamic} bootstrap handle/arg classes - plus class names embedded in method/
-     * field/{@code MethodType} descriptors and array {@code CONSTANT_Class} names ({@code [LB;}).
-     * A class name appears in a descriptor only as the token {@code L<name>;}, so the descriptor rewrite
-     * is an exact-token replace. Not rewritten: class names in generic {@code Signature}
-     * attributes (use the {@code Renamer} for generic-aware full renames). Internal names use
-     * {@code '/'}. Idempotent; returns the number of constants rewritten.
+     * Rewrites every constant-pool reference to class {@code fromInternal} so it resolves to {@code toInternal},
+     * leaving no live constant naming {@code fromInternal}.
      * @param fromInternal the current class internal name
      * @param toInternal   the new class internal name
      * @return the count of constants rewritten
@@ -658,7 +645,6 @@ public class ConstPool
 
     /**
      * Finds an existing FieldRefItem or creates a new one using string parameters.
-     * Alias for findOrAddField for consistency with method naming.
      * @param owner The fully qualified class name (e.g., "java/lang/String").
      * @param name The field name.
      * @param descriptor The field descriptor (e.g., "I", "Ljava/lang/String;").
@@ -749,8 +735,7 @@ public class ConstPool
 
     /**
      * As {@link #findOrAddMethodHandle(int, String, String, String)}, with the owner's interface-ness made
-     * explicit: a static/special/virtual handle on an INTERFACE owner must reference a
-     * {@code CONSTANT_InterfaceMethodref} (JVMS 4.4.8), or the JVM rejects the pool as inconsistent.
+     * explicit.
      *
      * @param refKind          The reference kind, 1-4 for field handles and 5-9 for method handles.
      * @param owner            The class containing the referenced member.

@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.transform;
 
+import java.util.Objects;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -10,22 +11,6 @@ import java.util.List;
 
 /**
  * Algebraic Simplification optimization transform.
- * Applies mathematical identities to simplify expressions:
- * - x + 0 -&gt; x
- * - x - 0 -&gt; x
- * - x * 1 -&gt; x
- * - x * 0 -&gt; 0
- * - x / 1 -&gt; x
- * - x &amp; 0 -&gt; 0
- * - x &amp; -1 -&gt; x (all bits set)
- * - x | 0 -&gt; x
- * - x | -1 -&gt; -1
- * - x ^ 0 -&gt; x
- * - x ^ x -&gt; 0 (same operand)
- * - x - x -&gt; 0 (same operand)
- * - x &lt;&lt; 0 -&gt; x
- * - x &gt;&gt; 0 -&gt; x
- * - x &gt;&gt;&gt; 0 -&gt; x
  */
 public class AlgebraicSimplification implements IRTransform
 {
@@ -45,16 +30,11 @@ public class AlgebraicSimplification implements IRTransform
         {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (int i = 0; i < instructions.size(); i++)
-            {
-                IRInstruction instr = instructions.get(i);
-
-                if (instr instanceof BinaryOpInstruction)
-                {
+            for (IRInstruction instr : instructions) {
+                if (instr instanceof BinaryOpInstruction) {
                     BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                     IRInstruction replacement = trySimplify(binOp);
-                    if (replacement != null)
-                    {
+                    if (replacement != null) {
                         replacement.setBlock(block);
                         int idx = block.getInstructions().indexOf(instr);
                         block.removeInstruction(instr);
@@ -251,7 +231,7 @@ public class AlgebraicSimplification implements IRTransform
         {
             IntConstant icA = (IntConstant) a;
             IntConstant icB = (IntConstant) b;
-            return icA.getValue() == icB.getValue();
+            return Objects.equals(icA.getValue(), icB.getValue());
         }
         return false;
     }

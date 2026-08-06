@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for return statements.
- * Use this to intercept and transform method returns.
  */
 @FunctionalInterface
 public interface ReturnHandler

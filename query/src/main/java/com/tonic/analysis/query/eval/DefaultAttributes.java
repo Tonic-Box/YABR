@@ -55,10 +55,7 @@ import static com.tonic.analysis.query.eval.SubjectKind.METHOD;
 import static com.tonic.analysis.query.eval.SubjectKind.PARAM;
 
 /**
- * Registers the static (bytecode-level) query vocabulary. Each line is one queryable fact; the same
- * keyword ({@code name}, {@code type}, {@code owner}, {@code value}, {@code arity}, ...) is registered
- * per subject kind with kind-appropriate behavior. This is the only file that grows as the vocabulary
- * expands - no new AST nodes or visitor methods.
+ * Registers the static (bytecode-level) query vocabulary.
  */
 public final class DefaultAttributes
 {
@@ -111,7 +108,7 @@ public final class DefaultAttributes
     }
 
     /**
-     * Control-flow / SSA atoms. {@code recursive} is a static self-call scan; loop/block counts lift IR lazily.
+     * Control-flow / SSA atoms.
      */
     private static void registerCfg(AttributeRegistry r)
     {
@@ -542,9 +539,7 @@ public final class DefaultAttributes
     }
 
     /**
-     * Class modifiers: the access-flag set (which already carries {@code enum}/{@code interface}/
-     * {@code annotation}/{@code abstract}) plus a synthetic {@code record} when the class carries a
-     * {@link RecordAttribute} (records have no access flag).
+     * Class modifiers.
      */
     private static Value classModifiers(ClassFile cf)
     {

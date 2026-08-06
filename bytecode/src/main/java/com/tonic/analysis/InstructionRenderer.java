@@ -9,15 +9,6 @@ import java.util.Map;
 
 /**
  * Renders the operand text of a single {@link Instruction} into a target buffer.
- *
- *The line prefix ({@code offset: mnemonic}) is emitted by the caller; each {@code visit} method
- * appends only the operand suffix for its instruction, so a no-operand opcode contributes nothing
- * (the inherited no-op visits). Operands are read from the parsed instruction's accessors rather
- * than re-decoding bytes, keeping {@link InstructionFactory} the single bytecode decoder.
- *
- *When a {@link DisassemblyContext} is supplied the renderer also appends verbose annotations:
- * {@code // name: descriptor} after local-slot operands and the resolved bootstrap after
- * invokedynamic. With a {@code null} context the output is the terse legacy listing.
  */
 final class InstructionRenderer extends AbstractBytecodeVisitor
 {
@@ -39,8 +30,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor
     }
 
     /**
-     * Appends the operand text for the given instruction. The caller is responsible for the line
-     * prefix and the trailing newline.
+     * Appends the operand text for the given instruction.
      * @param instr the instruction to render
      */
     void render(Instruction instr)
@@ -328,9 +318,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor
     }
 
     /**
-     * Renders the operand of a load/store instruction: the index for the general (2-byte) form, and
-     * nothing for the compact {@code iload_0}-style forms which encode the slot in the opcode. A
-     * local-variable annotation is appended in verbose mode.
+     * Renders the operand of a load/store instruction.
      */
     private void localIndex(Instruction instr, int varIndex)
     {
@@ -375,9 +363,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor
     }
 
     /**
-     * Appends a loadable-constant operand (ldc family) as {@code #index (resolved)}. Unlike
-     * {@link #reference(int)} this resolves primitives, method types/handles and dynamic constants - so a
-     * {@code long}/{@code double}/condy prints its value instead of {@code UnknownReference}.
+     * Appends a loadable-constant operand (ldc family) as {@code #index (resolved)}.
      */
     private void constant(int index)
     {
@@ -397,9 +383,7 @@ final class InstructionRenderer extends AbstractBytecodeVisitor
     }
 
     /**
-     * Renders the suffix for a malformed WIDE instruction. A recognized modified opcode is named
-     * before {@code <invalid>}; an unrecognized one is reported as {@code <unsupported>}; a WIDE with
-     * no following byte is simply {@code <invalid>}.
+     * Renders the suffix for a malformed WIDE instruction.
      */
     private void renderInvalidWide(byte[] operands)
     {

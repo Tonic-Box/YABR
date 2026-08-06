@@ -124,8 +124,7 @@ public enum CPGEdgeType
      */
     TAINT_PROPAGATE("Taint", "Taint propagation path"),
     /**
-     * Untyped taint edge for flows that fit none of the source, sink, or propagation roles;
-     * unlike those, it is not reported by {@link #isTaintEdge()}.
+     * Untyped taint edge for flows that fit none of the source, sink, or propagation roles.
      */
     TAINT("Taint", "Generic taint edge");
 

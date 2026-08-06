@@ -9,16 +9,12 @@ import java.util.List;
 
 /**
  * A switch expression (Java 14, JEP 361): {@code switch (sel) { case L -> result; default -> r; }}.
- * Each arm yields a value; the expression's type is the common type of the arm results. Only the
- * arrow/yield value form is modeled (block-bodied arms reduce to a single result expression here).
  */
 public final class SwitchExpr implements Expression
 {
 
     /**
-     * One arm. A constant-label arm has {@code labels} (empty when {@code isDefault}); a type-pattern
-     * arm (Java 21) instead has a {@code patternType} and optional {@code patternBinding}, rendered as
-     * {@code case Type binding -> result}.
+     * One arm.
      */
     public static final class Arm
     {

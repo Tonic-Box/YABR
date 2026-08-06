@@ -12,17 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Copies a method from one {@link ClassFile} into another, remapping every constant-pool reference in
- * its body from the source pool into the target pool by symbolic re-resolution (the ASM tree API gets
- * this for free because its operands are symbolic strings; YABR instructions hold source-pool indices,
- * so a graft must re-resolve them). The grafted body is relinked through {@link CodeWriter} so branch
- * and switch targets, the exception table, {@code maxLocals}, and the StackMapTable are all rebuilt in
- * the target. Pair with {@link ClassFile#redirectOwner} when the moved member should now point at the
- * target class.
- *
- *References are remapped by {@link ConstPoolRemapper}: method/field/interface/class refs, {@code ldc}
- * constants (String/Class/int/float/long/double/MethodHandle/MethodType), and {@code invokedynamic}/
- * dynamic constants (whose bootstrap method is copied into the target's {@code BootstrapMethods}).
+ * Copies a method from one {@link ClassFile} into another, re-resolving its constant-pool references into
+ * the target pool.
  */
 public final class MethodGrafter
 {
@@ -33,7 +24,7 @@ public final class MethodGrafter
 
     /**
      * Grafts {@code method} from {@code source} into {@code target} as a brand-new method, returning the new
-     * method entry on the target. The source method is left untouched.
+     * method entry on the target.
      * @param source the class file the method currently lives in
      * @param method the method to copy
      * @param target the class file to copy it into
@@ -49,9 +40,7 @@ public final class MethodGrafter
 
     /**
      * Replaces {@code targetMethod}'s body in place with {@code sourceMethod}'s, remapping every constant-pool
-     * reference into the target. The target method entry - and therefore the target class's member set and
-     * member order - is preserved, which is what makes a JVMTI live redefine accept the result: it can change
-     * method bodies but never add or remove members. {@code sourceMethod} is left untouched.
+     * reference into the target.
      * @param source       the class file {@code sourceMethod} lives in
      * @param sourceMethod the method whose body to copy
      * @param target       the class file {@code targetMethod} lives in
@@ -63,9 +52,8 @@ public final class MethodGrafter
     }
 
     /**
-     * Clones {@code method}'s body from {@code source} into {@code destination} on {@code target}, remapping
-     * constant-pool references and the exception table, then rebuilds branch/switch targets, {@code maxLocals}
-     * and the StackMapTable through {@link CodeWriter}/{@link FrameGenerator}.
+     * Clones {@code method}'s body from {@code source} into {@code destination} on {@code target},
+     * remapping constant-pool references and the exception table.
      */
     private static void copyBodyInto(ClassFile source, MethodEntry method, ClassFile target, MethodEntry destination)
     {

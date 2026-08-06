@@ -1,13 +1,8 @@
 package com.tonic.analysis.instruction;
 
 /**
- * Common supertype for the four owner-bearing invoke instructions -
- * {@link InvokeVirtualInstruction}, {@link InvokeSpecialInstruction}, {@link InvokeStaticInstruction},
- * and {@link InvokeInterfaceInstruction}. Lets call-site work (call graphs, inlining, owner rewriting)
- * extract the callee uniformly: {@code if (insn instanceof InvokeInsn call) { call.getOwnerClass(); ... }}.
- *
- *{@code invokedynamic} ({@link InvokeDynamicInstruction}) is intentionally excluded - it has no
- * owning class.
+ * Common supertype for the four owner-bearing invoke instructions - {@link InvokeVirtualInstruction}, {@link
+ * InvokeSpecialInstruction}, {@link InvokeStaticInstruction}, and {@link InvokeInterfaceInstruction}.
  */
 public interface InvokeInsn
 {

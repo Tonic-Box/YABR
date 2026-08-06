@@ -3,7 +3,7 @@ package com.tonic.analysis.ssa.llvm.lift;
 import com.tonic.analysis.ssa.type.*;
 
 /**
- * Maps LLVM IR type strings back to {@link IRType}. Inverse of {@link com.tonic.analysis.ssa.llvm.LlvmType#render()}.
+ * Maps LLVM IR type strings back to {@link IRType}.
  */
 final class TypeParser
 {

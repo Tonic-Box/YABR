@@ -410,37 +410,6 @@ ssa.transform(method);
 - Instruction has no side effects
 - Instruction is not a phi, branch, or memory operation
 
-### Induction Variable Simplification
-
-Identifies and simplifies induction variables in loops.
-
-```java
-// Before
-for (int i = 0; i < n; i++)
-{
-    sum += i * 4;      // Derived induction variable
-}
-
-// After
-int stride = 0;
-for (int i = 0; i < n; i++)
-{
-    sum += stride;     // Use derived variable directly
-    stride += 4;       // Increment by stride
-}
-```
-
-**Usage:**
-
-```java
-SSA ssa = new SSA(constPool).withInductionVariableSimplification();
-ssa.transform(method);
-```
-
-**Detected patterns:**
-- **Basic induction variable:** `i = i + c` where c is constant
-- **Derived induction variable:** `j = i * c + d` linear function of basic IV
-
 ### Loop Predication
 
 Converts loop-variant guards into loop-invariant predicates. Eliminates guards that can be proven always true for all loop iterations.
@@ -510,11 +479,10 @@ SSA ssa = new SSA(constPool).withAllOptimizations();
 12. BitTrackingDCE - Track demanded bits, mark dead operations
 13. NullCheckElimination - Remove redundant null checks
 14. LoopInvariantCodeMotion - Hoist loop-invariant code
-15. InductionVariableSimplification - Optimize loop counters
-16. LoopPredication - Eliminate provably-true loop guards
-17. JumpThreading - Thread jump chains
-18. BlockMerging - Merge single-edge blocks
-19. DeadCodeElimination - Clean up unused instructions (run last)
+15. LoopPredication - Eliminate provably-true loop guards
+16. JumpThreading - Thread jump chains
+17. BlockMerging - Merge single-edge blocks
+18. DeadCodeElimination - Clean up unused instructions (run last)
 
 Transforms run iteratively until a fixed point is reached (no more changes) or a maximum iteration count (10).
 

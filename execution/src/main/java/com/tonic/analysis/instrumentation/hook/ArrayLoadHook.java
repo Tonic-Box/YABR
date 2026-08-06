@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for array load instrumentation.
- * Hooks are called after array load instructions (*ALOAD).
  */
 public class ArrayLoadHook implements Hook
 {

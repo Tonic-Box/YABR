@@ -6,21 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for array access expressions (array[index]).
- * Provides context about whether the access is a read or store operation.
- *
- *Example usage:
- * <pre>
- * editor.onArrayAccess((ctx, access, accessType) -&gt; {
- *     if (accessType == ArrayAccessType.STORE) {
- *         // Handle array stores (assignments to array elements)
- *         System.out.println("Storing to " + access.getArray() + "[" + access.getIndex() + "]");
- *     } else {
- *         // Handle array reads
- *         System.out.println("Reading from " + access.getArray() + "[" + access.getIndex() + "]");
- *     }
- *     return Replacement.keep();
- * });
- * </pre>
  */
 @FunctionalInterface
 public interface ArrayAccessHandler

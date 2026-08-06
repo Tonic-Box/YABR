@@ -10,11 +10,7 @@ import java.util.Objects;
 
 /**
  * Removes a redundant re-assignment {@code x = V} that repeats an earlier identical {@code x = V} in the same
- * block, when nothing between writes {@code x} and {@code V} is side-effect free (so {@code x} provably still
- * holds {@code V}). YABR's phi elimination emits such a copy at a branch's end - e.g.
- * <pre>boolWrapper = FALSE; charWrapper = ...; boolWrapper = FALSE;</pre>
- * where the second assignment is the phi copy of a value the variable already holds; javac emits no copy. The
- * <em>later</em> assignment is dropped, keeping the earlier one in its original source position.
+ * block, when nothing between writes {@code x} and {@code V} is side-effect free.
  */
 public class RedundantAssignmentEliminator implements ASTTransform
 {
@@ -90,9 +86,8 @@ public class RedundantAssignmentEliminator implements ASTTransform
     }
 
     /**
-     * A prior write of {@code x = value}: either an assignment statement or a declaration with an
-     * initializer ({@code T x = value}). Recognizing the declaration lets a later redundant {@code x =
-     * value} be dropped even after a declaration hoist has folded the first write into the declaration.
+     * A prior write of {@code x = value}: either an assignment statement or a declaration with an initializer
+     * ({@code T x = value}).
      */
     private Assign priorWrite(Statement stmt)
     {
@@ -256,9 +251,7 @@ public class RedundantAssignmentEliminator implements ASTTransform
 
         /**
          * A declaration of {@code var} (e.g. the mis-recovered loop-increment {@code int i = i + 1}, or any
-         * re-declaration javac reuses the slot for) writes the variable just as an assignment does. {@code
-         * priorWrite} already treats such a declaration as a write; the between-writes guard must too, or an
-         * intervening loop that steps the counter via a declaration is missed and a later re-init wrongly dropped.
+         * re-declaration javac reuses the slot for) writes the variable just as an assignment does.
          */
         @Override
         public Void visitVarDecl(VarDeclStmt stmt)

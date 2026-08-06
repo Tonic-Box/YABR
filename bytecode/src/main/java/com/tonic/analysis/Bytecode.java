@@ -16,7 +16,6 @@ import java.util.Map;
 
 /**
  * High-level bytecode manipulation API.
- * Provides convenient methods for inserting common bytecode instructions into a method.
  */
 public class Bytecode
 {
@@ -533,8 +532,7 @@ public class Bytecode
     }
 
     /**
-     * Computes and updates this method's StackMapTable frames. Opt-in: call it after modifying
-     * bytecode. Existing frames are preserved when the bytecode is unmodified and its table is valid.
+     * Computes and updates this method's StackMapTable frames.
      */
     public void computeFrames()
     {

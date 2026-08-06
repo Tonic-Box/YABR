@@ -18,14 +18,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Simplifies control flow in AST to reduce nesting depth and improve readability.
- * Transformations:
- * 1. Empty if-block inversion: if(x){} else{body} -&gt; if(!x){body}
- * 2. AND-chain merging: if(a){if(b){body}} -&gt; if(a &amp;&amp; b){body}
- * 3. Guard clause conversion: if(x){long} else{return} -&gt; if(!x)return; long
- * 4. If-else to ternary: if(c){x=0}else{x=1} -&gt; x=c?0:1
- * 5. Sequential guard merging: if(a)ret; if(b)ret; -&gt; if(a||b)ret;
- * 6. Boolean flag inlining: bool f=x; if(!f)... -&gt; if(!x)...
- * 7. Nested negated guard flattening: if(!a){if(!b){body}} ret; -&gt; if(a||b){ret} body
  */
 public class ControlFlowSimplifier implements ASTTransform
 {
@@ -129,9 +121,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Reports whether an expression may legally stand alone as a Java statement (a method/
-     * dynamic invocation, object/array creation, assignment, or pre/post increment-decrement).
-     * Comparisons and other pure expressions are not statement expressions.
+     * Reports whether an expression may legally stand alone as a Java statement.
      */
     private static boolean isStatementExpression(Expression e)
     {
@@ -459,7 +449,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Simplifies expressions within statements.
-     * - Ternary with equal branches: cond ? x : x -&gt; x
      */
     private boolean simplifyExpressions(List<Statement> stmts)
     {
@@ -489,10 +478,7 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Folds boolean identities ({@code x && true}/{@code x || false}) left behind by compound-condition
-     * reconstruction out of {@code if}/loop conditions. Only these identity folds are applied - NOT the constant
-     * variable-reference inlining that {@code simplifyExpression} also does, which would rewrite {@code if (x >=
-     * y)} to {@code if (5 >= 10)} for constant-valued locals, leaving {@code x}/{@code y} dead and drifting on
-     * round trip. Conditions are mutated in place (preserving the statement's label and location).
+     * reconstruction out of {@code if}/loop conditions.
      */
     private boolean simplifyConditions(List<Statement> stmts)
     {
@@ -641,7 +627,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Folds {@code cond ? 1 : 0} to {@code cond} - the boolean whose int materialization the ternary is.
-     * Returns null when {@code e} is not that shape.
      */
     private Expression foldBooleanIntTernary(Expression e)
     {
@@ -670,10 +655,7 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Folds a boolean short-circuit that javac materializes as an int-carrying ternary back into {@code &&}/{@code
-     * ||}: {@code c ? 1 : y} is {@code c || y}, {@code c ? y : 0} is {@code c && y} (and the negated {@code 0}/
-     * {@code 1} forms), where the non-literal arm {@code y} is itself boolean. Recompiling a {@code ||}/{@code &&}
-     * and decompiling it yields this int-ternary shape; folding it makes the round trip a fixed point. Returns
-     * null when the ternary is a genuine value select (neither arm is a boolean-materialized {@code 0}/{@code 1}).
+     * ||}.
      */
     private Expression foldBooleanShortCircuit(Expression cond, Expression thenExpr, Expression elseExpr)
     {
@@ -812,11 +794,8 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Simplifies each argument in place, and writes an int literal handed to a {@code boolean} parameter as
-     * the boolean it is. A boolean argument arrives either as the int-carrying ternary its branches
-     * materialize ({@code c ? 1 : 0} and friends) or - when a layout staged it through a slot - as a bare
-     * {@code 0}/{@code 1} inlined after recovery, past every type hint. Nothing else descends into argument
-     * lists, so without this the call keeps an int where the callee declares a boolean: not valid Java.
+     * Simplifies each argument in place, and writes an int literal handed to a {@code boolean} parameter as the
+     * boolean it is.
      */
     private void simplifyArguments(List<Expression> arguments, String descriptor)
     {
@@ -873,8 +852,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Tries to inline a VarRefExpr that has an SSA value with a constant definition.
-     * This handles cases where phi constant propagation left a reference to a variable
-     * that was never declared because the ternary was simplified away.
      */
     private Expression tryInlineConstantVarRef(VarRefExpr varRef)
     {
@@ -1005,10 +982,8 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Removes a redundant unlabeled {@code continue} that is the last statement of the LAST case of a switch
-     * which is itself the last statement of a loop body: control reaches the loop's back-edge either way, so
-     * the continue is a no-op. javac omits it; the recovery emits it for its own recompiled shape, so it drifts
-     * on round trip. The last case has no case after it, so dropping the continue cannot introduce fall-through.
+     * Removes a redundant unlabeled {@code continue} that is the last statement of the LAST case of a switch which
+     * is itself the last statement of a loop body.
      */
     private boolean stripRedundantSwitchContinue(BlockStmt loopBody)
     {
@@ -1046,11 +1021,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Removes a no-op guard at the very end of a loop body: {@code if (G) { continue; }} (unlabeled, no
-     * else) as the last statement continues either way - taken it continues explicitly, not taken it falls
-     * through to the back edge - so when {@code G} has no side effects the whole statement does nothing.
-     * The reaching-condition structurer emits such a guard for a settled fall-through tail; javac never
-     * does, and the leftover reference can also pin a loop counter out of its for-init scope.
+     * Removes a no-op guard at the very end of a loop body.
      */
     private boolean stripNoOpTailContinueGuard(BlockStmt loopBody)
     {
@@ -1083,8 +1054,7 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * The shared side-effect detector, additionally treating the immutable {@code String} query methods as
-     * effect-free: the tail guard's condition is typically a chain of {@code equals} tests, which are safe
-     * to discard along with the no-op guard. Receiver and arguments are still vetted.
+     * effect-free.
      */
     private static final SideEffectDetector TAIL_GUARD_PURITY = new SideEffectDetector() {
         @Override
@@ -1145,10 +1115,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Whether {@code stmt} is exactly one return or throw. Both end the method, so which of the two the
-     * structurer leaves as the branch's fall-through is a property of the layout it was recovered from rather
-     * than of the program - so the guard-clause swap treats them alike, and a decompile reaches the same form
-     * from either layout.
+     * Whether {@code stmt} is exactly one return or throw.
      */
     private boolean isSingleTerminalExit(Statement stmt)
     {
@@ -1215,9 +1182,7 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * True only for a syntactic logical negation - {@code !x} or {@code a != b} - excluding the relationals
-     * ({@code >}, {@code >=}). A relational nested-guard chain De-Morgans into a compound whose shape is
-     * layout-dependent, so flipping it would not converge; it recovers identically from either layout when
-     * left as recovered, so the both-exit normalization skips it.
+     * ({@code >}, {@code >=}).
      */
     private boolean isPurelyLogicalNegation(Expression e)
     {
@@ -1243,8 +1208,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * As {@link #isConstantEqualityGuard}, but a null literal does not count: null is never a switch label,
-     * so a null-check guard has no switch-chain form to preserve and may be normalized freely.
+     * As {@link #isConstantEqualityGuard}, but a null literal does not count.
      */
     private boolean isSwitchChainGuard(Expression cond)
     {
@@ -1318,10 +1282,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Whether negating {@code e} actually yields a positive form. A floating-point relational cannot flip
-     * its operator (that changes the answer for NaN), so negating it WRAPS a {@code !} - orienting on it
-     * would turn the positive form into the negative one and the next pass would swap straight back,
-     * oscillating forever. Such a condition is already as positive as it can be written.
+     * Whether negating {@code e} actually yields a positive form.
      */
     private boolean negationIsPositive(Expression e)
     {
@@ -1372,9 +1333,8 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Whether {@code cond} compares a value against a constant for (in)equality - {@code x == k}, {@code x != k}, or
-     * {@code !(x == k)}. These are the guards a switch-dispatch chain is built from, so they must keep the negated-
-     * nested guard form the switch reconstructor recognizes rather than being flattened to a positive leading guard.
+     * Whether {@code cond} compares a value against a constant for (in)equality - {@code x == k}, {@code x != k},
+     * or {@code !(x == k)}.
      */
     private boolean isConstantEqualityGuard(Expression cond)
     {
@@ -1427,12 +1387,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Merges two adjacent guards with complementary conditions into an if/else: {@code if (C) { A } if (!C) { B }}
-     * becomes {@code if (C) { A } else { B }}. The reaching-condition structurer emits the then and else arms of a
-     * compound-condition branch as separate guards under {@code C} and {@code !C} rather than one if/else, so this
-     * recovers the source shape. Sound only when C is side-effect-free (the merge evaluates it once where the two
-     * guards evaluated C then !C) and A does not write a variable C reads (so C's truth is unchanged once A has run
-     * and the else is correctly not entered).
+     * Merges two adjacent guards with complementary conditions into an if/else.
      */
     private boolean mergeComplementaryGuards(List<Statement> stmts)
     {
@@ -1469,13 +1424,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Splices the body out of a guard whose condition is the COMPLEMENT of an immediately preceding
-     * exiting guard: after {@code if (C) exit;}, C is false, so {@code if (!C) { REST }} is just REST.
-     * The recovered pair otherwise leaves the method's textual tail open - javac rejects the text
-     * ("missing return statement") and the re-lowering needs a synthesized tail terminator. Pure
-     * literal declarations between the two guards are allowed (the hoisted {@code T x = null;}) when
-     * the second condition does not read them; deleting the complement's evaluation requires it to be
-     * side-effect-free.
+     * Splices the body out of a guard whose condition is the COMPLEMENT of an immediately preceding exiting guard.
      */
     private boolean unguardComplementOfExitedGuard(List<Statement> stmts)
     {
@@ -1544,12 +1493,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Folds the layout spill of an in-try return back into the try: {@code T x = null; try { ...;
-     * x = expr; } catch (E e) { <terminal> } return x;} becomes {@code try { ...; return expr; }
-     * catch (E e) { <terminal> }}. javac parks the returned value in a slot so the return
-     * instruction sits OUTSIDE the protected range; recovering that literally invents a temp the
-     * source never had. Sound only when every catch is terminal (nothing can fall through to read
-     * the declaration's null) and the temp has no other reader.
+     * Folds the layout spill of an in-try return back into the try.
      */
     private boolean foldTrySpilledReturn(List<Statement> stmts)
     {
@@ -1696,11 +1640,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Whether flipping this comparison's operator would change what it answers for NaN. An ordered
-     * comparison of floating-point values is false whenever either side is NaN, so BOTH {@code a < b} and
-     * {@code a >= b} are false there - the negation of one is not the other, and the bytecode keeps them
-     * apart with different compare opcodes ({@code dcmpg} versus {@code dcmpl}). Only the ordered operators
-     * are affected: {@code ==} and {@code !=} do stay each other's negation for NaN.
+     * Whether flipping this comparison's operator would change what it answers for NaN.
      */
     private boolean flipChangesNanAnswer(BinaryExpr comparison)
     {
@@ -1744,10 +1684,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Drops every statement following an unconditional exit in the same list. Java rejects unreachable
-     * statements outright, so a recovered {@code continue; return;} tail is not merely redundant - it
-     * does not compile. Only a bare exit is treated as terminal here; a block or {@code if} whose paths
-     * all exit is left alone, since its own statement list is cleaned by the recursion.
+     * Drops every statement following an unconditional exit in the same list.
      */
     private boolean removeUnreachableStatements(List<Statement> stmts)
     {
@@ -1773,12 +1710,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Removes an unlabeled {@code continue} in TAIL position of a loop body: control reaches the back
-     * edge whether it runs or falls through, so it is a no-op the source never had. Descends through a
-     * trailing block and through both arms of a trailing {@code if} (each arm independently falls to the
-     * back edge), but never into a nested loop, switch or try, where {@code continue} binds elsewhere or
-     * carries finally semantics. A lone {@code continue} is kept so an arm is never emptied - the
-     * neighbouring guard rules own that shape.
+     * Removes an unlabeled {@code continue} in TAIL position of a loop body.
      */
     private boolean stripTailContinue(Statement tail)
     {
@@ -1907,8 +1839,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Converts if-else that assigns 0/1 to same variable into boolean expression.
-     * if (cond) { x = 0; } else { x = 1; } -&gt; x = cond ? 0 : 1;
-     * if (cond) { x = 0; } else { x = 1; } where x is int assigned 0/1 -&gt; x = !cond ? 1 : 0 or simplified
      */
     private Statement tryConvertIfElseToAssignment(IfStmt ifStmt)
     {
@@ -2119,14 +2049,8 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * The body of {@code s} when every use of {@code varName} in {@code s} is inside that one body and the
-     * body writes the variable before reading it - so the declaration can move in with it. A loop body
-     * qualifies only under that write-first rule: a variable read before it is written carries its value from
-     * the previous iteration, and a declaration moved inside would reset it every time. An if-arm needs the
-     * same rule for a different reason - moved inside, the default initializer no longer precedes the read.
-     * This is what lets a temporary the relowered layout spilled to a slot end up beside its use, where the
-     * single-use inliner can fold it away again; left at method level with the assignment further down, the
-     * inliner sees a statement in between and declines, and the temporary survives into the output.
+     * The body of {@code s} when every use of {@code varName} in {@code s} is inside that one body and the body
+     * writes the variable before reading it - so the declaration can move in with it.
      */
     private BlockStmt exclusiveBodyOf(Statement s, String varName)
     {
@@ -2192,8 +2116,7 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Whether {@code varName} steers a loop nested inside {@code body} - its condition or update reads the
-     * variable, making it that loop's counter. A counter's declaration belongs to the loop it drives, which the
-     * for-counter folder places; moving it here as well leaves the two passes disagreeing about where it goes.
+     * variable, making it that loop's counter.
      */
     private boolean drivesALoopWithin(BlockStmt body, String varName)
     {
@@ -2362,7 +2285,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Checks if an expression reads the given variable.
-     * Uses visitor pattern with special handling for assignment LHS.
      */
     private boolean readsVariableExpr(Expression expr, String varName, boolean skipAssignLeft)
     {
@@ -2395,7 +2317,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Merges sequential guard clauses with identical early-exit bodies.
-     * Pattern: if(a) { return X; } if(b) { return X; } -&gt; if(a || b) { return X; }
      */
     private boolean mergeSequentialGuards(List<Statement> stmts)
     {
@@ -2516,8 +2437,7 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * If {@code stmts} ends in {@code temp = expr; return temp} where {@code temp} is a pure return temp (not
-     * referenced earlier in the list), returns the list with that pair replaced by {@code return expr}; else
-     * returns {@code stmts} unchanged. Used only to normalize guard bodies for equality comparison.
+     * referenced earlier in the list), returns the list with that pair replaced by {@code return expr}.
      */
     private List<Statement> normalizeReturnTemp(List<Statement> stmts)
     {
@@ -2624,7 +2544,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Inlines single-use boolean variables into their condition usage.
-     * Pattern: boolean flag = expr; if (!flag) { ... } -&gt; if (!expr) { ... }
      */
     private boolean inlineSingleUseBooleans(List<Statement> stmts)
     {
@@ -2688,15 +2607,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Collapses a value materialized through a default init and a one-armed {@code if} back into the condition:
-     * <pre>
-     *   boolean t = false; if (c) { t = true; }   =&gt;   boolean t = c;
-     *   boolean t = true;  if (c) { t = false; }   =&gt;   boolean t = !c;
-     * </pre>
-     * The reaching-condition engine lowers a boolean phi as these two statements where javac wrote the condition
-     * directly; a later single-use inline then folds {@code boolean t = c; return t;} to {@code return c}. Applies
-     * to a declaration ({@code T t = V0}) or a plain assignment, and only when the init, the conditional value,
-     * and the condition are side-effect free and {@code c} does not read {@code t} - so evaluating {@code c}
-     * first changes nothing.
      */
     private boolean collapseConditionalMaterialization(List<Statement> stmts)
     {
@@ -2755,15 +2665,6 @@ public class ControlFlowSimplifier implements ASTTransform
     /**
      * Collapses a boolean flag whose default init, single conditional write, and single read live at different
      * nesting levels:
-     * <pre>
-     *   boolean t = false; if (a) { ...; if (c) { t = true; } return t; } return false;
-     *   ==&gt;  boolean-free: ...; if (a) { ...; return c; } return false;
-     * </pre>
-     * The reaching-condition engine hoists the phi default ({@code t = false}) to the flag's method-scope
-     * declaration while its conditional {@code t = true} and its {@code return t} sit inside a branch. This folds
-     * when {@code t} has exactly one declaration with a boolean-literal init, exactly one other write (the
-     * conditional one, immediately followed by {@code return t}), and no other use - so the flag is exactly the
-     * boolean value of its condition.
      */
     private boolean collapseReturnedBooleanPhi(List<Statement> stmts)
     {
@@ -2930,11 +2831,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * Folds a logical identity where one operand is a boolean constant: {@code x && true} and {@code true && x}
-     * to {@code x}, {@code x || false} and {@code false || x} to {@code x}. These keep the other operand as-is,
-     * so they are always safe (no side effect is dropped). The absorbing cases ({@code x && false},
-     * {@code x || true}) are left alone since they would discard the other operand. Returns null when neither
-     * operand is the matching constant, or the operator is not a short-circuit {@code &&}/{@code ||}.
+     * Folds a logical identity where one operand is a boolean constant.
      */
     private Expression foldBooleanIdentity(BinaryOperator op, Expression left, Expression right)
     {
@@ -3171,13 +3068,7 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
-     * The sibling form of {@link #collapseGuardWithSharedEarlyExit}: an exit guard, then a guarded
-     * TERMINAL body, then the same exit as the trailing fall-through -
-     * {@code if (A) exit; if (C) { body...exit } exit;} - is one disjoined guard over the shared
-     * exit: {@code if (A || !C) exit; body}. This is the shape a shared exit tail recovers as when
-     * the bytecode keeps ONE copy of the exit (javac's short-circuit layout), while a layout with
-     * per-test copies recovers as the disjunction directly - folding here makes both layouts agree.
-     * Evaluation order is unchanged: A first, C only when A failed.
+     * The sibling form of {@link #collapseGuardWithSharedEarlyExit}.
      */
     private boolean mergeGuardChainIntoSharedExit(List<Statement> stmts)
     {
@@ -3348,7 +3239,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Collects positive conditions from nested negated if statements.
-     * Returns the innermost body statement.
      */
     private Statement collectNestedNegatedConditions(IfStmt ifStmt, List<Expression> positiveConditions)
     {
@@ -3378,7 +3268,6 @@ public class ControlFlowSimplifier implements ASTTransform
 
     /**
      * Extracts the positive form of a negated condition.
-     * Returns null if the condition is not a negation.
      */
     private Expression getPositiveCondition(Expression expr)
     {

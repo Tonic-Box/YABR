@@ -378,7 +378,6 @@ public class XrefBuilder
 
     /**
      * Process a DynamicConstant (condy) for xrefs.
-     * Resolves the bootstrap method and its arguments from the constant pool.
      */
     private void processDynamicConstant(ClassFile cf, DynamicConstant condy, String sourceClass, String sourceMethod, String sourceMethodDesc, int instrIndex, int bytecodeOffset)
     {
@@ -407,7 +406,6 @@ public class XrefBuilder
 
     /**
      * Scans all bootstrap methods in a class for method references.
-     * This catches references in unused or indirectly referenced bootstrap entries.
      */
     private void processAllBootstrapMethods(ClassFile cf, String sourceClass)
     {
@@ -602,7 +600,6 @@ public class XrefBuilder
 
     /**
      * Extract class name from a field/method descriptor.
-     * For example: "Ljava/lang/String;" -&gt; "java/lang/String"
      */
     private String extractTypeFromDescriptor(String desc)
     {

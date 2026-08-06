@@ -2,8 +2,6 @@ package com.tonic.parser.constpool.structure;
 
 /**
  * Represents a CONSTANT_Dynamic entry structure in the constant pool.
- * Used by ldc/ldc_w/ldc2_w to load dynamically computed constants (Java 11+).
- * Structure is identical to InvokeDynamic but used in different context.
  */
 public class ConstantDynamic
 {

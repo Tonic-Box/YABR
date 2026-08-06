@@ -9,17 +9,6 @@ import java.util.List;
 
 /**
  * Folds the verbose array-build idiom javac emits for an array literal back into a literal:
- * <pre>
- *   int[] tmp = new int[N]; tmp[0] = a0; tmp[1] = a1; ...; tmp[N-1] = a_{N-1}; X = tmp;
- * </pre>
- * becomes
- * <pre>
- *   X = new int[]{a0, a1, ..., a_{N-1}};
- * </pre>
- * Only a fully and in-order initialized build (all indices {@code 0..N-1}, constant size, each store once)
- * whose temp is used exactly once afterward (the consumer) and nowhere else, with store values that don't
- * reference the temp, is folded - which is exactly the shape javac produces for {@code new T[]{...}}. Anything
- * sparser or reused stays in its expanded form (safe, just less pretty).
  */
 public class ArrayInitializerReconstructor implements ASTTransform
 {
@@ -132,11 +121,7 @@ public class ArrayInitializerReconstructor implements ASTTransform
     }
 
     /**
-     * The consumer-first variant: {@code T[] tmp = new T[N]; X = tmp; tmp[0]=e0; ...; tmp[N-1]=e_{N-1}} folded to
-     * {@code X = new T[]{e0, ..., e_{N-1}}}. javac assigns the array to its target before the element stores (the
-     * stores modify the aliased array), so the store scan of the consumer-last path never starts. Safe under the
-     * same conditions: the temp is used only by the one assignment plus the N in-order stores, and no store value
-     * references the temp or the target X (so X's intermediate state is never observed).
+     * The consumer-first variant.
      */
     private boolean foldConsumerFirst(List<Statement> stmts, int i, NewArrayExpr na, int size, String var)
     {

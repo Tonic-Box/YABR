@@ -6,9 +6,7 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 
 /**
- * The polymorphic evaluation cursor. An accessor step rebinds the subject (method -&gt; call -&gt; arg);
- * attribute resolvers read from the concrete subject. Thin immutable wrappers over YABR/parser
- * objects plus the shared {@link EvalContext}.
+ * The polymorphic evaluation cursor.
  */
 public interface Subject
 {
@@ -206,10 +204,8 @@ public interface Subject
     }
 
     /**
-     * A dynamic site: an invokedynamic call site ({@code site == "indy"}), a {@code CONSTANT_Dynamic}
-     * load, or a nested condy bootstrap argument ({@code site == "condy"}). Holds the resolved
-     * bootstrap and the call-site name/descriptor (the indy/condy name+type), plus the originating
-     * instruction (for evidence) when there is one.
+     * A dynamic site: an invokedynamic call site ({@code site == "indy"}), a {@code CONSTANT_Dynamic} load, or a
+     * nested condy bootstrap argument.
      */
     final class DynamicSubject implements Subject
     {

@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Interns the name strings (class / field / method ids, string literals) passed to the runtime ABI
- * as private NUL-terminated C-string globals ({@code @.str.N}). Deduped by content; the symbol name
- * is assigned at first sight (deterministic given the deterministic lowering order), so it can be
- * referenced inline before the full set is known.
+ * Interns the name strings (class / field / method ids, string literals) passed to the runtime ABI as private
+ * NUL-terminated C-string globals.
  */
 final class CStringPool
 {

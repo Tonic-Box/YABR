@@ -4,8 +4,6 @@ import java.util.Objects;
 
 /**
  * Scope limited to events during execution of specific methods.
- * Example: DURING clinit OF classes matching /Config/
- *          DURING method "Auth.login"
  */
 public final class DuringScope implements Scope
 {

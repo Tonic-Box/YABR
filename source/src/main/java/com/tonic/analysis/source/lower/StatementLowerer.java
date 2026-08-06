@@ -41,10 +41,7 @@ public class StatementLowerer
     private final ExpressionLowerer exprLowerer;
 
     /**
-     * Finally blocks of the try statements the lowering is currently inside, innermost first. An
-     * abrupt {@code return} out of a protected region must run each enclosing finally before exiting,
-     * matching javac's inlined-finally lowering (JLS 14.20.2). Fall-through and exception paths get
-     * their own finally copies in {@link #lowerTryCatch}.
+     * Finally blocks of the try statements the lowering is currently inside, innermost first.
      */
     private final Deque<Statement> finallyStack = new ArrayDeque<>();
 
@@ -635,9 +632,7 @@ public class StatementLowerer
     }
 
     /**
-     * The enum class a named-label switch dispatches over. The lowered selector VALUE is the authority -
-     * its type comes from a resolved descriptor - with the declared source type as the fallback for values
-     * whose IR type is unspecific. Named labels with no enum class to resolve against cannot lower.
+     * The enum class a named-label switch dispatches over.
      */
     private String enumSelectorClass(SwitchStmt switchStmt, Value selector)
     {
@@ -767,11 +762,7 @@ public class StatementLowerer
     }
 
     /**
-     * Runs the cleanups an abrupt jump crosses: every finally/monitor-release pushed since the target
-     * loop or switch was entered (the entries above {@code targetDepth}), top-most first - mirroring
-     * how {@link #lowerReturn} drains the whole stack. A {@code break}/{@code continue} that leaves a
-     * {@code synchronized} inside the loop must emit that block's {@code monitorexit} before jumping,
-     * otherwise the monitor leaks and the round trip throws {@code IllegalMonitorStateException}.
+     * Runs the cleanups an abrupt jump crosses.
      */
     private void drainFinallyAboveDepth(int targetDepth)
     {
@@ -979,12 +970,7 @@ public class StatementLowerer
     }
 
     /**
-     * Desugars a try-with-resources into javac's modern pattern so it recompiles to bytecode the decompiler folds
-     * back into {@code try (r) { ... }}: the body runs in a protected region, the resource is closed on the normal
-     * path (and before every return, via the finally stack), and a cleanup handler closes the resource - chaining a
-     * close failure into the in-flight exception with {@code Throwable.addSuppressed} - then rethrows. Several
-     * resources nest right to left; a try-with-resources that also has its own catch/finally wraps the resource
-     * management in an ordinary try so the existing lowering handles the catch/finally around it.
+     * Desugars a try-with-resources into javac's modern pattern.
      */
     private void lowerTryWithResources(TryCatchStmt tryCatch)
     {
@@ -1151,14 +1137,7 @@ public class StatementLowerer
     }
 
     /**
-     * Lowers {@code synchronized (lock) { body }} to javac's monitor scaffolding: a {@code monitorenter}, the
-     * body in a protected region that releases the monitor on every exit, and a catch-all handler that
-     * releases it and rethrows when an exception escapes. The monitor must be released before each early
-     * {@code return}/{@code break} out of the body too (not only on fall-through), so a
-     * {@link MonitorExitStmt} is pushed onto the shared finally stack that {@link #lowerReturn} and the
-     * abrupt-exit lowering already drain - mirroring how a try/finally's cleanup runs on every path. Emitting
-     * the release only on fall-through (the prior behaviour) leaked the monitor whenever the body returned,
-     * throwing {@code IllegalMonitorStateException} and dropping the synchronized shape on re-decompilation.
+     * Lowers {@code synchronized (lock) { body }} to javac's monitor scaffolding.
      */
     private void lowerSynchronized(SynchronizedStmt syncStmt)
     {
@@ -1209,9 +1188,7 @@ public class StatementLowerer
     }
 
     /**
-     * A synthetic cleanup pushed onto {@link #finallyStack} for an enclosing {@code synchronized}: lowering
-     * it emits a {@code monitorexit} of the block's monitor. It exists only during lowering (it is drained by
-     * the abrupt-exit paths, never emitted or visited), so its visitor entry point is unsupported.
+     * A synthetic cleanup pushed onto {@link #finallyStack} for an enclosing {@code synchronized}.
      */
     private static final class MonitorExitStmt implements Statement
     {
@@ -1242,9 +1219,7 @@ public class StatementLowerer
     }
 
     /**
-     * Lowers a labeled statement. A label on a loop names that loop's break/continue targets, so it is moved onto
-     * the loop before lowering - the loop's own lowering registers the label (via {@code pushLoop}), which is what
-     * a labeled {@code break}/{@code continue} inside it resolves against.
+     * Lowers a labeled statement.
      */
     private void lowerLabeled(LabeledStmt labeled)
     {

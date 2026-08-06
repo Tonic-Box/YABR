@@ -1,10 +1,7 @@
 package com.tonic.analysis.ssa.llvm;
 
 /**
- * Maps a JVM method (owner + name + descriptor) to a deterministic, collision-free LLVM global
- * symbol. Uses LLVM's quoted-identifier form ({@code @"..."}), which permits arbitrary characters,
- * so the full JVM signature is the key - distinct overloads and packages never collide, and the
- * identical string is used at the {@code define}, every {@code call}, and the {@code declare}.
+ * Maps a JVM method (owner + name + descriptor) to a deterministic, collision-free LLVM global symbol.
  */
 final class SymbolMangler
 {
@@ -27,8 +24,7 @@ final class SymbolMangler
     }
 
     /**
-     * Per-field runtime-ABI accessor symbol, e.g. {@code @"jvm.gf owner.name desc"}. The {@code tag}
-     * ({@code gf}/{@code pf}) plus the descriptor keep it disjoint from method and static-field symbols.
+     * Per-field runtime-ABI accessor symbol, e.g. {@code @"jvm.gf owner.name desc"}.
      */
     static String mangleFieldAccessor(String tag, String owner, String name, String descriptor)
     {

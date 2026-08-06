@@ -12,8 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The PermittedSubclasses attribute: CONSTANT_Class indices of the types allowed to directly
- * extend or implement a sealed class, modeled so the permits clause and class renames stay in sync.
+ * The PermittedSubclasses attribute.
  */
 public class PermittedSubclassesAttribute extends Attribute
 {

@@ -178,11 +178,7 @@ public class BytecodeLowerer
     }
 
     /**
-     * Rebuilds the LocalVariableTypeTable against the regenerated LocalVariableTable: each LVT entry that names a
-     * variable which had a generic signature (matched by slot + name index, captured before the stale tables were
-     * dropped) gets a type-table entry with the LVT entry's fresh offsets and that signature. The class loader
-     * requires every type-table entry to have a matching variable-table entry, so aligning the offsets is what
-     * lets a recompiled generic local ({@code List<Object> l}) load. Returns null when nothing carries a signature.
+     * Rebuilds the LocalVariableTypeTable against the regenerated LocalVariableTable.
      */
     private LocalVariableTypeTableAttribute rebuildTypeTable(LocalVariableTableAttribute lvt, Map<Long, Integer> genericSignatures, MethodEntry targetMethod)
     {
@@ -268,9 +264,7 @@ public class BytecodeLowerer
     }
 
     /**
-     * Collapses the emitted byte ranges of a protected region's blocks into maximal contiguous runs. A nested
-     * try whose body is interrupted by an interleaved handler emits as several non-adjacent ranges; each run
-     * becomes one exception-table entry, matching how javac splits such a region.
+     * Collapses the emitted byte ranges of a protected region's blocks into maximal contiguous runs.
      */
     private List<int[]> contiguousRuns(Set<IRBlock> tryBlocks, Map<IRBlock, Integer> offsets, Map<IRBlock, Integer> endOffsets)
     {
@@ -307,13 +301,6 @@ public class BytecodeLowerer
 
     /**
      * Removes LoadLocalInstruction and StoreLocalInstruction artifacts from the IR.
-     * After SSA lifting, these instructions are artifacts from the initial bytecode
-     * conversion. The VariableRenamer replaces their results with actual SSA values,
-     * making them dead. Keeping them causes incorrect bytecode because:
-     * 1. LoadLocalInstruction references stale local indices from the original method
-     * 2. StoreLocalInstruction stores to indices that may not exist in the current frame
-     * 3. For inlined code, these indices reference the callee's frame, not the caller's
-     * In proper SSA form, all data flow is through SSAValue uses, not local variable slots.
      */
     private void removeLocalInstructionArtifacts(IRMethod method)
     {

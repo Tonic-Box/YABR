@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for throw statements.
- * Use this to intercept and transform exception throwing.
  */
 @FunctionalInterface
 public interface ThrowHandler

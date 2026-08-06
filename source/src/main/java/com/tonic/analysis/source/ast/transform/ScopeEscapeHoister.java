@@ -29,20 +29,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Repairs declarations whose variable escapes its block: recovery can place a declaration
- * inside a catch or branch that physically absorbed straight-line code (an always-throwing
- * try has no join, so the continuation lives in the handler block), leaving later uses out
- * of scope - invalid source. The declaration becomes an assignment in place and a
- * default-initialized declaration is inserted at method scope. Names declared more than once
- * are left alone (scoping is then ambiguous).
+ * Repairs declarations whose variable escapes its block.
  */
 public class ScopeEscapeHoister implements ASTTransform
 {
 
     /**
-     * Names that are not repairable locals: method parameters and names resolving to fields of the
-     * class. A bare write to such a name is legal without any declaration, so the missing-declaration
-     * net must never manufacture a shadowing local for it. The caller supplies the predicate.
+     * Names that are not repairable locals: method parameters and names resolving to fields of the class.
      */
     private java.util.function.Predicate<String> nonLocalName = n -> true;
 
@@ -271,11 +264,7 @@ public class ScopeEscapeHoister implements ASTTransform
     }
 
     /**
-     * The declaration hoister orders default-initialized declarations that share a first-use
-     * statement by NAME (its recorded round-trip-stability tie-break). An inserted repair
-     * declaration must land inside a contiguous run of such declarations at the name-ordered
-     * position, or the recompiled layout re-derives the other order and the round trip flips
-     * between the two.
+     * The declaration hoister orders default-initialized declarations that share a first-use statement by NAME.
      */
     private static int tieBreakInsertionIndex(List<Statement> stmts, int insertAt, String name)
     {
@@ -298,8 +287,8 @@ public class ScopeEscapeHoister implements ASTTransform
     }
 
     /**
-     * The right-hand side of {@code stmt} when it is exactly {@code name = <expr>} and the
-     * expression does not read {@code name} itself; null otherwise.
+     * The right-hand side of {@code stmt} when it is exactly {@code name = <expr>} and the expression does not
+     * read {@code name} itself.
      */
     private static Expression adoptableInitializer(Statement stmt, String name)
     {
@@ -351,8 +340,6 @@ public class ScopeEscapeHoister implements ASTTransform
 
     /**
      * Index of the direct child statement of {@code methodBlock} containing {@code node}, or -1.
-     * Containment is decided by child links, not parent pointers - a transform that moved a subtree
-     * without re-stamping parents would otherwise hide its uses from the placement scan.
      */
     private static int carrierIndex(BlockStmt methodBlock, ASTNode node)
     {

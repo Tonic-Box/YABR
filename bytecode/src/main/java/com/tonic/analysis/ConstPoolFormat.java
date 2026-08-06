@@ -18,9 +18,7 @@ import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.parser.constpool.structure.MethodHandle;
 
 /**
- * Shared formatting of constant-pool entries for disassembly. Centralizing this keeps a single
- * resolver for the per-instruction renderer ({@link InstructionRenderer}) and the verbose
- * enrichment context ({@link DisassemblyContext}).
+ * Shared formatting of constant-pool entries for disassembly.
  */
 final class ConstPoolFormat
 {
@@ -69,8 +67,7 @@ final class ConstPoolFormat
     }
 
     /**
-     * Resolves any loadable constant (a {@code ldc}-style entry or a bootstrap argument): primitives,
-     * strings, classes, method types and method handles.
+     * Resolves any loadable constant (a {@code ldc}-style entry or a bootstrap argument).
      * @param constPool the constant pool
      * @param index     the constant pool index
      * @return a readable representation of the constant

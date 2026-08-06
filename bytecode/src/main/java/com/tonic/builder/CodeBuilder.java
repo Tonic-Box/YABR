@@ -39,12 +39,8 @@ public class CodeBuilder
     }
 
     /**
-     * Creates a standalone builder for authoring a detached instruction snippet, independent of the
-     * {@link ClassBuilder}/{@link MethodBuilder} chain. Use the same fluent API, then materialize the
-     * snippet with {@link #assemble(ClassFile)} and splice it into an existing method via
-     * {@code CodeWriter.insertBefore}/{@code replaceBody}. {@link #end()} is not available on a
-     * detached builder; {@code invokedynamic} is (its bootstrap method is added to the
-     * {@link #assemble(ClassFile)} target's {@code BootstrapMethods}).
+     * Creates a standalone builder for authoring a detached instruction snippet, independent of the {@link
+     * ClassBuilder}/{@link MethodBuilder} chain.
      * @return a builder with no enclosing method
      */
     public static CodeBuilder detached()
@@ -58,11 +54,8 @@ public class CodeBuilder
     }
 
     /**
-     * Declares {@code name} as an external branch target - an instruction in the host method the
-     * snippet will be spliced into, not one defined in the snippet. Branches to it are left unresolved
-     * by {@link #assemble(ClassFile)} and must be bound at splice time via
-     * {@code ClonedRange.bindLabel} (or a {@code Map} splice overload). Only meaningful on a detached
-     * builder destined for {@code assemble}.
+     * Declares {@code name} as an external branch target - an instruction in the host method the snippet will be
+     * spliced into, not one defined in the snippet.
      * @param name the label name, created on first use
      * @return this builder
      */
@@ -1342,11 +1335,7 @@ public class CodeBuilder
     }
 
     /**
-     * Emits a {@code tableswitch} over the contiguous keys {@code low..high}. {@code caseLabels} gives
-     * the target label for each key in ascending order (so {@code caseLabels.length == high - low + 1});
-     * {@code defaultLabel} is the fallthrough. All labels must be {@code label()}-defined in the snippet
-     * (switch targets are not external/continuation-bindable). Padding to the 4-byte boundary is
-     * computed automatically.
+     * Emits a {@code tableswitch} over the contiguous keys {@code low..high}.
      * @param low the lowest key
      * @param high the highest key
      * @param defaultLabel label taken when the value is outside the key range
@@ -1375,9 +1364,8 @@ public class CodeBuilder
     }
 
     /**
-     * Emits a {@code lookupswitch} mapping each key in {@code cases} to its target label, with
-     * {@code defaultLabel} as the fallthrough. Keys are sorted ascending as the JVM requires. All labels
-     * must be {@code label()}-defined in the snippet. Padding is computed automatically.
+     * Emits a {@code lookupswitch} mapping each key in {@code cases} to its target label, with {@code
+     * defaultLabel} as the fallthrough.
      * @param defaultLabel label taken when no key matches
      * @param cases key to target label mapping
      * @return this builder
@@ -1863,9 +1851,8 @@ public class CodeBuilder
     }
 
     /**
-     * Resolves labels and emits the recorded ops into the CodeWriter bound to {@code bc}, laying the
-     * snippet out from offset 0. Shared by {@link #buildCode} and {@link #assemble}; does not install
-     * exception regions or serialize.
+     * Resolves labels and emits the recorded ops into the CodeWriter bound to {@code bc}, laying the snippet out
+     * from offset 0.
      * @return the resolved label offsets plus any unresolved external/continuation branch offsets
      */
     private EmitResult emitInto(Bytecode bc)
@@ -1993,13 +1980,9 @@ public class CodeBuilder
     }
 
     /**
-     * Materializes the recorded ops into a detached, self-contained instruction snapshot resolved
-     * against {@code target}'s constant pool, ready to splice into any method that {@code target}
-     * owns via {@code CodeWriter.insertBefore(handle, ClonedRange)} or {@code replaceBody(ClonedRange)}.
-     * Branch and switch targets - and any {@code trycatch} regions - are carried by identity, so the
-     * snippet relinks correctly at any insertion point. Constant-pool references created here (classes,
-     * members, ldc constants, exception catch types) are added to {@code target}, so the spliced
-     * indices are valid where used.
+     * Materializes the recorded ops into a detached instruction snapshot resolved against {@code target}'s
+     * constant pool.
+     *
      * @param target the class whose constant pool backs the snippet and which will host the result
      * @return the assembled snippet
      */
@@ -2037,10 +2020,8 @@ public class CodeBuilder
     }
 
     /**
-     * Builds a throwaway static method bound to {@code target} purely to host a {@link CodeWriter}
-     * during {@link #assemble}. It is never added to the class or written, and reuses an existing Utf8
-     * (the class name, always present) for its name/descriptor so it adds nothing to the constant pool
-     * - only the snippet's own references (added during emit) persist.
+     * Builds a throwaway static method bound to {@code target} purely to host a {@link CodeWriter} during {@link
+     * #assemble}.
      */
     private MethodEntry scratchMethod(ClassFile target)
     {

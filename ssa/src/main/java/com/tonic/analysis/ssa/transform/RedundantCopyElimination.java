@@ -11,10 +11,6 @@ import java.util.*;
 
 /**
  * Removes redundant copy instructions and simplifies assignment chains.
- * This pass eliminates:
- * 1. Identity copies: x = x (no-ops)
- * 2. Redundant load-store pairs: store x, v; load x -&gt; v (when no intervening store)
- * 3. Chained copies: a = b; c = a -&gt; c = b (propagates through chains)
  */
 public class RedundantCopyElimination implements IRTransform
 {
@@ -39,7 +35,6 @@ public class RedundantCopyElimination implements IRTransform
 
     /**
      * Removes CopyInstruction where source equals result (identity copies).
-     * These are no-ops that can be safely removed.
      */
     private boolean removeIdentityCopies(IRMethod method)
     {
@@ -92,10 +87,7 @@ public class RedundantCopyElimination implements IRTransform
     }
 
     /**
-     * The caught-exception capture markers of {@code method}: the leading self-copy of each handler block,
-     * which the lowerer turns into the astore that stores the on-stack exception into its local. Identified
-     * exactly as {@code BytecodeEmitter.identifyHandlerExceptionCaptures} does (first instruction, a
-     * CopyInstruction whose source IS its result) so the two passes agree on which copies are critical.
+     * The caught-exception capture markers of {@code method}.
      */
     private static Set<IRInstruction> handlerExceptionCaptureMarkers(IRMethod method)
     {
@@ -121,9 +113,8 @@ public class RedundantCopyElimination implements IRTransform
     }
 
     /**
-     * Removes redundant load-store sequences where a value is stored
-     * then immediately loaded without any intervening modification.
-     * Pattern: store_local N, v; ... load_local N -&gt; replace load with v
+     * Removes redundant load-store sequences where a value is stored then immediately loaded without any
+     * intervening modification.
      */
     private boolean removeRedundantLoadStore(IRMethod method)
     {

@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 /**
  * Represents a union type, e.g., catch (IOException | SQLException e).
- * Used in multi-catch clauses.
  */
 public final class UnionSourceType implements SourceType
 {

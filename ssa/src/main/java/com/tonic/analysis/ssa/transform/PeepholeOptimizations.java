@@ -9,11 +9,6 @@ import java.util.*;
 
 /**
  * Peephole optimization transform.
- * Applies small pattern-based optimizations:
- * - Double negation: NEG(NEG(x)) -&gt; x
- * - Shift by type width: x &lt;&lt; 32 -&gt; x (for int), x &lt;&lt; 64 -&gt; x (for long)
- * - Redundant operations: x + (-y) -&gt; x - y
- * - Consecutive shifts: (x &lt;&lt; a) &lt;&lt; b -&gt; x &lt;&lt; (a + b) when safe
  */
 public class PeepholeOptimizations implements IRTransform
 {
@@ -33,13 +28,10 @@ public class PeepholeOptimizations implements IRTransform
         {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (int i = 0; i < instructions.size(); i++)
-            {
-                IRInstruction instr = instructions.get(i);
+            for (IRInstruction instr : instructions) {
                 IRInstruction replacement = tryOptimize(instr);
 
-                if (replacement != null)
-                {
+                if (replacement != null) {
                     replacement.setBlock(block);
                     int idx = block.getInstructions().indexOf(instr);
                     block.removeInstruction(instr);

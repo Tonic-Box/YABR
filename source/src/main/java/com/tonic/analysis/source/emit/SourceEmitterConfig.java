@@ -1,8 +1,7 @@
 package com.tonic.analysis.source.emit;
 
 /**
- * Configuration options for source code emission. Instances are created via {@link #builder()} or one
- * of the presets ({@link #defaults()}, {@link #debug()}, {@link #compact()}).
+ * Configuration options for source code emission.
  */
 public class SourceEmitterConfig
 {

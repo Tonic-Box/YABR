@@ -119,8 +119,6 @@ public class ClassRenamer
 
     /**
      * Refreshes the cached descriptor values on all member entries.
-     * After updating Utf8 items in the constant pool, the cached desc fields
-     * on FieldEntry and MethodEntry need to be refreshed.
      */
     private void refreshMemberDescriptors(ClassFile cf)
     {
@@ -222,8 +220,7 @@ public class ClassRenamer
     }
 
     /**
-     * The source simple name of a binary class name: the segment after the last '$' (or '/' if none),
-     * with the numeric prefix that local classes carry (Outer$1Local) stripped.
+     * The source simple name of a binary class name.
      */
     private static String simpleName(String binaryName)
     {

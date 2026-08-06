@@ -96,7 +96,6 @@ public class RenamerContext
 
     /**
      * Gets a class from the ClassPool by name.
-     * If the class was renamed, also tries looking up by the new name.
      * @param internalName the internal class name (could be old or new name)
      * @return the ClassFile, or null if not found
      */
@@ -126,7 +125,6 @@ public class RenamerContext
 
     /**
      * Counts how many items reference a NameAndType entry.
-     * Used to determine if it's safe to modify in place.
      * @param cp       The constant pool
      * @param natIndex The index of the NameAndType entry
      * @return The number of items referencing this NameAndType
@@ -188,7 +186,6 @@ public class RenamerContext
 
     /**
      * Collects all NameAndType indices that are used for a specific method signature.
-     * This is used to find all call sites that need updating.
      * @param cf         The ClassFile containing the constant pool
      * @param methodName The method name to find
      * @param descriptor The method descriptor
@@ -217,7 +214,6 @@ public class RenamerContext
 
     /**
      * Updates all Utf8 items that contain class references in descriptors.
-     * This is called after class renames to fix all descriptors.
      * @param cf The ClassFile to update
      */
     public void remapDescriptorsInClass(ClassFile cf)
@@ -247,7 +243,6 @@ public class RenamerContext
 
     /**
      * Updates a specific NameAndType to use a new name.
-     * Creates a new NAT if the existing one is shared.
      * @param cp         The constant pool
      * @param natIndex   The index of the NameAndType
      * @param newName    The new name to use

@@ -1,15 +1,7 @@
 package com.tonic.analysis.source.recovery.rcs;
 
 /**
- * The reaching-condition boolean engine for one method's structuring pass. Every operation updates the
- * canonical {@link Bdd} and the syntactic {@link Nnf} in lockstep, so a {@link BoolFormula} is always
- * consistent across both layers. Equivalence, satisfiability and implication are answered by the BDD;
- * emission consumes the NNF. Switch selectors register their case atoms as a mutually-exclusive group
- * whose "at most one" constraint is folded into a domain formula, so reasoning that is only sound under
- * that domain (a switch's default guard, dead-combination pruning) uses the {@code *Given} variants.
- *
- * Atoms are opaque non-negative integer indices here; mapping an index to a concrete branch/switch
- * predicate (and to a readable leaf {@code Expression}) is the caller's concern.
+ * The reaching-condition boolean engine for one method's structuring pass.
  */
 public final class BoolFormulaFactory
 {

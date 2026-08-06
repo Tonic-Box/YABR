@@ -2,20 +2,6 @@ package com.tonic.util;
 
 /**
  * Utility class for constructing and checking access flags in Java class files.
- * Provides static methods to test various access modifiers based on access flag integers.
- * The {@code Modifiers} class defines constants for access flags as per the JVM specification
- * and offers methods to set and check these flags.
- * <h2>Example Usage:</h2>
- * <pre>{@code
- * // Building access flags for a public static final method
- * int accessFlags = new AccessBuilder()
- *                         .setPublic()
- *                         .setStatic()
- *                         .setFinal()
- *                         .build();
- * // Checking if the method is static
- * boolean isStatic = Modifiers.isStatic(accessFlags); // returns true
- * }</pre>
  */
 public final class Modifiers
 {
@@ -40,7 +26,6 @@ public final class Modifiers
 
     /**
      * Private constructor to prevent instantiation.
-     * The {@code Modifiers} class is a utility class and should not be instantiated.
      */
     private Modifiers()
     {
@@ -49,7 +34,6 @@ public final class Modifiers
 
     /**
      * Sets the {@code public} access flag.
-     * Clears {@code private} and {@code protected} flags to ensure only one visibility modifier is set.
      * @param mod the current access flags
      * @return the updated access flags with {@code public} set
      */
@@ -60,7 +44,6 @@ public final class Modifiers
 
     /**
      * Sets the {@code private} access flag.
-     * Clears {@code public} and {@code protected} flags to ensure only one visibility modifier is set.
      * @param mod the current access flags
      * @return the updated access flags with {@code private} set
      */
@@ -71,7 +54,6 @@ public final class Modifiers
 
     /**
      * Sets the {@code protected} access flag.
-     * Clears {@code public} and {@code private} flags to ensure only one visibility modifier is set.
      * @param mod the current access flags
      * @return the updated access flags with {@code protected} set
      */
@@ -202,7 +184,6 @@ public final class Modifiers
 
     /**
      * Sets the {@code volatile} access flag.
-     * Note: Typically used for fields.
      * @param mod the current access flags
      * @return the updated access flags with {@code volatile} set
      */
@@ -213,7 +194,6 @@ public final class Modifiers
 
     /**
      * Sets the {@code transient} access flag.
-     * Note: Typically used for fields.
      * @param mod the current access flags
      * @return the updated access flags with {@code transient} set
      */
@@ -374,7 +354,6 @@ public final class Modifiers
 
     /**
      * Checks if the access flags indicate that the entity is volatile.
-     * Note: Typically used for fields.
      * @param mod the access flags integer
      * @return {@code true} if the volatile flag is set, {@code false} otherwise
      */
@@ -385,7 +364,6 @@ public final class Modifiers
 
     /**
      * Checks if the access flags indicate that the entity is transient.
-     * Note: Typically used for fields.
      * @param mod the access flags integer
      * @return {@code true} if the transient flag is set, {@code false} otherwise
      */
@@ -396,7 +374,6 @@ public final class Modifiers
 
     /**
      * Determines if the entity has package-private visibility.
-     * This is true if none of {@code public}, {@code protected}, or {@code private} flags are set.
      * @param mod the access flags integer
      * @return {@code true} if the entity has package-private visibility, {@code false} otherwise
      */

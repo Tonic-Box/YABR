@@ -4,11 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Values of the well-known {@code public static final} primitive constants in {@code java.lang}. The
- * engine cannot run a JDK class's {@code <clinit>} (those classes are not in the pool), so a
- * {@code getstatic} of e.g. {@code Integer.MAX_VALUE} would otherwise read as the 0 default. These are
- * compile-time constants with fixed values, so the engine can supply them directly. Consulted only
- * when the heap has no value for the field, so a genuinely-modeled static still wins.
+ * Values of the well-known {@code public static final} primitive constants in {@code java.lang}.
  */
 final class JdkConstants
 {

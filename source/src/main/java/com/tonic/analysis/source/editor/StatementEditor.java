@@ -8,20 +8,6 @@ import java.util.List;
 
 /**
  * Statement-only facade over {@link ASTEditor}.
- *
- * <pre>
- * StatementEditor editor = new StatementEditor(methodBody, "test", "()V", "com/example/Test");
- * // Add logging before all return statements
- * editor.onReturn((ctx, ret) -&gt; {
- *     Statement logStmt = ctx.factory()
- *         .methodCall("info")
- *         .on("java/util/logging/Logger")
- *         .withArgs(ctx.factory().stringLiteral("Returning from " + ctx.getMethodName()))
- *         .asStatement();
- *     return Replacement.insertBefore(logStmt);
- * });
- * editor.apply();
- * </pre>
  */
 public class StatementEditor
 {

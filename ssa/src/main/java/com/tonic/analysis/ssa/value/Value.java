@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.type.IRType;
 
 /**
  * Base interface for all values in SSA form.
- * A value represents any data that can be used as an operand.
  */
 public interface Value
 {

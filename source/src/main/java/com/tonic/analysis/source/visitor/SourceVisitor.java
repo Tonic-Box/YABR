@@ -7,7 +7,6 @@ import com.tonic.analysis.source.ast.type.*;
 
 /**
  * Visitor interface for traversing source AST nodes.
- * Each node type has a corresponding visit method.
  * @param <T> the return type of visit methods
  */
 public interface SourceVisitor<T>

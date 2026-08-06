@@ -11,10 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * One abstract execution path through a method: an operand {@link Stack} + {@link Variables}, a current
- * instruction cursor, and the list of {@link InsnContext}s it executed. Forks a fresh frame at every branch
- * target ({@link #fork}); a per-method visited-edge guard ({@link Execution#hasJumped}) terminates loops.
- * Port of RuneLite's {@code Frame}, reduced (no value domain, no mapping/step executor).
+ * One abstract execution path through a method.
  */
 public final class Frame
 {
@@ -123,11 +120,11 @@ public final class Frame
     }
 
     /**
-     * Unconditionally redirect this frame to {@code target} (goto). Guards against re-traversing an edge.
+     * Unconditionally redirect this frame to {@code target} (goto).
      */
     void jumpTo(InsnContext from, Instruction target)
     {
-        if (target == null || execution.hasJumped(method, from.getInstruction(), target))
+        if (target == null || execution.hasJumped(from.getInstruction(), target))
         {
             executing = false;
             return;
@@ -141,7 +138,7 @@ public final class Frame
      */
     void fork(InsnContext from, Instruction target)
     {
-        if (target == null || execution.hasJumped(method, from.getInstruction(), target))
+        if (target == null || execution.hasJumped(from.getInstruction(), target))
         {
             return;
         }
@@ -157,7 +154,7 @@ public final class Frame
 
     Instruction instructionAtOffset(int offset)
     {
-        return execution.instructionAtOffset(method, offset);
+        return execution.instructionAtOffset(offset);
     }
 
     private void processExceptions(InsnContext ictx)
@@ -173,7 +170,7 @@ public final class Frame
                 continue;
             }
             Instruction handler = instructionAtOffset(ex.getHandlerPc());
-            if (handler == null || execution.hasJumped(method, ictx.getInstruction(), handler))
+            if (handler == null || execution.hasJumped(ictx.getInstruction(), handler))
             {
                 continue;
             }

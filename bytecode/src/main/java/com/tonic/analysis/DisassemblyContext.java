@@ -19,10 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Supplies the verbose enrichments for disassembly: local-variable names/types (from the
- * LocalVariableTable) and resolved invokedynamic bootstraps (from the class's BootstrapMethods) that
- * {@link InstructionRenderer} appends to operands, plus the method {@link #signature(MethodEntry)}
- * header. Disabled enrichments yield empty strings, so the renderer needs no extra guards.
+ * Supplies the verbose enrichments for disassembly.
  */
 final class DisassemblyContext
 {
@@ -65,9 +62,8 @@ final class DisassemblyContext
     }
 
     /**
-     * Renders a method's signature as {@code name(param: descriptor, ...)}, resolving parameter names
-     * from the MethodParameters attribute, then the LocalVariableTable, falling back to {@code argN}.
-     * Parameter types always come from the descriptor; the implicit {@code this} slot is omitted.
+     * Renders a method's signature as {@code name(param: descriptor, ...)}, resolving parameter names from the
+     * MethodParameters attribute, then the LocalVariableTable, falling back to {@code argN}.
      * @param method the method to describe
      * @return the rendered signature
      */
@@ -148,10 +144,8 @@ final class DisassemblyContext
     }
 
     /**
-     * Returns a {@code  // condy BSM: handle [args]} annotation for a {@code ldc}-family load of a
-     * {@code CONSTANT_Dynamic} at the given constant-pool index, resolving its bootstrap method and
-     * static arguments. Empty when the entry is not a condy, resolution is disabled, or the bootstrap
-     * cannot be located.
+     * Returns a {@code // condy BSM: handle [args]} annotation for a {@code ldc}-family load of a {@code
+     * CONSTANT_Dynamic} at the given constant-pool index, resolving its bootstrap method and static arguments.
      * @param cpIndex the constant-pool index of the loaded constant
      * @return the annotation, or an empty string
      */
@@ -229,9 +223,7 @@ final class DisassemblyContext
     }
 
     /**
-     * Renders a dynamic-constant bootstrap argument as {@code condy name:desc {BSM handle [args]}}, resolving
-     * the condy's own bootstrap and its static arguments so the method actually invoked through the condy (the
-     * MethodHandle argument) is visible rather than an opaque {@code UnknownReference}.
+     * Renders a dynamic-constant bootstrap argument, resolving its own bootstrap and static arguments.
      */
     private String condyArgument(ConstantDynamicItem condy)
     {

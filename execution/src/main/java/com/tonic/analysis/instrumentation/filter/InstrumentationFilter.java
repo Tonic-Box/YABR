@@ -5,7 +5,6 @@ import com.tonic.parser.MethodEntry;
 
 /**
  * Base interface for instrumentation filters.
- * Filters determine which classes, methods, and fields should be instrumented.
  */
 public interface InstrumentationFilter
 {

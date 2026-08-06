@@ -14,10 +14,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Recursive-descent parser for the composable {@code WHERE} expression language. Operates over a
- * shared token list with an internal cursor so the top-level query parser can hand it the tokens
- * after {@code WHERE} and resume at {@link #position()}. Structural keywords are recognized by
- * spelling; atom names are left as identifiers for the attribute registry to resolve.
+ * Recursive-descent parser for the composable {@code WHERE} expression language.
  */
 public final class ConditionParser
 {

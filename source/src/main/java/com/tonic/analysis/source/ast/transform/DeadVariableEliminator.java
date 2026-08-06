@@ -14,14 +14,6 @@ import java.util.Set;
 
 /**
  * Removes unused variable declarations from the AST.
- * This transform identifies variable declarations where the variable is never read,
- * and either removes them (if side-effect free) or converts them to expression
- * statements (if the initializer has side effects).
- * Handles:
- * - VarDeclStmt with side-effect-free initializers that are never read
- * - Phi-generated declarations that are never used
- * - Write-only variables (variables that are written but never read)
- * - Cascading dead variables (iterates until fixed point)
  */
 public class DeadVariableEliminator implements ASTTransform
 {
@@ -63,10 +55,8 @@ public class DeadVariableEliminator implements ASTTransform
     }
 
     /**
-     * Collects variables that must not be eliminated because their value is side-effecting yet cannot
-     * legally stand alone as a statement. Stripping such a store to a bare expression (Java/C# only
-     * admit calls, {@code new}, assignments, and inc/dec as expression-statements) would not compile,
-     * so the whole declaration and store are kept and the variable is treated as live.
+     * Collects variables that must not be eliminated because their value is side-effecting yet cannot legally
+     * stand alone as a statement.
      */
     private Set<String> collectPinnedVariables(BlockStmt block)
     {
@@ -76,9 +66,8 @@ public class DeadVariableEliminator implements ASTTransform
     }
 
     /**
-     * Whether {@code expr} is legal as an expression-statement: a method call, object creation,
-     * assignment, or increment/decrement. Any other side-effecting expression (ternary, binary
-     * arithmetic, cast, field/array access, array creation) must stay bound to its variable.
+     * Whether {@code expr} is legal as an expression-statement: a method call, object creation, assignment, or
+     * increment/decrement.
      */
     private static boolean isStatementExpression(Expression expr)
     {
@@ -150,7 +139,6 @@ public class DeadVariableEliminator implements ASTTransform
 
     /**
      * Visitor that collects all READ variable references.
-     * Handles the special case where assignment LHS is a WRITE, not a READ.
      */
     private static class ReadVariableCollector extends AbstractSourceVisitor<Void>
     {
@@ -257,11 +245,6 @@ public class DeadVariableEliminator implements ASTTransform
 
     /**
      * Removes unused declarations and write-only assignments from the statement list.
-     * A variable is "unused" if it's never READ (not just written to).
-     * For unused variables:
-     * - Remove the declaration if initializer has no side effects
-     * - Convert to expression statement if initializer has side effects
-     * - Also remove any assignment statements to the variable
      */
     private boolean removeUnusedCode(List<Statement> stmts, Set<String> readVariables)
     {
@@ -479,7 +462,6 @@ public class DeadVariableEliminator implements ASTTransform
 
     /**
      * Determines if an expression has side effects that must be preserved.
-     * Uses visitor pattern - returns true if any sub-expression has side effects.
      */
     private boolean hasSideEffects(Expression expr)
     {

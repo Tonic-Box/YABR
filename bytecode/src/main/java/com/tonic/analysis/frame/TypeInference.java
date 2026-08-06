@@ -9,7 +9,6 @@ import static com.tonic.util.Opcode.*;
 
 /**
  * Type inference engine for bytecode analysis.
- * Maps each instruction to its effect on the TypeState (locals and stack).
  */
 public class TypeInference
 {

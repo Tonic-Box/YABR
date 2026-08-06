@@ -24,9 +24,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Per-subject evaluation scope with lazy, cached views of a method so repeated accessors (every
- * {@code arg(n)}, {@code instructions}, {@code line}) share one decode/analysis. Method-scoped when a
- * {@link MethodEntry} is present, class-scoped otherwise. Carries the {@link EvidenceCollector}.
+ * Per-subject evaluation scope with lazy, cached views of a method so repeated accessors (every {@code
+ * arg(n)}, {@code instructions}, {@code line}) share one decode/analysis.
  */
 public final class EvalContext
 {

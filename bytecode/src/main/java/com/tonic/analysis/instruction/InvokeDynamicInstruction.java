@@ -9,11 +9,6 @@ import java.io.IOException;
 
 /**
  * Represents the INVOKEDYNAMIC instruction (0xBA).
- * Per JVM spec, the instruction format is:
- * - opcode (1 byte)
- * - constant pool index to CONSTANT_InvokeDynamic_info (2 bytes)
- * - two reserved zero bytes (2 bytes)
- * Total: 5 bytes
  */
 public class InvokeDynamicInstruction extends Instruction
 {

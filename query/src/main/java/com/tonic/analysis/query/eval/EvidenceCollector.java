@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Accumulates the bytecode locations that satisfied a query, so results stay navigable. A matching
- * instruction/call/arg records the owning method signature + the producing instruction's pc; the
- * runner turns these into {@code PCTarget} evidence matches.
+ * Accumulates the bytecode locations that satisfied a query, so results stay navigable.
  */
 public final class EvidenceCollector
 {

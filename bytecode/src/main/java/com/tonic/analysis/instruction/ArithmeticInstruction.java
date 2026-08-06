@@ -6,7 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents arithmetic instructions (IADD, LADD, FADD, DADD, ISUB, LSUB, FSUB, DSUB, IMUL, LMUL, FMUL, DMUL, IDIV, LDIV, FDIV, DDIV, IREM, LREM, FREM, DREM).
+ * Represents arithmetic instructions.
  */
 public class ArithmeticInstruction extends Instruction
 {

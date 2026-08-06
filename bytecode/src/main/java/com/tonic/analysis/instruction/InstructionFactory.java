@@ -11,8 +11,7 @@ import java.util.Map;
 import static com.tonic.util.Opcode.*;
 
 /**
- * Decodes raw bytecode into {@link Instruction} objects. The single byte-&gt;Instruction decoder,
- * shared by {@code CodeWriter} (for editing) and {@code CodePrinter} (for disassembly).
+ * Decodes raw bytecode into {@link Instruction} objects.
  */
 public final class InstructionFactory
 {
@@ -41,8 +40,7 @@ public final class InstructionFactory
     }
 
     /**
-     * Decodes the single instruction starting at an offset, reading its operands from the bytecode;
-     * truncated or unrecognized encodings decode as {@code UnknownInstruction}.
+     * Decodes the single instruction starting at an offset, reading its operands from the bytecode.
      * @param opcode the opcode byte at the offset
      * @param offset the bytecode offset of the instruction
      * @param bytecode the full method bytecode

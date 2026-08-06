@@ -10,12 +10,6 @@ import java.util.*;
 
 /**
  * Null Check Elimination optimization transform.
- * Removes redundant null checks when an object is provably non-null:
- * - After 'new' instruction, the object is non-null
- * - After a successful IFNONNULL check in a dominating block
- * - Method 'this' reference (parameter 0 in non-static methods)
- * When a null check is known to always succeed or fail, the branch
- * is replaced with an unconditional goto.
  */
 public class NullCheckElimination implements IRTransform
 {
@@ -37,101 +31,166 @@ public class NullCheckElimination implements IRTransform
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
 
-        Set<Integer> nonNullValues = new HashSet<>();
-
-        if (!method.isStatic() && !method.getParameters().isEmpty())
-        {
-            SSAValue thisRef = method.getParameters().get(0);
-            nonNullValues.add(thisRef.getId());
-        }
-
+        Map<IRBlock, Set<Integer>> nonNullOnExit = new HashMap<>();
         boolean changed = false;
 
-        for (IRBlock block : method.getBlocksInOrder())
+        for (IRBlock block : dominatorPreorder(method, domTree))
         {
-            changed |= processBlock(block, nonNullValues, domTree);
+            Set<Integer> nonNull = nonNullOnEntry(method, block, domTree, nonNullOnExit);
+            changed |= processBlock(block, nonNull);
+            nonNullOnExit.put(block, nonNull);
         }
 
         return changed;
     }
 
-    private boolean processBlock(IRBlock block, Set<Integer> nonNullValues, DominatorTree domTree)
+    /**
+     * The blocks in dominator-tree preorder, so a block is visited after the dominator whose facts it
+     * inherits.
+     */
+    private List<IRBlock> dominatorPreorder(IRMethod method, DominatorTree domTree)
     {
-        boolean changed = false;
+        List<IRBlock> order = new ArrayList<>();
+        Deque<IRBlock> work = new ArrayDeque<>();
+        work.push(method.getEntryBlock());
 
-        Set<Integer> localNonNull = new HashSet<>(nonNullValues);
+        Set<IRBlock> seen = new HashSet<>();
+        while (!work.isEmpty())
+        {
+            IRBlock block = work.pop();
+            if (!seen.add(block))
+            {
+                continue;
+            }
+            order.add(block);
+            for (IRBlock child : domTree.getDominatorTreeChildren(block))
+            {
+                work.push(child);
+            }
+        }
+        return order;
+    }
+
+    /**
+     * The values known non-null on entry to {@code block}: those established by its immediate dominator,
+     * which runs on every path here, plus the operand of a null guard when the guarded arm is the only way
+     * in. Facts from a sibling branch are never inherited - it may not have run.
+     */
+    private Set<Integer> nonNullOnEntry(IRMethod method, IRBlock block, DominatorTree domTree, Map<IRBlock, Set<Integer>> nonNullOnExit)
+    {
+        if (block == method.getEntryBlock())
+        {
+            Set<Integer> facts = new HashSet<>();
+            if (!method.isStatic() && !method.getParameters().isEmpty())
+            {
+                facts.add(method.getParameters().get(0).getId());
+            }
+            return facts;
+        }
 
         IRBlock idom = domTree.getImmediateDominator(block);
+        Set<Integer> inherited = idom == null ? null : nonNullOnExit.get(idom);
+        Set<Integer> facts = inherited == null ? new HashSet<>() : new HashSet<>(inherited);
+        addGuardedNonNull(idom, block, facts);
+        return facts;
+    }
 
+    /**
+     * Adds the operand of {@code idom}'s null guard when {@code block} is the arm that guard proves non-null
+     * and no other edge reaches it.
+     */
+    private void addGuardedNonNull(IRBlock idom, IRBlock block, Set<Integer> facts)
+    {
+        if (idom == null || !(idom.getTerminator() instanceof BranchInstruction))
+        {
+            return;
+        }
+
+        BranchInstruction branch = (BranchInstruction) idom.getTerminator();
+        CompareOp cond = branch.getCondition();
+        if (cond != CompareOp.IFNULL && cond != CompareOp.IFNONNULL)
+        {
+            return;
+        }
+        if (!(branch.getLeft() instanceof SSAValue))
+        {
+            return;
+        }
+
+        IRBlock nonNullArm = cond == CompareOp.IFNONNULL ? branch.getTrueTarget() : branch.getFalseTarget();
+        if (block != nonNullArm)
+        {
+            return;
+        }
+
+        Set<IRBlock> preds = block.getPredecessors();
+        if (preds.size() != 1 || !preds.contains(idom))
+        {
+            return;
+        }
+
+        facts.add(((SSAValue) branch.getLeft()).getId());
+    }
+
+    /**
+     * Records the block's own non-null definitions and folds its null guard when the operand is already
+     * known non-null.
+     */
+    private boolean processBlock(IRBlock block, Set<Integer> nonNull)
+    {
         for (IRInstruction instr : block.getInstructions())
         {
             if (instr instanceof NewInstruction)
             {
-                NewInstruction newInstr = (NewInstruction) instr;
-                SSAValue result = newInstr.getResult();
+                SSAValue result = instr.getResult();
                 if (result != null)
                 {
-                    localNonNull.add(result.getId());
-                    nonNullValues.add(result.getId());
+                    nonNull.add(result.getId());
                 }
             }
         }
 
         IRInstruction terminator = block.getTerminator();
-        if (terminator instanceof BranchInstruction)
+        if (!(terminator instanceof BranchInstruction))
         {
-            BranchInstruction branch = (BranchInstruction) terminator;
-            CompareOp cond = branch.getCondition();
+            return false;
+        }
 
-            if (cond == CompareOp.IFNULL || cond == CompareOp.IFNONNULL)
+        BranchInstruction branch = (BranchInstruction) terminator;
+        CompareOp cond = branch.getCondition();
+        if (cond != CompareOp.IFNULL && cond != CompareOp.IFNONNULL)
+        {
+            return false;
+        }
+        if (!(branch.getLeft() instanceof SSAValue))
+        {
+            return false;
+        }
+        if (!nonNull.contains(((SSAValue) branch.getLeft()).getId()))
+        {
+            return false;
+        }
+
+        IRBlock target = cond == CompareOp.IFNULL ? branch.getFalseTarget() : branch.getTrueTarget();
+        IRBlock dead = cond == CompareOp.IFNULL ? branch.getTrueTarget() : branch.getFalseTarget();
+
+        SimpleInstruction gotoInstr = SimpleInstruction.createGoto(target);
+        gotoInstr.setBlock(block);
+
+        int idx = block.getInstructions().indexOf(branch);
+        block.removeInstruction(branch);
+        block.insertInstruction(idx, gotoInstr);
+
+        if (target != dead)
+        {
+            block.removeSuccessor(dead);
+            dead.getPredecessors().remove(block);
+            for (PhiInstruction phi : dead.getPhiInstructions())
             {
-                Value operand = branch.getLeft();
-
-                if (operand instanceof SSAValue)
-                {
-                    SSAValue ssaOperand = (SSAValue) operand;
-                    int valueId = ssaOperand.getId();
-                    boolean isKnownNonNull = localNonNull.contains(valueId);
-
-                    if (isKnownNonNull)
-                    {
-                        IRBlock targetBlock;
-                        if (cond == CompareOp.IFNULL)
-                        {
-                            targetBlock = branch.getFalseTarget();
-                        }
-                        else
-                        {
-                            targetBlock = branch.getTrueTarget();
-                        }
-
-                        SimpleInstruction gotoInstr = SimpleInstruction.createGoto(targetBlock);
-                        gotoInstr.setBlock(block);
-
-                        List<IRInstruction> instructions = block.getInstructions();
-                        int idx = instructions.indexOf(branch);
-                        block.removeInstruction(branch);
-                        block.insertInstruction(idx, gotoInstr);
-
-                        IRBlock removedTarget = (cond == CompareOp.IFNULL)
-                            ? branch.getTrueTarget()
-                            : branch.getFalseTarget();
-                        block.removeSuccessor(removedTarget);
-                        removedTarget.getPredecessors().remove(block);
-
-                        changed = true;
-                    }
-                    else
-                    {
-                        if (cond == CompareOp.IFNONNULL)
-                        {
-                            nonNullValues.add(valueId);
-                        }
-                    }
-                }
+                phi.removeIncoming(block);
             }
         }
 
-        return changed;
+        return true;
     }
 }

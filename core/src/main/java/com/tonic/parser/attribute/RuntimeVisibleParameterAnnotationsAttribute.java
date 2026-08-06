@@ -11,8 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The RuntimeVisibleParameterAnnotations or RuntimeInvisibleParameterAnnotations attribute:
- * per-parameter annotation lists, distinguished by a visibility flag.
+ * The RuntimeVisibleParameterAnnotations or RuntimeInvisibleParameterAnnotations attribute.
  */
 public class RuntimeVisibleParameterAnnotationsAttribute extends Attribute
 {

@@ -289,9 +289,7 @@ public class Parser
     }
 
     /**
-     * True if a record declaration begins here: the contextual {@code record} keyword, a name, then
-     * a component list {@code (} (or type parameters {@code <}). The trailing {@code (}/{@code <}
-     * disambiguates from a field/variable whose type is literally named {@code record} in legacy code.
+     * True if a record declaration begins here.
      */
     private boolean isRecordDeclAhead()
     {
@@ -304,10 +302,7 @@ public class Parser
     }
 
     /**
-     * Parses a record declaration (Java 16). The implicit component backing fields are materialized
-     * so body references resolve; the canonical constructor / accessors / ObjectMethods members are
-     * compiler-synthesized and not represented here (recompilation edits an existing class, which
-     * already carries them).
+     * Parses a record declaration (Java 16).
      */
     private ClassDecl parseRecord(Set<Modifier> modifiers, List<AnnotationExpr> annotations)
     {
@@ -773,8 +768,8 @@ public class Parser
     }
 
     /**
-     * Builds a single field declarator (optional C-style {@code []} dimensions and initializer)
-     * against a shared base type. The field name has already been consumed.
+     * Builds a single field declarator (optional C-style {@code []} dimensions and initializer) against a shared
+     * base type.
      */
     private FieldDecl parseFieldDeclarator(Set<Modifier> modifiers, List<AnnotationExpr> annotations, SourceType baseType, String name)
     {
@@ -1354,9 +1349,7 @@ public class Parser
     }
 
     /**
-     * Parses one switch-expression arm: a constant arm {@code case L1, L2 -> e}, a type-pattern arm
-     * {@code case T b [when g] -> e}, a record-deconstruction arm {@code case T(C0 b0, ...) [when g] -> e},
-     * or {@code default -> e} (Java 21 pattern switch).
+     * Parses one switch-expression arm.
      */
     private SwitchExpr.Arm parseSwitchExprArm()
     {
@@ -1661,8 +1654,7 @@ public class Parser
     }
 
     /**
-     * Parses comma-separated declarators of a local variable declaration without the trailing
-     * semicolon (used by for-loop initializers, e.g. {@code for (int i = 0, j = n; ...)}).
+     * Parses comma-separated declarators of a local variable declaration without the trailing semicolon.
      */
     private List<VarDeclStmt> parseLocalVariableDeclaratorsNoSemi()
     {
@@ -2767,9 +2759,7 @@ public class Parser
     }
 
     /**
-     * Consumes one {@code >} closing a type-argument or type-parameter list. Nested generics end in
-     * {@code >>} (or {@code >>>}), which the lexer reads as a shift operator - one token. Splitting it here
-     * consumes a single angle and leaves the remainder as the current token for the enclosing list to close.
+     * Consumes one {@code >} closing a type-argument or type-parameter list.
      */
     private void consumeTypeClose(String message)
     {
@@ -2799,8 +2789,7 @@ public class Parser
     }
 
     /**
-     * Consumes a NAME: an identifier, or {@code var} - a reserved TYPE name only, legal as a variable,
-     * field, parameter, or member name (`ShaderNodeVariable var = ...` is real source).
+     * Consumes a NAME.
      */
     private Token consumeName(String message)
     {

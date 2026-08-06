@@ -18,7 +18,7 @@ public class ALoadInstruction extends Instruction implements LocalVarInstruction
      * Constructs an ALoadInstruction.
      * @param opcode   The opcode of the instruction.
      * @param offset   The bytecode offset of the instruction.
-     * @param varIndex The index of the local variable to load. For ALOAD_0-3, this is 0-3 respectively.
+     * @param varIndex The index of the local variable to load.
      */
     public ALoadInstruction(int opcode, int offset, int varIndex)
     {

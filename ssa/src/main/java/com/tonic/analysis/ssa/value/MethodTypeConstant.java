@@ -7,9 +7,6 @@ import java.util.Objects;
 
 /**
  * Represents a MethodType constant loaded via ldc.
- * Corresponds to CONSTANT_MethodType in the constant pool.
- * A MethodType represents a method signature (parameter types and return type)
- * and is commonly used with invokedynamic and method handles.
  */
 public final class MethodTypeConstant extends Constant
 {

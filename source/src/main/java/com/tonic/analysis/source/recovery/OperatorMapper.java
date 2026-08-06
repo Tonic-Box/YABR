@@ -133,7 +133,6 @@ public final class OperatorMapper
 
     /**
      * Maps an IR unary operator to a source unary operator, if applicable.
-     * Type conversion operators return null as they become casts.
      * @param op the IR operator
      * @return the corresponding source operator, or null for type conversions
      */

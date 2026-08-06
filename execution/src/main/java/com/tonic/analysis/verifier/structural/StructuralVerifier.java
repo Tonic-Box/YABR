@@ -47,9 +47,8 @@ public class StructuralVerifier
     }
 
     /**
-     * Walks a method body and reports every structural fault to the collector,
-     * stopping early once the collector says to. Abstract and empty methods pass
-     * without a check.
+     * Walks a method body and reports every structural fault to the collector, stopping early once the collector
+     * says to.
      * @param method the method to verify
      * @param collector receives the verification errors
      */

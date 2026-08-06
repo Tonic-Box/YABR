@@ -5,8 +5,7 @@ import com.tonic.analysis.instruction.*;
 import com.tonic.analysis.query.ast.ArgumentType;
 
 /**
- * Static helpers for classifying invoke-instruction arguments by how they are produced; backs the
- * {@code arg(n).type}/{@code arg(n).kind} attributes via {@link com.tonic.analysis.query.eval.ArgValueResolver}.
+ * Static helpers for classifying invoke-instruction arguments by how they are produced.
  */
 public class ArgumentTypeAnalyzer
 {
@@ -84,9 +83,8 @@ public class ArgumentTypeAnalyzer
     }
 
     /**
-     * Walks backwards from an invoke, tracking stack depth, to find the instruction
-     * that pushed one of its arguments. The search stops at the first control flow
-     * instruction, so producers from another block are not found.
+     * Walks backwards from an invoke, tracking stack depth, to find the instruction that pushed one of its
+     * arguments.
      * @param codeWriter the body being scanned
      * @param invokeIndex index of the invoke instruction
      * @param argIndex the argument position to trace

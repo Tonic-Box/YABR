@@ -4,7 +4,6 @@ import com.tonic.util.DescriptorUtil;
 
 /**
  * Utility for parsing method descriptors in invoke operations.
- * Delegates to DescriptorUtil for core parsing logic.
  */
 public class InvokeParameterUtil
 {

@@ -3,8 +3,7 @@ package com.tonic.analysis.query.planner;
 import java.util.Objects;
 
 /**
- * The code location a query match points to: a class, a method, or a specific bytecode offset within
- * a method. A pure location descriptor with no presentation concerns.
+ * The code location a query match points to: a class, a method, or a specific bytecode offset within a method.
  */
 public interface QueryTarget
 {

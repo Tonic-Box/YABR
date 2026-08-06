@@ -5,7 +5,6 @@ import java.util.regex.Pattern;
 
 /**
  * Scope limited to methods matching a pattern or signature.
- * Example: IN method "get.*" or IN method "com/foo/Bar.process(I)V"
  */
 public final class MethodScope implements Scope
 {

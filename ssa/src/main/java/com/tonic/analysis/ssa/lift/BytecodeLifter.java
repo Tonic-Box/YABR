@@ -94,12 +94,8 @@ public class BytecodeLifter
     }
 
     /**
-     * Re-types phi results to the common type of their incoming values when every non-null
-     * incoming is the same primitive type. Iterates to a fixpoint so corrections propagate
-     * through chained phis. Conservative: leaves reference phis and mixed-type (genuine pun)
-     * phis untouched. Run after SSA renaming, once local-slot phis and their operands exist:
-     * a slot reused for an Iterator then an int loop counter otherwise leaves the counter phi
-     * typed by the slot's stale reference type, propagating an Object type-pun into the source.
+     * Re-types phi results to the common type of their incoming values when every non-null incoming is the same
+     * primitive type.
      * @param method the SSA method whose phi results are re-typed in place
      */
     public static void refinePhiTypes(IRMethod method)
@@ -137,14 +133,8 @@ public class BytecodeLifter
     }
 
     /**
-     * Returns the shared primitive type of the phi's incomings, or null if any concrete incoming is
-     * non-primitive or the incomings disagree.
-     *
-     *An incoming that is itself a phi of the same (still-unrefined) type as this phi is skipped: it is a
-     * back-edge in a phi cycle, and counting it would deadlock a cycle whose only concrete seed is a
-     * different primitive - e.g. a long loop variable seeded by a long constant but carried through phis that
-     * defaulted to int. Across the refinement fixpoint the concrete seed's type then propagates around the
-     * cycle. Concrete (non-phi) incomings always count, so a genuine primitive mix still blocks refinement.
+     * Returns the shared primitive type of the phi's incomings, or null if any concrete incoming is non-primitive
+     * or the incomings disagree.
      */
     private static IRType uniformPrimitiveIncomingType(PhiInstruction phi)
     {
@@ -178,12 +168,7 @@ public class BytecodeLifter
     }
 
     /**
-     * Unifies a reference phi's type without hierarchy knowledge: null-bottom incomings are
-     * ignored, self-referential loop operands are skipped, and if every remaining incoming
-     * carries one identical reference or array type, the phi adopts it. When the concrete
-     * reference incomings disagree (e.g. a String constant merged with an Object value, as a
-     * ternary produces), the phi widens to java/lang/Object rather than keeping a stale narrow
-     * type that would pun an unrelated reference into a downcast.
+     * Unifies a reference phi's type without hierarchy knowledge.
      */
     private static IRType uniformReferenceIncomingType(PhiInstruction phi)
     {
@@ -222,12 +207,8 @@ public class BytecodeLifter
     }
 
     /**
-     * Whether a phi operand is a null bottom, assignable to any reference and so ignorable when
-     * unifying a reference phi's type. This is the bare {@link NullConstant} or an SSAValue defined
-     * by a {@link ConstantInstruction} of it: {@code aconst_null} lifts to such a ConstantInstruction
-     * with an Object-typed result, so a null reaching a phi through a local store arrives as that
-     * Object-typed value rather than a bare NullConstant. Both must count as bottom, else a null
-     * merged with a concrete reference or array type would spuriously widen the phi to Object.
+     * Whether a phi operand is a null bottom, assignable to any reference and so ignorable when unifying a
+     * reference phi's type.
      */
     private static boolean isNullBottom(Value v)
     {
@@ -564,22 +545,7 @@ public class BytecodeLifter
     }
 
     /**
-     * Adds an exception edge from every protected (try) block to its handler block, returning the edges added
-     * (caller -&gt; handler pairs) so they can be removed again with {@link #removeExceptionEdges}.
-     *
-     *These edges are a transient scaffold for SSA construction only. Without them a handler is unreachable
-     * from the entry, so it is absent from the dominator tree: {@code PhiInserter} never places phis there and
-     * {@code VariableRenamer} never visits it, leaving the handler's {@code LoadLocal} placeholders for locals
-     * live across the exception edge (method params like {@code this}, and try-body definitions) unrenamed -
-     * the lowerer then allocates them stale registers and the handler reads slots that are never written.
-     * Modelling the edge (an exception may transfer control from any protected block to the handler) lets
-     * standard SSA construction merge those locals into the handler's entry via phis.
-     *
-     *The edges are added only around phi-insertion + renaming and then removed: callers that walk the CFG
-     * for normal control flow (e.g. the source-recovery decompiler's statement reconstruction) must not see
-     * them, and the lowered exception table is rebuilt from {@code ExceptionHandler.tryBlocks}, not these
-     * edges. The operand stack is untouched - the handler entry already holds just the caught exception and
-     * renaming only resolves locals.
+     * Adds an exception edge from every protected block to its handler block.
      * @param irMethod the method whose handler blocks to connect
      * @return the list of (fromBlock, handlerBlock) edges that were actually added
      */
@@ -612,9 +578,7 @@ public class BytecodeLifter
 
     /**
      * Removes the transient exception edges added by {@link #addExceptionEdges} once SSA local renaming is
-     * complete, so the final CFG carries only real control-flow edges. Each removed edge is the exact
-     * (fromBlock, handlerBlock) pair that was added, so a handler that legitimately is also a normal successor
-     * of a block keeps that normal edge.
+     * complete, so the final CFG carries only real control-flow edges.
      * @param addedEdges the edges returned by {@link #addExceptionEdges}
      */
     public static void removeExceptionEdges(List<IRBlock[]> addedEdges)
@@ -690,8 +654,6 @@ public class BytecodeLifter
 
     /**
      * Merges stack values from incoming state with existing state using PHI nodes.
-     * When two control flow paths merge at a block and have different stack values,
-     * we need to insert PHI nodes to properly represent the merged values.
      */
     private void mergeStackWithPhis(AbstractState incomingState, AbstractState existingState, IRBlock targetBlock, IRBlock incomingBlock, IRBlock firstSourceBlock)
     {
@@ -769,10 +731,6 @@ public class BytecodeLifter
 
     /**
      * Post-processing pass to fix up PHI uses.
-     * For each PHI instruction, ensures all instructions in the block AND all
-     * reachable successor blocks use the PHI result instead of any incoming values.
-     * This is necessary because successor blocks may have been processed before
-     * the phi was created (when only one predecessor had been seen).
      */
     private void fixupPhiUses(IRMethod method)
     {
@@ -790,12 +748,7 @@ public class BytecodeLifter
     }
 
     /**
-     * Replaces all uses of oldValue with newValue in the given block and all
-     * reachable successor blocks. Uses a worklist to avoid infinite loops
-     * in cyclic control flow. Also updates phi incoming values in successor blocks
-     * where the edge comes from a visited block, except for the phi that triggered
-     * the replacement: in cyclic control flow the walk reaches that phi's own
-     * predecessors, and rewriting its incoming edges would make it reference itself.
+     * Replaces all uses of oldValue with newValue in the given block and all reachable successor blocks.
      */
     private void replaceValueInBlockAndSuccessors(IRBlock startBlock, Value oldValue, Value newValue, PhiInstruction currentPhi)
     {

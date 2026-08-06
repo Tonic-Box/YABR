@@ -684,7 +684,7 @@ Auto-populate fields from constructor bytecode:
 ConstructorAnalyzer analyzer = new ConstructorAnalyzer();
 
 // Analyze constructor to get field assignments
-SimObject obj = analyzer.analyzeConstructor(site, constructor, args, heap);
+SimObject obj = analyzer.analyzeConstructor(site, constructor, args);
 
 // Extract field assignments without creating object
 Map<FieldKey, SimValue> assignments = analyzer.extractFieldAssignments(constructor, args);

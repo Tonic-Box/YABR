@@ -10,15 +10,6 @@ import java.util.*;
 
 /**
  * Reachability and path-enumeration queries over the control flow graph a simulation covered.
- * <pre>
- * PathQuery query = PathQuery.from(result);
- * // Check if one block can reach another
- * boolean canReach = query.canReach(blockA, blockB);
- * // Get all paths between blocks
- * List&lt;List&lt;IRBlock&gt;&gt; paths = query.getAllPaths(blockA, blockB);
- * // Get shortest path
- * List&lt;IRBlock&gt; shortest = query.getShortestPath(blockA, blockB);
- * </pre>
  */
 public class PathQuery
 {

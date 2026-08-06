@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Assembles a complete textual LLVM IR module: an optional target header (triple / datalayout),
- * the {@code declare} block for external callees, then one or more {@code define} blocks.
+ * Assembles a complete textual LLVM IR module.
  */
 final class LlvmModule
 {

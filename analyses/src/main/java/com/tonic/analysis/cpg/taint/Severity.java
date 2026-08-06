@@ -24,8 +24,8 @@ public enum Severity
      */
     HIGH,
     /**
-     * Reaches a sink that yields code or query execution outright - SQL injection, command
-     * injection, or insecure deserialization; these paths are summarized first.
+     * Reaches a sink that yields code or query execution outright - SQL injection, command injection, or insecure
+     * deserialization.
      */
     CRITICAL
 }

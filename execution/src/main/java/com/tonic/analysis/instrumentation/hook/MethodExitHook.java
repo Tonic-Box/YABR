@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Configuration for method exit instrumentation.
- * Hooks are called before each return statement in the method.
  */
 public class MethodExitHook implements Hook
 {

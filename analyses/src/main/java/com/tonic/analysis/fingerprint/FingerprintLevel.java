@@ -6,8 +6,7 @@ package com.tonic.analysis.fingerprint;
 public enum FingerprintLevel
 {
     /**
-     * Signature shape plus the called, accessed and instantiated targets; survives recompilation
-     * best, so it carries the most weight and an exact match here alone counts as a match.
+     * Signature shape plus the called, accessed and instantiated targets.
      */
     ULTRA_STABLE(0, 0.50),
     /**
@@ -16,8 +15,7 @@ public enum FingerprintLevel
      */
     STABLE(1, 0.35),
     /**
-     * Opcode-bigram, CFG edge and terminator histograms plus dominance depth; the most precise
-     * level and the one most easily disturbed by a recompile, hence the smallest weight.
+     * Opcode-bigram, CFG edge and terminator histograms plus dominance depth.
      */
     DETAILED(2, 0.15);
 

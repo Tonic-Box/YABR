@@ -7,10 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A single query match: the code location it points to, its computed attributes (e.g. {@code class},
- * {@code method}, {@code matches}), and any nested evidence matches (the bytecode sites that
- * satisfied the query). A domain model with no presentation concerns - display labels are the
- * caller's responsibility.
+ * A single query match.
  */
 public class QueryMatch
 {

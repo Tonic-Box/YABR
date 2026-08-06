@@ -6,7 +6,6 @@ import com.tonic.parser.constpool.Utf8Item;
 
 /**
  * Represents an entry in the LocalVariableTable attribute.
- * Describes a local variable's name, type, and scope within a method.
  */
 public class LocalVariableTableEntry
 {

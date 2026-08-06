@@ -10,12 +10,6 @@ import java.util.*;
 
 /**
  * Block merging optimization.
- * Merges blocks with a single predecessor/successor relationship where:
- * - Block A has exactly one successor (B)
- * - Block B has exactly one predecessor (A)
- * - Block B has no phi instructions
- * - Block A ends with an unconditional goto to B
- * The result combines A and B into a single block.
  */
 public class BlockMerging implements IRTransform
 {

@@ -11,8 +11,7 @@ import java.util.function.LongBinaryOperator;
 import java.util.function.LongUnaryOperator;
 
 /**
- * Typed registration helpers for native methods whose body is a pure numeric function. Each helper
- * owns argument indexing and result boxing, so a handler body cannot mis-index {@code args}.
+ * Typed registration helpers for native methods whose body is a pure numeric function.
  */
 final class Numerics
 {

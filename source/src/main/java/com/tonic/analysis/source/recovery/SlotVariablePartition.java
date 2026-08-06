@@ -22,22 +22,7 @@ import java.util.Set;
 import java.util.function.IntFunction;
 
 /**
- * Partitions each JVM local slot into one or more source variables using a
- * reaching-definition analysis.
- *
- *JVM bytecode reuses a single local slot for unrelated variables whose live
- * ranges do not overlap (e.g. a {@code String} in one switch case and a
- * {@code boolean} in another). The recovery layer must split such reuse into
- * distinct source variables, otherwise a slot is declared once with an
- * over-broadened type (boolean, or {@code Object}) that does not compile against
- * all its uses.
- *
- *Locals are not in SSA form at this stage, so sameness cannot be read off
- * phi connectivity. Instead we compute, for every load, the set of stores that
- * reach it, and union stores that share a load into one variable. Disjoint reuse
- * therefore yields separate variables, while a genuine control-flow merge (where
- * the verifier already widened the loaded value to the common supertype) keeps
- * the stores in one variable carrying that merged type.
+ * Partitions each JVM local slot into one or more source variables using a reaching-definition analysis.
  */
 public class SlotVariablePartition
 {
@@ -76,8 +61,7 @@ public class SlotVariablePartition
     }
 
     /**
-     * As the three-argument form, with a dedicated resolver for STORE offsets: a store's variable
-     * becomes visible at the next instruction, so its name lives one instruction past the store.
+     * As the three-argument form, with a dedicated resolver for STORE offsets.
      *
      * @param method the method to analyze
      * @param baseNameForSlot supplies the fallback name for a slot with no scope name
@@ -423,11 +407,9 @@ public class SlotVariablePartition
     }
 
     /**
-     * Whether the value stored by {@code store} transitively depends on the slot's own variable - either a load
-     * of the slot, or (following pure ops and phi merges) any SSA value that some OTHER store writes into the
-     * same slot. The latter catches a read-modify-write whose input arrives as a merged value rather than a fresh
-     * load, e.g. {@code num += 2} in a finally where {@code num} is a phi of the try/catch results. Such a
-     * component is a genuine update of the variable, not an independent spill temp reusing its slot.
+     * Whether the value stored by {@code store} transitively depends on the slot's own variable - either a load of
+     * the slot, or (following pure ops and phi merges) any SSA value that some OTHER store writes into the same
+     * slot.
      */
     private boolean storedValueDependsOnSlot(StoreLocalInstruction store, int slot)
     {
@@ -740,15 +722,7 @@ public class SlotVariablePartition
 
     /**
      * Whether {@code root} is a recompiler spill of an inlined sub-expression that merely reuses another named
-     * local's slot within that local's live range. The recompiler stores such a temp into a free named slot; on
-     * the next round trip it must NOT inherit the slot's debug name (it is an independent value that inlines back
-     * into its single use), or it materializes as a spurious assignment to the named variable.
-     *
-     *The signature is precise so genuine variables are never demoted: the component must be single-def,
-     * single-use, its stored value must not read the slot back (so a reassignment {@code n = n + 2} - even one
-     * whose {@code n} arrives through a phi - is excluded), and its bytecode range must be strictly NESTED inside
-     * another same-named component's range (so two same-named locals in disjoint scopes, which merely reuse the
-     * slot sequentially, are both kept - neither nests in the other).
+     * local's slot within that local's live range.
      */
     private boolean isReusedSlotSpillTemp(int root, int slot, List<Integer> sameNameRoots, Map<Integer, List<Integer>> rootOffsets)
     {
@@ -986,9 +960,7 @@ public class SlotVariablePartition
     }
 
     /**
-     * The local slot a phi result belongs to, derived from its SSA name. Phi results for locals
-     * are named {@code phi_{slot}} or {@code v{slot}_{version}} (or {@code v{slot}}); the leading
-     * number is the slot. Returns -1 when the name does not encode a slot.
+     * The local slot a phi result belongs to, derived from its SSA name.
      */
     private int slotFromPhiResultName(PhiInstruction phi)
     {

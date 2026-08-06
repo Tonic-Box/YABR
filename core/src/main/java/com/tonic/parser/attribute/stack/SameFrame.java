@@ -5,7 +5,6 @@ import java.io.IOException;
 
 /**
  * Represents a SameFrame in the StackMapTable attribute.
- * Used when the frame has the same locals as the previous frame and an empty stack.
  */
 public class SameFrame extends StackMapFrame
 {

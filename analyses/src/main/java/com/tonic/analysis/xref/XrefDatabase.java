@@ -138,8 +138,6 @@ public class XrefDatabase
 
     /**
      * Looks up callers by owner and name only, for queries that carry no descriptor.
-     * An empty or null owner or name matches anything, and an owner also matches on
-     * a simple-name suffix.
      * @param owner internal name or simple name of the declaring class, or null for any
      * @param name the method name, or null for any
      * @return the references calling any matching method

@@ -8,7 +8,6 @@ import java.io.IOException;
 
 /**
  * Represents verification type information used in stack map frames.
- * Encodes the type of a local variable or operand stack entry.
  */
 public class VerificationTypeInfo
 {

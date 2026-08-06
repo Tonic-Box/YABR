@@ -47,9 +47,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     private final TypeRecoverer typeRecoverer;
 
     /**
-     * The reaching-condition structurer. It is offered each region first and falls back to the legacy walk
-     * by returning null for shapes it does not yet handle (exception scaffolding, irreducible flow, and the
-     * few regions it declines), which the legacy walk still recovers until it is retired.
+     * The reaching-condition structurer.
      */
     private final ReachingConditionStructurer rcsStructurer;
 
@@ -328,11 +326,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     private final Map<IRBlock, StringSwitchInfo> stringSwitchScaffolds = new HashMap<>();
 
     /**
-     * Decodes javac's two-phase string switch into a structuring-ready descriptor over the INDEX
-     * switch: selector = the original string expression, labels = the string literals mapped through
-     * the hashCode/equals scaffold, case headers = the index switch's targets. The scaffold blocks
-     * stay outside the engine's region (the model follows the descriptor's case headers, not the raw
-     * dispatch edges) and are marked processed when the header's statements are emitted.
+     * Decodes javac's two-phase string switch into a structuring-ready descriptor over the INDEX switch.
      */
     private SwitchDescriptor decodeStringSwitchDescriptor(IRBlock header, StringSwitchInfo info)
     {
@@ -670,7 +664,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Removes duplicate inline finally code that appears after try-catch-finally statements.
-     * The JVM inlines finally code for the normal execution path, creating duplicates.
      */
     private void removeInlineFinallyDuplicates(List<Statement> statements)
     {
@@ -695,7 +688,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Removes statements from the list that match the given pattern statements.
-     * Returns the number of statements removed.
      */
     private int removeMatchingStatements(List<Statement> statements, int startIndex, List<Statement> pattern)
     {
@@ -794,7 +786,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Recovers statements with exception handling structure.
-     * Handles both simple and nested try-catch regions.
      */
     private List<Statement> recoverWithExceptionHandling(IRBlock entry, List<ExceptionHandler> handlers)
     {
@@ -877,12 +868,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers the region of the outermost try at {@code entry}: any prelude before the protected range,
-     * the try/catch (or synchronized) statement itself - with a finally de-duplicated or filtered from its
-     * inlined copies - and the continuation after the region. {@code outerHandler} is the widest merged
-     * handler protecting {@code entry}; {@code handlers} and {@code mergedHandlers} are the method's raw and
-     * merged handler lists, and {@code handlerBlocks} the handler-reachable stop set for the walking
-     * recoveries.
+     * Recovers the region of the outermost try at {@code entry}.
      */
     private List<Statement> recoverOuterHandlerRegion(IRBlock entry, ExceptionHandler outerHandler, List<ExceptionHandler> handlers, List<ExceptionHandler> mergedHandlers, Set<IRBlock> handlerBlocks)
     {
@@ -1261,8 +1247,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Merges exception handlers that share the same handler block.
-     * This handles the case where a try region is split into multiple exception table entries
-     * due to return statements within the try block.
      */
     private List<ExceptionHandler> mergeHandlersWithSameTarget(List<ExceptionHandler> handlers)
     {
@@ -1349,7 +1333,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Recovers statements with nested exception handlers.
-     * The inner handlers may start at blocks different from the entry block.
      */
     private List<Statement> recoverWithNestedHandlers(IRBlock start, List<ExceptionHandler> innerHandlers, Set<IRBlock> stopBlocks)
     {
@@ -1814,8 +1797,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The caught type for one exception-table entry: {@code java/lang/Throwable} for a catch-all, otherwise
-     * the declared catch type. Used to assemble the type list of a reconstructed multi-catch clause.
+     * The caught type for one exception-table entry: {@code java/lang/Throwable} for a catch-all, otherwise the
+     * declared catch type.
      */
     private SourceType catchTypeOf(ExceptionHandler handler)
     {
@@ -1827,10 +1810,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Builds the catch clauses for one try region, coalescing every group of handlers that share a handler
-     * block into a single (multi-)catch clause. javac compiles a multi-catch {@code catch (A | B e)} to one
-     * handler block reached by several exception-table entries; duplicate types (a region split into several
-     * entries by intervening returns) collapse to a single type.
+     * Builds the catch clauses for one try region, coalescing every group of handlers that share a handler block
+     * into a single (multi-)catch clause.
      */
     private List<CatchClause> buildCatchClauses(List<ExceptionHandler> regionHandlers)
     {
@@ -1871,11 +1852,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Detects a {@code synchronized} block. javac compiles it to a protected region guarded by a catch-all
-     * handler that releases the monitor ({@code monitorexit}) and rethrows, with a {@code monitorenter} on
-     * the same lock dominating the region. Returns the lock value of that {@code monitorenter}, or null if
-     * the handler is not a monitor-release. The monitor instructions themselves are dropped during statement
-     * recovery, so the region's recovered body is exactly the synchronized body.
+     * Detects a {@code synchronized} block.
      */
     private Value detectSynchronizedLock(ExceptionHandler handler)
     {
@@ -1903,9 +1880,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers a {@code synchronized} lock expression. The lock's slot store is scaffolding the sync
-     * recovery consumes, so a lock materialized under that slot's name would reference a variable that
-     * is never emitted - recover through the materialization to the defining expression instead.
+     * Recovers a {@code synchronized} lock expression.
      */
     private Expression recoverLockExpr(Value syncLock)
     {
@@ -1957,19 +1932,13 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovered clauses per handler block. Clause recovery consumes shared walk state (processed-block
-     * marks), so a second recovery of the same handler - the outer scaffolding rebuilding a clause an
-     * inner recovery already produced - walks partially-consumed blocks and yields a truncated body (a
-     * finally rethrow clause losing its cleanup, leaving an empty {@code finally {}}). The first, complete
-     * recovery is authoritative for the block.
+     * Recovered clauses per handler block.
      */
     private final Map<IRBlock, CatchClause> recoveredClauses = new HashMap<>();
 
     /**
-     * Rewrites a trailing {@code if (c) { <terminates> } else { X }} to {@code if (c) <terminates>; X},
-     * recursing on the hoisted tail, so a nested rethrow ends up as the last statement. Only the tail is
-     * hoisted (an earlier terminating if already dominates everything after it); a non-terminating then-arm,
-     * or an if without an else, is left as is.
+     * Rewrites a trailing {@code if (c) { <terminates> } else { X }} to {@code if (c) <terminates>; X}, recursing
+     * on the hoisted tail, so a nested rethrow ends up as the last statement.
      */
     private List<Statement> hoistTerminalThenElse(List<Statement> stmts)
     {
@@ -2251,11 +2220,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * A catch clause that falls through to a merge ALREADY consumed elsewhere would silently drop off the
-     * end of the method: the shared continuation (typically the method's trailing {@code return null})
-     * was absorbed into the try body's region, and no enclosing recovery places it again for the catch
-     * path. A return terminator is idempotent, so re-emit it at the clause end - exactly the treatment
-     * the region structurer gives its own consumed boundaries.
+     * A catch clause that falls through to a merge ALREADY consumed elsewhere would silently drop off the end of
+     * the method.
      */
     private void appendSharedReturnFallThrough(List<Statement> stmts, IRBlock handlerBlock)
     {
@@ -2300,11 +2266,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when the catch handler block gotos directly into its own nested try: a successor that starts an
-     * unprocessed exception handler and is dominated by the handler block (reachable only through this catch).
-     * That is the one case where a non-catch-all handler ending in a goto must still recover its successors -
-     * the nested try is the catch body. A successor that is merely the shared post-try merge or an enclosing
-     * finally's inlined copy (no handler starts there) stays skipped, so the inlined copy is not duplicated.
+     * True when the catch handler block gotos directly into its own nested try.
      */
     private boolean catchBodyHasNestedTry(IRBlock handlerBlock)
     {
@@ -2330,13 +2292,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the rethrowing clause is a REAL finally rather than a user-written
-     * {@code catch (Throwable t) { cleanup; throw t; }} (bytecode-identical by rethrow shape and, on a
-     * recompiled layout, by catch type). Evidence, in order: a verbatim inlined copy of the handler body
-     * outside its protected ranges (javac inlines the finally before every exit; user cleanup text
-     * appears nowhere else); a TRUE catch-any entry (source cannot express one); the de-duplication
-     * having excised this family; a monitorexit in the handler (a synchronized release, whose copies
-     * are dropped before recovery). Unknown provenance keeps the conversion.
+     * Whether the rethrowing clause is a real finally rather than a user-written catch-and-rethrow.
      */
     private boolean clauseHasFinallyEvidence(CatchClause clause)
     {
@@ -2357,13 +2313,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the rethrowing handler at {@code hb} is a REAL finally rather than a user-written
-     * {@code catch (Throwable t) { cleanup; throw t; }} (bytecode-identical by rethrow shape and, on a
-     * recompiled layout, by catch type). Evidence, in order: a verbatim inlined copy of the handler body -
-     * in the gaps between javac's split protected ranges, or inside a recompiled layout's whole-range
-     * entry at exit position, where the catch-rethrow and finally forms are the same construct; a TRUE
-     * catch-any entry (source cannot express one); the de-duplication having excised this family; a
-     * monitorexit in the handler (a synchronized release, whose copies are dropped before recovery).
+     * Whether the rethrowing handler at {@code hb} is a real finally rather than a user-written catch-and-rethrow.
      */
     private boolean handlerHasFinallyEvidence(IRBlock hb)
     {
@@ -2637,7 +2587,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Extracts the finally body from a finally-rethrow catch clause.
-     * The finally body is everything except the final throw statement.
      */
     private BlockStmt extractFinallyBody(CatchClause clause)
     {
@@ -2679,9 +2628,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Removes the caught-exception rethrow ending a recovered clause structure, keeping the structure: a
-     * loop-carrying finally clause recovers as {@code while (true) { body; if (exit) throw e; }}, whose
-     * rethrow is the loop exit rather than a trailing statement.
+     * Removes the caught-exception rethrow ending a recovered clause structure, keeping the structure.
      */
     private Statement stripTrailingRethrow(Statement s)
     {
@@ -2760,9 +2707,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Strips the inlined finally copies from user catch bodies: javac inlines the finally before each
-     * return/throw inside a catch just as it does in the try body, so once the finally clause exists the
-     * copies must fold out of every clause or the finally's effect doubles on the catch paths.
+     * Strips the inlined finally copies from user catch bodies.
      */
     private List<CatchClause> filterInlinedFinallyFromCatches(List<CatchClause> catches, List<Statement> finallyStmts)
     {
@@ -2790,9 +2735,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
         return out;
     }
 
-    /** Diagnostic kill switch for the statement-level inlined-finally folds: with
-     * {@code -Dyabr.disable.finally.folds} set they pass statements through untouched, measuring how much
-     * of the copy removal the CFG-level de-duplication owns on its own (the fold-retirement burn-down). */
+    /**
+     * Diagnostic kill switch for the statement-level inlined-finally folds.
+     */
     private static final boolean FOLDS_DISABLED = System.getProperty("yabr.disable.finally.folds") != null;
 
     private List<Statement> filterInlinedFinallyFromTryStatements(List<Statement> statements, List<Statement> finallyStmts)
@@ -3046,11 +2991,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Matches javac's normal-exit inlining of a single-if finally that the walk recovered as an INVERTED
-     * guard clause: the template {@code if (C) { T... }} appears in the try body as
-     * {@code if (!C) { J } T...} where {@code J} is the single exit jump both paths take after the finally.
-     * Returns the index just past the matched copy (the guard plus the template body), or -1 when the
-     * shape does not match; the caller replaces the whole copy with {@code J}.
+     * Matches javac's normal-exit inlining of a single-if finally recovered as an inverted guard clause.
      */
     private int matchInvertedFinallyCopy(List<Statement> statements, int i, List<Statement> finallyStmts)
     {
@@ -3147,10 +3088,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Structural match of a candidate statement against a finally-body statement, tolerating a bijection between
-     * the two copies' locally-declared temp names. The finally materializes its stored value into a single-use SSA
-     * temp whose name differs between the handler copy and each inlined copy ({@code int i8 = e; x = i8} versus
-     * {@code int i5 = e; x = i5}), so a use of the finally's temp is matched against the candidate's via
-     * {@code bind}, which is populated when their declarations line up.
+     * the two copies' locally-declared temp names.
      */
     private boolean statementMatchesFinally(Statement cand, Statement fin, Map<String, String> bind)
     {
@@ -3299,10 +3237,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Recovers the blocks between a protected region's end and its handler - the finally inlined on the normal
-     * exit path followed by the region's real continuation - then strips the inlined-finally copies. Recovery
-     * is <em>structural</em> (not linear block-by-block) because when the finally contains control flow (e.g. a
-     * conditional {@code return}) the inlined copy is itself an {@code if}/{@code else} whose non-finally arm is
-     * the genuine continuation; linear recovery would otherwise stop at the finally's own inlined return.
+     * exit path followed by the region's real continuation - then strips the inlined-finally copies.
      */
     private List<Statement> recoverFinallyGap(IRBlock tryEnd, IRBlock handlerBlock, BlockStmt finallyBlock, Set<String> finallyExceptionVars)
     {
@@ -3391,11 +3326,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * A return block whose every live predecessor is either inside the clause's dominated subtree or an
-     * EMPTIED inlined-finally copy block (nothing but the caught-exception copy and its terminator left):
-     * before the excision the copy's mirrored handler also flowed into it, so the pre-excision dominator
-     * tree classifies it as a shared merge - but post-excision the clause is its only real in-flow, and
-     * skipping it would drop the clause's own return.
+     * A return block whose every live predecessor is either inside the clause's dominated subtree or an EMPTIED
+     * inlined-finally copy block.
      */
     private boolean isCatchExclusiveTail(IRBlock block, IRBlock catchEntry, DominatorTree dt)
     {
@@ -3547,7 +3479,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Finds the exception variable name from the handler block.
-     * The first instruction in a catch handler typically stores the exception to a local.
      */
     private String findExceptionVariableName(IRBlock handlerBlock)
     {
@@ -3583,7 +3514,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Collects all SSA values that represent the caught exception in a handler block.
-     * These values come from CopyInstruction at the start of the handler.
      */
     private Set<SSAValue> collectExceptionValues(IRBlock handlerBlock)
     {
@@ -3628,7 +3558,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Registers all SSA values that represent the exception in an exception handler.
-     * This ensures they reference the catch parameter instead of undefined "v#" names.
      */
     private void registerExceptionVariables(ExceptionHandler handler, String exceptionVarName)
     {
@@ -3650,7 +3579,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Finds all SSA values that represent the caught exception.
-     * Starts from values with "exc_" prefix and tracks through copies and local stores/loads.
      */
     private void findExceptionSSAValues(IRBlock block, Set<SSAValue> result, Set<IRBlock> bound)
     {
@@ -3828,10 +3756,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Finds the exception handler whose try region starts at the given block, preferring the
-     * widest region: nested regions share a start pc with their enclosing one (and the table
-     * lists inner entries first), so taking the first match would recover the inner region and
-     * silently drop the outer catch. Ties keep table order.
+     * Finds the exception handler whose try region starts at the given block, preferring the widest region.
      */
     private ExceptionHandler findHandlerStartingAt(IRBlock block)
     {
@@ -3861,19 +3786,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers a try-with-resources statement from javac's desugaring. javac lowers
-     * {@code try (R r = init) { body }} into per-resource cleanup handlers that close the resource and
-     * re-throw, chaining suppressed exceptions via {@code Throwable.addSuppressed}. The generic try/catch
-     * recovery mangles this (dropped return value, out-of-scope exception variable, unconditional throw).
-     * When the {@code addSuppressed} signature is present this marks the cleanup handlers processed, recovers
-     * the clean normal path (the handler blocks are not normal successors), lifts the resource declarations
-     * into a {@code try (r1; r2) { ... }} header and strips the synthetic close calls. Returns null when the
-     * method is not a try-with-resources, so the caller falls back to the generic recovery.
-     *
-     *A user {@code catch} clause on the resource ({@code try (r) { } catch (E e) { }}) compiles to its own
-     * handler alongside the resource cleanup handlers; those user handlers are folded into the recovered
-     * {@code try (r)} as catch clauses rather than being dropped. A user {@code finally} (a rethrowing handler)
-     * is left to the generic recovery.
+     * Recovers a try-with-resources statement from javac's desugaring.
      */
     private List<Statement> recoverTryWithResources(IRBlock entry, List<ExceptionHandler> handlers)
     {
@@ -3882,6 +3795,13 @@ public class StatementRecoverer implements RegionRecoveryBridge
             return null;
         }
         Set<ExceptionHandler> cleanup = twrCleanupHandlers(handlers);
+        // This route folds the whole method into ONE try(...) header, so it only owns a method holding a
+        // single construct. With several, the resources of the later ones are lifted into the first
+        // header and their closes are dropped.
+        if (twrConstructCount(cleanup) > 1)
+        {
+            return null;
+        }
         List<ExceptionHandler> userHandlers = new ArrayList<>();
         for (ExceptionHandler h : handlers)
         {
@@ -3989,9 +3909,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The resource cleanup handlers of a try-with-resources method: each suppress handler (its own block calls
-     * {@code Throwable.addSuppressed}) plus the primary handler it pairs with (the nearest enclosing handler,
-     * whose block holds the close the suppress handler protects). Every other handler is a user catch/finally.
+     * The resource cleanup handlers of a try-with-resources method.
      */
     private Set<ExceptionHandler> twrCleanupHandlers(List<ExceptionHandler> handlers)
     {
@@ -4057,10 +3975,70 @@ public class StatementRecoverer implements RegionRecoveryBridge
         }
         return false;
     }
+    
+    /**
+     * The number of separate try-with-resources constructs {@code cleanup} describes.
+     */
+    private int twrConstructCount(Set<ExceptionHandler> cleanup)
+    {
+        List<ExceptionHandler> ordered = new ArrayList<>();
+        for (ExceptionHandler h : cleanup)
+        {
+            if (h.getTryStart() != null && h.getTryEnd() != null)
+            {
+                ordered.add(h);
+            }
+        }
+        ordered.sort(Comparator.comparingInt(a -> a.getTryStart().getBytecodeOffset()));
+        List<List<ExceptionHandler>> constructs = new ArrayList<>();
+        for (ExceptionHandler h : ordered)
+        {
+            List<ExceptionHandler> home = null;
+            for (List<ExceptionHandler> construct : constructs)
+            {
+                if (joinsConstruct(h, construct))
+                {
+                    home = construct;
+                    break;
+                }
+            }
+            if (home == null)
+            {
+                home = new ArrayList<>();
+                constructs.add(home);
+            }
+            home.add(h);
+        }
+        return constructs.size();
+    }
 
     /**
-     * True when an exception handler (transitively) calls {@code Throwable.addSuppressed} - the TWR signature.
+     * Whether {@code handler} is scaffolding of {@code construct} rather than the start of a new one.
      */
+    private boolean joinsConstruct(ExceptionHandler handler, List<ExceptionHandler> construct)
+    {
+        IRBlock start = handler.getTryStart();
+        int offset = start.getBytecodeOffset();
+        DominatorTree dt = context.getDominatorTree();
+        for (ExceptionHandler member : construct)
+        {
+            if (member.getHandlerBlock() != null && member.getHandlerBlock() == handler.getHandlerBlock())
+            {
+                return true;
+            }
+            if (offset >= member.getTryStart().getBytecodeOffset()
+                    && offset < member.getTryEnd().getBytecodeOffset())
+            {
+                return true;
+            }
+            if (member.getHandlerBlock() != null && dt.dominates(member.getHandlerBlock(), start))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean isTryWithResourcesMethod(List<ExceptionHandler> handlers)
     {
         Set<IRBlock> seen = new HashSet<>();
@@ -4092,11 +4070,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Unfolds a trailing {@code if (c) { throws } else { continuation }} into guard form - the terminal arm
-     * keeps the guard, the else's statements rejoin the top level. A validation guard whose arm declares a
-     * local recovers as a full diamond, burying the resource region inside the else where the fold cannot
-     * see it; with the arm terminal the two forms are the same program. Repeats while the tail keeps the
-     * shape, so stacked guards all flatten.
+     * Unfolds a trailing {@code if (c) { throws } else { continuation }} into guard form - the terminal arm keeps
+     * the guard, the else's statements rejoin the top level.
      */
     private void flattenTrailingGuardElse(List<Statement> normalPath)
     {
@@ -4224,12 +4199,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Removes the synthetic resource {@code close()} calls from {@code s}, returning the statement with only
-     * the closes stripped (or null when the whole statement was nothing but a close - a bare {@code r.close();}
-     * or javac's {@code if (r != null) { r.close(); }} wrapper). Unlike dropping a whole statement that merely
-     * <em>contains</em> a close, this preserves the surrounding code: a close nested in one arm of a user
-     * {@code if} leaves the rest of that arm intact, so a conditionally-throwing body recompiled with the close
-     * inside a branch still recovers its body instead of collapsing to {@code try (r) {}}.
+     * Removes the synthetic resource {@code close()} calls from {@code s}, or null when the statement was
+     * nothing but a close.
      */
     private Statement stripSyntheticCloses(Statement s, Set<String> resourceNames)
     {
@@ -4270,10 +4241,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The resource variable closed by {@code s}, whether directly ({@code r.close();}) or through the
-     * try-with-resources finally wrapper javac emits ({@code if (r != null) { ... r.close() ... }}).
-     * Recurses into if-branches and blocks so a close nested inside that wrapper is still recognized as
-     * the resource's, which top-level inspection alone misses.
+     * The resource variable closed by {@code s}, directly or through javac's try-with-resources wrapper.
      */
     private String findClosedResource(Statement s)
     {
@@ -4324,14 +4292,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code h} is a split piece of a construct ENCLOSING the {@code [mainStart, mainEnd)} region
-     * that an outer recovery already owns: some exception-table entry targeting the same handler block
-     * protects code outside the region, and the handler block is marked processed (the enclosing region is
-     * mid-recovery above us). javac splits an outer finally's range around the returns in its try, so a
-     * piece can lie entirely inside an inner catch's range while its siblings cover the catch body beyond
-     * it. Treating such a piece as a nested handler rebuilds it as a phantom inner try/finally whose body
-     * then runs twice; the enclosing region's own recovery owns it. When no outer recovery owns the block,
-     * the piece is kept nested - that nested form is how the region's finally clause materializes at all.
+     * Whether {@code h} is a split piece of a construct ENCLOSING the {@code [mainStart, mainEnd)} region that an
+     * outer recovery already owns.
      */
     private boolean isEnclosingHandlerPiece(ExceptionHandler h, int mainStart, int mainEnd)
     {
@@ -4706,9 +4668,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Whether {@code h} is a finally-style rethrow handler - its region ends in an {@code athrow} that re-raises
-     * the caught exception. javac emits a finally's synthetic handler as a catch-any (catch_type 0) while the
-     * recompiler emits it as a {@code Throwable} catch, so identifying the finally by its rethrow shape rather
-     * than its declared type is stable across the round trip.
+     * the caught exception.
      */
     private boolean handlerRethrows(ExceptionHandler h)
     {
@@ -4742,10 +4702,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * As {@link #handlerThrowsFreshException} but tracing freshness through slot round-trips - used ONLY
-     * by the decode-side finally classification, where a typed wrap-rethrow catch on a re-lowered layout
-     * (astore/aload around the constructor) must not read as finally scaffolding. The other call sites
-     * keep the narrower historical predicate their surrounding machinery is calibrated against.
+     * As {@link #handlerThrowsFreshException}, but traces freshness through slot round-trips.
      */
     private boolean throwsFreshExceptionThroughSlots(ExceptionHandler h)
     {
@@ -4850,10 +4807,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The linear chain of blocks from {@code h}'s handler entry to the block that rethrows, or null when
-     * the handler branches (a finally with control flow). javac's finally-self-protection splits a
-     * straight-line handler into [store; goto] + [body; aload; athrow]; the intervening goto terminators
-     * and the exception self-edge are stepped over.
+     * The linear chain of blocks from {@code h}'s handler entry to the block that rethrows, or null when the
+     * handler branches.
      */
     private List<IRBlock> finallyHandlerChain(ExceptionHandler h)
     {
@@ -4890,10 +4845,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the finally template (the rethrow handler's dominated subgraph up to its athrow) contains a
-     * nested exception handler - the try-with-resources suppress {@code try close catch addSuppressed}. Such
-     * a template is already recovered correctly by the fused-twr/suppress paths and must not be routed
-     * through the branchy consume-shells de-duplication; a plain sentinel-close template is safe.
+     * Whether the finally template (the rethrow handler's dominated subgraph up to its athrow) contains a nested
+     * exception handler - the try-with-resources suppress {@code try close catch addSuppressed}.
      */
     private boolean finallyTemplateHasNestedHandler(List<ExceptionHandler> outerHandlers)
     {
@@ -4991,15 +4944,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * De-duplicates a finally whose body CARRIES CONTROL FLOW - a guarded close, javac's inlined copies of
-     * it being branchy subgraphs the contiguous matcher cannot see. The handler's dominated subtree between
-     * the caught-exception store and the rethrow is the template; each normal exit of the protected range
-     * must lead to an isomorphic copy (same instructions block-for-block under a parallel walk of the
-     * branch targets), and every copy path must converge on ONE continuation, mirroring the template's
-     * paths converging on the rethrow. Matched copies are excised instruction-wise - branch terminators
-     * stay, leaving empty guard shells whose conditions recover from their (pure) SSA values - so no edge
-     * is rewired and the cached dominator tree stays valid. All-or-nothing: an uncovered exit, a template
-     * or copy with its own nested try, or a second continuation declines the whole de-duplication.
+     * De-duplicates a finally whose body CARRIES CONTROL FLOW - a guarded close, javac's inlined copies of it
+     * being branchy subgraphs the contiguous matcher cannot see.
      */
     private boolean dedupBranchySubgraphFinally(List<ExceptionHandler> rethrowers, boolean consumeShells)
     {
@@ -5558,12 +5504,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * As {@link #matchFinallySubgraph}, retrying with LEADING GUARDS PEELED when the direct match
-     * fails: the relowering prunes a copy's leading null-check when the tested value is provably
-     * non-null on that path, so the copy corresponds to the guard's surviving arm. Only a guard
-     * whose OTHER arm leads to the rethrow may peel (the pruned test's failure path could only
-     * rethrow, which the pruned path cannot take), and only pure-load guard payloads qualify - a
-     * peel must not lose an effect.
+     * As {@link #matchFinallySubgraph}, retrying with LEADING GUARDS PEELED when the direct match fails.
      */
     private Map<IRBlock, IRBlock> matchFinallySubgraphPeeled(IRBlock troot, IRBlock croot, Set<IRBlock> tblocks, IRBlock rethrowBlk, Map<IRBlock, ExceptionHandler> nestedTemplate, Set<ExceptionHandler> copyNestedHandlers)
     {
@@ -5643,10 +5584,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Parallel walk of the template subtree and a candidate copy: instructions must match pairwise
-     * ({@link #sameFinallyInstr}), branches pair their true/false targets, and every template edge into the
-     * rethrow must correspond to the copy reaching one single continuation. Returns the template-to-copy
-     * block map, or null when the shapes differ.
+     * Parallel walk of the template subtree and a candidate copy.
      */
     private Map<IRBlock, IRBlock> matchFinallySubgraph(IRBlock troot, IRBlock croot, Set<IRBlock> tblocks, IRBlock rethrowBlk, Map<IRBlock, ExceptionHandler> nestedTemplate, Set<ExceptionHandler> copyNestedHandlers)
     {
@@ -5950,8 +5888,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
         return false;
     }
 
-    /** The block comparable-instruction list: terminators and SSA plumbing skipped; the template root
-     * additionally drops its leading caught-exception store. */
+    /**
+     * The block comparable-instruction list.
+     */
     private List<IRInstruction> matchableInstructions(IRBlock b, boolean skipLeadingStore)
     {
         List<IRInstruction> out = new ArrayList<>();
@@ -6093,10 +6032,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code t}'s and {@code c}'s comparable instructions match shape-for-shape under a PROBE
-     * copy of the slot correspondence - a lookahead that decides whether a rethrow-prep template block
-     * still has a copy counterpart (older desugars inline the whole clause tail into each copy) or the
-     * copy already exited to its continuation (the modern fused desugar).
+     * Whether {@code t}'s and {@code c}'s comparable instructions match shape-for-shape under a probe copy
+     * of the slot correspondence.
      */
     private boolean matchableShapeEquals(IRBlock t, IRBlock c, Map<Integer, Integer> slotMap)
     {
@@ -6118,10 +6055,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when every path from {@code b} within the template reaches the rethrow carrying only local
-     * LOADS - the caught exception being staged for its {@code athrow}. Such rethrow PREP has no copy
-     * counterpart (a copy exits to the normal continuation right after the finally body), so the walk
-     * treats it as part of the rethrow boundary.
+     * True when every path from {@code b} within the template reaches the rethrow carrying only local LOADS - the
+     * caught exception being staged for its {@code athrow}.
      */
     private boolean leadsOnlyToRethrow(IRBlock b, Set<IRBlock> tblocks, IRBlock rethrowBlk)
     {
@@ -6174,9 +6109,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Follows {@code b} through blocks with no comparable instructions and a single normal successor -
-     * an already-excised copy of an inner finally, or a plain goto connector - to the block where a
-     * template match can begin. Returns {@code b} itself when it holds instructions.
+     * Follows {@code b} through blocks with no comparable instructions and a single normal successor - an
+     * already-excised copy of an inner finally, or a plain goto connector - to the block where a template match
+     * can begin.
      */
     private IRBlock resolveThroughEmptyChain(IRBlock b)
     {
@@ -6204,10 +6139,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when {@code h}'s handler chain performs nothing but local shuffling before its rethrow - no
-     * call, field access or other observable effect. javac's try-with-resources suppress catch spills the
-     * caught throwable into the suppress flag and rethrows; such a handler is a catch CLAUSE, carries no
-     * finally body, and has no inlined copies for the de-duplication to hunt.
+     * True when {@code h}'s handler chain performs nothing but local shuffling before its rethrow - no call, field
+     * access or other observable effect.
      */
     private boolean isLocalSpillRethrower(ExceptionHandler h)
     {
@@ -6259,10 +6192,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * As {@link #sameFinallyInstr(IRInstruction, IRInstruction)}, but local slots are compared through a
-     * consistent correspondence built during one subgraph match: the template's slot binds to the copy's
-     * on first sight and must agree afterwards. javac gives a nested catch's exception variable a DEEPER
-     * slot inside the finally clause than inside the inlined copies (the handler's own caught exception
-     * occupies one), so raw slot equality wrongly rejects otherwise verbatim copies.
+     * consistent correspondence built during one subgraph match.
      */
     private boolean sameFinallyInstr(IRInstruction a, IRInstruction b, Map<Integer, Integer> slotMap)
     {
@@ -6341,9 +6271,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * As {@link #contiguousTemplateStart} but for the EVIDENCE probe: the run may fill the whole block
-     * (a copy often occupies exactly one block), as long as the block is not a bare rethrow tail - only
-     * an {@code athrow}-terminated whole-block match could mistake the handler itself for a copy.
+     * As {@link #contiguousTemplateStart} but for the EVIDENCE probe.
      */
     private int probeTemplateStart(IRBlock block, List<IRInstruction> template)
     {
@@ -6405,20 +6333,18 @@ public class StatementRecoverer implements RegionRecoveryBridge
     /** Each excised finally copy's root mapped to its continuation, so a later (outer) group's exit hunt
      * resolves through the emptied - possibly branchy - copy to where its own copy begins. */
     private final Map<IRBlock, IRBlock> excisedCopyExits = new HashMap<>();
-    /** Every block emptied by a finally-copy excision; recoveries distinguish these from naturally empty
-     * blocks (a recompiled layout's synthetic goto bridges), which must not change walk behavior. */
+    /**
+     * Every block emptied by a finally-copy excision.
+     */
     private final Set<IRBlock> excisedFinallyCopyBlocks = new HashSet<>();
-    /** Widens the finally de-duplication (arithmetic templates, split-handler chains, shared-exit
-     * coverage) for the staged finally-after-prelude path only; the long-standing call sites keep the
-     * narrower acceptance their gated output is calibrated to. */
+    /**
+     * Widens the finally de-duplication (arithmetic templates, split-handler chains, shared-exit coverage) for the
+     * staged finally-after-prelude path only.
+     */
     private boolean extendedFinallyDedup;
 
     /**
-     * Removes javac's inlined straight-line finally copies from the exits of a protected range so the try body can be
-     * structured natively instead of by the legacy walk (the copies otherwise inflate reaching-condition guards and
-     * flip their orientation across a round trip). All-or-nothing: it verifies a contiguous template run inside every
-     * block that leaves the region before excising any; a shape it cannot fully account for leaves the IR untouched so
-     * the caller keeps the legacy body walk and statement-level fold. Returns true when the body was de-duplicated.
+     * Removes javac's inlined straight-line finally copies from the exits of a protected range.
      */
     private boolean dedupStraightLineFinally(List<ExceptionHandler> regionHandlers)
     {
@@ -6509,10 +6435,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The contiguous (straight-line template) de-duplication for one rethrower group: every exit of the
-     * group's protected ranges must carry a contiguous copy of the template (in the leaving block or the
-     * edge's target), and all copies are excised together. Returns false - leaving the IR untouched - for
-     * a branchy template or an uncovered exit.
+     * The contiguous (straight-line template) de-duplication for one rethrower group.
      */
     private boolean dedupContiguousGroup(List<ExceptionHandler> rethrowers)
     {
@@ -6736,16 +6659,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers a try body as a wholesale region hand-off: the enclosing try (and any nested try) is already
-     * marked processed, so the reaching-condition engine structures the handler-free body or declines to the
-     * legacy walk. It marks the body blocks processed via the shared context; the caller's continuation logic
-     * keys off the try-end offset and those marks, not this local visited set, so the engine need not populate
-     * it.
-     *
-     *When {@code skipReachingConditions} is set the body bypasses the engine entirely. A finally's inlined
-     * copies are still present when the engine would structure the body (they are folded out afterward), which
-     * inflates a guard's exit arm and flips the guard's orientation across a round trip; the legacy walk orients
-     * guards on the un-inflated body and is a round-trip fixed point there.
+     * Recovers a try body as a wholesale region hand-off.
      */
     private List<Statement> recoverBlocksForTry(IRBlock startBlock, Set<IRBlock> stopBlocks, Set<IRBlock> visited, boolean skipReachingConditions)
     {
@@ -7094,11 +7008,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The end offset of a try/synchronized region, widened across every exception-table entry sharing
-     * this handler block. javac splits one protected range into several entries around instructions that
-     * exit it (a return/break between protected sections, e.g. per {@code monitorexit} in a synchronized
-     * block); the continuation lies past the LAST entry's end, so using the passed entry's own {@code
-     * tryEnd} would land on a block still inside the region. Mirrors the range-merge in recoverTryCatch.
+     * The end offset of a try/synchronized region, widened across every exception-table entry sharing this handler
+     * block.
      */
     private int mergedTryEndOffset(ExceptionHandler handler)
     {
@@ -7136,11 +7047,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The membership closure of a finally family: the blocks of its protected ranges and handlers, every
-     * nested handler whose whole protected range lies inside, and every block all of whose predecessors
-     * already belong. The unprotected-return carve is applied separately by the caller, so membership can
-     * be tested for an exit before any block is freed.
-     *
+     * The membership closure of a finally family.
      */
     private Set<IRBlock> buildFamilyClosure(List<int[]> protectedRanges, Set<IRBlock> familyHandlers,
             int endOff)
@@ -7223,8 +7130,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Removes from {@code closure} every return block outside {@code protectedRanges}: a gap return the
-     * exits converge on is the construct's join, never its interior.
+     * Removes from {@code closure} every return block outside {@code protectedRanges}.
      */
     private void carveUnprotectedReturns(Set<IRBlock> closure, List<int[]> protectedRanges)
     {
@@ -7267,9 +7173,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code block} opens with a repeat of the body of any handler in {@code familyHandlers} - the
-     * form an inlined finally copy takes on a path outside the family's protected ranges. The handler's
-     * own leading store of the caught exception is not part of the copied body.
+     * Whether {@code block} opens with a repeat of the body of any handler in {@code familyHandlers} - the form an
+     * inlined finally copy takes on a path outside the family's protected ranges.
      */
     private boolean repeatsFamilyHandlerBody(IRBlock block, Set<IRBlock> familyHandlers)
     {
@@ -7299,8 +7204,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The instructions of {@code handler} that an inlined copy of it repeats: its own body without the
-     * phis and without the leading store that binds the caught exception.
+     * The instructions of {@code handler} that an inlined copy of it repeats.
      */
     private List<IRInstruction> handlerBodyTemplate(IRBlock handler)
     {
@@ -7463,8 +7367,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Emits declarations for phi variables at method scope.
-     * Only phi variables (values that merge from multiple control flow paths) need
-     * early declaration. Other variables are declared inline where they're defined.
      */
     private final Set<Integer> phiSlots = new HashSet<>();
 
@@ -7725,10 +7627,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The LocalVariableTable declared type at a store, when it is a narrow primitive (char/byte/short/boolean)
-     * - the sub-int types that int-shaped bytecode would otherwise lose. A store makes its slot live at the
-     * following pc, so the entry's scope typically begins just after the store; a small forward window catches
-     * it. Returns null when there is no such entry (no debug info, or the slot holds a wider type there).
+     * The LocalVariableTable declared type at a store, when it is a narrow primitive (char/byte/short/boolean) -
+     * the sub-int types that int-shaped bytecode would otherwise lose.
      */
     private String narrowLvtDescriptor(int slot, int offset)
     {
@@ -7754,7 +7654,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Emits a phi variable declaration with default value.
-     * Uses unified type from all incoming phi values.
      */
     private void emitPhiDeclaration(PhiInstruction phi, List<Statement> statements, Set<String> declaredNames, Set<IRBlock> handlerBlocks)
     {
@@ -7918,9 +7817,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The single distinct phi operand whose definition dominates the phi's block - the value the variable
-     * holds on entry to the merge, before any branch reassigns it. Null when no operand, or more than one
-     * distinct value, dominates. The same value arriving from several predecessors still counts as one.
+     * The single distinct phi operand whose definition dominates the phi's block - the value the variable holds on
+     * entry to the merge, before any branch reassigns it.
      */
     private Value findDominatingOperand(PhiInstruction phi)
     {
@@ -7947,9 +7845,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the entry input genuinely enters the loop from outside: its definition dominates the
-     * phi's block. A merge phi inside the loop body (e.g. one whose non-recursive incoming is a
-     * mid-loop assignment) has a non-dominating "entry" that must not seed the slot's declaration.
+     * Whether the entry input genuinely enters the loop from outside: its definition dominates the phi's block.
      */
     private boolean entryDominatesPhi(Value entryInput, PhiInstruction phi)
     {
@@ -7989,8 +7885,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers a constant-backed entry value as a literal, bypassing slot materialization. Returns null
-     * when the entry input is not constant-backed, leaving the declaration's default initializer.
+     * Recovers a constant-backed entry value as a literal, bypassing slot materialization.
      */
     private Expression recoverEntryConstant(Value entryInput, SourceType type)
     {
@@ -8081,13 +7976,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Checks if a PHI instruction corresponds to a for-loop induction variable.
-     * Such PHIs should not have their declaration emitted early since the variable
-     * will be declared inline in the for-loop initialization.
-     * Uses two checks:
-     * 1. Direct PHI result marking (always applies)
-     * 2. Local index check, but ONLY if the PHI is in a for-loop header block
-     *    (this prevents slot reuse bugs where a later PHI for the same slot
-     *    would be incorrectly skipped)
      */
     private boolean isForLoopInductionPhi(PhiInstruction phi)
     {
@@ -8152,10 +8040,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when {@code value} is stored to the slot the {@code phi} represents - a branch's own StoreLocal
-     * already assigns the phi variable, so materializing the phi value as a separate `phiVar = value` copy
-     * would duplicate that store (e.g. javac's `s = new X(); result = s` where both s and result get one
-     * `new X` value: the result store assigns the phi, the extra phi copy must not be emitted).
+     * True when {@code value} is stored to the slot the {@code phi} represents.
      */
     private boolean isStoredToPhiSlot(SSAValue value, PhiInstruction phi)
     {
@@ -8175,11 +8060,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether a freshly-constructed {@code value} genuinely belongs to the variable {@code phiVarName}
-     * that a phi merges it into. A JVM slot reused for two variables can leave a value from one
-     * partition ({@code max}) feeding the phi of the other ({@code child}); materializing it under the
-     * phi's name would emit a wrong-typed assignment (e.g. {@code child = new Vector3f()}). The value's
-     * own store partition is authoritative, so require it to match. Unknown partitions do not veto.
+     * Whether a freshly-constructed {@code value} genuinely belongs to the variable {@code phiVarName} that a phi
+     * merges it into.
      */
     private boolean valueBelongsToPhiVariable(SSAValue value, String phiVarName)
     {
@@ -8203,9 +8085,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Whether a StoreLocal consumes {@code value} under the same recovered name as {@code varName}.
-     * Such a store renders the value's expression itself (as a declaration or assignment), so a
-     * phi-copy materialization of the same expression under that name would run its side effects a
-     * second time - the store is the single materialization and the copy must be suppressed.
      */
     private boolean isStoredToVariableNamed(SSAValue value, String varName)
     {
@@ -8225,8 +8104,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * The local slot a value belongs to - its parameter slot, the slot it was stored to, or the slot of its
-     * defining local load/store/phi - or -1 when it is not a local-slot value. Lets a variable's role be
-     * decided from its slot layout rather than from its (now real) recovered name.
+     * defining local load/store/phi - or -1 when it is not a local-slot value.
      */
     private int slotOfValue(SSAValue value)
     {
@@ -8270,9 +8148,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code block} is reached from a catch handler - i.e. one of its predecessors lies in some
-     * exception handler's region. Used to tell a shared try/catch continuation (the catch jumps to it) from
-     * an ordinary sequence terminator, so the former is recovered after the try/catch rather than inside it.
+     * Whether {@code block} is reached from a catch handler - i.e. one of its predecessors lies in some exception
+     * handler's region.
      */
     private boolean isReachedFromCatchHandler(IRBlock block)
     {
@@ -8388,10 +8265,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Collects exception handler ENTRY blocks only.
-     * Only the handler entry block should be skipped for phi declarations,
-     * as it contains the exception-related phi (for the caught exception).
-     * Normal control flow merge blocks that are reachable from handlers
-     * should NOT be skipped - they contain regular value phis that need declaration.
      */
     private Set<IRBlock> collectExceptionHandlerBlocks(IRMethod method)
     {
@@ -8415,7 +8288,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Sorts SSA values so that values are declared after their dependencies.
-     * Uses topological sort based on def-use chains.
      */
     private List<SSAValue> sortByDependencies(Set<SSAValue> values)
     {
@@ -8461,7 +8333,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Checks if an SSA value is an intermediate value that should be inlined.
-     * Intermediate values are those used only by other instructions (not stored to fields/arrays/locals).
      */
     private boolean isIntermediateValue(SSAValue value)
     {
@@ -8502,8 +8373,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Whether the object a constructor call built is used by nothing else, so the call stands alone as a
-     * statement. The {@code <init>} invoke itself (and the {@code dup} the allocation is paired through) are
-     * not uses that keep the value alive for anything later.
+     * statement.
      */
     private boolean isDiscardedAllocation(SSAValue newValue, InvokeInstruction init)
     {
@@ -8522,10 +8392,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether a call result must be forced into a named temporary instead of inlined. Only multi-use
-     * receivers qualify: a single-use value is always inlined at its sole use site by the expression
-     * recoverer, so materializing it here is futile and leaves an orphaned, re-inlined statement once
-     * dead-variable elimination strips the unread declaration.
+     * Whether a call result must be forced into a named temporary instead of inlined.
      */
     private boolean shouldStoreMethodResult(InvokeInstruction invoke, SSAValue result)
     {
@@ -8608,7 +8475,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Checks if an SSA value is used exactly once and that use is a FieldAccessInstruction store.
-     * Such values can be safely inlined into the field assignment.
      */
     private boolean isSingleUsePutField(SSAValue value)
     {
@@ -8635,9 +8501,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Checks if an SSA value is used by a StoreLocalInstruction.
-     * In this case, the instruction producing the value should be skipped
-     * and let StoreLocalInstruction handle the emission. The StoreLocal
-     * will create the local variable, and other uses will reference that local.
      */
     private boolean isUsedByStoreLocal(SSAValue value)
     {
@@ -8675,7 +8538,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Gets the PHI instruction that uses this value, if any.
-     * Returns the first PHI instruction found that uses this value.
      */
     private PhiInstruction getPhiUsingValue(SSAValue value)
     {
@@ -8737,9 +8599,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * A phi is degenerate when all its incoming values are the same {@link Value} (or it has a
-     * single incoming). Such a phi is redundant - it is not a genuine control-flow merge of
-     * distinct definitions - and must not be treated as a variable that needs its own assignment.
+     * A phi is degenerate when all its incoming values are the same {@link Value} (or it has a single incoming).
      */
     private static boolean isDegeneratePhi(PhiInstruction phi)
     {
@@ -8849,9 +8709,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True if {@code value} is consumed solely as the stored value of a single array
-     * store ({@code arr[i] = value}). Such a value should be inlined into that store
-     * rather than also emitted as a standalone (result-discarding) statement.
+     * True if {@code value} is consumed solely as the stored value of a single array store ({@code arr[i] =
+     * value}).
      */
     private boolean isSingleUseArrayStoreValue(SSAValue value)
     {
@@ -8867,7 +8726,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Gets the local variable name from the StoreLocalInstruction that stores this value.
-     * Used to emit array declarations at the right position with the correct name.
      */
     private String getLocalNameFromStoreLocal(SSAValue value)
     {
@@ -8999,8 +8857,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when {@code fieldLoad}'s receiver matches the implicit (null) receiver the self-store
-     * recovery emits: a static field, or an instance field accessed on {@code this}.
+     * True when {@code fieldLoad}'s receiver matches the implicit (null) receiver the self-store recovery emits.
      */
     private boolean selfStoreFieldReceiverIsImplicit(FieldAccessInstruction fieldLoad)
     {
@@ -9017,13 +8874,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when {@code result} (a field load feeding {@code targetPhi}) is written by a store_local to
-     * a source variable other than the phi's own. The store is then the value's real assignment, and a
-     * phi copy naming the phi's variable would be a spurious cross-variable one - either a redundant
-     * advance (`e = e.next` beside the store `e = next` in the coalesced `next = e.next; e = next`
-     * idiom) or a type-punned slot reuse (`i = model` where the reused JVM slot later holds the
-     * {@code sceneModel} Spatial). Suppress the copy; the store owns the value. Names come from the
-     * reaching-definition partition, which splits a reused slot into its distinct source variables.
+     * True when {@code result} (a field load feeding {@code targetPhi}) is written by a store_local to a source
+     * variable other than the phi's own.
      */
     private boolean fieldLoadValueBelongsToOtherVariable(SSAValue result, PhiInstruction targetPhi)
     {
@@ -9147,7 +8999,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Checks if an expression is a default value (0, false, null, 0L, 0.0, etc.).
-     * Used to skip redundant assignments that re-initialize variables to their default values.
      */
     private boolean isDefaultValue(Expression expr)
     {
@@ -9212,10 +9063,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers a wholesale region hand-off - an exception-scaffolding piece (the code before a try, a try
-     * body, or the continuation after a try/catch) - preferring the RC engine, then the legacy walk. Such
-     * a piece is handed off in full rather than being a sub-region of an in-progress schema structuring,
-     * so the RC engine may structure it without interleaving with the legacy walk.
+     * Recovers a wholesale region hand-off - an exception-scaffolding piece (the code before a try, a try body, or
+     * the continuation after a try/catch) - preferring the RC engine, then the legacy walk.
      */
     private List<Statement> recoverRegionHandoff(IRBlock startBlock, Set<IRBlock> stopBlocks)
     {
@@ -9282,10 +9131,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code info}'s loop is CUT by the walk's stop blocks - some loop block (typically the
-     * latch beyond a try's protected range) is a stop. Structuring the loop from inside such a walk
-     * would absorb blocks an outer recovery owns; the header is emitted as a plain block instead and
-     * the outer recovery closes the loop.
+     * Whether {@code info}'s loop is CUT by the walk's stop blocks - some loop block (typically the latch beyond a
+     * try's protected range) is a stop.
      */
     private boolean loopCutByStops(RegionInfo info, Set<IRBlock> stops)
     {
@@ -9500,10 +9347,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The blocks that belong exclusively to catch code: each handler's entry block plus every block it
-     * dominates. Unlike the handler-REACHABLE set - which a fall-through or looping catch extends into the
-     * normal flow it rejoins - this set can never contain a block normal control reaches, so it is safe as
-     * a stop set for boundary-strict recoveries.
+     * The blocks that belong exclusively to catch code: each handler's entry block plus every block it dominates.
      */
     private Set<IRBlock> catchExclusiveBlocks(List<ExceptionHandler> handlers)
     {
@@ -10170,9 +10014,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code h} is a finally's rethrow scaffold by shape AND provenance: the rethrow shape,
-     * a finally-compatible catch type, and either a true catch-any entry (source cannot express one)
-     * or a verbatim inlined copy of the handler body somewhere outside its protected ranges.
+     * Whether {@code h} is a finally's rethrow scaffold by shape AND provenance.
      */
     private boolean isEvidencedFinally(ExceptionHandler h)
     {
@@ -10197,11 +10039,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
 
     /**
-     * Recovers a staged region whose try at {@code tryStart} carries a finally, by delegating the try and
-     * its continuation to the outer-handler scaffolding (which de-duplicates the inlined finally copies at
-     * the CFG level and builds the clause). The prefix before the try is recovered first, natively. Returns
-     * null - keeping the caller's decline - when the scaffolding's outermost handler for the try does not
-     * begin exactly at the staged boundary, was already consumed, or protects a try with its own catch.
+     * Recovers a staged region whose try at {@code tryStart} carries a finally, by delegating the try and its
+     * continuation to the outer-handler scaffolding.
      */
     private List<Statement> recoverFinallyStage(IRBlock startBlock, IRBlock tryStart, Set<IRBlock> stopBlocks)
     {
@@ -10272,8 +10111,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
         return out;
     }
 
-    /** Whether a store is a handler's caught-exception spill: its value chains through copies to the
-     * raw exception (a definition-less SSA value), not to anything the finally body computed. */
+    /**
+     * Whether a store is a handler's caught-exception spill.
+     */
     private boolean isExceptionSpill(StoreLocalInstruction store)
     {
         Value v = store.getValue();
@@ -10364,11 +10204,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Completes the node decode for a finally-protected try (with or without sibling user catches):
-     * de-duplicates the rethrower's inlined straight-line copies from the region's exits (declining when
-     * the template cannot account for every exit), consumes every same-start handler's chain, and joins at
-     * the single normal continuation the deduplicated exits converge on. The descriptor keeps the caller's
-     * handler pick, so the delegate recovery matches the legacy walk's flat clause folding.
+     * Completes the node decode for a finally-protected try (with or without sibling user catches).
      */
     private TryNodeDescriptor decodeFinallyTryNode(IRBlock block, ExceptionHandler h, Set<IRBlock> consumed, DominatorTree dt)
     {
@@ -10758,12 +10594,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Resolves a continuation candidate through bare goto shells: an empty block (or one whose only
-     * instruction is its goto terminator) with a single successor is a jump pad in front of the real
-     * continuation, not the continuation itself. Bounded to reject pathological chains. When a collector
-     * is given, each traversed shell is added to it - a shell on a try node's exit path belongs to the
-     * node's consumed set, or it would dangle outside both the node and the region and break the model's
-     * predecessor mapping for the join.
+     * Resolves a continuation candidate through bare goto shells.
      */
     private IRBlock resolveThroughGotoShells(IRBlock b)
     {
@@ -10791,11 +10622,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether an exit chain from the construct is a per-exit tail the DELEGATE recovery may own. Two
-     * sound cases: the chain is reachable ONLY from the consumed window (arbitrary code, exclusively the
-     * construct's), or it is a strictly BARE return chain (nothing but local loads/copies feeding a
-     * return - duplicating a bare return on another path is idempotent). A shared chain carrying real
-     * code is a genuine join: treating it as a tail duplicates or drops the shared continuation.
+     * Whether an exit chain from the construct is a per-exit tail the DELEGATE recovery may own.
      */
     private boolean delegateOwnsExitTail(IRBlock exit, Set<IRBlock> consumed, ExceptionHandler rethrower)
     {
@@ -10818,11 +10645,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * An exit chain that is an inlined finally COPY feeding a return: every path branches only through
-     * local loads/stores/copies and calls that also occur in the rethrower's clause (the finally
-     * template), ending in returns. Such a tail duplicates only the finally's own effect on its exit
-     * path - exactly what the desugar itself does - so the delegate owns it even when the trailing
-     * return is shared with paths outside the construct.
+     * An exit chain that is an inlined finally COPY feeding a return.
      */
     private boolean isFinallyCopyReturnTail(IRBlock exit, ExceptionHandler rethrower)
     {
@@ -10900,10 +10723,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * A straight terminal tail: blocks chained through single normal successors (excised copy shells
-     * skipped) into a return or throw, with no branching. The walks re-emit such a converging
-     * terminal once per reaching path, so a region offer may absorb it as its own arm's terminal;
-     * the duplicate emissions cover exclusive paths and each executes at most once.
+     * A straight terminal tail.
      */
     private boolean isTerminalTail(IRBlock b)
     {
@@ -11092,10 +10912,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the handler's declared type is one javac (catch-any) or the recompiler
-     * ({@code Throwable}) uses for a finally's synthetic rethrow handler. A NARROWER typed catch that
-     * rethrows ({@code catch (IllegalArgumentException ex) { throw ex; }}) is a genuine user clause,
-     * not finally scaffolding.
+     * Whether the handler's declared type is one javac (catch-any) or the recompiler ({@code Throwable}) uses for
+     * a finally's synthetic rethrow handler.
      */
     private boolean isFinallyCatchType(ExceptionHandler h)
     {
@@ -11104,8 +10922,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the block sits inside an enclosing loop's body - i.e. some loop containing it has a DIFFERENT
-     * header block. A block that is itself a loop header (a try that wraps the loop) is not "inside" the body.
+     * Whether the block sits inside an enclosing loop's body - i.e. some loop containing it has a DIFFERENT header
+     * block.
      */
     private boolean isInsideLoopBody(IRBlock block)
     {
@@ -11140,9 +10958,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Offers a region with no analyzer-known bound. Every path may end inside it (the walk has no
-     * continuation), or the region may flow into exactly ONE stop - then it is really a bounded
-     * construct whose join the analyzer did not name, and the walk resumes at that exit.
+     * Offers a region with no analyzer-known bound.
      */
     private OfferResult offerTerminalRegion(IRBlock entry, Set<IRBlock> offeredStops)
     {
@@ -11196,9 +11012,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Releases stops the offered construct owns internally: an unprocessed try's start (the engine
-     * models it as a node) and a bare return tail (duplication-idempotent), both strictly dominated
-     * by the entry and distinct from the bound.
+     * Releases stops the offered construct owns internally.
      */
     private void releaseInternalStops(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound)
     {
@@ -11217,9 +11031,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code b} starts a protected range of a CLAIMED handler still being recovered (claimed
-     * but its clause not yet emitted). Such a range boundary is the in-progress construct's internal
-     * scaffolding - javac splits ranges around early exits - not a nested try the offer must stop at.
+     * Whether {@code b} starts a protected range of a CLAIMED handler still being recovered (claimed but its
+     * clause not yet emitted).
      */
     private boolean startsClaimedHandlerRange(IRBlock b)
     {
@@ -11244,10 +11057,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether the construct spanned from {@code entry} to {@code merge} can hold a surviving inlined
-     * finally copy: every copy precedes an exit from the protected range, so a span whose reachable
-     * blocks (up to the merge and the walk's stops) carry no return/throw terminator - the merge
-     * itself included - is copy-free and safe to structure while copies survive elsewhere.
+     * Whether the construct spanned from {@code entry} to {@code merge} can hold a surviving inlined finally copy.
      */
     private boolean regionIsCopyFree(IRBlock entry, IRBlock merge, Set<IRBlock> stopBlocks)
     {
@@ -11366,10 +11176,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether a probed exit set satisfies the offer's bound contract: an unbounded offer accepts only
-     * empty exits; a bounded one accepts exactly the bound - or a single goto-only shell fronting it
-     * (a loop latch pad the enclosing recovery owns; the region falls out into it and the walk resumes
-     * at the bound just as after the schema dispatch).
+     * Whether a probed exit set satisfies the offer's bound contract.
      */
     private boolean boundSatisfied(Set<IRBlock> exits, IRBlock bound)
     {
@@ -11390,13 +11197,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * The failed-probe retry shared by the bounded and terminal offers: releases extra exits that are
-     * an in-progress construct's own boundaries - a claimed handler range's end, its scaffolding-added
-     * successor, a dominated terminal tail, or anything dominated by an already-released block - and
-     * FLAGS a shared terminal tail the entry does not dominate for the engine's boundary-tail
-     * duplication (it stays a stop). Re-probes after each round; returns the final exit set (null when
-     * a probe declined). {@code offeredStops} and {@code flaggedTails} are mutated in place; the caller
-     * owns clearing the engine's flagged-tail set after the offer.
+     * The failed-probe retry shared by the bounded and terminal offers.
      */
     private Set<IRBlock> retryOfferReleases(IRBlock entry, Set<IRBlock> offeredStops, IRBlock bound, Set<IRBlock> exits, Set<IRBlock> flaggedTails)
     {
@@ -11489,9 +11290,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code b} directly follows a CLAIMED handler's protected range (a successor of its
-     * exclusive try-end block, claimed but not yet emitted) - a stop the scaffolding added for that
-     * in-progress construct's own boundary, which an offer spanning the construct may cross.
+     * Whether {@code b} directly follows a claimed handler's protected range.
      */
     private boolean followsClaimedHandlerRange(IRBlock b)
     {
@@ -11633,11 +11432,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * True when a field-load value is read again after the same field is reassigned before that use.
-     * A field read is not an SSA value backed by a register but a re-read of mutable memory, so
-     * inlining it at a later use would observe the written value, not the loaded one. This is javac's
-     * {@code arr[this.f++] = v} shape: the store index is the pre-increment field value, but the
-     * putfield that increments the field is emitted first. Restricted to a single block, where
-     * instruction order is program order, so the check needs no dominance reasoning.
      */
     private boolean fieldLoadClobberedBeforeUse(FieldAccessInstruction load, SSAValue result)
     {
@@ -11713,10 +11507,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     private final java.util.Map<IRBlock, Boolean> blockHasFieldStoreCache = new java.util.IdentityHashMap<>();
 
     /**
-     * Whether {@code name} is one of the per-value temporaries this recovery mints for a value with no variable
-     * of its own ({@code v} followed by an id) - so a store may take its slot's name over it. Matched against
-     * that whole generated form rather than tested for a leading {@code v}, which also claimed any recovered
-     * variable that merely happens to be called {@code value} or {@code visited}.
+     * Whether {@code name} is one of the per-value temporaries this recovery mints for a value with no variable of
+     * its own ({@code v} followed by an id) - so a store may take its slot's name over it.
      */
     private boolean isPerValueTemporaryName(String name)
     {
@@ -11735,12 +11527,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers the store consuming {@code result} at the CALL's own position. Bytecode may keep a call
-     * result on the stack across another effect and store it only afterwards; recovering the store at its
-     * own offset then prints the call after that effect, in the opposite order to the one the program
-     * performs. Emitting the assignment where the call happens restores the order without a temporary.
-     * In-place only when the move is invisible: the single use is a store in the same block, and nothing
-     * in between touches the store's slot or names its variable. Returns null otherwise.
+     * Recovers the store consuming {@code result} at the CALL's own position.
      */
     private Statement storeCarriedCallInPlace(InvokeInstruction invoke, SSAValue result)
     {
@@ -11872,8 +11659,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Declares {@code value} into a temporary under {@code name} and binds later reads to it, pinning the
-     * expression to this position in the statement sequence. Returns null when the value has no recoverable
-     * type or the name is already taken, leaving the caller's default path.
+     * expression to this position in the statement sequence.
      */
     private Statement materializeIntoTemporary(SSAValue result, Expression value, String name)
     {
@@ -11898,9 +11684,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * A name for a captured call result, taken from the call itself: {@code getEnteredPassword()} names its
-     * temporary {@code enteredPassword}. Deriving it from the callee rather than the SSA value keeps it the
-     * same whichever bytecode layout the method was compiled from, which an id-based name is not. Returns
-     * null when no stable name is available, leaving the caller on its existing path.
+     * temporary {@code enteredPassword}.
      */
     private String temporaryNameForCall(InvokeInstruction invoke)
     {
@@ -11940,13 +11724,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     private final Set<SSAValue> splitIncrementTemps = new HashSet<>();
 
     /**
-     * Splits the live range of a self-increment's pre-value when it is read again, later in the same
-     * block, after the increment store. A loop induction and its {@code + 1} coalesce to one source name
-     * ({@code i}); {@code f(i++)} reads the pre-increment value but the store {@code i = i + 1} is
-     * emitted first, so re-rendering that read as {@code i} would observe the incremented value. The
-     * pre-value is captured into a temporary before the store and the post-store reads rewired to it,
-     * yielding {@code int t = i; i = i + 1; f(t);}. The copy carries a temp name; its declaration is
-     * emitted when the inserted {@link CopyInstruction} is recovered.
+     * Splits the live range of a self-increment's pre-value when it is read again, later in the same block, after
+     * the increment store.
      */
     private void splitClobberedIncrementReads(IRMethod method)
     {
@@ -12917,11 +12696,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when the slot written by {@code instr} (a StoreLocal, or the definition a StoreLocal in the same
-     * block consumes as {@code storedValue}) is read inside an exception handler protecting blocks reachable
-     * from it. Such a handler observes the slot at the fault point, so a default init to the slot is LIVE on
-     * the exception path even when normal-flow dominance says it is redundant - eliding it either changes
-     * the handler's read or strands the variable's declaration inside the try the handler covers.
+     * True when the slot written by {@code instr} (a StoreLocal, or the definition a StoreLocal in the same block
+     * consumes as {@code storedValue}) is read inside an exception handler protecting blocks reachable from it.
      */
     private boolean slotReadByReachableHandler(IRInstruction instr, SSAValue storedValue)
     {
@@ -13025,10 +12801,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     private Map<ExceptionHandler, Set<Integer>> handlerReadSlots;
 
     /**
-     * True when a non-default value is written to {@code store}'s slot on the path reaching it - either earlier
-     * in its own block or in a dominating block (the nearest such store is the value the slot holds entering
-     * {@code store}). When so, a default-valued store to the slot is a real re-initialization, not a redundant
-     * repeat of the declaration's default, and must be kept.
+     * True when a non-default value is written to {@code store}'s slot on the path reaching it - either earlier in
+     * its own block or in a dominating block.
      */
     private boolean hasDominatingNonDefaultStore(StoreLocalInstruction store)
     {
@@ -13228,10 +13002,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
 
     /**
-     * Folds javac's try-with-resources suppress scaffolding out of a finally body. The exception-path
-     * clause guards each close with {@code try { r.close(); } catch (Throwable t) { primary.addSuppressed(t); }},
-     * but {@code primary} is the clause's caught exception, which a source-level {@code finally} cannot
-     * name; the recovered finally keeps the plain close, matching the single-resource convention.
+     * Folds javac's try-with-resources suppress scaffolding out of a finally body.
      */
     private Statement unwrapSuppressScaffold(Statement stmt)
     {
@@ -13291,12 +13062,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
 
     /**
-     * A retired schema recoverer's dispatch arm: every region of the kind now structures through
-     * the reaching-condition engine (natively, via the loop-cut guard, or via the opaque try node).
-     * A dispatch arm still classifying a region as one signals a routing gap to fix on the engine
-     * side, so it fails loudly rather than degrading silently. {@link MethodRecoverer} catches the
-     * typed signal for a handler-free method and re-recovers it as a faithful dispatch loop - the
-     * totality fallback for shapes no structured route owns (e.g. irreducible flow).
+     * A retired schema recoverer's dispatch arm.
      */
     private RetiredSchemaRecoveryException retiredSchemaRecovery(String kind, IRBlock header)
     {
@@ -13473,11 +13239,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * If {@code value} is a single-use operand of a phi whose variable is already declared - a
-     * structured switch-expression / if-merge - returns the {@code phiVar = expr} assignment that
-     * destructs the phi at this predecessor block. The structured recovery path has no
-     * {@code lowerPhisOnEdge} step, so without this a non-constant arm value (e.g. a string concat)
-     * feeding the merge phi would be silently dropped. Returns null otherwise (caller caches).
+     * If {@code value} is a single-use operand of a phi whose variable is already declared - a structured
+     * switch-expression / if-merge - returns the {@code phiVar = expr} assignment that destructs the phi at this
+     * predecessor block.
      */
     private Statement phiCopyForDeclaredMerge(SSAValue value, Expression expr)
     {
@@ -13519,9 +13283,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Reconstructed {@code switch} on a {@code String}. javac lowers it to two phases: a {@code switch} on
-     * {@code s.hashCode()} whose cases run {@code s.equals("literal")} guards and, on a match, assign a dense
-     * index to a synthetic local, followed by a second {@code switch} on that index holding the real bodies.
+     * Reconstructed {@code switch} on a {@code String}.
      */
     private static final class StringSwitchInfo
     {
@@ -13905,8 +13667,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     private static final String DISPATCH_LABEL = "$dispatch$";
 
-    /** Invoke names that legitimately have no MethodCallExpr in faithful output because the
-     * recovery folds them into syntax (string concat -&gt; +, boxing, for-each, constructors -&gt; new). */
+    /**
+     * Invoke names the recovery folds into syntax, so faithful output carries no call expression for them.
+     */
     private static final Set<String> FOLDED_CALL_NAMES = new HashSet<>(Arrays.asList(
         "<init>", "<clinit>", "append", "toString", "valueOf",
         "intValue", "longValue", "doubleValue", "floatValue", "booleanValue",
@@ -13918,12 +13681,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
         "hashCode", "equals"));
 
     /**
-     * Completeness invariant: reports whether any observable operation reachable from the entry in
-     * the bytecode is absent from the recovered source AST. This is the authoritative signal that
-     * the structured recovery dropped an operation - by any mechanism (never-visited block,
-     * irreducible region, or a block recovered then discarded during region assembly). Compares the
-     * set of reachable IR method calls (keyed owner.name, excluding folded-into-syntax calls)
-     * against the calls actually present in {@code body}.
+     * Completeness invariant.
      *
      * @param body the recovered method body to audit
      * @return true if a reachable call is missing from the body
@@ -13996,10 +13754,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers the whole method as a structured dispatch loop
-     * ({@code int $pc$ = entry; $dispatch$: while(true){ switch($pc$){ case L: ...; $pc$ = T; break; } }}),
-     * which is complete and faithful for any (reducible or irreducible) CFG. Used as the fallback
-     * when {@link #hasDroppedOperations(BlockStmt)} is true; must run on a fresh context.
+     * Recovers the whole method as a structured dispatch loop.
      *
      * @return the method body as a dispatch loop, or an empty block when the method has no entry
      */
@@ -14033,10 +13788,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Pre-declares, at method scope, every non-phi local stored within the dispatch block set so a
-     * declaration inside one switch case is neither out of scope nor "might not be initialized" in
-     * a sibling case. Mirrors recoverStoreLocal's naming so subsequent stores become assignments
-     * (the decl-vs-assign decision keys on isDeclared).
+     * Pre-declares, at method scope, every non-phi local stored within the dispatch block set so a declaration
+     * inside one switch case is neither out of scope nor "might not be initialized" in a sibling case.
      */
     private void hoistDispatchLocals(List<IRBlock> blocks, List<Statement> statements)
     {
@@ -14126,9 +13879,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Translates a block's terminator into the dispatch-loop case tail: phi copies on the taken
-     * edge, the {@code $pc$ = target} assignment, then a break. Return/throw blocks are already
-     * emitted by recoverSimpleBlock and need no tail.
+     * Translates a block's terminator into the dispatch-loop case tail.
      */
     private List<Statement> dispatchCaseTail(IRBlock block, Map<IRBlock, Integer> pc, String pcName)
     {
@@ -14206,9 +13957,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * SSA destruction on a CFG edge: for each phi at {@code succ}, assign the phi variable the
-     * value coming from {@code pred}, placed before the {@code $pc$} update so it runs when the
-     * edge is taken. Reuses the phi result's already-bound name and method-scope declaration.
+     * SSA destruction on a CFG edge.
      */
     @Override
     public List<Statement> lowerPhisOnEdge(IRBlock pred, IRBlock succ)
@@ -14217,10 +13966,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * As {@link #lowerPhisOnEdge}, but only for the loop's for-induction counter phis - the ones
-     * {@link #emitPhiDeclaration} deliberately does not declare (their init is realized here or folded into
-     * the for-init). Used for a region-entry loop's out-of-region pre-header edge, where emitting every phi
-     * copy would re-emit a non-counter init the surrounding recovery already kept, duplicating it.
+     * As {@link #lowerPhisOnEdge}, but only for the loop's for-induction counter phis - the ones {@link
+     * #emitPhiDeclaration} deliberately does not declare.
      */
     @Override
     public List<Statement> lowerInductionPhiInitsOnEdge(IRBlock pred, IRBlock succ)
@@ -14295,10 +14042,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether a phi edge copy of {@code incoming} into a variable of type {@code target} is type-
-     * coherent: primitives only into primitives, and references only when one side is assignable to
-     * the other (either direction - the unified type may be narrower than the incoming's static
-     * type). Unresolvable classes are assumed compatible.
+     * Whether a phi edge copy of {@code incoming} into a variable of type {@code target} is type- coherent.
      */
     private boolean copyTypeCompatible(SourceType target, Value incoming)
     {
@@ -14340,9 +14084,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Pool lookup tolerant of the source-dotted spelling of a nested class: tries the slashed name,
-     * then successively rewrites separators to {@code $} from the right ({@code a/b/Outer/Inner} -&gt;
-     * {@code a/b/Outer$Inner}).
+     * Pool lookup tolerant of the source-dotted spelling of a nested class.
      */
     private ClassFile poolClassFor(String name)
     {
@@ -14417,11 +14159,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Copies for {@code succ}'s operand-stack merge phis whose incoming on this edge no instruction in
-     * {@code pred} produces. {@link #phiCopyForDeclaredMerge} materializes an arm's contribution while
-     * recovering the instruction that computes it, which covers an arm that computes something; an arm whose
-     * contribution is a value computed elsewhere (the {@code k} of {@code cond ? k : -k}) has no such
-     * instruction, so without this the merge reads whatever the temporary last held.
+     * Copies for {@code succ}'s operand-stack merge phis whose incoming on this edge no instruction in {@code
+     * pred} produces.
      *
      * @param pred the source block of the edge
      * @param succ the merge block whose stack phis are lowered
@@ -14598,9 +14337,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Folds a three-way-compare result tested against zero into a direct relational comparison:
-     * {@code lcmp/fcmp/dcmp(a, b) <branchCond> 0} becomes {@code a <branchCond> b}. Returns null when the
-     * branch's left operand is not a three-way compare, leaving the generic compare-to-zero handling.
+     * Folds a three-way-compare result tested against zero into a direct relational comparison.
      */
     private Expression recoverThreeWayCompare(BranchInstruction branch, boolean negate)
     {
@@ -14874,10 +14611,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Whether {@code value} reads a local the class declares {@code boolean}, tested at {@code offset}. A
-     * boolean is an int once it is in a register, so the SSA type says nothing - but the declared type is
-     * recorded, and a branch on such a local is testing the variable itself. Without this the condition came
-     * out as `flag == 0`, comparing a boolean to an int, which is not valid Java.
+     * Whether {@code value} reads a local the class declares {@code boolean}, tested at {@code offset}.
      */
     private boolean isBooleanLocalAt(Value value, int offset)
     {
@@ -15150,9 +14884,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when {@code merge} is reachable from every switch target (each case target and the default),
-     * i.e. it is a real convergence point that post-dominates the header. Guards against a spurious
-     * post-dominator that only one case body can reach.
+     * True when {@code merge} is reachable from every switch target (each case target and the default), i.e. it is
+     * a real convergence point that post-dominates the header.
      */
     private boolean reachedFromAllTargets(IRBlock merge, Set<IRBlock> allTargets)
     {
@@ -15179,10 +14912,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
 
     /**
-     * Marks exactly the blocks a catch clause's recovery consumes: the walk stops at goto,
-     * return and athrow terminators, mirroring recoverCatchClause/recoverHandlerBlocks. An
-     * unbounded reachability walk would claim the fall-through join and everything after the
-     * try/catch, making the outer sequence drop the method's continuation.
+     * Marks exactly the blocks a catch clause's recovery consumes.
      */
     private void collectCatchConsumedBlocks(ExceptionHandler handler, Set<IRBlock> result)
     {
@@ -15225,10 +14955,9 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when a goto-terminated catch entry jumps WITHIN its own body - its target is dominated by the
-     * handler block (e.g. the return-value spill falling into the inlined finally copy) - rather than out
-     * to the shared post-try merge. The former is catch code to consume and recover; the latter must stay
-     * unconsumed or the merge is swallowed into the catch.
+     * True when a goto-terminated catch entry jumps WITHIN its own body - its target is dominated by the handler
+     * block (e.g. the return-value spill falling into the inlined finally copy) - rather than out to the shared
+     * post-try merge.
      */
     private boolean gotoStaysInCatch(IRBlock handlerBlock)
     {
@@ -15272,8 +15001,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Inverts a condition expression.
-     * For binary comparisons, inverts the operator (e.g., != to ==).
-     * For other expressions, wraps in NOT.
      */
     private Expression invertCondition(Expression condition)
     {
@@ -15291,11 +15018,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Coerces a value to the slot type it is being stored into when the source-level
-     * types disagree but the JVM treats them identically (a boolean is stored as an int).
-     * Storing a boolean into an integral slot becomes {@code value ? 1 : 0}; storing an
-     * integral value into a boolean slot becomes {@code value != 0}. Otherwise the value
-     * is returned unchanged. {@code !!x} collapses to {@code x} first so the result is clean.
+     * Coerces a value to the slot type it is being stored into when the source-level types disagree but the JVM
+     * treats them identically.
      */
     private Expression coerceForStore(Expression value, SourceType target)
     {
@@ -15352,7 +15076,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Extracts a boolean constant value (0 or 1) from an IR Value.
-     * Handles both direct IntConstants and SSAValues defined by ConstantInstructions.
      */
     private Integer extractBooleanConstant(Value val)
     {
@@ -15446,7 +15169,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Checks if all phi operands are boolean constants (0 or 1).
-     * Used to determine if a phi should be typed as boolean instead of int.
      */
     private boolean phiReceivesBooleanConstantsOnly(PhiInstruction phi)
     {
@@ -15470,8 +15192,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Pre-pass to collect for-loop initializer instructions before block processing.
-     * This allows them to be inlined into the for-loop declaration instead of
-     * being emitted separately in predecessor blocks.
      */
     private void collectForLoopInitInstructions()
     {
@@ -15550,9 +15270,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when {@code binOp} is {@code phiResult +/- constant} - the canonical induction step. An
-     * accumulation like {@code s = s + element} (the addend is a variable, not a constant) is NOT an
-     * induction step and must not be mistaken for the loop counter.
+     * True when {@code binOp} is {@code phiResult +/- constant} - the canonical induction step.
      */
     private boolean isInductionStep(BinaryOpInstruction binOp, SSAValue phiResult)
     {
@@ -15631,14 +15349,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when the arm computes exactly the phi's incoming value and nothing else observable: every
-     * non-terminator instruction either defines the incoming value, stores that value into the merged
-     * slot, or produces an intermediate consumed only within this arm (e.g. a load feeding the call
-     * whose result is the incoming value). Unlike {@link #extractSingleProducedValue} this tolerates
-     * multi-instruction value computations (load + invoke), and unlike {@link #isPureComputeArm} it
-     * allows the value-producing call/allocation itself - it is not lost, it becomes the ternary arm.
-     * A side-effecting store or a value that escapes the arm for anything but the phi disqualifies it,
-     * so the collapse never drops work.
+     * True when the arm computes exactly the phi's incoming value and nothing else observable.
      */
     private boolean isSingleValueComputeArm(IRBlock block, Value phiIncoming)
     {
@@ -15692,10 +15403,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True when every instruction in a diamond arm is a side-effect-free computation: local/array/
-     * field loads, constants, unary/binary ops and type checks. A local store is permitted only when
-     * it stores the phi's incoming value (the redundant temp materialization the lifter emits).
-     * Calls, allocations and real stores disqualify - the collapse would drop them.
+     * True when every instruction in a diamond arm is a side-effect-free computation.
      */
     private boolean isPureComputeArm(IRBlock block, Value phiIncoming)
     {
@@ -15741,8 +15449,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Extracts the single SSA value produced by a block (excluding the goto terminator).
-     * The block should only contain one value-producing instruction.
-     * Returns null if the block produces no values or multiple values.
      */
     private SSAValue extractSingleProducedValue(IRBlock block)
     {
@@ -15780,8 +15486,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Collapses a ternary PHI pattern to a cached TernaryExpr.
-     * Creates: condition ? thenValue : elseValue
-     * and caches it for the PHI result so it gets inlined at usage sites.
      */
     private void collapseToTernaryPhiExpression(Expression condition, PhiInstruction phi, IRBlock thenBlock, IRBlock elseBlock)
     {
@@ -15804,11 +15508,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Recovers a ternary arm's incoming value as an inlined expression. The arm's statements are
-     * discarded by the collapse, so a value the arm materialized into a temp (e.g. a call result
-     * stored into the merged slot) must be re-recovered as its defining expression - referencing the
-     * discarded temp name would leave an undefined variable. Un-materialize across the recovery so the
-     * expression is inlined, then restore the flag so unrelated uses are unaffected.
+     * Recovers a ternary arm's incoming value as an inlined expression.
      */
     private Expression recoverTernaryArmValue(Value value, IRBlock armBlock)
     {
@@ -15850,8 +15550,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Gets the appropriate variable name for a local slot index.
-     * Returns "this" for slot 0 in instance methods, "argN" for parameter slots,
-     * and "localN" for true local variables.
      */
     private String getNameForLocalSlot(int localIndex)
     {
@@ -15871,8 +15569,7 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * True if the value is the null reference (directly or via a constant instruction). Null is
-     * assignable to any reference type, so it must not widen a slot's unified type to Object.
+     * True if the value is the null reference (directly or via a constant instruction).
      */
     private boolean isNullValue(Value value)
     {
@@ -16003,8 +15700,6 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
     /**
      * Gets the parameter index for a given local slot.
-     * Accounts for long/double parameters taking 2 slots.
-     * Returns -1 if the slot is not a parameter slot (either 'this' or a local variable).
      */
     private int getParamIndexForSlot(int slot)
     {

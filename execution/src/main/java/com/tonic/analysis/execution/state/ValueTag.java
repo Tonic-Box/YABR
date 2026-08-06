@@ -6,8 +6,7 @@ package com.tonic.analysis.execution.state;
 public enum ValueTag
 {
     /**
-     * A 32-bit signed integer occupying one slot; also carries the narrower
-     * boolean, byte, char, and short values, which the JVM computes on as ints.
+     * A 32-bit signed integer occupying one slot.
      */
     INT(1),
     /**

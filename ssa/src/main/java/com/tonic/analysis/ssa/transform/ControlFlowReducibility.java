@@ -12,7 +12,6 @@ import java.util.*;
 
 /**
  * Transforms irreducible control flow into reducible form using node splitting.
- * This allows the decompiler to emit structured Java code instead of IR regions.
  */
 public class ControlFlowReducibility implements IRTransform
 {
@@ -287,10 +286,8 @@ public class ControlFlowReducibility implements IRTransform
     }
 
     /**
-     * Mirrors each successor phi's incoming from the original block onto the duplicate, since control
-     * can now arrive from either. The mirrored value is the ORIGINAL's - not the duplicate's clone of
-     * it - which is imprecise when the value is defined inside the split block; the recovery tolerates
-     * it because both define the same expression, and only irreducible methods reach this transform.
+     * Mirrors each successor phi's incoming from the original block onto the duplicate, since control can now
+     * arrive from either.
      */
     private void updatePhisForSplit(IRBlock succ, IRBlock original, IRBlock duplicate)
     {

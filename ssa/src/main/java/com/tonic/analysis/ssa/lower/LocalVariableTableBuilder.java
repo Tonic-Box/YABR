@@ -18,10 +18,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A builder for a {@code LocalVariableTable} over the source-local model recorded during AST lowering
- * ({@link IRMethod.SourceLocal}), taking slots from {@link RegisterAllocator} and scoping each entry to the
- * blocks holding that local's defs and uses. Compiler temps have no source-local record and so never
- * produce an entry.
+ * A builder for a {@code LocalVariableTable} over the source-local model recorded during AST lowering ({@link
+ * IRMethod.SourceLocal}), taking slots from {@link RegisterAllocator} and scoping each entry to the blocks
+ * holding that local's defs and uses.
  */
 public final class LocalVariableTableBuilder
 {
@@ -168,10 +167,7 @@ public final class LocalVariableTableBuilder
     }
 
     /**
-     * Folds the ranges of one variable on one slot into their union wherever they overlap or touch. Two
-     * scopes that come out identical are a duplicate entry, which the JVM rejects outright as a malformed
-     * class - and even when they merely overlap, two rows naming the same variable over the same slot say
-     * nothing the union does not.
+     * Folds the ranges of one variable on one slot into their union wherever they overlap or touch.
      */
     private List<LocalVariableTableEntry> mergeSameVariableRanges(List<LocalVariableTableEntry> entries)
     {
@@ -214,11 +210,7 @@ public final class LocalVariableTableBuilder
     }
 
     /**
-     * Resolves same-slot range overlaps by TRIMMING rather than dropping: within each slot, sort entries by
-     * start and clamp each one's end to the next one's start, so a reused slot's successive variables get
-     * disjoint ranges and BOTH keep their name. (The old drop discarded the later entry, so the decompiler
-     * fell back to the surviving name for it - the mislabelled, drifting round trip.) The LocalVariableTable is
-     * debug-only, so trimming never affects execution; it only sharpens which variable a slot names at each pc.
+     * Resolves same-slot range overlaps by TRIMMING rather than dropping.
      */
     private List<LocalVariableTableEntry> trimSameSlotOverlaps(List<LocalVariableTableEntry> entries)
     {
@@ -326,11 +318,8 @@ public final class LocalVariableTableBuilder
     }
 
     /**
-     * Instruction-precise scope {@code [startPc, endPc)} spanning the local's defs and uses - used only for a
-     * reused slot, so its live-disjoint occupants get disjoint scopes (their block-range scopes would collide in
-     * a straight-line method, losing one to {@link LvtSupport#dropSameSlotOverlaps} and widening the slot to
-     * {@code Object}). Phi defs carry no bytecode offset and are simply skipped; a local's real (stored/used)
-     * offsets bound its range.
+     * Instruction-precise scope {@code [startPc, endPc)} spanning the local's defs and uses, for a reused
+     * slot.
      */
     private int[] instructionScope(List<SSAValue> values)
     {

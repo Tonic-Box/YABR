@@ -308,9 +308,8 @@ public class ASTLowerer
     }
 
     /**
-     * Internal name of the lowered class's superclass, or {@code java/lang/Object} when none is declared
-     * (an implicit-Object class). Lets {@code super(...)}/{@code super.x} resolve to the real superclass
-     * instead of always defaulting to Object.
+     * Internal name of the lowered class's superclass, or {@code java/lang/Object} when none is declared (an
+     * implicit-Object class).
      */
     private String resolveSuperClassName(TypeResolver typeResolver)
     {
@@ -333,10 +332,7 @@ public class ASTLowerer
     }
 
     /**
-     * Ensures a constructor body begins with a {@code super(...)}/{@code this(...)} chain call. The
-     * decompiler strips the implicit no-arg {@code super()}, so a body that lacks an explicit chain call
-     * would lower to an unverifiable {@code <init>}; this prepends a synthetic {@code super()} targeting
-     * {@code superClassName}.
+     * Ensures a constructor body begins with a {@code super(...)}/{@code this(...)} chain call.
      */
     private void ensureConstructorChainCall(BlockStmt body, String superClassName)
     {
@@ -385,9 +381,7 @@ public class ASTLowerer
 
     /**
      * Whether {@code stmt} is an assignment to a javac synthetic capture field on {@code this} - the
-     * enclosing-instance reference ({@code this$0}, {@code this$1}, ...) or a captured local
-     * ({@code val$...}). These are emitted before super(); ordinary field assignments are not, so the
-     * name pattern is what keeps normal constructors emitting super() first.
+     * enclosing-instance reference ({@code this$0}, {@code this$1}, ...) or a captured local.
      */
     private boolean isSyntheticCaptureFieldInit(Statement stmt)
     {
@@ -682,11 +676,7 @@ public class ASTLowerer
     }
 
     /**
-     * Appends the implied terminator to an unterminated tail block. A void method's tail is the
-     * implicit {@code return}; a value-returning method's tail is only unterminated when every real
-     * path already returned or threw, but the block still needs a terminator the verifier accepts -
-     * a bare void {@code return} contradicts the descriptor and fails verification - so it returns
-     * the type's default value instead.
+     * Appends the implied terminator to an unterminated tail block.
      */
     private void appendImpliedReturn(LoweringContext ctx, IRType returnType)
     {

@@ -10,7 +10,6 @@ import java.util.function.Function;
 
 /**
  * Immutable representation of the type state at a specific point in bytecode execution.
- * Contains the types of all local variables and the operand stack.
  */
 public final class TypeState
 {
@@ -260,10 +259,8 @@ public final class TypeState
     }
 
     /**
-     * Pushes a single raw stack entry, WITHOUT the category-2 {@code TOP} companion that {@link #push}
-     * appends for a long/double. Used by the stack-manipulation opcodes (dup/swap families) which
-     * reconstruct the stack slot by slot from {@link #peek(int)} results: re-{@link #push}ing a long's
-     * value slot would re-expand it into a {@code {VALUE, TOP}} pair and inflate the stack depth.
+     * Pushes a single raw stack entry, WITHOUT the category-2 {@code TOP} companion that {@link #push} appends for
+     * a long/double.
      * @param type the raw slot entry to push
      * @return new state with the entry pushed
      */

@@ -6,7 +6,6 @@ import com.tonic.parser.constpool.Utf8Item;
 
 /**
  * Represents a method parameter in the MethodParameters attribute.
- * Contains metadata about formal parameters including name and access flags.
  */
 public class MethodParameter
 {

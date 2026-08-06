@@ -8,7 +8,6 @@ import java.util.*;
 
 /**
  * Builder API for constructing simulated values with field initialization.
- * Supports building complex object graphs for simulation entry points.
  */
 public final class SimValueBuilder
 {

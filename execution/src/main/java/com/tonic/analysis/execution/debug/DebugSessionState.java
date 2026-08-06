@@ -14,8 +14,7 @@ public enum DebugSessionState
      */
     RUNNING,
     /**
-     * Suspended with a live call stack that can be inspected and resumed; a session enters
-     * this state immediately on start, before the first instruction.
+     * Suspended with a live call stack that can be inspected and resumed.
      */
     PAUSED,
     /**

@@ -38,21 +38,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Reconstructs a pattern-matching switch (Java 21, {@code SwitchBootstraps.typeSwitch}) from the
- * {@code $pc$} dispatch loop that control-flow recovery falls back to.
- *
- *javac compiles {@code return switch (o) { case Integer i -> ...; case String s -> ...; default
- * -> ... }} to a {@code typeSwitch} invokedynamic whose result drives a switch; YABR currently
- * recovers this as a {@code while(true) switch($pc$){...}} state machine. This pass recognizes that
- * shape and folds it back into a {@link SwitchExpr} with type-pattern arms wrapped in a
- * {@code return}. It is strictly gated on the inner switch's selector being a {@code typeSwitch}
- * invokedynamic, so the other dispatch loops YABR emits for genuinely unstructurable code are left
- * untouched.
- *
- *Scope: type-pattern arms (with optional binding) + default, in both the return and assignment
- * forms, plus record-deconstruction arms ({@code case Point(int x, int y) -> ...}) recognized via the
- * {@code CastExpr.recordDeconstruction} marker the recovery sets from the MatchException handler.
- * Guards ({@code when}) are not yet folded.
+ * Reconstructs a pattern-matching switch (Java 21, {@code SwitchBootstraps.typeSwitch}) from the {@code $pc$}
+ * dispatch loop that control-flow recovery falls back to.
  */
 public class PatternSwitchReconstructor implements ASTTransform
 {
@@ -361,22 +348,7 @@ public class PatternSwitchReconstructor implements ASTTransform
     }
 
     /**
-     * Folds javac's restart-dispatch lowering of a GUARDED pattern switch, as the structuring engine
-     * recovers it:
-     * <pre>
-     *   while (true) {
-     *       switch (typeSwitch(sel, idx)) {
-     *           case k: T b = (T) sel;
-     *                   if (!guard) { idx = k + 1; continue; }   // guard failed: try the next case
-     *                   r = e; break;
-     *           default: r = e; break;
-     *       }
-     *       return r;
-     *   }
-     *     =&gt;  return switch (sel) { case T b when guard -&gt; e; ... default -&gt; e; };
-     * </pre>
-     * The restart arm is what a failing guard compiles to, so its negated condition IS the source
-     * guard. Returns false for any shape that does not match exactly.
+     * Folds javac's restart-dispatch lowering of a GUARDED pattern switch, as the structuring engine recovers it:
      */
     private boolean tryFoldRestartLoop(List<Statement> stmts, int index, WhileStmt loop)
     {
@@ -481,8 +453,8 @@ public class PatternSwitchReconstructor implements ASTTransform
     }
 
     /**
-     * One arm of a restart-dispatch switch: {@code [T b = (T) sel;] [if (!guard) { idx = N; continue; }]
-     * r = e; break;}. The optional restart {@code if} carries the arm's guard, negated.
+     * One arm of a restart-dispatch switch: {@code [T b = (T) sel;] [if (!guard) { idx = N; continue; }] r = e;
+     * break;}.
      */
     private RestartArm analyzeRestartArm(List<Statement> body, Expression selector, String restartVar, String resultVar)
     {
@@ -827,8 +799,8 @@ public class PatternSwitchReconstructor implements ASTTransform
     }
 
     /**
-     * An arm body {@code [binding = (T) selector;] resultVar = expr;} terminated by either a
-     * {@code break} (assignment form) or {@code return resultVar} / {@code return expr} (return form).
+     * An arm body {@code [binding = (T) selector;] resultVar = expr;} terminated by either a {@code break}
+     * (assignment form) or {@code return resultVar} / {@code return expr}.
      */
     private ArmInfo analyzeStructuredArm(List<Statement> body, Expression selector, Set<String> patternBindings)
     {
@@ -954,10 +926,7 @@ public class PatternSwitchReconstructor implements ASTTransform
     }
 
     /**
-     * An arm state is {@code [binding = (T) selector;] resultVar = expr; ... $pc$ = M; break}, or a
-     * guarded arm {@code binding = (T) selector; if (guard) { $pc$ = P } else { $pc$ = F }} where the
-     * pass state {@code P} produces the result and the fail state {@code F} re-dispatches (restart) to
-     * {@code dispatchState}. Extracts the optional binding/guard, the result value, and the merge state.
+     * Whether the state is a pattern-switch arm, plain or guarded.
      */
     private ArmInfo analyzeArm(List<Statement> body, Expression selector, Map<Integer, List<Statement>> states, int dispatchState)
     {
@@ -1125,9 +1094,7 @@ public class PatternSwitchReconstructor implements ASTTransform
     }
 
     /**
-     * A binding name for a type-pattern arm whose source binding was unused (so no cast survives in
-     * bytecode). Java requires a binding identifier for a type pattern, so we synthesize one from the
-     * type's simple name (e.g. {@code String -> string}).
+     * A binding name for a type-pattern arm whose source binding was unused (so no cast survives in bytecode).
      */
     private static String synthBinding(SourceType type)
     {

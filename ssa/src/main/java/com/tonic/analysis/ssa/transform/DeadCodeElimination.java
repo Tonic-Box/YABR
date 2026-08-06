@@ -141,10 +141,7 @@ public class DeadCodeElimination implements IRTransform
     }
 
     /**
-     * Removes blocks not reachable from the method entry or any exception handler. This is a purely
-     * structural CFG cleanup (no SSA def/use assumptions), so it is safe to run at any lowering stage -
-     * e.g. before bytecode emission, to drop unreachable join blocks (such as the fall-through after an
-     * exhaustive {@code switch}) that would otherwise emit a stray trailing terminator.
+     * Removes blocks not reachable from the method entry or any exception handler.
      * @param method the method whose unreachable blocks to remove
      */
     public static void removeUnreachableBlocks(IRMethod method)

@@ -6,11 +6,8 @@ import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 
 /**
  * Visitor that renders recovered AST nodes back to Java source text.
@@ -39,13 +36,16 @@ public class SourceEmitter implements SourceVisitor<Void>
         void record(String methodKey, Statement stmt, int line);
     }
 
-    /** Pushed for a lambda whose impl method is unknown - recording is then skipped (method keys,
-     *  being name+descriptor, are never empty, so an empty string is an unambiguous marker). */
+    /**
+     * Pushed for a lambda whose impl method is unknown - recording is then skipped.
+     */
     private static final String SUPPRESS = "";
 
     private LineMapSink lineMapSink;
-    /** Active recording key per nesting level: base method at the bottom, an impl key (or
-     *  {@link #SUPPRESS}) pushed for each lambda body. Empty when no sink is set. */
+    /**
+     * Active recording key per nesting level: base method at the bottom, an impl key (or {@link #SUPPRESS}) pushed
+     * for each lambda body.
+     */
     private final Deque<String> methodKeyStack = new ArrayDeque<>();
     private String currentClassName;
     /** Declared type of each local variable name, recorded as declarations are emitted, so member
@@ -103,9 +103,7 @@ public class SourceEmitter implements SourceVisitor<Void>
     /**
      * Registers a sink for the 1-based output line each provenance-carrying statement starts on.
      *
-     * @param baseMethodKey key of the method being emitted; statements inside an inlined lambda body
-     *                      are reported under the lambda's own impl-method key instead, so their
-     *                      separate offset space never pollutes this method's map
+     * @param baseMethodKey key of the method being emitted.
      * @param sink receives each statement and its start line, skipping offsets whose owning method
      *             cannot be identified
      */
@@ -1223,31 +1221,19 @@ public class SourceEmitter implements SourceVisitor<Void>
         {
             Long l = (Long) value;
             String symbolic = getSymbolicConstant(l, true);
-            if (symbolic != null)
-            {
-                return symbolic;
-            }
-            return l + "L";
+            return Objects.requireNonNullElseGet(symbolic, () -> l + "L");
         }
         if (value instanceof Float)
         {
             Float f = (Float) value;
             String symbolic = getSymbolicFloatConstant(f);
-            if (symbolic != null)
-            {
-                return symbolic;
-            }
-            return f + "f";
+            return Objects.requireNonNullElseGet(symbolic, () -> f + "f");
         }
         if (value instanceof Double)
         {
             Double d = (Double) value;
             String symbolic = getSymbolicDoubleConstant(d);
-            if (symbolic != null)
-            {
-                return symbolic;
-            }
-            return d + "d";
+            return Objects.requireNonNullElseGet(symbolic, () -> d + "d");
         }
         if (value instanceof Boolean)
         {
@@ -1400,11 +1386,8 @@ public class SourceEmitter implements SourceVisitor<Void>
     }
 
     /**
-     * Whether an expression must be parenthesized when used as the receiver of a
-     * {@code .}/{@code []} (or similar postfix) operation. Casts, binary ops,
-     * {@code instanceof}, ternaries, and prefix unaries all bind looser than the
-     * postfix operator, so {@code (Foo) x.bar()} would otherwise mis-parse as
-     * {@code (Foo) (x.bar())}.
+     * Whether an expression must be parenthesized when used as the receiver of a {@code .}/{@code []} (or similar
+     * postfix) operation.
      */
     private boolean needsParensAsReceiver(Expression e)
     {
@@ -2162,11 +2145,7 @@ public class SourceEmitter implements SourceVisitor<Void>
     }
 
     /**
-     * Whether a binary expression must be parenthesized inside its parent binary expression to keep
-     * its grouping. Lower precedence always needs parentheses. At equal precedence the operand on the
-     * parent's non-binding side (the right operand of a left-associative operator) re-parses into the
-     * parent's chain, so it keeps parentheses unless re-association is provably value- and
-     * evaluation-order-preserving (a same-operator logical or non-shift bitwise chain).
+     * Whether a binary expression must be parenthesized inside its parent binary expression to keep its grouping.
      */
     private boolean needsParentheses(BinaryExpr expr)
     {

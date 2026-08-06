@@ -33,25 +33,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Desugars a Java 21 pattern-matching switch EXPRESSION (type-pattern and guarded arms) into the
- * {@code SwitchBootstraps.typeSwitch} invokedynamic + an integer dispatch switch, for the
- * source-to-bytecode front end - the inverse of {@link PatternSwitchReconstructor}.
- * <pre>
- *   T r = switch (sel) { case A a -&gt; e0; case B b when g -&gt; e1; default -&gt; d; };
- *     =&gt;
- *   T r = &lt;default&gt;;
- *   S $psel$ = sel;                       // S = selector's static type
- *   java.util.Objects.requireNonNull($psel$);
- *   int $pidx$ = typeSwitch($psel$, 0);   // indy, bsm static args [A, B]
- *   switch ($pidx$) {                      // (a restart loop when any arm is guarded)
- *     case 0: { A a = (A) $psel$; r = e0; break; }
- *     case 1: { B b = (B) $psel$; if (g) { r = e1; break; } $pidx$ = typeSwitch($psel$, 2); ... }
- *     default: { r = d; break; }
- *   }
- * </pre>
- * Runs before {@link SwitchExpressionDesugar}: it lowers pattern switches fully (the resulting
- * integer switch and casts are handled by the ordinary statement lowering), leaving only constant
- * switch expressions for that pass. Record-deconstruction arms are not yet desugared here.
+ * Desugars a Java 21 pattern-matching switch expression into the {@code SwitchBootstraps.typeSwitch}
+ * invokedynamic and an integer dispatch switch.
  */
 public class PatternSwitchDesugar implements ASTTransform
 {
@@ -107,7 +90,6 @@ public class PatternSwitchDesugar implements ASTTransform
                     stmts.addAll(i, repl);
                     i += repl.size() - 1;
                     changed = true;
-                    continue;
                 }
             }
             if (s instanceof ReturnStmt)
@@ -172,9 +154,7 @@ public class PatternSwitchDesugar implements ASTTransform
     }
 
     /**
-     * True for a pattern switch this pass can fully desugar: it has at least one type-pattern arm,
-     * and every record-deconstruction arm's record type is resolvable (so its component accessors
-     * can be named).
+     * True for a pattern switch this pass can fully desugar.
      */
     private boolean isLowerablePatternSwitch(Expression e)
     {
@@ -298,11 +278,7 @@ public class PatternSwitchDesugar implements ASTTransform
     }
 
     /**
-     * The integer dispatch switch. When {@code loopLabel} is null (no guards) every arm assigns the
-     * result and {@code break}s the switch. Otherwise the switch runs inside a {@code while(true)}
-     * labeled {@code loopLabel}: each arm exits via {@code break loopLabel}, and a guard-fail re-runs
-     * {@code typeSwitch} with the next restart index and {@code break}s only the inner switch so the
-     * loop re-dispatches.
+     * The integer dispatch switch.
      */
     private SwitchStmt buildDispatchSwitch(List<SwitchExpr.Arm> patternArms, SwitchExpr.Arm defaultArm, String selTemp, SourceType selType, String idxTemp, String target, SourceType targetType, String loopLabel, String selInternal, List<String> caseTypeInternals)
     {
@@ -338,9 +314,7 @@ public class PatternSwitchDesugar implements ASTTransform
     }
 
     /**
-     * The binding statements for one pattern arm: a single cast for a type pattern
-     * ({@code T b = (T) sel;}), or a temp cast plus a component-accessor declaration per binding for
-     * a record deconstruction ({@code T $pdec = (T) sel; C0 b0 = $pdec.comp0(); ...}).
+     * The binding statements for one pattern arm.
      */
     private List<Statement> bindPattern(SwitchExpr.Arm arm, int k, String selTemp, SourceType selType)
     {

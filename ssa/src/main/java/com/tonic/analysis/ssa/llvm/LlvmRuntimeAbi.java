@@ -3,14 +3,8 @@ package com.tonic.analysis.ssa.llvm;
 import java.util.Arrays;
 
 /**
- * Single source of truth for the {@code jvm_*} runtime ABI that the {@code RUNTIME_ABI} object model
- * lowers object operations onto. Each method records the extern in the {@link DeclareCollector} (so
- * it appears once, sorted, in the module's {@code declare} block) and returns the callee symbol; the
- * caller composes the {@code call}/{@code invoke} line with its typed operands.
- *
- *This is the contract a future runtime library must implement to link/run the emitted IR. The
- * ABI is intentionally layout-agnostic: references are opaque {@code ptr}, and class/field/method
- * identities are passed as interned C-string names rather than resolved offsets/vtables.
+ * Single source of truth for the {@code jvm_*} runtime ABI that the {@code RUNTIME_ABI} object model lowers
+ * object operations onto.
  */
 final class LlvmRuntimeAbi
 {

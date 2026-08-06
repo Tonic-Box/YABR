@@ -6,7 +6,6 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for method call expressions.
- * Use this to intercept and transform method calls.
  */
 @FunctionalInterface
 public interface MethodCallHandler

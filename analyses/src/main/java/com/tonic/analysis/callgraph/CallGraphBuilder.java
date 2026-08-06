@@ -179,8 +179,8 @@ public class CallGraphBuilder
     }
 
     /**
-     * Processes an invokedynamic instruction, extracting bootstrap method and any
-     * method handle targets from bootstrap arguments (including lambda implementations).
+     * Processes an invokedynamic instruction, extracting bootstrap method and any method handle targets from
+     * bootstrap arguments.
      */
     private static void processDynamicInvoke(CallGraph graph, CallGraphNode callerNode, MethodReference callerRef, InvokeInstruction invoke, String targetName, String targetDesc, ConstPool constPool, BootstrapMethodsAttribute bsmAttr)
     {
@@ -280,8 +280,8 @@ public class CallGraphBuilder
     }
 
     /**
-     * Processes a bootstrap method entry, extracting the bootstrap method handle
-     * and any method handles in the arguments (including nested condys).
+     * Processes a bootstrap method entry, extracting the bootstrap method handle and any method handles in the
+     * arguments.
      */
     private static void processBootstrapMethod(CallGraph graph, CallGraphNode callerNode, MethodReference callerRef, BootstrapMethod bsm, ConstPool constPool, BootstrapMethodsAttribute bsmAttr)
     {

@@ -1,8 +1,8 @@
 package com.tonic.analysis;
 
 /**
- * Owner/name predicates for the JDK bootstrap-method families reachable from invokedynamic
- * and constant-dynamic: lambdas, string concatenation, records, and pattern switch.
+ * Owner/name predicates for the JDK bootstrap-method families reachable from invokedynamic and
+ * constant-dynamic.
  */
 public final class BootstrapFamilies
 {

@@ -273,9 +273,9 @@ public class ClassDecompiler
     }
 
     /**
-     * Builds a synthetic {@link LocalVariableTableAttribute} from the recovered slot names, keyed to the
-     * original bytecode offsets, for injecting named locals into a stripped class - the names match what
-     * {@link #decompile()} renders. No bytecode is modified; the caller attaches the attribute.
+     * Builds a synthetic {@link LocalVariableTableAttribute} from the recovered slot names, keyed to the original
+     * bytecode offsets, for injecting named locals into a stripped class - the names match what {@link
+     * #decompile()} renders.
      *
      * @param method the method to recover slot names for
      * @return the synthetic table, or null if the method has no Code or recovery fails
@@ -315,10 +315,8 @@ public class ClassDecompiler
     }
 
     /**
-     * Decompiles the class and additionally collects, per method, a map from bytecode offset to the
-     * 1-based output line of the statement recovered from that offset. Provenance flows from the SSA
-     * lifter through statement recovery and the AST transform pipeline; statements without surviving
-     * provenance (synthesized or merged away) simply have no entry.
+     * Decompiles the class and additionally collects, per method, a map from bytecode offset to the 1-based output
+     * line of the statement recovered from that offset.
      *
      * @return the source text together with the per-method line maps and declaration spans
      */
@@ -592,11 +590,8 @@ public class ClassDecompiler
     }
 
     /**
-     * Analyzes the synthetic {@code $SwitchMap$} holder classes that javac generates alongside this class
-     * for enum switches. The holder is a nested class of the class that contains the switch; its static
-     * initializer maps each enum constant's ordinal to a dense case index. Resolving it from the default
-     * {@link ClassPool} populates the switch-map registry so the switch emits constant-name case labels.
-     * When the holder is not in the pool, the recovery falls back to a switch on {@code ordinal()}.
+     * Analyzes the synthetic {@code $SwitchMap$} holder classes that javac generates alongside this class for enum
+     * switches.
      */
     private void analyzeSiblingSwitchMapHolders()
     {
@@ -800,10 +795,7 @@ public class ClassDecompiler
     }
 
     /**
-     * Whether this enum-flagged class is the enum itself rather than a constant's body. A constant with a
-     * class body compiles to an anonymous subclass that also carries ACC_ENUM but extends the ENUM, not
-     * {@code java/lang/Enum} - and no legal source declares an enum that extends another type, so such a
-     * class is emitted as a plain class for the round trip to parse.
+     * Whether this enum-flagged class is the enum itself rather than a constant's body.
      */
     private boolean isEnumProper()
     {
@@ -824,11 +816,8 @@ public class ClassDecompiler
     }
 
     /**
-     * Names of members the compiler auto-generates for a record and which must be suppressed so the
-     * decompiled {@code record} header is the canonical form: the component backing fields, the
-     * canonical constructor, the component accessors, and the {@code ObjectMethods}-backed
-     * {@code equals}/{@code hashCode}/{@code toString} (recognized by canonical signature + final, so
-     * user overrides - which are not final - are kept).
+     * Names of members the compiler auto-generates for a record and which must be suppressed so the decompiled
+     * {@code record} header is the canonical form.
      */
     private boolean isSuppressedRecordField(RecordAttribute record, FieldEntry field)
     {
@@ -1076,7 +1065,6 @@ public class ClassDecompiler
 
     /**
      * Applies baseline transforms (ControlFlowReducibility, DuplicateBlockMerging) to the IR method.
-     * Used for static initializers and constructors where these transforms are known to work.
      * @param ir the IR method to transform
      */
     private void applyBaselineTransforms(IRMethod ir)
@@ -1098,7 +1086,7 @@ public class ClassDecompiler
     }
 
     /**
-     * Lifts + recovers {@code <clinit>} to a fully-transformed AST body (no trailing return). Throws on failure.
+     * Lifts + recovers {@code <clinit>} to a fully-transformed AST body (no trailing return).
      */
     private BlockStmt recoverClinitBody(MethodEntry clinit)
     {
@@ -1126,7 +1114,7 @@ public class ClassDecompiler
     }
 
     /**
-     * Emits a {@code static { ... }} block from an already-recovered body.
+     * Emits a static initializer block.
      */
     private void emitStaticInitializerBlock(IndentingWriter writer, BlockStmt body, String key)
     {
@@ -1181,12 +1169,7 @@ public class ClassDecompiler
 
     /**
      * Hoists the leading run of {@code <clinit>} statements that are simple {@code ThisClass.staticField = <expr>}
-     * assignments into the field declarations (Java field-initializer sugar). Only a contiguous prefix is taken,
-     * and only while the assigned fields are in declaration order, each assigned exactly once in {@code <clinit>},
-     * with a right-hand side that references no local (a {@code <clinit>} temp). Under those rules the emitted layout
-     * (field inits in declaration order, then the leftover {@code static {}} block) reproduces the original
-     * {@code <clinit>} execution order exactly. Returns null if there is no {@code <clinit>} or recovery fails, so the
-     * caller falls back to emitting the whole block.
+     * assignments into the field declarations.
      */
     private ClinitHoist computeClinitHoist(List<FieldEntry> emittedFields)
     {
@@ -1280,7 +1263,6 @@ public class ClassDecompiler
 
     /**
      * Removes a trailing void return statement from a block.
-     * Used for static initializers where return statements are invalid in Java source.
      */
     private void removeTrailingReturn(BlockStmt body)
     {
@@ -1288,11 +1270,8 @@ public class ClassDecompiler
     }
 
     /**
-     * Removes a redundant trailing void {@code return;} - one with nothing executable after it - from a
-     * statement list, recursing into the branches of a trailing {@code if} (which are themselves in tail
-     * position). A void return in tail position is implicit in Java, so emitting one is non-idempotent: the
-     * recompiled bytecode routes a try/catch's normal exit through a shared trailing return that recovery
-     * then surfaces as an explicit `return;` inside the enclosing block.
+     * Removes a redundant trailing void {@code return;} - one with nothing executable after it - from a statement
+     * list, recursing into the branches of a trailing {@code if}.
      */
     private void removeTrailingVoidReturn(List<Statement> stmts)
     {
@@ -1636,9 +1615,7 @@ public class ClassDecompiler
     }
 
     /**
-     * Reports nodes whose parent pointer disagrees with the child link that reaches them. The child links are
-     * the tree; the parent pointers are a cache a transform has to maintain when it moves a node, and a
-     * transform that reasons about scope by walking parents silently sees the pre-move tree when it does not.
+     * Reports nodes whose parent pointer disagrees with the child link that reaches them.
      */
     private static void reportDetachedParents(ASTNode root, String stage)
     {
@@ -1853,8 +1830,8 @@ public class ClassDecompiler
     }
 
     /**
-     * Maps a method's local slots to their LocalVariableTable names, keeping only slots whose every entry
-     * agrees on a single name. Lets the signature show real parameter names that match the recovered body.
+     * Maps a method's local slots to their LocalVariableTable names, keeping only slots whose every entry agrees
+     * on a single name.
      */
     private Map<Integer, String> unambiguousLvtNames(MethodEntry method)
     {
@@ -1886,10 +1863,7 @@ public class ClassDecompiler
     }
 
     /**
-     * Whether a name is legally assignable without a local declaration in {@code method}'s body: a
-     * parameter, or a name resolving to a field of this class (own or inherited - a bare write to it
-     * lowers as an implicit field store). Feeds the hoister's missing-declaration net so it never
-     * manufactures a local that would shadow one of these.
+     * Whether a name is legally assignable without a local declaration in {@code method}'s body.
      */
     private java.util.function.Predicate<String> nonLocalNamePredicate(MethodEntry method)
     {
@@ -2037,11 +2011,7 @@ public class ClassDecompiler
     }
 
     /**
-     * Emits import statements for the reference types actually used in the emitted code. Excludes types that
-     * need no import: {@code java.lang} and JDK-internal types, same-package types, this class, and its nested
-     * types - the last matched in both the {@code Outer$Inner} form and the malformed {@code Outer/Inner} form a
-     * recompiled generic signature can yield (its package parses to {@code thisClassName}). Unqualified names
-     * (no package) are never valid imports and are dropped.
+     * Emits import statements for the reference types actually used in the emitted code.
      */
     private void emitImports(IndentingWriter writer, String thisClassName)
     {
@@ -2249,7 +2219,6 @@ public class ClassDecompiler
 
     /**
      * Formats an annotation type name for output.
-     * Converts descriptor format (Ljava/lang/Override;) to simple name (Override).
      */
     private String formatAnnotationTypeName(String typeName)
     {

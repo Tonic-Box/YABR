@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One local-variable slot's contents during abstract execution: a link to the {@link InsnContext} that stored
- * it and the contexts that read it, plus a parameter flag. Port of RuneLite's {@code VariableContext} minus
- * the value domain.
+ * One local-variable slot's contents during abstract execution.
  */
 public final class VarCtx
 {

@@ -89,14 +89,7 @@ public class FieldRenamer
 
     /**
      * Expands a declaring owner to also include every descendant class whose resolution of {@code (name,
-     * descriptor)} reaches that owner - i.e. descendants that INHERIT the field without redeclaring (hiding)
-     * it. A subtype that accesses an inherited field through its own static type emits a constant-pool ref
-     * owned by the subtype, so those descendants must be treated as access-site owners too.
-     *
-     *A descendant is included only when the nearest ancestor (itself first, then up the superclass chain)
-     * that actually declares {@code (name, descriptor)} is {@code declaringOwner}; a descendant that hides the
-     * field with its own declaration is left out, so unrelated fields that merely share the name/descriptor are
-     * never renamed.
+     * descriptor)} reaches that owner - i.e. descendants that INHERIT the field without redeclaring (hiding) it.
      */
     private Set<String> expandToInheritingOwners(String declaringOwner, String name, String descriptor)
     {
