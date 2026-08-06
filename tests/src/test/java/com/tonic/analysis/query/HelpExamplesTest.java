@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * Guards that every documented query example parses as valid composable DSL: the help popup
  * examples (mirroring {@code QueryExplorerPanel.buildExampleBoxes}) and the advanced examples in
- * {@code docs/query-dsl.md}.
+ * {@code md-docs/query-api.md}.
  */
 class HelpExamplesTest
 {
