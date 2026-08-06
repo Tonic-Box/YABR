@@ -357,7 +357,7 @@ public class MethodRecoverer
         assignParameterNames();
 
         SlotVariablePartition partition = new SlotVariablePartition(irMethod, this::baseNameForSlot,
-                nameRecoverer::debugNameAt, nameRecoverer::debugNameAtStore);
+                nameRecoverer::debugNameAt, nameRecoverer::debugNameAtStore, nameRecoverer::debugDescriptorAt);
         recoveryContext.setSlotPartition(partition);
         recoveryContext.setDebugDescriptorResolver(nameRecoverer::debugDescriptorAt);
         recoveryContext.setDebugStoreDescriptorResolver(nameRecoverer::debugDescriptorAtStore);

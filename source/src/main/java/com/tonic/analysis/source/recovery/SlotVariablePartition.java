@@ -45,6 +45,7 @@ public class SlotVariablePartition
     private final IntFunction<String> baseNameForSlot;
     private final ScopeNameResolver scopeNameResolver;
     private final ScopeNameResolver storeNameResolver;
+    private final ScopeNameResolver scopeDescriptorResolver;
 
     private final Map<IRInstruction, String> instructionNames = new HashMap<>();
 
@@ -70,10 +71,26 @@ public class SlotVariablePartition
      */
     public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot, ScopeNameResolver scopeNameResolver, ScopeNameResolver storeNameResolver)
     {
+        this(method, baseNameForSlot, scopeNameResolver, storeNameResolver, null);
+    }
+
+    /**
+     * As the four-argument form, with a resolver for the declared descriptor in scope, so two components
+     * cannot share a debug name unless they share a type.
+     *
+     * @param method the method to analyze
+     * @param baseNameForSlot supplies the fallback name for a slot with no scope name
+     * @param scopeNameResolver resolves the declared name in scope at a load offset, may be null
+     * @param storeNameResolver resolves the declared name in scope at a store offset, may be null
+     * @param scopeDescriptorResolver resolves the declared descriptor in scope at an offset, may be null
+     */
+    public SlotVariablePartition(IRMethod method, IntFunction<String> baseNameForSlot, ScopeNameResolver scopeNameResolver, ScopeNameResolver storeNameResolver, ScopeNameResolver scopeDescriptorResolver)
+    {
         this.method = method;
         this.baseNameForSlot = baseNameForSlot;
         this.scopeNameResolver = scopeNameResolver;
         this.storeNameResolver = storeNameResolver;
+        this.scopeDescriptorResolver = scopeDescriptorResolver;
         compute();
     }
 
@@ -551,6 +568,12 @@ public class SlotVariablePartition
                 }
             }
         }
+        // A debug name identifies one variable only together with its TYPE. javac reuses a slot for two
+        // differently-typed variables, and reuses a source name across disjoint scopes on DIFFERENT slots;
+        // either way the components are separate variables. Letting them share a name merges them into one
+        // declaration that carries only one of the types, so the other's assignments and reads no longer
+        // compile. The first claimant of a name keeps it; a claimant with another type takes a fallback.
+        Map<String, String> claimedDebugTypes = new HashMap<>();
         for (Map.Entry<Integer, Map<Integer, Integer>> se : slotComponentOrder.entrySet())
         {
             int slot = se.getKey();
@@ -567,27 +590,62 @@ public class SlotVariablePartition
             // its stored value does not read its own slot back (a real reassignment like `n = n + 2` does; an
             // independent `t = f(...)` does not). Such a component is left for Pass 2 to give a fresh fallback name.
             Set<String> used = new HashSet<>();
-            Map<String, List<Integer>> componentsByName = new HashMap<>();
+            Map<String, List<Integer>> componentsByName = new LinkedHashMap<>();
+            Map<Integer, String> rootDescriptor = new HashMap<>();
             for (int root : order.keySet())
             {
                 String scoped = scopeName(slot, rootOffsets.get(root));
-                if (scoped != null)
+                if (scoped == null)
                 {
-                    componentsByName.computeIfAbsent(scoped, k -> new ArrayList<>()).add(root);
+                    continue;
+                }
+                componentsByName.computeIfAbsent(scoped, k -> new ArrayList<>()).add(root);
+                String descriptor = scopeDescriptor(slot, rootOffsets.get(root));
+                if (descriptor != null)
+                {
+                    rootDescriptor.put(root, descriptor);
                 }
             }
             for (Map.Entry<String, List<Integer>> ce : componentsByName.entrySet())
             {
-                List<Integer> roots = ce.getValue();
+                String name = ce.getKey();
+                // Split the name's components by declared type, keeping the first type as the owner of the
+                // name. A component whose type is UNKNOWN stays with the owner - only a known, different type
+                // proves a separate variable, and treating an unresolved lookup as a mismatch would strand a
+                // plain variable on a fallback name whenever one generation's table is thinner.
+                String owner = claimedDebugTypes.get(name);
+                List<Integer> roots = new ArrayList<>();
+                for (int root : ce.getValue())
+                {
+                    String descriptor = rootDescriptor.get(root);
+                    if (owner == null && descriptor != null)
+                    {
+                        owner = descriptor;
+                    }
+                    if (descriptor == null || owner.equals(descriptor))
+                    {
+                        roots.add(root);
+                    }
+                }
+                if (roots.isEmpty())
+                {
+                    continue;
+                }
+                boolean claimed = false;
                 for (int root : roots)
                 {
                     if (roots.size() > 1 && isReusedSlotSpillTemp(root, slot, roots, rootOffsets))
                     {
                         continue;
                     }
-                    rootName.put(root, ce.getKey());
+                    rootName.put(root, name);
                     scopedRoots.add(root);
-                    used.add(ce.getKey());
+                    used.add(name);
+                    claimed = true;
+                }
+                if (claimed && owner != null)
+                {
+                    claimedDebugTypes.put(name, owner);
                 }
             }
             // Pass 2: remaining components get a fallback name that does NOT collide with a scoped name. The
@@ -820,8 +878,36 @@ public class SlotVariablePartition
     private Set<Integer> componentStoreOffsets = new HashSet<>();
 
     /**
-     * The LVT name covering the most of a component's instruction offsets, or null if none resolve.
+     * The declared descriptor in scope over a component's offsets, by the same majority vote scopeName uses.
      */
+    private String scopeDescriptor(int slot, List<Integer> offsets)
+    {
+        if (scopeDescriptorResolver == null || offsets == null || offsets.isEmpty())
+        {
+            return null;
+        }
+        Map<String, Integer> votes = new HashMap<>();
+        for (int off : offsets)
+        {
+            String d = scopeDescriptorResolver.nameAt(slot, off);
+            if (d != null)
+            {
+                votes.merge(d, 1, Integer::sum);
+            }
+        }
+        String best = null;
+        int bestCount = 0;
+        for (Map.Entry<String, Integer> e : votes.entrySet())
+        {
+            if (e.getValue() > bestCount)
+            {
+                best = e.getKey();
+                bestCount = e.getValue();
+            }
+        }
+        return best;
+    }
+
     private String scopeName(int slot, List<Integer> offsets)
     {
         if (scopeNameResolver == null || offsets == null || offsets.isEmpty())
